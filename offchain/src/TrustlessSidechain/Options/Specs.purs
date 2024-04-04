@@ -169,7 +169,7 @@ optSpec maybeConfig =
         ( info (withCommonOpts maybeConfig initCommitteeSelectionSpec)
             (progDesc "Initialise commitee selection")
         )
-        "init-checkpoint"
+    , command "init-checkpoint"
         ( info (withCommonOpts maybeConfig initCheckpointSpec)
             (progDesc "Initialise checkpoint")
         )
