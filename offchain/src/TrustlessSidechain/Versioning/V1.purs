@@ -4,6 +4,7 @@ module TrustlessSidechain.Versioning.V1
   , getVersionedPoliciesAndValidators
   , getFuelPoliciesAndValidators
   , getDsPoliciesAndValidators
+  , getMerkleRootPoliciesAndValidators
   ) where
 
 import Contract.Prelude
@@ -105,9 +106,8 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   -- Getting validators to version
   -----------------------------------
   merkleRootTokenValidator ← MerkleRoot.merkleRootTokenValidator sp
-  { validator: committeeHashValidator } ←
-    do
-      getUpdateCommitteeHashValidator sp
+
+  { validator: committeeHashValidator } ← getUpdateCommitteeHashValidator sp
 
   versionOracleConfig ← Versioning.getVersionOracleConfig sp
   checkpointValidator ← do
@@ -131,6 +131,27 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
       ]
 
   pure $ { versionedPolicies, versionedValidators }
+
+getMerkleRootPoliciesAndValidators ∷
+  ∀ r.
+  SidechainParams →
+  Run (EXCEPT OffchainError + WALLET + r)
+    { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
+    , versionedValidators ∷ List (Tuple ScriptId Validator)
+    }
+getMerkleRootPoliciesAndValidators sp = do
+  { mintingPolicy: merkleRootTokenMintingPolicy } ←
+    MerkleRoot.merkleRootCurrencyInfo sp
+
+  merkleRootTokenValidator ← MerkleRoot.merkleRootTokenValidator sp
+
+  let
+    versionedPolicies = List.fromFoldable
+      [ MerkleRootTokenPolicy /\ merkleRootTokenMintingPolicy ]
+    versionedValidators = List.fromFoldable
+      [ MerkleRootTokenValidator /\ merkleRootTokenValidator ]
+
+  pure { versionedPolicies, versionedValidators }
 
 getCommitteeSelectionPoliciesAndValidators ∷
   ∀ r.
@@ -161,7 +182,6 @@ getCommitteeSelectionPoliciesAndValidators atmsKind sp =
         { committeeCertificateMint, sidechainParams: sp }
         atmsKind
 
-    -- TODO WG: are these the right scripts?
     let
       versionedPolicies = List.fromFoldable
         [ CommitteeCertificateVerificationPolicy /\

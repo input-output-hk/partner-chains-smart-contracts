@@ -6,7 +6,6 @@ import Contract.Prelude
 
 import Contract.Wallet as Wallet
 import Data.BigInt as BigInt
-import Data.List as List
 import Mote.Monad as Mote.Monad
 import Test.InitSidechain.Utils (expectedInitTokens, failMsg, unorderedEq)
 import Test.PlutipTest (PlutipTest)
@@ -14,9 +13,13 @@ import Test.PlutipTest as Test.PlutipTest
 import Test.Unit.Assert (assert)
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
+import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
+import TrustlessSidechain.Checkpoint.Utils as Checkpoint
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
+import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
+import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Effects.Log (logInfo') as Effect
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow) as Effect
@@ -80,10 +83,12 @@ initTokensMintScenario1 =
               version
 
           let
-            -- See `Versioning.mintVersionInitTokens` for where this comes from
-            nversion = BigInt.fromInt $ List.length versionedPolicies
-              + List.length versionedValidators
-            expected = expectedInitTokens nversion
+            expected = expectedInitTokens 0 versionedPolicies versionedValidators
+              [ Checkpoint.checkpointInitTokenName
+              , DistributedSet.dsInitTokenName
+              , CommitteeOraclePolicy.committeeOracleInitTokenName
+              , CandidatePermissionToken.candidatePermissionInitTokenName
+              ]
 
           -- Get the tokens just created
           { initTokenStatusData: res } ← Init.getInitTokenStatus
@@ -148,10 +153,12 @@ initTokensMintIdempotent =
               version
 
           let
-            -- See `Versioning.mintVersionInitTokens` for where this comes from
-            nversion = BigInt.fromInt $ List.length versionedPolicies
-              + List.length versionedValidators
-            expected = expectedInitTokens nversion
+            expected = expectedInitTokens 0 versionedPolicies versionedValidators
+              [ Checkpoint.checkpointInitTokenName
+              , DistributedSet.dsInitTokenName
+              , CommitteeOraclePolicy.committeeOracleInitTokenName
+              , CandidatePermissionToken.candidatePermissionInitTokenName
+              ]
 
           -- Get the tokens just created
           { initTokenStatusData: res } ← Init.getInitTokenStatus

@@ -42,6 +42,7 @@ import TrustlessSidechain.EndpointResp
       , InitTokensMintResp
       , InitCommitteeSelectionResp
       , InitFuelResp
+      , InitMerkleRootResp
       , CommitteeHandoverResp
       , SaveCheckpointResp
       , InsertVersionResp
@@ -82,6 +83,7 @@ import TrustlessSidechain.InitSidechain.CommitteeSelection
   )
 import TrustlessSidechain.InitSidechain.FUEL (initFuel)
 import TrustlessSidechain.InitSidechain.Init (getInitTokenStatus)
+import TrustlessSidechain.InitSidechain.MerkleRoot (initMerkleRoot)
 import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
 import TrustlessSidechain.MerkleRoot (SaveRootParams(SaveRootParams))
 import TrustlessSidechain.MerkleRoot as MerkleRoot
@@ -106,6 +108,7 @@ import TrustlessSidechain.Options.Types
       , InitCommitteeSelection
       , InitTokensMint
       , InitFuel
+      , InitMerkleRoot
       , CommitteeHandover
       , SaveCheckpoint
       , InsertVersion2
@@ -517,6 +520,14 @@ runTxEndpoint sidechainEndpointParams endpoint =
 
         map (InitFuelResp <<< map toResp) $
           initFuel scParams (unwrap sidechainEndpointParams).atmsKind version
+
+      InitMerkleRoot { version } → do
+        let
+          toResp r = r { initTransactionIds = map unwrap r.initTransactionIds }
+
+        map (InitMerkleRootResp <<< map toResp) $
+          initMerkleRoot scParams (unwrap sidechainEndpointParams).atmsKind
+            version
 
       CommitteeHandover
         { merkleRoot
