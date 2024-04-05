@@ -4,6 +4,7 @@ module TrustlessSidechain.Versioning.V2
   , getVersionedPoliciesAndValidators
   , getFuelPoliciesAndValidators
   , getDsPoliciesAndValidators
+  , getMerkleRootPoliciesAndValidators
   ) where
 
 import Contract.Prelude
@@ -114,3 +115,19 @@ getCheckpointPoliciesAndValidators _ =
     versionedValidators = List.fromFoldable []
   in
     pure $ { versionedPolicies, versionedValidators }
+
+-- | Get V2 policies and validators for the
+-- | Merkle Root.
+getMerkleRootPoliciesAndValidators ∷
+  ∀ r.
+  SidechainParams →
+  Run (EXCEPT OffchainError + r)
+    { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
+    , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+    }
+getMerkleRootPoliciesAndValidators _ =
+  let
+    versionedPolicies = List.fromFoldable []
+    versionedValidators = List.fromFoldable []
+  in
+    pure { versionedPolicies, versionedValidators }

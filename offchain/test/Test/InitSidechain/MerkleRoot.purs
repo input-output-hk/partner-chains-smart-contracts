@@ -1,45 +1,54 @@
-module Test.InitSidechain.FUEL
-  ( tests
-  ) where
+module Test.InitSidechain.MerkleRoot (tests) where
 
 import Contract.Prelude
 
-import Contract.AssocMap as Plutus.Map
 import Contract.Wallet as Wallet
 import Data.BigInt as BigInt
+import Data.List as List
 import Mote.Monad as Mote.Monad
-import Test.InitSidechain.Utils (failMsg)
+import Test.InitSidechain.Utils (expectedInitTokens, failMsg, unorderedEq)
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Unit.Assert (assert)
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
+import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
+import TrustlessSidechain.Checkpoint.Utils as Checkpoint
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
+import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Effects.Log (logInfo') as Effect
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow) as Effect
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.Governance as Governance
-import TrustlessSidechain.InitSidechain.FUEL as InitFuel
 import TrustlessSidechain.InitSidechain.Init as Init
+import TrustlessSidechain.InitSidechain.MerkleRoot as InitMerkleRoot
 import TrustlessSidechain.InitSidechain.TokensMint as InitMint
 import TrustlessSidechain.SidechainParams as SidechainParams
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
+import TrustlessSidechain.Versioning
+  ( getActualVersionedPoliciesAndValidators
+  , getExpectedVersionedPoliciesAndValidators
+  ) as Versioning
+import TrustlessSidechain.Versioning.Types
+  ( ScriptId(MerkleRootTokenPolicy, MerkleRootTokenValidator)
+  )
 
 -- | `tests` aggregates all the tests together in one convenient function
 tests ∷ WrappedTests
-tests = plutipGroup "Initialising FUEL" $ do
-  -- InitFuel endpoint
-  initFuelSucceeds
-  initFuelIdempotent
+tests = plutipGroup "Initialising MerkleRoot" $ do
+  -- InitMerkleRoot endpoint
+  initMerkleRootSucceeds
+  initMerkleRootIdempotent
 
--- | A call to `initTokensMint` is followed by `initFuel`, resulting in success.
-initFuelSucceeds ∷ PlutipTest
-initFuelSucceeds =
-  Mote.Monad.test "`initFuel` succeeds"
+-- | A call to `initTokensMint` is followed by `MerkleRoot`, resulting in
+-- | success.
+initMerkleRootSucceeds ∷ PlutipTest
+initMerkleRootSucceeds =
+  Mote.Monad.test "`initMerkleRoot` succeeds"
     $ Test.PlutipTest.mkPlutipConfigTest
         [ BigInt.fromInt 50_000_000
         , BigInt.fromInt 50_000_000
@@ -48,7 +57,7 @@ initFuelSucceeds =
         ]
     $ \alice →
         withUnliftApp (Wallet.withKeyWallet alice) do
-          Effect.logInfo' "InitSidechain 'initFuelSucceeds'"
+          Effect.logInfo' "InitSidechain 'initMerkleRootSucceeds'"
 
           genesisUtxo ← Test.Utils.getOwnTransactionInput
 
@@ -70,29 +79,57 @@ initFuelSucceeds =
           -- First create init tokens
           void $ InitMint.initTokensMint sidechainParams initATMSKind version
 
-          fuelRes ← InitFuel.initFuel sidechainParams initATMSKind version
+          merkleRootRes ← InitMerkleRoot.initMerkleRoot sidechainParams
+            initATMSKind
+            version
 
-          -- Was the DsInitToken burned?
           { initTokenStatusData: tokenStatus } ← Init.getInitTokenStatus
             sidechainParams
 
+          { versionedPolicies: actualPolicies
+          , versionedValidators: actualValidators
+          } ←
+            Versioning.getActualVersionedPoliciesAndValidators
+              { atmsKind: initATMSKind
+              , sidechainParams
+              }
+              version
+
+          -- For computing the number of versionOracle init tokens
+          { versionedPolicies, versionedValidators } ←
+            Versioning.getExpectedVersionedPoliciesAndValidators
+              { atmsKind: initATMSKind
+              , sidechainParams
+              }
+              version
+
           let
             expected = true
-            dsSpent = not $
-              Plutus.Map.member
-                DistributedSet.dsInitTokenName
-                tokenStatus
-            res = isJust fuelRes && dsSpent
+            res = isJust merkleRootRes
+            expectedTokens = expectedInitTokens 2 versionedPolicies
+              versionedValidators
+              [ Checkpoint.checkpointInitTokenName
+              , DistributedSet.dsInitTokenName
+              , CommitteeOraclePolicy.committeeOracleInitTokenName
+              , CandidatePermissionToken.candidatePermissionInitTokenName
+              ]
+            expectedScripts = List.fromFoldable
+              [ MerkleRootTokenPolicy, MerkleRootTokenValidator ]
+            actualScripts = (map fst actualPolicies) <> (map fst actualValidators)
 
           Effect.fromMaybeThrow (GenericInternalError "Unreachable")
             $ map Just
             $ liftAff
             $ assert (failMsg expected res) res
+            <* assert (failMsg expectedTokens tokenStatus)
+              (unorderedEq expectedTokens tokenStatus)
+            <* assert (failMsg expectedScripts actualScripts)
+              (expectedScripts == actualScripts)
 
--- | Second call to `initFuel` should return `Nothing`.
-initFuelIdempotent ∷ PlutipTest
-initFuelIdempotent =
-  Mote.Monad.test "`initFuel` called a second time returns Nothing"
+-- | Second call to `initMerkleRoot` should return `Nothing`.
+initMerkleRootIdempotent ∷ PlutipTest
+initMerkleRootIdempotent =
+  Mote.Monad.test "`initMerkleRoot` called a second time returns Nothing"
     $ Test.PlutipTest.mkPlutipConfigTest
         [ BigInt.fromInt 50_000_000
         , BigInt.fromInt 50_000_000
@@ -101,7 +138,7 @@ initFuelIdempotent =
         ]
     $ \alice →
         withUnliftApp (Wallet.withKeyWallet alice) do
-          Effect.logInfo' "InitSidechain 'initFuelIdempotent'"
+          Effect.logInfo' "InitSidechain 'initMerkleRootIdempotent'"
 
           genesisUtxo ← Test.Utils.getOwnTransactionInput
 
@@ -123,14 +160,17 @@ initFuelIdempotent =
           -- First create init tokens
           void $ InitMint.initTokensMint sidechainParams initATMSKind version
 
-          void $ InitFuel.initFuel sidechainParams initATMSKind version
+          void $ InitMerkleRoot.initMerkleRoot sidechainParams initATMSKind
+            version
 
           -- Second call should do nothing.
-          fuelRes ← InitFuel.initFuel sidechainParams initATMSKind version
+          merkleRootRes ← InitMerkleRoot.initMerkleRoot sidechainParams
+            initATMSKind
+            version
 
           let
             expected = true
-            res = isNothing fuelRes
+            res = isNothing merkleRootRes
 
           Effect.fromMaybeThrow (GenericInternalError "Unreachable")
             $ map Just

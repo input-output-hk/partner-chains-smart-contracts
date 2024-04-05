@@ -208,6 +208,7 @@ data TxEndpoint
       , version ∷ Int
       }
   | InitFuel { version ∷ Int }
+  | InitMerkleRoot { version ∷ Int }
   | Init
       { committeePubKeysInput ∷ InputArgOrFile (List ByteArray)
       , initSidechainEpoch ∷ BigInt

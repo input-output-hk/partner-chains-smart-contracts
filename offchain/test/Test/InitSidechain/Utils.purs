@@ -7,14 +7,16 @@ module Test.InitSidechain.Utils
 import Prelude
 
 import Contract.AssocMap as Plutus.Map
-import Contract.Prelude (foldr, (/\))
+import Contract.Prelude (Tuple, foldr, (/\))
+import Contract.Scripts (MintingPolicy, Validator)
+import Contract.Value (TokenName)
 import Ctl.Internal.Types.TokenName as Value
 import Data.Array as Array
+import Data.BigInt (fromInt)
 import Data.BigInt as BigInt
-import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
-import TrustlessSidechain.Checkpoint.Utils as Checkpoint
-import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
-import TrustlessSidechain.DistributedSet as DistributedSet
+import Data.List (List)
+import Data.List as List
+import TrustlessSidechain.Versioning.ScriptId as Types
 import TrustlessSidechain.Versioning.Utils as Versioning
 
 -- | Testing utility to check ordered equality of
@@ -48,16 +50,23 @@ failMsg exp act = "Expected: "
 -- | and quantity. Requires the number of version oracle init tokens
 -- | to be passed.
 expectedInitTokens ∷
-  BigInt.BigInt →
+  Int →
+  List (Tuple Types.ScriptId MintingPolicy) →
+  List (Tuple Types.ScriptId Validator) →
+  Array TokenName →
   Plutus.Map.Map Value.TokenName BigInt.BigInt
-expectedInitTokens nversion =
-  foldr (\(k /\ v) → Plutus.Map.insert k v) Plutus.Map.empty
-    $ Array.(:) (Versioning.versionOracleInitTokenName /\ nversion)
-    $
-      map
-        (_ /\ one)
-        [ Checkpoint.checkpointInitTokenName
-        , DistributedSet.dsInitTokenName
-        , CommitteeOraclePolicy.committeeOracleInitTokenName
-        , CandidatePermissionToken.candidatePermissionInitTokenName
-        ]
+expectedInitTokens tokensUsed versionedPolicies versionedValidators tokens =
+  let
+    -- See `Versioning.mintVersionInitTokens` for where this comes from
+    nversion = BigInt.fromInt $ List.length versionedPolicies
+      + List.length versionedValidators
+  in
+    foldr (\(k /\ v) → Plutus.Map.insert k v) Plutus.Map.empty
+      $ Array.(:)
+          ( Versioning.versionOracleInitTokenName /\
+              (nversion - fromInt tokensUsed)
+          )
+      $
+        map
+          (_ /\ one)
+          tokens

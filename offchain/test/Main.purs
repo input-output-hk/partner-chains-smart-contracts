@@ -18,6 +18,7 @@ import Test.InitSidechain as InitSidechain
 import Test.InitSidechain.Checkpoint as InitCheckpoint
 import Test.InitSidechain.CommitteeSelection as InitCommittee
 import Test.InitSidechain.FUEL as InitFUEL
+import Test.InitSidechain.MerkleRoot as InitMerkleRoot
 import Test.InitSidechain.TokensMint as InitMint
 import Test.MerkleProofSerialisation as MerkleProofSerialisation
 import Test.MerkleRoot as MerkleRoot
@@ -59,6 +60,7 @@ main = do
           ConfigFile.tests
 
         group "Plutip integration tests" do
+          InitMerkleRoot.tests
           InitSidechain.tests
           InitMint.tests
           InitCheckpoint.tests
