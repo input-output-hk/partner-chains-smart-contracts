@@ -4,19 +4,15 @@ module Test.InitSidechain.Checkpoint
 
 import Contract.Prelude
 
-import Contract.AssocMap as Plutus.Map
 import Contract.Log as Log
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Wallet as Wallet
 import Control.Monad.Error.Class as MonadError
-import Data.Array as Array
-import Data.BigInt (fromInt)
 import Data.BigInt as BigInt
 import Data.List (head)
-import Data.List as List
 import Mote.Monad as Mote.Monad
 import Run.Except (throw)
-import Test.InitSidechain.Utils (failMsg, unorderedEq)
+import Test.InitSidechain.Utils (expectedInitTokens, failMsg, unorderedEq)
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Unit.Assert (assert)
@@ -43,7 +39,6 @@ import TrustlessSidechain.Versioning
   , getExpectedVersionedPoliciesAndValidators
   ) as Versioning
 import TrustlessSidechain.Versioning.ScriptId (ScriptId(..))
-import TrustlessSidechain.Versioning.Utils (versionOracleInitTokenName) as Versioning
 
 -- | `tests` aggregates all the tests together in one convenient function
 tests ∷ WrappedTests
@@ -147,22 +142,12 @@ testInitCheckpoint =
                 version
 
             let
-              -- See `Versioning.mintVersionInitTokens` for where this comes from
-              nversion = BigInt.fromInt $ List.length versionedPolicies
-                + List.length versionedValidators
-              expectedTokens =
-                foldr (\(k /\ v) → Plutus.Map.insert k v) Plutus.Map.empty
-                  $ Array.(:)
-                      ( Versioning.versionOracleInitTokenName /\
-                          (nversion - fromInt 1)
-                      )
-                  $
-                    map
-                      (_ /\ one)
-                      [ DistributedSet.dsInitTokenName
-                      , CommitteeOraclePolicy.committeeOracleInitTokenName
-                      , CandidatePermissionToken.candidatePermissionInitTokenName
-                      ]
+              expectedTokens = expectedInitTokens 1 versionedPolicies
+                versionedValidators
+                [ DistributedSet.dsInitTokenName
+                , CommitteeOraclePolicy.committeeOracleInitTokenName
+                , CandidatePermissionToken.candidatePermissionInitTokenName
+                ]
 
             -- Get the tokens just created
             { initTokenStatusData: resTokens } ← Init.getInitTokenStatus
@@ -254,22 +239,12 @@ testInitCheckpointIdempotent =
                 version
 
             let
-              -- See `Versioning.mintVersionInitTokens` for where this comes from
-              nversion = BigInt.fromInt $ List.length versionedPolicies
-                + List.length versionedValidators
-              expectedTokens =
-                foldr (\(k /\ v) → Plutus.Map.insert k v) Plutus.Map.empty
-                  $ Array.(:)
-                      ( Versioning.versionOracleInitTokenName /\
-                          (nversion - fromInt 1)
-                      )
-                  $
-                    map
-                      (_ /\ one)
-                      [ DistributedSet.dsInitTokenName
-                      , CommitteeOraclePolicy.committeeOracleInitTokenName
-                      , CandidatePermissionToken.candidatePermissionInitTokenName
-                      ]
+              expectedTokens = expectedInitTokens 1 versionedPolicies
+                versionedValidators
+                [ DistributedSet.dsInitTokenName
+                , CommitteeOraclePolicy.committeeOracleInitTokenName
+                , CandidatePermissionToken.candidatePermissionInitTokenName
+                ]
 
             -- Get the tokens just created
             { initTokenStatusData: resTokens } ← Init.getInitTokenStatus
