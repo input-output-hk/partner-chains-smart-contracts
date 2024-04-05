@@ -27,6 +27,8 @@ Changelog](https://keepachangelog.com/en/1.1.0).
     checkpointing.
   * Added CLI endpoint `init-fuel` to initialize the FUEL mechanism,
     namely the distributed set and FUEL minting / burning versioning.
+  * Added CLI endpoint `init-merkle-root` to initialize the Merkle Root
+    policy and validator scripts.
 
 ## Changed
   * `init` now prints more human friendly message, when selected genesis utxo
