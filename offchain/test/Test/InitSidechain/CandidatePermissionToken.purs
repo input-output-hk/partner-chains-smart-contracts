@@ -35,7 +35,8 @@ tests = plutipGroup "Initialising the checkpoint mechanism" $ do
 
 -- | Test `initCandidatePermissionToken` having run `initTokensMint`, expecting
 -- | no failure
--- Note that this test isn't great. If we want to keep the `initCandidatePermissionToken` machinary, we should improve this test.
+-- Note that this test isn't great. If we want to keep the
+-- `initCandidatePermissionToken` machinery, we should improve this test.
 testInitCandidatePermissionToken ∷ PlutipTest
 testInitCandidatePermissionToken =
   Mote.Monad.test "Calling `InitCandidatePermissionToken`"
