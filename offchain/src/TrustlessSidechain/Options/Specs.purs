@@ -1024,13 +1024,9 @@ initSpec = ado
 --| Parser for the `init-tokens-mint` endpoint.
 initTokensMintSpec ∷ Parser TxEndpoint
 initTokensMintSpec = ado
-  genesisHash ← parseGenesisHash
   version ← parseVersion
   in
-    InitTokensMint
-      { genesisHash
-      , version
-      }
+    InitTokensMint { version }
 
 insertVersionSpec ∷ Parser TxEndpoint
 insertVersionSpec = ado
