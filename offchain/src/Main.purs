@@ -519,38 +519,12 @@ runTxEndpoint sidechainEndpointParams endpoint =
           (\r → r { initTransactionIds = map unwrap r.initTransactionIds })
           resp
       InitCandidatePermissionToken
-        { committeePubKeysInput
-        , initSidechainEpoch
-        , initCandidatePermissionTokenMintInfo
-        , genesisHash
+        { initCandidatePermissionTokenMintInfo
         , version
         } → do
-        rawCommitteePubKeys ← ConfigFile.getCommittee
-          committeePubKeysInput
-
-        committeePubKeys ← CommitteeATMSSchemes.aggregateATMSPublicKeys
-          { atmsKind
-          , committeePubKeys: List.toUnfoldable rawCommitteePubKeys
-          }
-
-        let
-          sc = unwrap scParams
-          isc =
-            { initChainId: sc.chainId
-            , initGenesisHash: genesisHash
-            , initUtxo: sc.genesisUtxo
-            , initATMSKind: (unwrap sidechainEndpointParams).atmsKind
-            , initAggregatedCommittee: committeePubKeys
-            , initCandidatePermissionTokenMintInfo
-            , initSidechainEpoch
-            , initThresholdNumerator: sc.thresholdNumerator
-            , initThresholdDenominator: sc.thresholdDenominator
-            , initGovernanceAuthority: sc.governanceAuthority
-            }
-
-        resp ← initCandidatePermissionToken (toSidechainParams isc)
-          isc.initCandidatePermissionTokenMintInfo
-          isc.initATMSKind
+        resp ← initCandidatePermissionToken scParams
+          initCandidatePermissionTokenMintInfo
+          (unwrap sidechainEndpointParams).atmsKind
           version
         pure $ InitCandidatePermissionTokenResp $ map
           (\r → r { initTransactionIds = map unwrap r.initTransactionIds })

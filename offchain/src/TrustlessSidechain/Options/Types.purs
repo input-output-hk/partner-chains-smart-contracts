@@ -226,11 +226,8 @@ data TxEndpoint
       , version ∷ Int
       }
   | InitCandidatePermissionToken
-      { committeePubKeysInput ∷ InputArgOrFile (List ByteArray)
-      , initSidechainEpoch ∷ BigInt
-      , initCandidatePermissionTokenMintInfo ∷
+      { initCandidatePermissionTokenMintInfo ∷
           Maybe CandidatePermissionTokenMintInit
-      , genesisHash ∷ ByteArray
       , version ∷ Int
       }
   | SaveCheckpoint

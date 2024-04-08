@@ -458,7 +458,7 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
           } =
           J.fromObject $
             Object.fromFoldable
-              [ "endpoint" /\ J.fromString "InitCommitteeSelection"
+              [ "endpoint" /\ J.fromString "InitCandidatePermissionToken"
               , "initTransactionIds" /\ J.fromArray
                   (map (J.fromString <<< byteArrayToHex) initTransactionIds)
               , "sidechainParams" /\ CA.encode scParamsCodec sidechainParams

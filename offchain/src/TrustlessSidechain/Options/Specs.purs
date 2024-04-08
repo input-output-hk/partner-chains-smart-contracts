@@ -1078,24 +1078,12 @@ initCommitteeSelectionSpec = ado
 
 initCandidatePermissionTokenSpec ∷ Parser TxEndpoint
 initCandidatePermissionTokenSpec = ado
-  committeePubKeysInput ← parseCommittee
-    "committee-pub-key"
-    "Public key for a committee member at sidechain initialisation"
-    "committee-pub-key-file-path"
-    "Filepath of a JSON file containing public keys of the new committee\
-    \ e.g. `[{\"public-key\":\"aabb...\", }, ...]`"
-
-  initSidechainEpoch ← parseSidechainEpoch
   initCandidatePermissionTokenMintInfo ←
     optional initCandidatePermissionTokenMintHelper
-  genesisHash ← parseGenesisHash
   version ← parseVersion
   in
     InitCandidatePermissionToken
-      { committeePubKeysInput
-      , initSidechainEpoch
-      , initCandidatePermissionTokenMintInfo
-      , genesisHash
+      { initCandidatePermissionTokenMintInfo
       , version
       }
 
