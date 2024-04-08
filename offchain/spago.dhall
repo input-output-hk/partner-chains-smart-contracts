@@ -29,6 +29,7 @@
   , "node-path"
   , "node-process"
   , "nonempty"
+  , "newtype"
   , "optparse"
   , "ordered-collections"
   , "parsing"
