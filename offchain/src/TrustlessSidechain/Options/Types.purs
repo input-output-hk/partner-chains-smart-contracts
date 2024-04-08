@@ -198,9 +198,7 @@ data TxEndpoint
   | GetAddrs
       SidechainAddressesExtra
   | InitTokensMint
-      { genesisHash ∷ ByteArray
-      , version ∷ Int
-      }
+      { version ∷ Int }
   | Init
       { committeePubKeysInput ∷ InputArgOrFile (List ByteArray)
       , initSidechainEpoch ∷ BigInt
