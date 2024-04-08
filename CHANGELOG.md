@@ -29,6 +29,8 @@ Changelog](https://keepachangelog.com/en/1.1.0).
     namely the distributed set and FUEL minting / burning versioning.
   * Added CLI endpoint `init-merkle-root` to initialize the Merkle Root
     policy and validator scripts.
+  * Added CLI endpoint `init-candidate-permission-token` to initialise the
+    candidate permission token mechanism.
 
 ## Changed
   * `init` now prints more human friendly message, when selected genesis utxo

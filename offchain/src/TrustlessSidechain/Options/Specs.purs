@@ -111,6 +111,7 @@ import TrustlessSidechain.Options.Types
       , InitFuel
       , InitMerkleRoot
       , Init
+      , InitCandidatePermissionToken
       , CommitteeCandidateReg
       , CommitteeCandidateDereg
       , CommitteeHash
@@ -182,6 +183,10 @@ optSpec maybeConfig =
     , command "init-merkle-root"
         ( info (withCommonOpts maybeConfig initMerkleRootSpec)
             (progDesc "Initialise Merkle Root scripts")
+        )
+    , command "init-candidate-permission-token"
+        ( info (withCommonOpts maybeConfig initCandidatePermissionTokenSpec)
+            (progDesc "Initialise candidate permission token")
         )
     , command "addresses"
         ( info (withCommonOpts maybeConfig getAddrSpec)
@@ -1064,6 +1069,29 @@ initCommitteeSelectionSpec = ado
   version ← parseVersion
   in
     InitCommitteeSelection
+      { committeePubKeysInput
+      , initSidechainEpoch
+      , initCandidatePermissionTokenMintInfo
+      , genesisHash
+      , version
+      }
+
+initCandidatePermissionTokenSpec ∷ Parser TxEndpoint
+initCandidatePermissionTokenSpec = ado
+  committeePubKeysInput ← parseCommittee
+    "committee-pub-key"
+    "Public key for a committee member at sidechain initialisation"
+    "committee-pub-key-file-path"
+    "Filepath of a JSON file containing public keys of the new committee\
+    \ e.g. `[{\"public-key\":\"aabb...\", }, ...]`"
+
+  initSidechainEpoch ← parseSidechainEpoch
+  initCandidatePermissionTokenMintInfo ←
+    optional initCandidatePermissionTokenMintHelper
+  genesisHash ← parseGenesisHash
+  version ← parseVersion
+  in
+    InitCandidatePermissionToken
       { committeePubKeysInput
       , initSidechainEpoch
       , initCandidatePermissionTokenMintInfo
