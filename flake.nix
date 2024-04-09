@@ -16,6 +16,10 @@
 
   inputs = {
     cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib/b7e8d396711f95e7a7b755a2a7e7089df712aaf5";
+    db-sync.url = "github:IntersectMBO/cardano-db-sync/13.1.0.2";
+    empty.url = "github:input-output-hk/empty-flake";
+    db-sync.inputs.cardano-world.follows = "empty";
+    cardano-transaction-lib.inputs.db-sync.follows = "db-sync";
     plutip.follows = "cardano-transaction-lib/plutip";
     haskell-nix.url = "github:input-output-hk/haskell.nix/9af167fb4343539ca99465057262f289b44f55da";
     nixpkgs.follows = "cardano-transaction-lib/nixpkgs";
