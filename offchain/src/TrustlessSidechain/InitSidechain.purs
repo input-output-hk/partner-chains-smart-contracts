@@ -25,27 +25,24 @@ import Contract.Prelude
 
 import Contract.PlutusData (PlutusData)
 import Contract.Prim.ByteArray (ByteArray)
-import Contract.ScriptLookups (ScriptLookups)
 import Contract.Transaction (TransactionHash, TransactionInput)
-import Contract.TxConstraints (TxConstraints)
 import Data.BigInt (BigInt)
 import Data.Maybe (isJust)
-import Data.Monoid (mempty)
 import Run (Run)
-import Run.Except (EXCEPT)
 import TrustlessSidechain.CandidatePermissionToken
   ( CandidatePermissionTokenMintInfo
   )
-import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
 import TrustlessSidechain.Effects.App (APP)
-import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.GetSidechainAddresses
   ( SidechainAddresses
   , SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
   )
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.Governance as Governance
+import TrustlessSidechain.InitSidechain.CandidatePermissionToken
+  ( initCandidatePermissionTokenLookupsAndConstraints
+  )
 import TrustlessSidechain.InitSidechain.Checkpoint
   ( initCheckpointLookupsAndConstraints
   )
@@ -111,30 +108,6 @@ toSidechainParams isp = SidechainParams
   , governanceAuthority: isp.initGovernanceAuthority
   }
 
--- | `initCandidatePermissionTokenLookupsAndConstraints` creates the lookups and
--- | constraints required when initalizing the candidiate permission tokens (this does NOT
--- | submit any transaction). In particular, it includes lookups / constraints
--- | to do the following:
--- |
--- |      - Mints the candidiate permission tokens if
--- |     `initCandidatePermissionTokenMintInfo` is `Just` (otherwise returns empty)
-initCandidatePermissionTokenLookupsAndConstraints ∷
-  ∀ (r ∷ Row Type) r'.
-  InitTokensParams r →
-  Run (EXCEPT OffchainError + r')
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
-    }
-initCandidatePermissionTokenLookupsAndConstraints isp =
-  case isp.initCandidatePermissionTokenMintInfo of
-    Nothing → pure mempty
-    Just { candidatePermissionTokenAmount: amount } → do
-      let sidechainParams = toSidechainParams isp
-
-      CandidatePermissionToken.candidatePermissionTokenLookupsAndConstraints
-        sidechainParams
-        amount
-
 -- | `initSidechain` creates the `SidechainParams` and executes
 -- | `initSidechainTokens` and `paySidechainTokens` in one transaction. Briefly,
 -- | this will do the following:
@@ -190,7 +163,9 @@ initSidechain (InitSidechainParams isp) version = do
   dsInitTxId ← initFuelAndDsLookupsAndConstraints sidechainParams version
     >>= balanceSignAndSubmit "Distributed set init"
   permissionTokensInitTxId ←
-    initCandidatePermissionTokenLookupsAndConstraints isp
+    initCandidatePermissionTokenLookupsAndConstraints
+      isp.initCandidatePermissionTokenMintInfo
+      sidechainParams
       >>= balanceSignAndSubmit "Candidate permission tokens init"
   committeeInitTxId ←
     initCommitteeHashLookupsAndConstraints isp.initSidechainEpoch

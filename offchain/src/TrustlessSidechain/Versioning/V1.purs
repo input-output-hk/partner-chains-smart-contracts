@@ -5,6 +5,7 @@ module TrustlessSidechain.Versioning.V1
   , getFuelPoliciesAndValidators
   , getDsPoliciesAndValidators
   , getMerkleRootPoliciesAndValidators
+  , getCandidatePermissionTokenPoliciesAndValidators
   ) where
 
 import Contract.Prelude
@@ -152,6 +153,16 @@ getMerkleRootPoliciesAndValidators sp = do
       [ MerkleRootTokenValidator /\ merkleRootTokenValidator ]
 
   pure { versionedPolicies, versionedValidators }
+
+getCandidatePermissionTokenPoliciesAndValidators ∷
+  ∀ r.
+  SidechainParams →
+  Run (EXCEPT OffchainError + WALLET + r)
+    { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
+    , versionedValidators ∷ List (Tuple ScriptId Validator)
+    }
+getCandidatePermissionTokenPoliciesAndValidators _sp = do
+  pure $ { versionedPolicies: mempty, versionedValidators: mempty }
 
 getCommitteeSelectionPoliciesAndValidators ∷
   ∀ r.
