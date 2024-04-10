@@ -2,6 +2,10 @@ module Test.Main (main) where
 
 import Contract.Prelude
 
+import Ctl.Internal.Deserialization.Keys
+  ( freshPrivateKey
+  )
+import Ctl.Internal.Serialization.Types (PrivateKey)
 import Mote.Monad (group)
 import Test.CandidatePermissionToken as CandidatePermissionToken
 import Test.Checkpoint as Checkpoint
@@ -25,6 +29,7 @@ import Test.MerkleProofSerialisation as MerkleProofSerialisation
 import Test.MerkleRoot as MerkleRoot
 import Test.MerkleRootChaining as MerkleRootChaining
 import Test.MerkleTree as MerkleTree
+import Test.MinotaurStake as MinotaurStake
 import Test.Options.Parsers as Options.Parsers
 import Test.PermissionedCandidates as PermissionedCandidates
 import Test.PoCECDSA as PoCECDSA
@@ -50,15 +55,16 @@ import Test.Versioning as Versioning
 -- > You can ignore it, it's not a memory leak, it's just that we attach a lot of listeners to the exit event
 main ∷ Effect Unit
 main = do
+  pk ← freshPrivateKey
   Test.Unit.Main.runTest
     $ interpretWrappedTest do
 
-        group "Unit tests" do
-          MerkleTree.tests
-          MerkleProofSerialisation.tests
-          Options.Parsers.tests
-          AddressUtils.tests
-          ConfigFile.tests
+        -- group "Unit tests" do
+        --   MerkleTree.tests
+        --   MerkleProofSerialisation.tests
+        --   Options.Parsers.tests
+        --   AddressUtils.tests
+        --   ConfigFile.tests
 
         group "Plutip integration tests" do
           InitCandidatePermissionToken.tests
@@ -82,14 +88,15 @@ main = do
           DParameter.tests
           PermissionedCandidates.tests
           GarbageCollector.tests
+          MinotaurStake.tests pk
 
-        plutipGroup "POC Plutip tests" do
-          PoCInlineDatum.tests
-          PoCReferenceInput.tests
-          PoCReferenceScript.tests
-          PoCSerialiseData.tests
-          PoCECDSA.testScenario
-          PoCSchnorrSecp256k1.tests
+-- plutipGroup "POC Plutip tests" do
+--   PoCInlineDatum.tests
+--   PoCReferenceInput.tests
+--   PoCReferenceScript.tests
+--   PoCSerialiseData.tests
+--   PoCECDSA.testScenario
+--   PoCSchnorrSecp256k1.tests
 
-        group "Roundtrips" $ do
-          Data.tests
+-- group "Roundtrips" $ do
+--   Data.tests

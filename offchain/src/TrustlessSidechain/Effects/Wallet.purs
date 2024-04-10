@@ -7,11 +7,12 @@ module TrustlessSidechain.Effects.Wallet
   , handleWalletLive
   , handleWalletWith
   , ownPaymentPubKeyHashes
+  , ownStakePubKeyHashes
   ) where
 
 import Contract.Prelude
 
-import Contract.Address (Address, NetworkId, PaymentPubKeyHash)
+import Contract.Address (Address, NetworkId, PaymentPubKeyHash, StakePubKeyHash)
 import Contract.Address as Address
 import Contract.Utxos (UtxoMap)
 import Contract.Wallet as Wallet
@@ -36,6 +37,7 @@ data WalletF a
   = GetNetworkId (NetworkId → a)
   | GetWalletAddresses (Array Address → a)
   | OwnPaymentPubKeyHashes (Array PaymentPubKeyHash → a)
+  | OwnStakePubKeyHashes (Array (Maybe StakePubKeyHash) → a)
   | GetWalletUtxos (Maybe UtxoMap → a)
 
 derive instance functorWalletF ∷ Functor WalletF
@@ -58,6 +60,9 @@ getWalletAddresses = Run.lift _wallet (GetWalletAddresses identity)
 ownPaymentPubKeyHashes ∷ ∀ r. Run (WALLET + r) (Array PaymentPubKeyHash)
 ownPaymentPubKeyHashes = Run.lift _wallet (OwnPaymentPubKeyHashes identity)
 
+ownStakePubKeyHashes ∷ ∀ r. Run (WALLET + r) (Array (Maybe StakePubKeyHash))
+ownStakePubKeyHashes = Run.lift _wallet (OwnStakePubKeyHashes identity)
+
 getWalletUtxos ∷ ∀ r. Run (WALLET + r) (Maybe UtxoMap)
 getWalletUtxos = Run.lift _wallet (GetWalletUtxos identity)
 
@@ -72,6 +77,9 @@ handleWalletLive = case _ of
   OwnPaymentPubKeyHashes f → f <$> withTry
     (fromError "ownPaymentPubKeyHashes: ")
     Wallet.ownPaymentPubKeyHashes
+  OwnStakePubKeyHashes f → f <$> withTry
+    (fromError "ownStakePubKeyHashes: ")
+    Wallet.ownStakePubKeyHashes
   GetWalletUtxos f → f <$> withTry
     (fromError "getWalletUtxos: ")
     Wallet.getWalletUtxos
