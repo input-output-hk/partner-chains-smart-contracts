@@ -39,6 +39,7 @@ import TrustlessSidechain.EndpointResp
       , SaveRootResp
       , InitCheckpointResp
       , InitResp
+      , InitCandidatePermissionTokenResp
       , InitTokensMintResp
       , InitCommitteeSelectionResp
       , InitFuelResp
@@ -77,6 +78,9 @@ import TrustlessSidechain.GetSidechainAddresses
   )
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.InitSidechain (initSidechain, toSidechainParams)
+import TrustlessSidechain.InitSidechain.CandidatePermissionToken
+  ( initCandidatePermissionToken
+  )
 import TrustlessSidechain.InitSidechain.Checkpoint (initCheckpoint)
 import TrustlessSidechain.InitSidechain.CommitteeSelection
   ( initCommitteeSelection
@@ -106,6 +110,7 @@ import TrustlessSidechain.Options.Types
       , InitCheckpoint
       , Init
       , InitCommitteeSelection
+      , InitCandidatePermissionToken
       , InitTokensMint
       , InitFuel
       , InitMerkleRoot
@@ -489,6 +494,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
           { atmsKind
           , committeePubKeys: List.toUnfoldable rawCommitteePubKeys
           }
+
         let
           sc = unwrap scParams
           isc =
@@ -503,7 +509,6 @@ runTxEndpoint sidechainEndpointParams endpoint =
             , initThresholdDenominator: sc.thresholdDenominator
             , initGovernanceAuthority: sc.governanceAuthority
             }
-
         resp ← initCommitteeSelection (toSidechainParams isc)
           isc.initCandidatePermissionTokenMintInfo
           isc.initSidechainEpoch
@@ -513,7 +518,17 @@ runTxEndpoint sidechainEndpointParams endpoint =
         pure $ InitCommitteeSelectionResp $ map
           (\r → r { initTransactionIds = map unwrap r.initTransactionIds })
           resp
-
+      InitCandidatePermissionToken
+        { initCandidatePermissionTokenMintInfo
+        , version
+        } → do
+        resp ← initCandidatePermissionToken scParams
+          initCandidatePermissionTokenMintInfo
+          (unwrap sidechainEndpointParams).atmsKind
+          version
+        pure $ InitCandidatePermissionTokenResp $ map
+          (\r → r { initTransactionIds = map unwrap r.initTransactionIds })
+          resp
       InitFuel { version } → do
         let
           toResp r = r { initTransactionIds = map unwrap r.initTransactionIds }

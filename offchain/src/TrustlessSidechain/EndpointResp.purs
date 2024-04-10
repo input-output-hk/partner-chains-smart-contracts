@@ -126,6 +126,13 @@ data EndpointResp
           , sidechainAddresses ∷ SidechainAddresses
           }
       )
+  | InitCandidatePermissionTokenResp
+      ( Maybe
+          { initTransactionIds ∷ Array ByteArray
+          , sidechainParams ∷ SidechainParams
+          , sidechainAddresses ∷ SidechainAddresses
+          }
+      )
   | SaveCheckpointResp { transactionId ∷ ByteArray }
   | InsertVersionResp { versioningTransactionIds ∷ Array ByteArray }
   | UpdateVersionResp { versioningTransactionIds ∷ Array ByteArray }
@@ -430,6 +437,28 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
           J.fromObject $
             Object.fromFoldable
               [ "endpoint" /\ J.fromString "InitCommitteeSelection"
+              , "initTransactionIds" /\ J.fromArray
+                  (map (J.fromString <<< byteArrayToHex) initTransactionIds)
+              , "sidechainParams" /\ CA.encode scParamsCodec sidechainParams
+              , "addresses" /\ J.fromObject
+                  ( Object.fromFoldable
+                      ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
+                          sidechainAddresses.addresses
+                      )
+                  )
+              ]
+      in
+        CA.encode (CAC.maybe CA.json) (map encodeInitCommitteeSelectionResp resp)
+    InitCandidatePermissionTokenResp resp →
+      let
+        encodeInitCommitteeSelectionResp
+          { initTransactionIds
+          , sidechainParams
+          , sidechainAddresses
+          } =
+          J.fromObject $
+            Object.fromFoldable
+              [ "endpoint" /\ J.fromString "InitCandidatePermissionToken"
               , "initTransactionIds" /\ J.fromArray
                   (map (J.fromString <<< byteArrayToHex) initTransactionIds)
               , "sidechainParams" /\ CA.encode scParamsCodec sidechainParams

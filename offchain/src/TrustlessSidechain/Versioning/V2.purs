@@ -5,6 +5,7 @@ module TrustlessSidechain.Versioning.V2
   , getFuelPoliciesAndValidators
   , getDsPoliciesAndValidators
   , getMerkleRootPoliciesAndValidators
+  , getCandidatePermissionTokenPoliciesAndValidators
   ) where
 
 import Contract.Prelude
@@ -66,6 +67,20 @@ getCommitteeSelectionPoliciesAndValidators ∷
     , versionedValidators ∷ (List (Tuple Types.ScriptId Validator))
     }
 getCommitteeSelectionPoliciesAndValidators _ =
+  let
+    versionedPolicies = List.fromFoldable []
+    versionedValidators = List.fromFoldable []
+  in
+    pure $ { versionedPolicies, versionedValidators }
+
+getCandidatePermissionTokenPoliciesAndValidators ∷
+  ∀ r.
+  SidechainParams →
+  Run (EXCEPT OffchainError + r)
+    { versionedPolicies ∷ (List (Tuple Types.ScriptId MintingPolicy))
+    , versionedValidators ∷ (List (Tuple Types.ScriptId Validator))
+    }
+getCandidatePermissionTokenPoliciesAndValidators _ =
   let
     versionedPolicies = List.fromFoldable []
     versionedValidators = List.fromFoldable []
