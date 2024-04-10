@@ -111,6 +111,7 @@ import TrustlessSidechain.Options.Types
       , InitFuel
       , InitMerkleRoot
       , Init
+      , InitCandidatePermissionToken
       , CommitteeCandidateReg
       , CommitteeCandidateDereg
       , CommitteeHash
@@ -182,6 +183,10 @@ optSpec maybeConfig =
     , command "init-merkle-root"
         ( info (withCommonOpts maybeConfig initMerkleRootSpec)
             (progDesc "Initialise Merkle Root scripts")
+        )
+    , command "init-candidate-permission-token"
+        ( info (withCommonOpts maybeConfig initCandidatePermissionTokenSpec)
+            (progDesc "Initialise candidate permission token")
         )
     , command "addresses"
         ( info (withCommonOpts maybeConfig getAddrSpec)
@@ -1068,6 +1073,17 @@ initCommitteeSelectionSpec = ado
       , initSidechainEpoch
       , initCandidatePermissionTokenMintInfo
       , genesisHash
+      , version
+      }
+
+initCandidatePermissionTokenSpec ∷ Parser TxEndpoint
+initCandidatePermissionTokenSpec = ado
+  initCandidatePermissionTokenMintInfo ←
+    optional initCandidatePermissionTokenMintHelper
+  version ← parseVersion
+  in
+    InitCandidatePermissionToken
+      { initCandidatePermissionTokenMintInfo
       , version
       }
 
