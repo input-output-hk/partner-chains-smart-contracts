@@ -7,11 +7,9 @@ import Contract.Prelude
 import Contract.Log as Log
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Wallet as Wallet
-import Control.Monad.Error.Class as MonadError
 import Data.BigInt as BigInt
 import Data.List (head)
 import Mote.Monad as Mote.Monad
-import Run.Except (throw)
 import Test.InitSidechain.Utils (expectedInitTokens, failMsg, unorderedEq)
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
@@ -59,7 +57,8 @@ testInitCheckpointUninitialised =
         , BigInt.fromInt 50_000_000
         ]
     $ \alice → do
-        result ← withUnliftApp (MonadError.try <<< Wallet.withKeyWallet alice)
+        -- | Test succeeds if action fails.
+        withUnliftApp (Test.Utils.fails <<< Wallet.withKeyWallet alice)
           do
             liftContract $ Log.logInfo'
               "InitSidechain 'testInitCheckpointUninitialised'"
@@ -84,11 +83,6 @@ testInitCheckpointUninitialised =
               initGenesisHash
               initATMSKind
               1
-        case result of
-          Right _ →
-            throw $ GenericInternalError
-              "Contract should have failed but it didn't."
-          Left _err → pure unit
 
 -- | Test `InitCheckpoint` having run `initTokensMint`, expecting success and for the
 -- | `checkpointInitToken` to be spent
