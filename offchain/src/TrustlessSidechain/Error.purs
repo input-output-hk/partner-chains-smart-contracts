@@ -16,6 +16,8 @@ data OffchainError
   = NotFoundUtxo String
   -- | Own payment public key hashes cannot be found
   | NotFoundOwnPubKeyHash
+  -- | Own stake public key hashes cannot be found
+  | NotFoundOwnStakePubKeyHash
   -- | Own address cannot be found
   | NotFoundOwnAddress
   -- | Reference script not found in UTXO

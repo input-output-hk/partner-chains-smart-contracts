@@ -6,6 +6,7 @@ module TrustlessSidechain.Utils.Address
   , addressFromBech32Bytes
   , byteArrayToBech32BytesUnsafe
   , getOwnPaymentPubKeyHash
+  , getOwnStakePubKeyHash
   , getOwnWalletAddress
   , toValidatorHash
   , toAddress
@@ -23,6 +24,7 @@ import Contract.Prelude hiding (note)
 import Contract.Address
   ( Address
   , PaymentPubKeyHash
+  , StakePubKeyHash
   , validatorHashEnterpriseAddress
   )
 import Contract.Address as Address
@@ -72,6 +74,7 @@ import TrustlessSidechain.Effects.Wallet as Effect
 import TrustlessSidechain.Error
   ( OffchainError
       ( NotFoundOwnPubKeyHash
+      , NotFoundOwnStakePubKeyHash
       , InvalidAddress
       , ConversionError
       , InvalidCurrencySymbol
@@ -153,6 +156,14 @@ getOwnPaymentPubKeyHash ∷
 getOwnPaymentPubKeyHash = do
   pubKeyHashes ← Effect.ownPaymentPubKeyHashes
   Run.note NotFoundOwnPubKeyHash $ Array.head pubKeyHashes
+
+-- | Return a single own stake pub key hash without generating warnings.
+getOwnStakePubKeyHash ∷
+  ∀ r.
+  Run (EXCEPT OffchainError + WALLET + r) StakePubKeyHash
+getOwnStakePubKeyHash = do
+  stakePubKeyHashes ← Effect.ownStakePubKeyHashes
+  Run.note NotFoundOwnStakePubKeyHash $ join $ Array.head stakePubKeyHashes
 
 -- | Return a single own wallet address without generating warnings.
 getOwnWalletAddress ∷
