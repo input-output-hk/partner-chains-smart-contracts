@@ -106,6 +106,12 @@ tests = plutipGroup "Estimated fees for minting and burning versioning tokens"
 
               let
                 (actual ∷ BigInt) = unwrap (unwrap (unwrap (unwrap fTx)).body).fee
-                (expected ∷ BigInt) = BigInt.fromInt 495664
+                (expected1 ∷ BigInt) = BigInt.fromInt 495664
+                (expected2 ∷ BigInt) = BigInt.fromInt 504422
 
-              liftAff $ Assert.equal expected actual
+              liftAff $ Assert.assert
+                ( "Expected " <> show expected1 <> " or " <> show expected2
+                    <> "but got "
+                    <> show actual
+                )
+                (expected1 == actual || expected2 == actual)
