@@ -9,7 +9,11 @@
 -- datum that identifies the script and its version.
 module TrustlessSidechain.MinotaurStake.MinotaurStakePolicy (serialisableMinotaurStakePolicy) where
 
-import Plutus.V1.Ledger.Value (AssetClass (AssetClass), assetClassValueOf)
+import Plutus.V1.Ledger.Value (
+  AssetClass (AssetClass),
+  CurrencySymbol,
+  assetClassValueOf,
+ )
 import Plutus.V2.Ledger.Api (
   Address,
   Datum (Datum),
@@ -49,7 +53,7 @@ data MinotaurStakeDatum = MinotaurStakeDatum
     stakePoolId :: BuiltinByteString
   , -- | currency symbol of the minotaur stake delegation token
     -- @since Unreleased
-    stakeCurrencySymbol :: Currencysymbol
+    stakeCurrencySymbol :: CurrencySymbol
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
