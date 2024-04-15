@@ -53,7 +53,7 @@ import TrustlessSidechain.Utils (
 --
 --   ERROR-MINO-POLICY-04: Transaction is not signed by the correct Stake Key
 --
---   ERROR-MINO-POLICY-05: Transaction must mint exactly one MinotaurStake token
+--   ERROR-MINO-POLICY-05: Transaction must burn exactly one MinotaurStake token
 --
 --   ERROR-MINO-POLICY-06: Stake key not found in input
 --
