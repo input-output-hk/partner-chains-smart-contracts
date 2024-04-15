@@ -66,6 +66,7 @@ import TrustlessSidechain.EndpointResp
       , BurnNFTsResp
       , InitTokenStatusResp
       , ListVersionedScriptsResp
+      , MinotaurDelegateResp
       )
   , stringifyEndpointResp
   )
@@ -92,6 +93,7 @@ import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
 import TrustlessSidechain.MerkleRoot (SaveRootParams(SaveRootParams))
 import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.MerkleTree as MerkleTree
+import TrustlessSidechain.MinotaurStake as MinotaurStake
 import TrustlessSidechain.Options.Specs (options)
 import TrustlessSidechain.Options.Types
   ( Options(TxOptions, UtilsOptions, CLIVersion)
@@ -125,6 +127,7 @@ import TrustlessSidechain.Options.Types
       , BurnNFTs
       , InitTokenStatus
       , ListVersionedScripts
+      , MinotaurDelegate
       )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
@@ -710,6 +713,15 @@ runTxEndpoint sidechainEndpointParams endpoint =
               { sidechainParams: scParams, atmsKind }
               version
           )
+
+      MinotaurDelegate
+        { stakePoolId, partnerChainRewardAddress } →
+        MinotaurStake.mkMinotaurDelegateLookupsAndConstraints
+          { stakePoolId, partnerChainRewardAddress }
+          >>= balanceSignAndSubmit "MinotaurDelegate"
+          <#> unwrap
+          >>> { transactionId: _ }
+          >>> MinotaurDelegateResp
 
 -- | Executes an endpoint for the `utils` subcommand. Note that this does _not_
 -- | need to be in the Contract monad.
