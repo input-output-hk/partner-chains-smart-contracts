@@ -7,6 +7,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 ## Added
 
+  * Added `minotaur-delegate` command.
   * Added `use-candidate-permission-token` switch to `register` and `addresses`
     command.  Using this flag will assume usage of candidate permission tokens.
   * Added CLI endpoint `list-versioned-scripts` switch to return currently versioned scripts.

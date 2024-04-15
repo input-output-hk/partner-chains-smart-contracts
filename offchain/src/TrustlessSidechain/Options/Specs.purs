@@ -127,6 +127,7 @@ import TrustlessSidechain.Options.Types
       , BurnNFTs
       , InitTokenStatus
       , ListVersionedScripts
+      , MinotaurDelegate
       )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
@@ -288,6 +289,12 @@ optSpec maybeConfig =
         ( info (pure CLIVersion)
             ( progDesc
                 "Display semantic version of the CLI and its git hash"
+            )
+        )
+    , command "minotaur-delegate"
+        ( info (withCommonOpts maybeConfig minotaurDelegateSpec)
+            ( progDesc
+                "Delegate your tokens to the partner chain SPO using the Minotaur protocol"
             )
         )
     ]
@@ -1520,3 +1527,23 @@ cborCombinedMerkleProofSpec = ado
   in
     UtilsOptions
       { utilsOptions: CborCombinedMerkleProofAct { merkleTree, merkleTreeEntry } }
+
+minotaurDelegateSpec ∷ Parser TxEndpoint
+minotaurDelegateSpec = ado
+  partnerChainRewardAddress ← parsePartnerChainRewardAddress
+  stakePoolId ← parseStakePoolId
+  in MinotaurDelegate { partnerChainRewardAddress, stakePoolId }
+
+parsePartnerChainRewardAddress ∷ Parser ByteArray
+parsePartnerChainRewardAddress = option byteArray $ fold
+  [ long "partner-chain-reward-address"
+  , metavar "PARTNER_CHAIN_REWARD_ADDRESS"
+  , help "Partner chain reward address"
+  ]
+
+parseStakePoolId ∷ Parser ByteArray
+parseStakePoolId = option byteArray $ fold
+  [ long "stake-pool-id"
+  , metavar "STAKE_POOL_ID"
+  , help "Stake pool ID"
+  ]

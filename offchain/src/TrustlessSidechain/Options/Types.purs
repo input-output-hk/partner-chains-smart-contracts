@@ -276,6 +276,10 @@ data TxEndpoint
       }
   | BurnNFTs
   | InitTokenStatus
+  | MinotaurDelegate
+      { partnerChainRewardAddress ∷ ByteArray
+      , stakePoolId ∷ ByteArray
+      }
 
 -- | `CandidatePermissionTokenMintInit` is a type alias for minting the
 -- | candidate permission token when initializing the sidechain
