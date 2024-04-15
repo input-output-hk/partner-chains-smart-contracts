@@ -9,6 +9,7 @@ import Laws (toDataSafeLaws', toDataUnsafeLaws')
 import Plutus.V2.Ledger.Api (
   CurrencySymbol,
   LedgerBytes (LedgerBytes),
+  PubKeyHash,
   ValidatorHash,
  )
 import Test.QuickCheck (
@@ -56,6 +57,10 @@ import TrustlessSidechain.MerkleTree (
   RootHash (RootHash),
   Side (L, R),
   Up (Up),
+ )
+import TrustlessSidechain.MinotaurStake.MinotaurStakeDatum (
+  MinotaurStakeDatum (MinotaurStakeDatum),
+  MinotaurStakeRedeemer (BurnMinotaurStake, MintMinotaurStake),
  )
 import TrustlessSidechain.PlutusPrelude qualified as PTPrelude
 import TrustlessSidechain.Types (
@@ -231,6 +236,10 @@ main =
     , testProperty "PermissionedCandidatesValidatorDatum (unsafe)" . toDataUnsafeLaws' genPCVD shrinkPCVD $ show
     , testProperty "PermissionedCandidatesValidatorRedeemer (safe)" . toDataSafeLaws' genPCVR shrinkPCVR $ show
     , testProperty "PermissionedCandidatesValidatorRedeemer (unsafe)" . toDataUnsafeLaws' genPCVR shrinkPCVR $ show
+    , testProperty "MinotaurStakeDatum (safe)" . toDataSafeLaws' genMintaurStakeDatum shrinkMinotaurStakeDatum $ show
+    , testProperty "MinotaurStakeDatum (unsafe)" . toDataUnsafeLaws' genMintaurStakeDatum shrinkMinotaurStakeDatum $ show
+    , testProperty "MinotaurStakeRedeemer (safe)" . toDataSafeLaws' genMinotaurStakeRedeemer shrinkMinotaurStakeRedeemer $ show
+    , testProperty "MinotaurStakeRedeemer (unsafe)" . toDataUnsafeLaws' genMinotaurStakeRedeemer shrinkMinotaurStakeRedeemer $ show
     ]
   where
     go :: QuickCheckTests -> QuickCheckTests
@@ -240,25 +249,40 @@ main =
 
 -- Generators
 
+genBuiltinByteString :: Gen PTPrelude.BuiltinByteString
+genBuiltinByteString = do
+  ArbitraryBytes (LedgerBytes bbs) <- arbitrary
+  pure bbs
+
+genPubKeyHash :: Gen PubKeyHash
+genPubKeyHash = do
+  ArbitraryPubKeyHash pkh <- arbitrary
+  pure pkh
+
+genCurrencySymbol :: Gen CurrencySymbol
+genCurrencySymbol = do
+  ArbitraryCurrencySymbol sym <- arbitrary
+  pure sym
+
+genMintaurStakeDatum :: Gen MinotaurStakeDatum
+genMintaurStakeDatum =
+  MinotaurStakeDatum
+    <$> genBuiltinByteString
+      <*> genPubKeyHash
+      <*> genBuiltinByteString
+      <*> genCurrencySymbol
+
+genMinotaurStakeRedeemer :: Gen MinotaurStakeRedeemer
+genMinotaurStakeRedeemer = oneof [pure MintMinotaurStake, pure BurnMinotaurStake]
+
 genNode :: Gen Node
-genNode = Node <$> go <*> go
-  where
-    go :: Gen PTPrelude.BuiltinByteString
-    go = do
-      ArbitraryBytes (LedgerBytes bbs) <- arbitrary
-      pure bbs
+genNode = Node <$> genBuiltinByteString <*> genBuiltinByteString
 
 genDs :: Gen Ds
-genDs =
-  Ds <$> do
-    ArbitraryCurrencySymbol sym <- arbitrary
-    pure sym
+genDs = Ds <$> genCurrencySymbol
 
 genDsDatum :: Gen DsDatum
-genDsDatum =
-  DsDatum <$> do
-    ArbitraryBytes (LedgerBytes bbs) <- arbitrary
-    pure bbs
+genDsDatum = DsDatum <$> genBuiltinByteString
 
 genDsConfDatum :: Gen DsConfDatum
 genDsConfDatum = DsConfDatum <$> go <*> go
@@ -518,17 +542,27 @@ genITR = oneof [pure MintInitToken, pure BurnInitToken]
 
 -- Shrinkers
 
+shrinkCurrencySymbol :: CurrencySymbol -> [CurrencySymbol]
+shrinkCurrencySymbol sym = do
+  ArbitraryCurrencySymbol sym' <- shrink (ArbitraryCurrencySymbol sym)
+  pure sym'
+
+shrinkBuiltinByteString :: PTPrelude.BuiltinByteString -> [PTPrelude.BuiltinByteString]
+shrinkBuiltinByteString bbs = do
+  ArbitraryBytes (LedgerBytes bbs') <- shrink (ArbitraryBytes (LedgerBytes bbs))
+  pure bbs'
+
+shrinkMinotaurStakeDatum :: MinotaurStakeDatum -> [MinotaurStakeDatum]
+shrinkMinotaurStakeDatum = const []
+
+shrinkMinotaurStakeRedeemer :: MinotaurStakeRedeemer -> [MinotaurStakeRedeemer]
+shrinkMinotaurStakeRedeemer = const []
+
 shrinkDs :: Ds -> [Ds]
-shrinkDs (Ds sym) =
-  Ds <$> do
-    ArbitraryCurrencySymbol sym' <- shrink (ArbitraryCurrencySymbol sym)
-    pure sym'
+shrinkDs (Ds sym) = Ds <$> shrinkCurrencySymbol sym
 
 shrinkDsDatum :: DsDatum -> [DsDatum]
-shrinkDsDatum (DsDatum bbs) =
-  DsDatum <$> do
-    ArbitraryBytes (LedgerBytes bbs') <- shrink (ArbitraryBytes (LedgerBytes bbs))
-    pure bbs'
+shrinkDsDatum (DsDatum bbs) = DsDatum <$> shrinkBuiltinByteString bbs
 
 shrinkNode :: Node -> [Node]
 shrinkNode (Node k n) = do

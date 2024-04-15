@@ -59,6 +59,8 @@ data ScriptId
   | PermissionedCandidatesValidator
   | ScriptCache
   | InitTokenPolicy
+  | MinotaurStakePolicy
+  | MinotaurStakeValidator
 
 derive instance Eq ScriptId
 derive instance Ord ScriptId
@@ -119,6 +121,10 @@ instance FromData ScriptId where
     Just ScriptCache
   fromData (Integer i) | i == BigInt.fromInt 27 =
     Just InitTokenPolicy
+  fromData (Integer i) | i == BigInt.fromInt 28 =
+    Just MinotaurStakePolicy
+  fromData (Integer i) | i == BigInt.fromInt 29 =
+    Just MinotaurStakeValidator
   fromData _ = Nothing
 
 instance ToData ScriptId where
@@ -148,3 +154,5 @@ instance ToData ScriptId where
   toData PermissionedCandidatesValidator = Integer (BigInt.fromInt 25)
   toData ScriptCache = Integer (BigInt.fromInt 26)
   toData InitTokenPolicy = Integer (BigInt.fromInt 27)
+  toData MinotaurStakePolicy = Integer (BigInt.fromInt 28)
+  toData MinotaurStakeValidator = Integer (BigInt.fromInt 29)

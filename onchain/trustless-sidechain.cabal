@@ -97,7 +97,9 @@ library
     TrustlessSidechain.MerkleRootTokenMintingPolicy
     TrustlessSidechain.MerkleRootTokenValidator
     TrustlessSidechain.MerkleTree
+    TrustlessSidechain.MinotaurStake.MinotaurStakeDatum
     TrustlessSidechain.MinotaurStake.MinotaurStakePolicy
+    TrustlessSidechain.MinotaurStake.MinotaurStakeValidator
     TrustlessSidechain.OffChain
     TrustlessSidechain.PermissionedCandidates
     TrustlessSidechain.ScriptCache
