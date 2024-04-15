@@ -36,6 +36,7 @@ import TrustlessSidechain.InitToken qualified as InitToken
 import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTokenMintingPolicy
 import TrustlessSidechain.MerkleRootTokenValidator qualified as MerkleRootTokenValidator
 import TrustlessSidechain.MinotaurStake.MinotaurStakePolicy qualified as MinotaurStakePolicy
+import TrustlessSidechain.MinotaurStake.MinotaurStakeValidator qualified as MinotaurStakeValidator
 import TrustlessSidechain.PermissionedCandidates qualified as PermissionedCandidates
 import TrustlessSidechain.PoCECDSA qualified as PoCECDSA
 import TrustlessSidechain.PoCInlineDatum qualified as PoCInlineDatum
@@ -363,6 +364,10 @@ main =
 
             ( "MinotaurStakePolicy"
             , MinotaurStakePolicy.serialisableMinotaurStakePolicy
+            )
+          ,
+            ( "MinotaurStakeValidator"
+            , MinotaurStakeValidator.serialisableMinotaurStakeValidator
             )
           ]
         -- Validators for proof of concept tests.
