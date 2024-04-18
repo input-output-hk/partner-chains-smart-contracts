@@ -59,6 +59,8 @@ data ScriptId
   | PermissionedCandidatesValidator
   | ScriptCache
   | InitTokenPolicy
+  | DataStoragePolicy
+  | DataStorageValidator
 
 derive instance Eq ScriptId
 derive instance Ord ScriptId
@@ -148,3 +150,5 @@ instance ToData ScriptId where
   toData PermissionedCandidatesValidator = Integer (BigInt.fromInt 25)
   toData ScriptCache = Integer (BigInt.fromInt 26)
   toData InitTokenPolicy = Integer (BigInt.fromInt 27)
+  toData DataStorageValidator = Integer (BigInt.fromInt 28)
+  toData DataStoragePolicy = Integer (BigInt.fromInt 29)

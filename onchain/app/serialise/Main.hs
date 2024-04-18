@@ -28,6 +28,7 @@ import TrustlessSidechain.CommitteeCandidateValidator qualified as CommitteeCand
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy qualified as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy qualified as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import TrustlessSidechain.DParameter qualified as DParameter
+import TrustlessSidechain.DataStorage qualified as DataStorage
 import TrustlessSidechain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.FUELProxyPolicy qualified as FUELProxyPolicy
@@ -341,6 +342,9 @@ main =
             ( "CommitteePlainSchnorrSecp256k1ATMSPolicy"
             , CommitteePlainSchnorrSecp256k1ATMSPolicy.serialisableMintingPolicy
             )
+          , -- Scripts for data storage
+            ("DataStoragePolicy", DataStorage.serialisableMintingPolicy)
+          , ("DataStorageValidator", DataStorage.serialisableValidator)
           , -- Distributed set validators / minting policies
             ("DsInsertValidator", DistributedSet.serialisableInsertValidator)
           , ("DsConfValidator", DistributedSet.serialisableDsConfValidator)

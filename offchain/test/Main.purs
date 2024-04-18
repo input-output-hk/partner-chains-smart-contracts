@@ -11,6 +11,7 @@ import Test.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSec
 import Test.ConfigFile as ConfigFile
 import Test.DParameter as DParameter
 import Test.Data as Data
+import Test.DataStorage as DataStorage
 import Test.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import Test.FUELProxyPolicy as FUELProxyPolicy
 import Test.GarbageCollector as GarbageCollector
@@ -61,6 +62,7 @@ main = do
           ConfigFile.tests
 
         group "Plutip integration tests" do
+          DataStorage.tests
           InitCandidatePermissionToken.tests
           InitMerkleRoot.tests
           InitSidechain.tests

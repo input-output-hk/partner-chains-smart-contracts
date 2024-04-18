@@ -35,6 +35,7 @@
   , "partial"
   , "prelude"
   , "profunctor"
+  , "profunctor-lenses"
   , "quickcheck"
   , "random"
   , "run"
