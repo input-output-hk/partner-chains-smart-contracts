@@ -203,6 +203,12 @@ Available commands:
 ```
   init                     Initialise sidechain
   init-tokens-mint         Mint all sidechain initialisation tokens
+  init-committee-selection Initialise the committee selection mechanism
+  init-checkpoint          Initialise the checkpointing mechanism
+  init-fuel                Initialise the FUEL mechanism
+  init-merkle-root         Initialise the Merkle Root feature
+  init-candidate-permission-token
+                           Initialise the candidate permission token mechanism
   addresses                Get the script addresses for a given sidechain
   claim-v1                 Claim a FUEL tokens from a proof
   burn-v1                  Burn a certain amount of FUEL tokens
@@ -217,7 +223,7 @@ Available commands:
   committee-handover       An alias for saving the merkle root, followed by
                            updating the committee hash
   save-checkpoint          Saving a new checkpoint
-  insert-version           Initialize a new protocol version
+  insert-version-2         Initialize protocol version 2
   update-version           Update an existing protocol version
   invalidate-version       Invalidate a protocol version
   list-versioned-scripts   Get scripts (validators and minting policies) that
@@ -234,7 +240,7 @@ Available commands:
   cli-version              Display semantic version of the CLI and its git hash
 ```
 
-#### 3.3.1. Initialising the sidechain
+#### 3.3.1.1 Initialising the sidechain in full
 
 Before we can start claiming tokens, we must initialise the sidechain by:
 initialising the sidechain's tokens, and setting our initial committee. Only
@@ -263,6 +269,117 @@ nix run .#sidechain-main-cli -- init \
   --sidechain-epoch 0 \
   --version 1
   --candidate-permission-token-amount 42
+```
+
+#### 3.3.1.2 Initialising the sidechain in parts
+
+All of the following commands are idempotent.
+
+Before we can start claiming tokens, we must initialise the sidechain by:
+initialising the sidechain's tokens, and setting our initial committee. Only
+after these steps will we be able to obtain the validator addresses.
+
+To initialise the sidechain, we can run the following commands which will spend
+the genesis committee hash UTxO:
+
+# Initialise mint
+
+Mint the tokens to be used in subsequent commands.
+
+This will mint all tokens, regardless of whether there's an intention to use all
+of them.
+
+Spends Genesis Utxo
+
+Mints:
+* `"Checkpoint InitToken"`
+* `"DistributedSet InitToken"`
+* `"CandidatePermission InitToken"`
+* `"Committee oracle InitToken"`
+* `"Version oracle InitToken"`
+
+```
+nix run .#sidechain-main-cli -- init-tokens-mint --version 1
+```
+
+# Initialise committee
+
+Initialise the committee selection mechanism. Burn `"Committee oracle InitToken"`
+which was created by `init-tokens-mint`.
+
+```
+nix run .#sidechain-main-cli -- init-committee-selection \
+  --committee-pub-key aabbcc \
+  --committee-pub-key ccbbaa \
+  --sidechain-epoch 0 \
+  --version 1
+  --candidate-permission-token-amount 42
+```
+
+Insert policies:
+* `CommitteeCertificateVerificationMintingPolicy`
+* `CommitteeOraclePolicy`
+
+Insert validators:
+* `CommitteeHashValidator`
+* `CommitteeCandidateValidator`
+
+# Init FUEL
+
+Initialise the FUEL mechanism. Burn `"DistributedSet InitToken"`.
+
+Insert policies:
+* `DsKeyPolicy`
+* `FUELMintingPolicy`
+* `FUELBurningPolicy`
+
+```
+nix run .#sidechain-main-cli -- init-fuel --version 1
+```
+
+# Init Merkle Root
+
+Initialise the Merkle Root mechanism. Burn `"Checkpoint InitToken"`.
+
+Insert policy: `MerkleRootTokenPolicy`
+Insert validator: `MerkleRootTokenValidator`
+
+```
+nix run .#sidechain-main-cli -- init-merkle-root --version 1
+```
+
+# Init Checkpoint
+
+Initialise the Checkpoint mechanism. Burns `"Checkpoint InitToken"`.
+
+Insert validator: `CheckpointValidator`
+
+```
+nix run .#sidechain-main-cli -- init-checkpoint \
+  --committee-pub-key aabbcc \
+  --committee-pub-key ccbbaa \
+  --sidechain-epoch 0 \
+  --version 1
+  --candidate-permission-token-amount 42
+```
+
+# Initialise Candidate Permission Token
+
+Initialise the Candidate Permission Token mechanism.
+Burns `"Candidate permission token init"`.
+
+Insert validator: `CheckpointValidator`
+
+```
+nix run .#sidechain-main-cli -- init-candidate-permission-token \
+  --version 1
+  --candidate-permission-token-amount 42
+```
+
+# Insert Version 2
+
+```
+nix run .#sidechain-main-cli -- insert-version-2
 ```
 
 #### 3.3.2. List currently versioned scripts
