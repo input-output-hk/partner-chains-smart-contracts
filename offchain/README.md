@@ -282,7 +282,7 @@ after these steps will we be able to obtain the validator addresses.
 To initialise the sidechain, we can run the following commands which will spend
 the genesis committee hash UTxO:
 
-# Initialise mint
+# Initialise Mint
 
 Mint the tokens to be used in subsequent commands.
 
@@ -302,9 +302,9 @@ Mints:
 nix run .#sidechain-main-cli -- init-tokens-mint --version 1
 ```
 
-# Initialise committee
+# Initialise Committee
 
-Initialise the committee selection mechanism. Burn `"Committee oracle InitToken"`
+Initialise the Committee Selection mechanism. Burn `"Committee oracle InitToken"`
 which was created by `init-tokens-mint`.
 
 ```
