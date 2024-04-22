@@ -547,6 +547,262 @@ Standard output.
 }
 ```
 
+```bash
+# Create initialisation tokens
+nix run .#sidechain-main-cli -- init-tokens-mint \
+    --version 1 \
+    --sidechain-id 69 \
+    --threshold-numerator 1 \
+    --threshold-denominator 2 \
+    --atms-kind plain-ecdsa-secp256k1 \
+    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
+    --payment-signing-key-file ./alice.skey \
+    --genesis-committee-hash-utxo $ECDSA_SECP256K1_GENESIS_UTXO | jq
+
+# Initialise Committee Selection
+
+COMMITTEE_KEYS=""
+for SC_MEMBER in $ECDSA_SECP256K1_SC_COMMITTEE; do
+    PUB_KEY=$(jq -r .rawHexPublicKey "$SC_MEMBER")
+    COMMITTEE_KEYS+=" --committee-pub-key $PUB_KEY"
+done
+
+nix run .#sidechain-main-cli -- init-committee-selection \
+    --payment-signing-key-file "$SIGNING_KEY" \
+    --genesis-committee-hash-utxo "$ECDSA_SECP256K1_GENESIS_UTXO" \
+    --sidechain-id 69 \
+    --sidechain-genesis-hash 112233 \
+    --version 1 \
+    --threshold-numerator 1 \
+    --threshold-denominator 2 \
+    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
+    --atms-kind plain-ecdsa-secp256k1 \
+    $COMMITTEE_KEYS \
+    --sidechain-epoch 0 | jq
+
+# Initialise Checkpoint Mechanism
+nix run .#sidechain-main-cli -- init-checkpoint \
+    --payment-signing-key-file "$SIGNING_KEY" \
+    --genesis-committee-hash-utxo "$ECDSA_SECP256K1_GENESIS_UTXO" \
+    --sidechain-id 69 \
+    --sidechain-genesis-hash 112233 \
+    --version 1 \
+    --threshold-numerator 1 \
+    --threshold-denominator 2 \
+    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
+    --atms-kind plain-ecdsa-secp256k1 \
+    $COMMITTEE_KEYS \
+    --sidechain-epoch 0 | jq
+
+# Initialise Merkle Root Mechanism
+nix run .#sidechain-main-cli -- init-merkle-root \
+    --payment-signing-key-file "$SIGNING_KEY" \
+    --genesis-committee-hash-utxo "$ECDSA_SECP256K1_GENESIS_UTXO" \
+    --sidechain-id 69 \
+    --version 1 \
+    --threshold-numerator 1 \
+    --threshold-denominator 2 \
+    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
+    --atms-kind plain-ecdsa-secp256k1 | jq
+
+# Initialise FUEL
+nix run .#sidechain-main-cli -- init-fuel \
+    --payment-signing-key-file "$SIGNING_KEY" \
+    --genesis-committee-hash-utxo "$ECDSA_SECP256K1_GENESIS_UTXO" \
+    --sidechain-id 69 \
+    --version 1 \
+    --threshold-numerator 1 \
+    --threshold-denominator 2 \
+    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
+    --atms-kind plain-ecdsa-secp256k1 | jq
+```
+
+InitTokensMint output:
+```
+{
+  "endpoint": "InitTokensMint",
+  "transactionId": "a69c7c56c9d54833b360d91fbce5f64dfed11d9257ef0680c49062207af90d28",
+  "sidechainParams": {
+    "chainId": 69,
+    "genesisUtxo": "0e08ef9d08d74210f2309c10d67a9f6f8340c238b80beb74a732e60705312bc2#2",
+    "governanceAuthority": "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c",
+    "thresholdDenominator": 2,
+    "thresholdNumerator": 1
+  },
+  "addresses": {
+    "CommitteeCandidateValidator": "addr_test1wzph78rncn6xagc86ynm045szqn3h5cu42evgnef2qjhees2qvdw5",
+    "DsConfValidator": "addr_test1wpdut2h8jc5ylkf5azth0scdmpnmt50hcus89yl2q5507wqdrh6hl",
+    "DsInsertValidator": "addr_test1wrp9yjw92239jp7n402s0lyu62gkynyf3mhfdc02wretqdq7uswfe",
+    "VersionOracleValidator": "addr_test1wpe30nn44yqv343wdx3yw2gw8ukjtxklkewlkzjcvc0sgscymxqcc",
+    "PermissionedCandidatesValidator": "addr_test1wpqsncltzfvy3nfqx382qrntk4r9hct49fdjryadt06vlfgx0q4ls",
+    "DParameterValidator": "addr_test1wq6ltscr3z4t00tctx06rfmzp8ec2ln0msdcxh6htjs89ygk2cnjv",
+    "MerkleRootTokenValidator": "addr_test1wrrtmtl0t0vnyjlu5njntp7h69sf29xkjtw7eklyzk9skvsptux7u",
+    "CheckpointValidator": "addr_test1wrckygkuygfu78pjn5zqmey9z98upvxmjklrpe8za7q82cczx6a43",
+    "CommitteeHashValidator": "addr_test1wr0d8zlcem02xvgtnuc9lsjntvpjn0w4v66l6nxwkwalfcc5lrytj"
+  },
+  "validatorHashes": {
+    "CommitteeCandidateValidator": "837f1c73c4f46ea307d127b7d69010271bd31caab2c44f2950257ce6",
+    "DsConfValidator": "5bc5aae796284fd934e89777c30dd867b5d1f7c7207293ea0528ff38",
+    "DsInsertValidator": "c25249c552a25907d3abd507fc9cd291624c898eee96e1ea70f2b034",
+    "VersionOracleValidator": "7317ce75a900c8d62e69a247290e3f2d259adfb65dfb0a58661f0443",
+    "PermissionedCandidatesValidator": "4109e3eb125848cd20344ea00e6bb5465be1752a5b2193ad5bf4cfa5",
+    "DParameterValidator": "35f5c30388aab7bd78599fa1a76209f3857e6fdc1b835f575ca07291",
+    "MerkleRootTokenValidator": "c6bdafef5bd9324bfca4e53587d7d1609514d692ddecdbe4158b0b32",
+    "CheckpointValidator": "f16222dc2213cf1c329d040de485114fc0b0db95be30e4e2ef807563",
+    "CommitteeHashValidator": "ded38bf8cedea3310b9f305fc2535b0329bdd566b5fd4cceb3bbf4e3"
+  },
+  "mintingPolicies": {
+    "DsConfPolicy": "6272c91a5835482662f377ca25a4f4cb07696ab33985e70f3687f988",
+    "CheckpointPolicy": "37d28ab47d0f3c4088dc5a60ea83694e6589a013462bb818a9bad8aa",
+    "FUELProxyPolicy": "62c9e530cb9f09b4a3b54118ab83b958b5d9d58b56b1fc5fa3cbaafe",
+    "VersionOraclePolicy": "b327dcbc9ed5ec269208037deeb7590e53457d008bc4fab47dc534a0",
+    "PermissionedCandidatesPolicy": "58069e2a0889c09d59ffa71230d5a4c88a13857129ac41e38cf341e0",
+    "DParameterPolicy": "8c2079426238bb2f61d56d013926276bc909b7acda87e64abe218a55",
+    "InitTokenPolicy": "ce8eb20810687214a672cf838d684702bab45ea08774823fad01e265",
+    "MerkleRootTokenPolicy": "a0b09c907b79ceb63269344eb1864f5c64ca70501aeb808f545ab3d2",
+    "FUELMintingPolicy": "0a412383b905374360640a0c33617bad4ebc3bcfd3827381a276fffc",
+    "FUELBurningPolicy": "b5745a59dd553c629f3154c9109f3bc54a7371169251d4a70b3cc80a",
+    "DsKeyPolicy": "c03e9456a022f5cb5e73f6ea468d555356b651f7ca24a193236b088f",
+    "CommitteeCertificateVerificationPolicy": "4f322bb3f94e662fcc06746728b6c200eb7da79898e7103deb88c0b8",
+    "CommitteeOraclePolicy": "eb6076dc69b8155e874d5e72eac70a47463c2396fa3186857161fc4e",
+    "CommitteePlainEcdsaSecp256k1ATMSPolicy": "4f322bb3f94e662fcc06746728b6c200eb7da79898e7103deb88c0b8"
+  }
+}
+```
+
+InitCommitteeSelection output:
+```
+{
+  "endpoint": "InitCommitteeSelection",
+  "initTransactionIds": [
+    "d1c0c9abf4be5c68cb0b056e11bee93271615064fec359f0f4e30cc258a2755e",
+    "56da52cee80f82152784b1443ddade4f35018f03191a0f76664f5d73c7edfbfc",
+    "da89e424a745a80d100dfeb24315a653d240fba26051b30f5cebf56088bafe98",
+    "6d92e5e8326f772dc0608052eea8c5c819c94d76ca0e59cb1d687e4c78953816",
+    "884aedace14596974de5c8a5982c058bf3a45ab1f9207f6c9f941ba27415ad33"
+  ],
+  "sidechainParams": {
+    "chainId": 69,
+    "genesisUtxo": "0e08ef9d08d74210f2309c10d67a9f6f8340c238b80beb74a732e60705312bc2#2",
+    "governanceAuthority": "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c",
+    "thresholdDenominator": 2,
+    "thresholdNumerator": 1
+  },
+  "addresses": {
+    "CommitteeCandidateValidator": "addr_test1wzph78rncn6xagc86ynm045szqn3h5cu42evgnef2qjhees2qvdw5",
+    "DsConfValidator": "addr_test1wpdut2h8jc5ylkf5azth0scdmpnmt50hcus89yl2q5507wqdrh6hl",
+    "DsInsertValidator": "addr_test1wrp9yjw92239jp7n402s0lyu62gkynyf3mhfdc02wretqdq7uswfe",
+    "VersionOracleValidator": "addr_test1wpe30nn44yqv343wdx3yw2gw8ukjtxklkewlkzjcvc0sgscymxqcc",
+    "PermissionedCandidatesValidator": "addr_test1wpqsncltzfvy3nfqx382qrntk4r9hct49fdjryadt06vlfgx0q4ls",
+    "DParameterValidator": "addr_test1wq6ltscr3z4t00tctx06rfmzp8ec2ln0msdcxh6htjs89ygk2cnjv",
+    "MerkleRootTokenValidator": "addr_test1wrrtmtl0t0vnyjlu5njntp7h69sf29xkjtw7eklyzk9skvsptux7u",
+    "CheckpointValidator": "addr_test1wrckygkuygfu78pjn5zqmey9z98upvxmjklrpe8za7q82cczx6a43",
+    "CommitteeHashValidator": "addr_test1wr0d8zlcem02xvgtnuc9lsjntvpjn0w4v66l6nxwkwalfcc5lrytj"
+  }
+}
+```
+
+InitCheckpoint output:
+```
+{
+  "endpoint": "InitCheckpoint",
+  "initTransactionIds": [
+    "010230fae4c921707f7e7675bb25cb2ae41994c8409d49cf6c197551e39bfa7b",
+    "ff3a7725b7e97841162e0ba1b417dab1f025c6d94dcfec285eb2930bd2531415"
+  ],
+  "sidechainParams": {
+    "chainId": 69,
+    "genesisUtxo": "0e08ef9d08d74210f2309c10d67a9f6f8340c238b80beb74a732e60705312bc2#2",
+    "governanceAuthority": "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c",
+    "thresholdDenominator": 2,
+    "thresholdNumerator": 1
+  },
+  "addresses": {
+    "CommitteeCandidateValidator": "addr_test1wzph78rncn6xagc86ynm045szqn3h5cu42evgnef2qjhees2qvdw5",
+    "DsConfValidator": "addr_test1wpdut2h8jc5ylkf5azth0scdmpnmt50hcus89yl2q5507wqdrh6hl",
+    "DsInsertValidator": "addr_test1wrp9yjw92239jp7n402s0lyu62gkynyf3mhfdc02wretqdq7uswfe",
+    "VersionOracleValidator": "addr_test1wpe30nn44yqv343wdx3yw2gw8ukjtxklkewlkzjcvc0sgscymxqcc",
+    "PermissionedCandidatesValidator": "addr_test1wpqsncltzfvy3nfqx382qrntk4r9hct49fdjryadt06vlfgx0q4ls",
+    "DParameterValidator": "addr_test1wq6ltscr3z4t00tctx06rfmzp8ec2ln0msdcxh6htjs89ygk2cnjv",
+    "MerkleRootTokenValidator": "addr_test1wrrtmtl0t0vnyjlu5njntp7h69sf29xkjtw7eklyzk9skvsptux7u",
+    "CheckpointValidator": "addr_test1wrckygkuygfu78pjn5zqmey9z98upvxmjklrpe8za7q82cczx6a43",
+    "CommitteeHashValidator": "addr_test1wr0d8zlcem02xvgtnuc9lsjntvpjn0w4v66l6nxwkwalfcc5lrytj"
+  }
+}
+```
+
+InitMerkleRoot output:
+```
+{
+  "endpoint": "InitFuel", -- TODO fix this bug
+  "initTransactionIds": [
+    "e75f162ff075a2c4e61bbd490153f62834d8602be46db81879fd1b3e79e976e5",
+    "c8be407e2ec6ee2cf8259958abbf6f422d3b5ab063484062cfacab9e25a0476b"
+  ],
+  "sidechainParams": {
+    "chainId": 69,
+    "genesisUtxo": "0e08ef9d08d74210f2309c10d67a9f6f8340c238b80beb74a732e60705312bc2#2",
+    "governanceAuthority": "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c",
+    "thresholdDenominator": 2,
+    "thresholdNumerator": 1
+  },
+  "addresses": {
+    "CommitteeCandidateValidator": "addr_test1wzph78rncn6xagc86ynm045szqn3h5cu42evgnef2qjhees2qvdw5",
+    "DsConfValidator": "addr_test1wpdut2h8jc5ylkf5azth0scdmpnmt50hcus89yl2q5507wqdrh6hl",
+    "DsInsertValidator": "addr_test1wrp9yjw92239jp7n402s0lyu62gkynyf3mhfdc02wretqdq7uswfe",
+    "VersionOracleValidator": "addr_test1wpe30nn44yqv343wdx3yw2gw8ukjtxklkewlkzjcvc0sgscymxqcc",
+    "PermissionedCandidatesValidator": "addr_test1wpqsncltzfvy3nfqx382qrntk4r9hct49fdjryadt06vlfgx0q4ls",
+    "DParameterValidator": "addr_test1wq6ltscr3z4t00tctx06rfmzp8ec2ln0msdcxh6htjs89ygk2cnjv",
+    "MerkleRootTokenValidator": "addr_test1wrrtmtl0t0vnyjlu5njntp7h69sf29xkjtw7eklyzk9skvsptux7u",
+    "CheckpointValidator": "addr_test1wrckygkuygfu78pjn5zqmey9z98upvxmjklrpe8za7q82cczx6a43",
+    "CommitteeHashValidator": "addr_test1wr0d8zlcem02xvgtnuc9lsjntvpjn0w4v66l6nxwkwalfcc5lrytj"
+  }
+}
+```
+
+InitFuel output:
+```
+{
+  "endpoint": "InitFuel",
+  "initTransactionIds": [
+    "b91e733d64ce05accc48fd0cde91b7b8d2989407b7ac06f08de402a0aff83e94",
+    "ea14340a552262e057923fef3866627f204e2c788a6ef8f1ae83b9363dfe7a75",
+    "d9864a6f8cc2962321107a596d50b554c6add7ace551395c7882a400964504f9",
+    "7b8b2cef59a9701c3f5abe276160d3141f42e1187a06fb6c99c1528ebd31b92c"
+  ],
+  "sidechainParams": {
+    "chainId": 69,
+    "genesisUtxo": "0e08ef9d08d74210f2309c10d67a9f6f8340c238b80beb74a732e60705312bc2#2",
+    "governanceAuthority": "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c",
+    "thresholdDenominator": 2,
+    "thresholdNumerator": 1
+  },
+  "addresses": {
+    "CommitteeCandidateValidator": "addr_test1wzph78rncn6xagc86ynm045szqn3h5cu42evgnef2qjhees2qvdw5",
+    "DsConfValidator": "addr_test1wpdut2h8jc5ylkf5azth0scdmpnmt50hcus89yl2q5507wqdrh6hl",
+    "DsInsertValidator": "addr_test1wrp9yjw92239jp7n402s0lyu62gkynyf3mhfdc02wretqdq7uswfe",
+    "VersionOracleValidator": "addr_test1wpe30nn44yqv343wdx3yw2gw8ukjtxklkewlkzjcvc0sgscymxqcc",
+    "PermissionedCandidatesValidator": "addr_test1wpqsncltzfvy3nfqx382qrntk4r9hct49fdjryadt06vlfgx0q4ls",
+    "DParameterValidator": "addr_test1wq6ltscr3z4t00tctx06rfmzp8ec2ln0msdcxh6htjs89ygk2cnjv",
+    "MerkleRootTokenValidator": "addr_test1wrrtmtl0t0vnyjlu5njntp7h69sf29xkjtw7eklyzk9skvsptux7u",
+    "CheckpointValidator": "addr_test1wrckygkuygfu78pjn5zqmey9z98upvxmjklrpe8za7q82cczx6a43",
+    "CommitteeHashValidator": "addr_test1wr0d8zlcem02xvgtnuc9lsjntvpjn0w4v66l6nxwkwalfcc5lrytj"
+  }
+}
+```
+
+TODO
+nix run .#sidechain-main-cli -- init-candidate-permission-token \
+    --candidate-permission-token-amount 1 \
+    --payment-signing-key-file "$SIGNING_KEY" \
+    --genesis-committee-hash-utxo "$ECDSA_SECP256K1_GENESIS_UTXO" \
+    --sidechain-id 69 \
+    --version 1 \
+    --threshold-numerator 1 \
+    --threshold-denominator 2 \
+    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
+    --atms-kind plain-ecdsa-secp256k1 | jq
+
 #### Schnorr SECP256k1 sidechain commands
 Initializing the Schnorr SECP256k1 sidechain is essentially identical to
     initializing the ECDSA SECP256k1 sidechain
@@ -614,263 +870,6 @@ Standard output.
   }
 }
 ```
-
-# Create initialisation tokens
-nix run .#sidechain-main-cli -- init-tokens-mint \
-    --version 1 \
-    --sidechain-id 69 \
-    --threshold-numerator 1 \
-    --threshold-denominator 2 \
-    --atms-kind plain-ecdsa-secp256k1 \
-    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
-    --payment-signing-key-file ./alice.skey \
-    --genesis-committee-hash-utxo $ECDSA_SECP256K1_GENESIS_UTXO | jq
-
-Standard output:
-```
-{
-  "endpoint": "InitTokensMint",
-  "transactionId": "a69c7c56c9d54833b360d91fbce5f64dfed11d9257ef0680c49062207af90d28",
-  "sidechainParams": {
-    "chainId": 69,
-    "genesisUtxo": "0e08ef9d08d74210f2309c10d67a9f6f8340c238b80beb74a732e60705312bc2#2",
-    "governanceAuthority": "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c",
-    "thresholdDenominator": 2,
-    "thresholdNumerator": 1
-  },
-  "addresses": {
-    "CommitteeCandidateValidator": "addr_test1wzph78rncn6xagc86ynm045szqn3h5cu42evgnef2qjhees2qvdw5",
-    "DsConfValidator": "addr_test1wpdut2h8jc5ylkf5azth0scdmpnmt50hcus89yl2q5507wqdrh6hl",
-    "DsInsertValidator": "addr_test1wrp9yjw92239jp7n402s0lyu62gkynyf3mhfdc02wretqdq7uswfe",
-    "VersionOracleValidator": "addr_test1wpe30nn44yqv343wdx3yw2gw8ukjtxklkewlkzjcvc0sgscymxqcc",
-    "PermissionedCandidatesValidator": "addr_test1wpqsncltzfvy3nfqx382qrntk4r9hct49fdjryadt06vlfgx0q4ls",
-    "DParameterValidator": "addr_test1wq6ltscr3z4t00tctx06rfmzp8ec2ln0msdcxh6htjs89ygk2cnjv",
-    "MerkleRootTokenValidator": "addr_test1wrrtmtl0t0vnyjlu5njntp7h69sf29xkjtw7eklyzk9skvsptux7u",
-    "CheckpointValidator": "addr_test1wrckygkuygfu78pjn5zqmey9z98upvxmjklrpe8za7q82cczx6a43",
-    "CommitteeHashValidator": "addr_test1wr0d8zlcem02xvgtnuc9lsjntvpjn0w4v66l6nxwkwalfcc5lrytj"
-  },
-  "validatorHashes": {
-    "CommitteeCandidateValidator": "837f1c73c4f46ea307d127b7d69010271bd31caab2c44f2950257ce6",
-    "DsConfValidator": "5bc5aae796284fd934e89777c30dd867b5d1f7c7207293ea0528ff38",
-    "DsInsertValidator": "c25249c552a25907d3abd507fc9cd291624c898eee96e1ea70f2b034",
-    "VersionOracleValidator": "7317ce75a900c8d62e69a247290e3f2d259adfb65dfb0a58661f0443",
-    "PermissionedCandidatesValidator": "4109e3eb125848cd20344ea00e6bb5465be1752a5b2193ad5bf4cfa5",
-    "DParameterValidator": "35f5c30388aab7bd78599fa1a76209f3857e6fdc1b835f575ca07291",
-    "MerkleRootTokenValidator": "c6bdafef5bd9324bfca4e53587d7d1609514d692ddecdbe4158b0b32",
-    "CheckpointValidator": "f16222dc2213cf1c329d040de485114fc0b0db95be30e4e2ef807563",
-    "CommitteeHashValidator": "ded38bf8cedea3310b9f305fc2535b0329bdd566b5fd4cceb3bbf4e3"
-  },
-  "mintingPolicies": {
-    "DsConfPolicy": "6272c91a5835482662f377ca25a4f4cb07696ab33985e70f3687f988",
-    "CheckpointPolicy": "37d28ab47d0f3c4088dc5a60ea83694e6589a013462bb818a9bad8aa",
-    "FUELProxyPolicy": "62c9e530cb9f09b4a3b54118ab83b958b5d9d58b56b1fc5fa3cbaafe",
-    "VersionOraclePolicy": "b327dcbc9ed5ec269208037deeb7590e53457d008bc4fab47dc534a0",
-    "PermissionedCandidatesPolicy": "58069e2a0889c09d59ffa71230d5a4c88a13857129ac41e38cf341e0",
-    "DParameterPolicy": "8c2079426238bb2f61d56d013926276bc909b7acda87e64abe218a55",
-    "InitTokenPolicy": "ce8eb20810687214a672cf838d684702bab45ea08774823fad01e265",
-    "MerkleRootTokenPolicy": "a0b09c907b79ceb63269344eb1864f5c64ca70501aeb808f545ab3d2",
-    "FUELMintingPolicy": "0a412383b905374360640a0c33617bad4ebc3bcfd3827381a276fffc",
-    "FUELBurningPolicy": "b5745a59dd553c629f3154c9109f3bc54a7371169251d4a70b3cc80a",
-    "DsKeyPolicy": "c03e9456a022f5cb5e73f6ea468d555356b651f7ca24a193236b088f",
-    "CommitteeCertificateVerificationPolicy": "4f322bb3f94e662fcc06746728b6c200eb7da79898e7103deb88c0b8",
-    "CommitteeOraclePolicy": "eb6076dc69b8155e874d5e72eac70a47463c2396fa3186857161fc4e",
-    "CommitteePlainEcdsaSecp256k1ATMSPolicy": "4f322bb3f94e662fcc06746728b6c200eb7da79898e7103deb88c0b8"
-  }
-}
-```
-
-# Initialise Committee Selection
-COMMITTEE_KEYS=""
-for SC_MEMBER in $ECDSA_SECP256K1_SC_COMMITTEE; do
-    PUB_KEY=$(jq -r .rawHexPublicKey "$SC_MEMBER")
-    COMMITTEE_KEYS+=" --committee-pub-key $PUB_KEY"
-done
-
-nix run .#sidechain-main-cli -- init-committee-selection \
-    --payment-signing-key-file "$SIGNING_KEY" \
-    --genesis-committee-hash-utxo "$ECDSA_SECP256K1_GENESIS_UTXO" \
-    --sidechain-id 69 \
-    --sidechain-genesis-hash 112233 \
-    --version 1 \
-    --threshold-numerator 1 \
-    --threshold-denominator 2 \
-    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
-    --atms-kind plain-ecdsa-secp256k1 \
-    $COMMITTEE_KEYS \
-    --sidechain-epoch 0 | jq
-
-Standard output:
-
-```
-{
-  "endpoint": "InitCommitteeSelection",
-  "initTransactionIds": [
-    "d1c0c9abf4be5c68cb0b056e11bee93271615064fec359f0f4e30cc258a2755e",
-    "56da52cee80f82152784b1443ddade4f35018f03191a0f76664f5d73c7edfbfc",
-    "da89e424a745a80d100dfeb24315a653d240fba26051b30f5cebf56088bafe98",
-    "6d92e5e8326f772dc0608052eea8c5c819c94d76ca0e59cb1d687e4c78953816",
-    "884aedace14596974de5c8a5982c058bf3a45ab1f9207f6c9f941ba27415ad33"
-  ],
-  "sidechainParams": {
-    "chainId": 69,
-    "genesisUtxo": "0e08ef9d08d74210f2309c10d67a9f6f8340c238b80beb74a732e60705312bc2#2",
-    "governanceAuthority": "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c",
-    "thresholdDenominator": 2,
-    "thresholdNumerator": 1
-  },
-  "addresses": {
-    "CommitteeCandidateValidator": "addr_test1wzph78rncn6xagc86ynm045szqn3h5cu42evgnef2qjhees2qvdw5",
-    "DsConfValidator": "addr_test1wpdut2h8jc5ylkf5azth0scdmpnmt50hcus89yl2q5507wqdrh6hl",
-    "DsInsertValidator": "addr_test1wrp9yjw92239jp7n402s0lyu62gkynyf3mhfdc02wretqdq7uswfe",
-    "VersionOracleValidator": "addr_test1wpe30nn44yqv343wdx3yw2gw8ukjtxklkewlkzjcvc0sgscymxqcc",
-    "PermissionedCandidatesValidator": "addr_test1wpqsncltzfvy3nfqx382qrntk4r9hct49fdjryadt06vlfgx0q4ls",
-    "DParameterValidator": "addr_test1wq6ltscr3z4t00tctx06rfmzp8ec2ln0msdcxh6htjs89ygk2cnjv",
-    "MerkleRootTokenValidator": "addr_test1wrrtmtl0t0vnyjlu5njntp7h69sf29xkjtw7eklyzk9skvsptux7u",
-    "CheckpointValidator": "addr_test1wrckygkuygfu78pjn5zqmey9z98upvxmjklrpe8za7q82cczx6a43",
-    "CommitteeHashValidator": "addr_test1wr0d8zlcem02xvgtnuc9lsjntvpjn0w4v66l6nxwkwalfcc5lrytj"
-  }
-}
-```
-
-# Initialise Checkpoint Mechanism
-nix run .#sidechain-main-cli -- init-checkpoint \
-    --payment-signing-key-file "$SIGNING_KEY" \
-    --genesis-committee-hash-utxo "$ECDSA_SECP256K1_GENESIS_UTXO" \
-    --sidechain-id 69 \
-    --sidechain-genesis-hash 112233 \
-    --version 1 \
-    --threshold-numerator 1 \
-    --threshold-denominator 2 \
-    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
-    --atms-kind plain-ecdsa-secp256k1 \
-    $COMMITTEE_KEYS \
-    --sidechain-epoch 0 | jq
-
-Standard output:
-
-```
-{
-  "endpoint": "InitCheckpoint",
-  "initTransactionIds": [
-    "010230fae4c921707f7e7675bb25cb2ae41994c8409d49cf6c197551e39bfa7b",
-    "ff3a7725b7e97841162e0ba1b417dab1f025c6d94dcfec285eb2930bd2531415"
-  ],
-  "sidechainParams": {
-    "chainId": 69,
-    "genesisUtxo": "0e08ef9d08d74210f2309c10d67a9f6f8340c238b80beb74a732e60705312bc2#2",
-    "governanceAuthority": "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c",
-    "thresholdDenominator": 2,
-    "thresholdNumerator": 1
-  },
-  "addresses": {
-    "CommitteeCandidateValidator": "addr_test1wzph78rncn6xagc86ynm045szqn3h5cu42evgnef2qjhees2qvdw5",
-    "DsConfValidator": "addr_test1wpdut2h8jc5ylkf5azth0scdmpnmt50hcus89yl2q5507wqdrh6hl",
-    "DsInsertValidator": "addr_test1wrp9yjw92239jp7n402s0lyu62gkynyf3mhfdc02wretqdq7uswfe",
-    "VersionOracleValidator": "addr_test1wpe30nn44yqv343wdx3yw2gw8ukjtxklkewlkzjcvc0sgscymxqcc",
-    "PermissionedCandidatesValidator": "addr_test1wpqsncltzfvy3nfqx382qrntk4r9hct49fdjryadt06vlfgx0q4ls",
-    "DParameterValidator": "addr_test1wq6ltscr3z4t00tctx06rfmzp8ec2ln0msdcxh6htjs89ygk2cnjv",
-    "MerkleRootTokenValidator": "addr_test1wrrtmtl0t0vnyjlu5njntp7h69sf29xkjtw7eklyzk9skvsptux7u",
-    "CheckpointValidator": "addr_test1wrckygkuygfu78pjn5zqmey9z98upvxmjklrpe8za7q82cczx6a43",
-    "CommitteeHashValidator": "addr_test1wr0d8zlcem02xvgtnuc9lsjntvpjn0w4v66l6nxwkwalfcc5lrytj"
-  }
-}
-```
-
-# Initialise Merkle Root Mechanism
-nix run .#sidechain-main-cli -- init-merkle-root \
-    --payment-signing-key-file "$SIGNING_KEY" \
-    --genesis-committee-hash-utxo "$ECDSA_SECP256K1_GENESIS_UTXO" \
-    --sidechain-id 69 \
-    --version 1 \
-    --threshold-numerator 1 \
-    --threshold-denominator 2 \
-    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
-    --atms-kind plain-ecdsa-secp256k1 | jq
-
-Standard output:
-```
-{
-  "endpoint": "InitFuel", -- TODO fix this bug
-  "initTransactionIds": [
-    "e75f162ff075a2c4e61bbd490153f62834d8602be46db81879fd1b3e79e976e5",
-    "c8be407e2ec6ee2cf8259958abbf6f422d3b5ab063484062cfacab9e25a0476b"
-  ],
-  "sidechainParams": {
-    "chainId": 69,
-    "genesisUtxo": "0e08ef9d08d74210f2309c10d67a9f6f8340c238b80beb74a732e60705312bc2#2",
-    "governanceAuthority": "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c",
-    "thresholdDenominator": 2,
-    "thresholdNumerator": 1
-  },
-  "addresses": {
-    "CommitteeCandidateValidator": "addr_test1wzph78rncn6xagc86ynm045szqn3h5cu42evgnef2qjhees2qvdw5",
-    "DsConfValidator": "addr_test1wpdut2h8jc5ylkf5azth0scdmpnmt50hcus89yl2q5507wqdrh6hl",
-    "DsInsertValidator": "addr_test1wrp9yjw92239jp7n402s0lyu62gkynyf3mhfdc02wretqdq7uswfe",
-    "VersionOracleValidator": "addr_test1wpe30nn44yqv343wdx3yw2gw8ukjtxklkewlkzjcvc0sgscymxqcc",
-    "PermissionedCandidatesValidator": "addr_test1wpqsncltzfvy3nfqx382qrntk4r9hct49fdjryadt06vlfgx0q4ls",
-    "DParameterValidator": "addr_test1wq6ltscr3z4t00tctx06rfmzp8ec2ln0msdcxh6htjs89ygk2cnjv",
-    "MerkleRootTokenValidator": "addr_test1wrrtmtl0t0vnyjlu5njntp7h69sf29xkjtw7eklyzk9skvsptux7u",
-    "CheckpointValidator": "addr_test1wrckygkuygfu78pjn5zqmey9z98upvxmjklrpe8za7q82cczx6a43",
-    "CommitteeHashValidator": "addr_test1wr0d8zlcem02xvgtnuc9lsjntvpjn0w4v66l6nxwkwalfcc5lrytj"
-  }
-}
-```
-
-# Initialise FUEL
-nix run .#sidechain-main-cli -- init-fuel \
-    --payment-signing-key-file "$SIGNING_KEY" \
-    --genesis-committee-hash-utxo "$ECDSA_SECP256K1_GENESIS_UTXO" \
-    --sidechain-id 69 \
-    --version 1 \
-    --threshold-numerator 1 \
-    --threshold-denominator 2 \
-    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
-    --atms-kind plain-ecdsa-secp256k1 | jq
-
-Standard output:
-
-```
-{
-  "endpoint": "InitFuel",
-  "initTransactionIds": [
-    "b91e733d64ce05accc48fd0cde91b7b8d2989407b7ac06f08de402a0aff83e94",
-    "ea14340a552262e057923fef3866627f204e2c788a6ef8f1ae83b9363dfe7a75",
-    "d9864a6f8cc2962321107a596d50b554c6add7ace551395c7882a400964504f9",
-    "7b8b2cef59a9701c3f5abe276160d3141f42e1187a06fb6c99c1528ebd31b92c"
-  ],
-  "sidechainParams": {
-    "chainId": 69,
-    "genesisUtxo": "0e08ef9d08d74210f2309c10d67a9f6f8340c238b80beb74a732e60705312bc2#2",
-    "governanceAuthority": "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c",
-    "thresholdDenominator": 2,
-    "thresholdNumerator": 1
-  },
-  "addresses": {
-    "CommitteeCandidateValidator": "addr_test1wzph78rncn6xagc86ynm045szqn3h5cu42evgnef2qjhees2qvdw5",
-    "DsConfValidator": "addr_test1wpdut2h8jc5ylkf5azth0scdmpnmt50hcus89yl2q5507wqdrh6hl",
-    "DsInsertValidator": "addr_test1wrp9yjw92239jp7n402s0lyu62gkynyf3mhfdc02wretqdq7uswfe",
-    "VersionOracleValidator": "addr_test1wpe30nn44yqv343wdx3yw2gw8ukjtxklkewlkzjcvc0sgscymxqcc",
-    "PermissionedCandidatesValidator": "addr_test1wpqsncltzfvy3nfqx382qrntk4r9hct49fdjryadt06vlfgx0q4ls",
-    "DParameterValidator": "addr_test1wq6ltscr3z4t00tctx06rfmzp8ec2ln0msdcxh6htjs89ygk2cnjv",
-    "MerkleRootTokenValidator": "addr_test1wrrtmtl0t0vnyjlu5njntp7h69sf29xkjtw7eklyzk9skvsptux7u",
-    "CheckpointValidator": "addr_test1wrckygkuygfu78pjn5zqmey9z98upvxmjklrpe8za7q82cczx6a43",
-    "CommitteeHashValidator": "addr_test1wr0d8zlcem02xvgtnuc9lsjntvpjn0w4v66l6nxwkwalfcc5lrytj"
-  }
-}
-```
-
-
-TODO
-nix run .#sidechain-main-cli -- init-candidate-permission-token \
-    --candidate-permission-token-amount 1 \
-    --payment-signing-key-file "$SIGNING_KEY" \
-    --genesis-committee-hash-utxo "$ECDSA_SECP256K1_GENESIS_UTXO" \
-    --sidechain-id 69 \
-    --version 1 \
-    --threshold-numerator 1 \
-    --threshold-denominator 2 \
-    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
-    --atms-kind plain-ecdsa-secp256k1 | jq
 
 ### 3. Save a Merkle root of transactions from the sidechain
 Saving a Merkle root of transactions from the sidechain to the mainchain
