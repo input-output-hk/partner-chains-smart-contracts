@@ -1074,7 +1074,7 @@ InitCheckpoint output:
 InitMerkleRoot output:
 ```
 {
-  "endpoint": "InitFuel", -- TODO fix this bug (should be merkle root)
+  "endpoint": "InitMerkleRoot",
   "initTransactionIds": [
     "5a25f6532a9d0b313e9695ebc3a7e563a0da9af587e65c789616a73f704cff1c",
     "40b6d995a25410a1dd0a07192ec886ca7edcf8b3570f1a50f14342473a20e2d6"
