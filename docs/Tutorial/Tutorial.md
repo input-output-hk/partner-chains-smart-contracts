@@ -497,6 +497,21 @@ Note that we will need to pass the `rawHexPublicKey`s of each of our committee
     members as a flag to `sidechain-main-cli` with the flag `--committee-pub-key`.
 The following command initializes the sidechain with the committee from the previous step.
 
+#### Governance authority commands
+We need a governance authority to continue. To do this, we'll use `cardano-cli`.
+
+Note: `cardano-cli` is in a separate repo:
+  https://github.com/IntersectMBO/cardano-cli
+
+The command we need to run is as follows:
+
+```bash
+GOVERNANCE_AUTHORITY=$(nix run .#cardano-cli -- address \
+  key-hash \
+  --payment-verification-key-file {your-path}/{your-wallet}.vkey)
+echo $GOVERNANCE_AUTHORITY
+```
+
 # Option 1: Initialise the sidechain in full
 
 ```bash
@@ -508,6 +523,8 @@ nix run .#sidechain-main-cli -- init \
     --threshold-numerator 1 \
     --threshold-denominator 2 \
     --atms-kind plain-ecdsa-secp256k1 \
+    --version 1 \
+    --governance-authority $GOVERNANCE_AUTHORITY \
     $(for SC_MEMBER in $ECDSA_SECP256K1_SC_COMMITTEE
         do printf " --committee-pub-key %s " "$(jq -r .rawHexPublicKey "$SC_MEMBER")"
         done) \
@@ -559,7 +576,7 @@ nix run .#sidechain-main-cli -- init-tokens-mint \
     --threshold-numerator 1 \
     --threshold-denominator 2 \
     --atms-kind plain-ecdsa-secp256k1 \
-    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
+    --governance-authority $GOVERNANCE_AUTHORITY \
     --payment-signing-key-file ./alice.skey \
     --genesis-committee-hash-utxo $ECDSA_SECP256K1_GENESIS_UTXO | jq
 
@@ -578,7 +595,7 @@ nix run .#sidechain-main-cli -- init-committee-selection \
     --version 1 \
     --threshold-numerator 1 \
     --threshold-denominator 2 \
-    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
+    --governance-authority $GOVERNANCE_AUTHORITY \
     --atms-kind plain-ecdsa-secp256k1 \
     $COMMITTEE_KEYS \
     --sidechain-epoch 0 | jq
@@ -592,7 +609,7 @@ nix run .#sidechain-main-cli -- init-checkpoint \
     --version 1 \
     --threshold-numerator 1 \
     --threshold-denominator 2 \
-    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
+    --governance-authority $GOVERNANCE_AUTHORITY \
     --atms-kind plain-ecdsa-secp256k1 \
     $COMMITTEE_KEYS \
     --sidechain-epoch 0 | jq
@@ -605,7 +622,7 @@ nix run .#sidechain-main-cli -- init-merkle-root \
     --version 1 \
     --threshold-numerator 1 \
     --threshold-denominator 2 \
-    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
+    --governance-authority $GOVERNANCE_AUTHORITY \
     --atms-kind plain-ecdsa-secp256k1 | jq
 
 # Initialise FUEL
@@ -616,7 +633,7 @@ nix run .#sidechain-main-cli -- init-fuel \
     --version 1 \
     --threshold-numerator 1 \
     --threshold-denominator 2 \
-    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
+    --governance-authority $GOVERNANCE_AUTHORITY \
     --atms-kind plain-ecdsa-secp256k1 | jq
 ```
 
@@ -833,6 +850,8 @@ nix run .#sidechain-main-cli -- init \
     --sidechain-genesis-hash 112233 \
     --threshold-numerator 1 \
     --threshold-denominator 2 \
+    --version 1 \
+    --governance-authority $GOVERNANCE_AUTHORITY \
     --atms-kind plain-schnorr-secp256k1 \
     $(for SC_MEMBER in $SCHNORR_SECP256K1_SC_COMMITTEE
         do printf " --committee-pub-key %s " "$(jq -r .rawHexPublicKey "$SC_MEMBER")"
@@ -893,7 +912,7 @@ nix run .#sidechain-main-cli -- init-tokens-mint \
     --threshold-numerator 1 \
     --threshold-denominator 2 \
     --atms-kind plain-schnorr-secp256k1 \
-    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
+    --governance-authority $GOVERNANCE_AUTHORITY \
     --payment-signing-key-file ./alice.skey \
     --genesis-committee-hash-utxo $SCHNORR_SECP256K1_GENESIS_UTXO | jq
 
@@ -906,7 +925,7 @@ nix run .#sidechain-main-cli -- init-committee-selection \
     --version 1 \
     --threshold-numerator 1 \
     --threshold-denominator 2 \
-    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
+    --governance-authority $GOVERNANCE_AUTHORITY \
     --atms-kind plain-schnorr-secp256k1 \
     $(for SC_MEMBER in $SCHNORR_SECP256K1_SC_COMMITTEE
       do printf " --committee-pub-key %s " "$(jq -r .rawHexPublicKey "$SC_MEMBER")"
@@ -922,7 +941,7 @@ nix run .#sidechain-main-cli -- init-checkpoint \
     --version 1 \
     --threshold-numerator 1 \
     --threshold-denominator 2 \
-    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
+    --governance-authority $GOVERNANCE_AUTHORITY \
     --atms-kind plain-schnorr-secp256k1 \
     $COMMITTEE_KEYS \
     --sidechain-epoch 0 | jq
@@ -935,7 +954,7 @@ nix run .#sidechain-main-cli -- init-merkle-root \
     --version 1 \
     --threshold-numerator 1 \
     --threshold-denominator 2 \
-    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
+    --governance-authority $GOVERNANCE_AUTHORITY \
     --atms-kind plain-schnorr-secp256k1 | jq
 
 # Initialise FUEL
@@ -946,7 +965,7 @@ nix run .#sidechain-main-cli -- init-fuel \
     --version 1 \
     --threshold-numerator 1 \
     --threshold-denominator 2 \
-    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
+    --governance-authority $GOVERNANCE_AUTHORITY \
     --atms-kind plain-schnorr-secp256k1 | jq
 ```
 
