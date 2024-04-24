@@ -60,7 +60,7 @@ An initial committee must be provided which will be used to verify signatures fo
 
 **Workflow:**
 
-1. Call the initialize sidechain endpoint to generate the `SidechainParams` for a new sidechain.
+1. Call the initialize sidechain endpoint(s) to generate the `SidechainParams` for a new sidechain.
 2. Use the given sidechain parameters for the rest of the endpoints to work with this sidechain.
 
 **Endpoint params:**
