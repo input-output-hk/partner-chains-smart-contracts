@@ -23,7 +23,6 @@ import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.Utils.Address
   ( getCurrencySymbol
-  , getOwnWalletAddress
   , toAddress
   )
 import TrustlessSidechain.Utils.Scripts
@@ -44,13 +43,9 @@ decodeMinotaurStakePolicy ∷
   ∀ r.
   Run (EXCEPT OffchainError + WALLET + r) MintingPolicy
 decodeMinotaurStakePolicy = do
-  -- { minotaurStakeValidatorAddress } ←
-  --  getMinotaurStakeValidatorAndAddress
-  -- TODO: once minotaur stake validator is implemented, change this so
-  -- that the address is the actual address of the minotaur stake validator
-  dummyOwnAddress ← getOwnWalletAddress
+  { minotaurStakeValidatorAddress } ← getMinotaurStakeValidatorAndAddress
   mkMintingPolicyWithParams MinotaurStakePolicy
-    [ toData dummyOwnAddress ]
+    [ toData minotaurStakeValidatorAddress ]
 
 decodeMinotaurStakeValidator ∷
   ∀ r.

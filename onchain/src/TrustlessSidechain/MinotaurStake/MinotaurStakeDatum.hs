@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -fno-specialise #-}
 
 -- | Defines the 'MinotaurStakeDatum' and 'MinotaurStakeRedeemer'
 -- types, along with the 'minotaurStakeTokenName'.
@@ -8,6 +8,7 @@ module TrustlessSidechain.MinotaurStake.MinotaurStakeDatum where
 
 import Plutus.V1.Ledger.Value (CurrencySymbol)
 import Plutus.V2.Ledger.Api (
+  BuiltinData (BuiltinData),
   PubKeyHash,
   TokenName (TokenName),
  )
@@ -69,8 +70,24 @@ data MinotaurStakeRedeemer
     BurnMinotaurStake
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
-PlutusTx.makeIsDataIndexed
-  ''MinotaurStakeRedeemer
-  [ ('MintMinotaurStake, 0)
-  , ('BurnMinotaurStake, 1)
-  ]
+instance ToData MinotaurStakeRedeemer where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData MintMinotaurStake = BuiltinData (PlutusTx.I 0)
+  toBuiltinData BurnMinotaurStake = BuiltinData (PlutusTx.I 1)
+
+instance FromData MinotaurStakeRedeemer where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData x = do
+    integerValue <- fromBuiltinData x
+    case integerValue :: Integer of
+      0 -> pure MintMinotaurStake
+      1 -> pure BurnMinotaurStake
+      _ -> Nothing
+
+instance UnsafeFromData MinotaurStakeRedeemer where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData x = do
+    case unsafeFromBuiltinData x :: Integer of
+      0 -> MintMinotaurStake
+      1 -> BurnMinotaurStake
+      _ -> error ()
