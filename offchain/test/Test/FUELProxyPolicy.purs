@@ -13,6 +13,7 @@ import Mote.Monad as Mote.Monad
 import Partial.Unsafe (unsafePartial)
 import Run (liftEffect) as Run
 import Run.Except (note) as Run
+import Test.InitSidechain.Utils (initSidechain)
 import Test.MerkleRoot as Test.MerkleRoot
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
@@ -33,7 +34,6 @@ import TrustlessSidechain.FUELProxyPolicy
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
-  , initSidechain
   )
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)

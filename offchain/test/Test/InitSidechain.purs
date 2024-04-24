@@ -21,7 +21,7 @@ import Run (liftEffect) as Run
 import Run.Except (note) as Run
 import Run.Except (throw)
 import Test.CandidatePermissionToken as Test.CandidatePermissionToken
-import Test.InitSidechain.Utils (failMsg, unorderedEq)
+import Test.InitSidechain.Utils (failMsg, initSidechain, unorderedEq)
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Unit.Assert (assert)
@@ -101,7 +101,7 @@ testScenario1 = Mote.Monad.test "Calling `initSidechain`"
             , initGovernanceAuthority
             }
 
-        void $ InitSidechain.initSidechain initScParams 1
+        void $ initSidechain initScParams 1
 
 -- | `testScenario2` is a bit more complicated (but this should fail!) than
 -- | `testScenario1`. It takes two distinct wallets, say Alice and Bob, grabs a
@@ -157,7 +157,7 @@ testScenario2 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
             , initGovernanceAuthority
             }
 
-        void $ InitSidechain.initSidechain initScParams 1
+        void $ initSidechain initScParams 1
       case result of
         Right _ →
           throw $ GenericInternalError
@@ -211,7 +211,7 @@ testScenario3 =
               , initGovernanceAuthority
               }
 
-          { sidechainParams: sc } ← InitSidechain.initSidechain initScParams 1
+          { sidechainParams: sc } ← initSidechain initScParams 1
           Test.CandidatePermissionToken.assertIHaveCandidatePermissionToken sc
 
 -- | Utility for tests of getInitTokenStatus with a simple setup,
@@ -249,7 +249,7 @@ initSimpleSidechain amt = do
       , initGovernanceAuthority
       }
 
-  map _.sidechainParams $ InitSidechain.initSidechain initScParams 1
+  map _.sidechainParams $ initSidechain initScParams 1
 
 -- | Directly mint some init tokens with `mintOne*InitToken` actions,
 -- | spending the genesis UTxO. Returns the names and quantities of tokens minted.

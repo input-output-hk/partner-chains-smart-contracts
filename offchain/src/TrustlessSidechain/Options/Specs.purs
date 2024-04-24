@@ -110,7 +110,6 @@ import TrustlessSidechain.Options.Types
       , InitCheckpoint
       , InitFuel
       , InitMerkleRoot
-      , Init
       , InitCandidatePermissionToken
       , CommitteeCandidateReg
       , CommitteeCandidateDereg
@@ -159,11 +158,7 @@ options maybeConfig = info (helper <*> optSpec maybeConfig)
 optSpec ∷ Maybe Config → Parser Options
 optSpec maybeConfig =
   hsubparser $ fold
-    [ command "init"
-        ( info (withCommonOpts maybeConfig initSpec)
-            (progDesc "Initialise sidechain")
-        )
-    , command "init-tokens-mint"
+    [ command "init-tokens-mint"
         ( info (withCommonOpts maybeConfig initTokensMintSpec)
             (progDesc "Mint all sidechain initialisation tokens")
         )
@@ -1021,31 +1016,6 @@ parseVersion =
         , help "Protocol version"
         ]
     )
-
--- `initSpec` includes the sub parser from `initTokensSpec` (to optionally mint
--- candidate permission tokens), and parsers for the initial committee
-initSpec ∷ Parser TxEndpoint
-initSpec = ado
-  committeePubKeysInput ← parseCommittee
-    "committee-pub-key"
-    "Public key for a committee member at sidechain initialisation"
-    "committee-pub-key-file-path"
-    "Filepath of a JSON file containing public keys of the new committee\
-    \ e.g. `[{\"public-key\":\"aabb...\", }, ...]`"
-
-  initSidechainEpoch ← parseSidechainEpoch
-  initCandidatePermissionTokenMintInfo ←
-    optional initCandidatePermissionTokenMintHelper
-  genesisHash ← parseGenesisHash
-  version ← parseVersion
-  in
-    Init
-      { committeePubKeysInput
-      , initSidechainEpoch
-      , initCandidatePermissionTokenMintInfo
-      , genesisHash
-      , version
-      }
 
 -- | Parser for the `init-tokens-mint` endpoint.
 initTokensMintSpec ∷ Parser TxEndpoint

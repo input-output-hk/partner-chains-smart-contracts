@@ -11,6 +11,7 @@ import Data.List as List
 import Mote.Monad as Mote.Monad
 import Run (AFF, EFFECT, Run)
 import Run.Except (EXCEPT)
+import Test.InitSidechain.Utils (initSidechain)
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Unit.Assert (assert)
@@ -29,7 +30,6 @@ import TrustlessSidechain.FUELMintingPolicy.V2 as FUELMintingPolicy.V2
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
-  , initSidechain
   , toSidechainParams
   )
 import TrustlessSidechain.MerkleRoot (merkleRootCurrencyInfo)

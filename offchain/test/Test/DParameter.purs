@@ -11,6 +11,7 @@ import Data.Array as Array
 import Data.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Run as Run
+import Test.InitSidechain.Utils (initSidechain)
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, fails, getOwnTransactionInput, plutipGroup)
@@ -23,7 +24,6 @@ import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
-  , initSidechain
   , toSidechainParams
   )
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)

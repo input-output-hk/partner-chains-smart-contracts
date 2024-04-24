@@ -22,6 +22,7 @@ import Run (Run)
 import Run (liftEffect) as Run
 import Run.Except (EXCEPT)
 import Run.Except (note, rethrow) as Run
+import Test.InitSidechain.Utils (initSidechain)
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
@@ -202,7 +203,7 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
               ownPaymentPubKeyHash
           }
 
-      { sidechainParams } ← InitSidechain.initSidechain initSidechainParams 1
+      { sidechainParams } ← initSidechain initSidechainParams 1
 
       -- Building / saving the root that pays lots of FUEL to this wallet :)
       ----------------------------------------------------------------------
@@ -318,7 +319,7 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
               ownPaymentPubKeyHash
           }
 
-      { sidechainParams } ← InitSidechain.initSidechain initSidechainParams 1
+      { sidechainParams } ← initSidechain initSidechainParams 1
 
       -- Building / saving the root that pays lots of FUEL to this wallet :)
       ----------------------------------------------------------------------
@@ -416,7 +417,7 @@ testScenario3 =
                 pkh
             }
 
-        { sidechainParams } ← InitSidechain.initSidechain initSidechainParams 1
+        { sidechainParams } ← initSidechain initSidechainParams 1
 
         -- Building / saving the root that pays lots of FUEL to this wallet :)
         ----------------------------------------------------------------------

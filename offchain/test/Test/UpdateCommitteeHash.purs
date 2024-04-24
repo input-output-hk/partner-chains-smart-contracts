@@ -21,6 +21,7 @@ import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe as Unsafe
+import Test.InitSidechain.Utils (initSidechain)
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
@@ -33,7 +34,7 @@ import TrustlessSidechain.Effects.Contract (liftContract)
 import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
 import TrustlessSidechain.GarbageCollector as GarbageCollector
 import TrustlessSidechain.Governance as Governance
-import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
+import TrustlessSidechain.InitSidechain (InitSidechainParams(..))
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash

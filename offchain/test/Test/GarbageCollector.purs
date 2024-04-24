@@ -21,6 +21,7 @@ import Run (liftEffect) as Run
 import Run.Except (EXCEPT)
 import Run.Except (note) as Run
 import Test.CommitteePlainEcdsaSecp256k1ATMSPolicy (generateSignatures)
+import Test.InitSidechain.Utils (initSidechain)
 import Test.MerkleRoot as Test.MerkleRoot
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
@@ -48,7 +49,6 @@ import TrustlessSidechain.GarbageCollector as GarbageCollector
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
-  , initSidechain
   )
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.SidechainParams (SidechainParams)

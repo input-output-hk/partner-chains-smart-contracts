@@ -19,6 +19,7 @@ import Data.Maybe as Maybe
 import Effect.Class as Effect.Class
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe as Unsafe
+import Test.InitSidechain.Utils (initSidechain)
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
@@ -33,7 +34,6 @@ import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
-  , initSidechain
   )
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto

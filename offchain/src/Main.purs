@@ -38,7 +38,6 @@ import TrustlessSidechain.EndpointResp
       , CommitteeHashResp
       , SaveRootResp
       , InitCheckpointResp
-      , InitResp
       , InitCandidatePermissionTokenResp
       , InitTokensMintResp
       , InitCommitteeSelectionResp
@@ -77,7 +76,7 @@ import TrustlessSidechain.GetSidechainAddresses
   ( SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
   )
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
-import TrustlessSidechain.InitSidechain (initSidechain, toSidechainParams)
+import TrustlessSidechain.InitSidechain (toSidechainParams)
 import TrustlessSidechain.InitSidechain.CandidatePermissionToken
   ( initCandidatePermissionToken
   )
@@ -108,7 +107,6 @@ import TrustlessSidechain.Options.Types
       , CommitteeHash
       , SaveRoot
       , InitCheckpoint
-      , Init
       , InitCommitteeSelection
       , InitCandidatePermissionToken
       , InitTokensMint
@@ -419,48 +417,6 @@ runTxEndpoint sidechainEndpointParams endpoint =
         pure $ InitCheckpointResp $ map
           (\r → r { initTransactionIds = map unwrap r.initTransactionIds })
           resp
-      Init
-        { committeePubKeysInput
-        , initSidechainEpoch
-        , initCandidatePermissionTokenMintInfo
-        , genesisHash
-        , version
-        } → do
-        rawCommitteePubKeys ← ConfigFile.getCommittee committeePubKeysInput
-
-        committeePubKeys ←
-          CommitteeATMSSchemes.aggregateATMSPublicKeys
-            { atmsKind
-            , committeePubKeys: List.toUnfoldable rawCommitteePubKeys
-            }
-        let
-          sc = unwrap scParams
-          isc =
-            { initChainId: sc.chainId
-            , initGenesisHash: genesisHash
-            , initUtxo: sc.genesisUtxo
-            , initATMSKind: (unwrap sidechainEndpointParams).atmsKind
-            , initAggregatedCommittee: committeePubKeys
-            , initCandidatePermissionTokenMintInfo
-            , initSidechainEpoch
-            , initThresholdNumerator: sc.thresholdNumerator
-            , initThresholdDenominator: sc.thresholdDenominator
-            , initGovernanceAuthority: sc.governanceAuthority
-            }
-
-        { transactionId
-        , sidechainParams
-        , sidechainAddresses
-        , initTransactionIds
-        } ←
-          initSidechain (wrap isc) version
-
-        pure $ InitResp
-          { transactionId: unwrap transactionId
-          , sidechainParams
-          , sidechainAddresses
-          , initTransactionIds: map unwrap initTransactionIds
-          }
 
       InitTokensMint
         { version } →

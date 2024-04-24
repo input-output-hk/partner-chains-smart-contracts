@@ -17,7 +17,6 @@ module TrustlessSidechain.InitSidechain
   ( InitSidechainParams'
   , InitSidechainParams(..)
   , InitTokensParams
-  , initSidechain
   , toSidechainParams
   ) where
 
@@ -25,38 +24,14 @@ import Contract.Prelude
 
 import Contract.PlutusData (PlutusData)
 import Contract.Prim.ByteArray (ByteArray)
-import Contract.Transaction (TransactionHash, TransactionInput)
+import Contract.Transaction (TransactionInput)
 import Data.BigInt (BigInt)
-import Data.Maybe (isJust)
-import Run (Run)
 import TrustlessSidechain.CandidatePermissionToken
   ( CandidatePermissionTokenMintInfo
   )
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
-import TrustlessSidechain.Effects.App (APP)
-import TrustlessSidechain.GetSidechainAddresses
-  ( SidechainAddresses
-  , SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
-  )
-import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.Governance as Governance
-import TrustlessSidechain.InitSidechain.CandidatePermissionToken
-  ( initCandidatePermissionTokenLookupsAndConstraints
-  )
-import TrustlessSidechain.InitSidechain.Checkpoint
-  ( initCheckpointLookupsAndConstraints
-  )
-import TrustlessSidechain.InitSidechain.CommitteeSelection
-  ( initCommitteeHashLookupsAndConstraints
-  )
-import TrustlessSidechain.InitSidechain.FUEL
-  ( initFuelAndDsLookupsAndConstraints
-  )
-import TrustlessSidechain.InitSidechain.TokensMint (mintAllTokens)
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
-import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
-import TrustlessSidechain.Versioning as Versioning
-import Type.Row (type (+))
 
 -- | Parameters for the first step (see description above) of the initialisation procedure
 -- | Using a open row type, to allow composing the two contracts
@@ -107,91 +82,3 @@ toSidechainParams isp = SidechainParams
   , thresholdDenominator: isp.initThresholdDenominator
   , governanceAuthority: isp.initGovernanceAuthority
   }
-
--- | `initSidechain` creates the `SidechainParams` and executes
--- | `initSidechainTokens` and `paySidechainTokens` in one transaction. Briefly,
--- | this will do the following:
--- |
--- |     - Mints the committee hash NFT
--- |
--- |     - Pays the committee hash NFT to the update committee hash validator
--- |
--- |     - Mints the checkpoint NFT
--- |
--- |     - Pays the checkpoint NFT to the checkpoint hash validator
--- |
--- |     - Mints various tokens for the distributed set (and pay to the required
--- |       validators)
--- |
--- |     - Mints and pays versioning tokens to versioning script
--- |
--- |     - Optionally, mints candidate permission tokens
--- |
--- | For details, see `initSidechainTokens` and `paySidechainTokens`.
-initSidechain ∷
-  ∀ r.
-  InitSidechainParams →
-  Int →
-  Run (APP + r)
-    { transactionId ∷ TransactionHash
-    , initTransactionIds ∷ Array TransactionHash
-    , sidechainParams ∷ SidechainParams
-    , sidechainAddresses ∷ SidechainAddresses
-    }
-initSidechain (InitSidechainParams isp) version = do
-  let sidechainParams = toSidechainParams isp
-
-  -- Grabbing all contraints for initialising the committee hash
-  -- and distributed set.
-  -- Note: this uses the monoid instance of functions to monoids to run
-  -- all functions to get the desired lookups and contraints.
-  ----------------------------------------
-  -- TODO: lookups and constraints should be constructed depending on the
-  -- version argument.  See Issue #10
-  { transactionId: txId } ← mintAllTokens sidechainParams isp.initATMSKind
-    version
-
-  -- Mint and pay versioning tokens to versioning script.
-  ----------------------------------------
-  versionedScriptsTxIds ← Versioning.initializeVersion
-    { atmsKind: isp.initATMSKind, sidechainParams }
-    version
-
-  checkpointInitTxId ←
-    initCheckpointLookupsAndConstraints isp.initGenesisHash sidechainParams
-      >>= balanceSignAndSubmit "Checkpoint init"
-  dsInitTxId ← initFuelAndDsLookupsAndConstraints sidechainParams version
-    >>= balanceSignAndSubmit "Distributed set init"
-  permissionTokensInitTxId ←
-    initCandidatePermissionTokenLookupsAndConstraints
-      isp.initCandidatePermissionTokenMintInfo
-      sidechainParams
-      >>= balanceSignAndSubmit "Candidate permission tokens init"
-  committeeInitTxId ←
-    initCommitteeHashLookupsAndConstraints isp.initSidechainEpoch
-      isp.initAggregatedCommittee
-      sidechainParams
-      >>= balanceSignAndSubmit "Committee init"
-
-  -- Grabbing the required sidechain addresses of particular validators /
-  -- minting policies as in issue #224
-  -----------------------------------------
-  sidechainAddresses ←
-    GetSidechainAddresses.getSidechainAddresses $
-      SidechainAddressesEndpointParams
-        { sidechainParams
-        , atmsKind: isp.initATMSKind
-        , usePermissionToken: isJust isp.initCandidatePermissionTokenMintInfo
-        , version
-        }
-  pure
-    { transactionId: txId
-    , initTransactionIds: versionedScriptsTxIds <>
-        [ checkpointInitTxId
-        , dsInitTxId
-        , permissionTokensInitTxId
-        , committeeInitTxId
-        ]
-    , sidechainParams
-    , sidechainAddresses
-    }

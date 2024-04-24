@@ -21,6 +21,7 @@ import Data.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Run (liftEffect) as Run
 import Run.Except (note) as Run
+import Test.InitSidechain.Utils (initSidechain)
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.UpdateCommitteeHash (updateCommitteeHash)
@@ -37,7 +38,6 @@ import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
-  , initSidechain
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)

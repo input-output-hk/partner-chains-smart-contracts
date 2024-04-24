@@ -13,6 +13,7 @@ import Data.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Run (liftEffect) as Run
 import Run.Except (note) as Run
+import Test.InitSidechain.Utils (initSidechain)
 import Test.MerkleRoot as Test.MerkleRoot
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
@@ -101,7 +102,7 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
             , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
                 ownPaymentPubKeyHash
             }
-      { sidechainParams } ← InitSidechain.initSidechain isp 1
+      { sidechainParams } ← initSidechain isp 1
 
       -- 2. Saving a merkle root.
       -------------------------------
@@ -257,7 +258,7 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
             , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
                 ownPaymentPubKeyHash
             }
-      { sidechainParams } ← InitSidechain.initSidechain isp 1
+      { sidechainParams } ← initSidechain isp 1
 
       -- 2. Saving a merkle root
       -------------------------------
