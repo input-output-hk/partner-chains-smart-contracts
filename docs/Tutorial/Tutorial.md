@@ -506,7 +506,7 @@ Note: `cardano-cli` is in a separate repo:
 The command we need to run is as follows:
 
 ```bash
-GOVERNANCE_AUTHORITY=$(nix run .#cardano-cli -- address \
+GOVERNANCE_AUTHORITY=$(nix run {path/to/cardano-cli}#cardano-cli -- address \
   key-hash \
   --payment-verification-key-file {your-path}/{your-wallet}.vkey)
 echo $GOVERNANCE_AUTHORITY
@@ -810,18 +810,6 @@ InitFuel output:
   }
 }
 ```
-
-TODO
-nix run .#sidechain-main-cli -- init-candidate-permission-token \
-    --candidate-permission-token-amount 1 \
-    --payment-signing-key-file "$SIGNING_KEY" \
-    --genesis-committee-hash-utxo "$ECDSA_SECP256K1_GENESIS_UTXO" \
-    --sidechain-id 69 \
-    --version 1 \
-    --threshold-numerator 1 \
-    --threshold-denominator 2 \
-    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
-    --atms-kind plain-ecdsa-secp256k1 | jq
 
 #### Schnorr SECP256k1 sidechain commands
 Initializing the Schnorr SECP256k1 sidechain is essentially identical to
@@ -1142,18 +1130,6 @@ InitFuel output:
   }
 }
 ```
-
-TODO
-nix run .#sidechain-main-cli -- init-candidate-permission-token \
-    --candidate-permission-token-amount 1 \
-    --payment-signing-key-file "$SIGNING_KEY" \
-    --genesis-committee-hash-utxo "$ECDSA_SECP256K1_GENESIS_UTXO" \
-    --sidechain-id 69 \
-    --version 1 \
-    --threshold-numerator 1 \
-    --threshold-denominator 2 \
-    --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
-    --atms-kind plain-ecdsa-secp256k1 | jq
 
 ### 3. Save a Merkle root of transactions from the sidechain
 Saving a Merkle root of transactions from the sidechain to the mainchain
