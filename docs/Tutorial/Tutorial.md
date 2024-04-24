@@ -577,7 +577,7 @@ nix run .#sidechain-main-cli -- init-tokens-mint \
     --threshold-denominator 2 \
     --atms-kind plain-ecdsa-secp256k1 \
     --governance-authority $GOVERNANCE_AUTHORITY \
-    --payment-signing-key-file ./alice.skey \
+    --payment-signing-key-file $SIGNING_KEY \
     --genesis-committee-hash-utxo $ECDSA_SECP256K1_GENESIS_UTXO | jq
 
 # Initialise Committee Selection
@@ -901,7 +901,7 @@ nix run .#sidechain-main-cli -- init-tokens-mint \
     --threshold-denominator 2 \
     --atms-kind plain-schnorr-secp256k1 \
     --governance-authority $GOVERNANCE_AUTHORITY \
-    --payment-signing-key-file ./alice.skey \
+    --payment-signing-key-file $SIGNING_KEY \
     --genesis-committee-hash-utxo $SCHNORR_SECP256K1_GENESIS_UTXO | jq
 
 # Initialise Committee Selection
