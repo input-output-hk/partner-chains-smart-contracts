@@ -383,7 +383,7 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
           , sidechainParams
           , sidechainAddresses
           } → J.fromObject $ Object.fromFoldable
-          [ "endpoint" /\ J.fromString "InitFuel"
+          [ "endpoint" /\ J.fromString "InitMerkleRoot"
           , "initTransactionIds" /\ J.fromArray
               (map (J.fromString <<< byteArrayToHex) initTransactionIds)
           , "sidechainParams" /\ CA.encode scParamsCodec sidechainParams
