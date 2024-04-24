@@ -5,7 +5,6 @@ import Contract.Prelude
 import Ctl.Internal.Deserialization.Keys
   ( freshPrivateKey
   )
-import Ctl.Internal.Serialization.Types (PrivateKey)
 import Mote.Monad (group)
 import Test.CandidatePermissionToken as CandidatePermissionToken
 import Test.Checkpoint as Checkpoint
@@ -59,12 +58,12 @@ main = do
   Test.Unit.Main.runTest
     $ interpretWrappedTest do
 
-        -- group "Unit tests" do
-        --   MerkleTree.tests
-        --   MerkleProofSerialisation.tests
-        --   Options.Parsers.tests
-        --   AddressUtils.tests
-        --   ConfigFile.tests
+        group "Unit tests" do
+          MerkleTree.tests
+          MerkleProofSerialisation.tests
+          Options.Parsers.tests
+          AddressUtils.tests
+          ConfigFile.tests
 
         group "Plutip integration tests" do
           InitCandidatePermissionToken.tests
@@ -90,13 +89,13 @@ main = do
           GarbageCollector.tests
           MinotaurStake.tests pk
 
--- plutipGroup "POC Plutip tests" do
---   PoCInlineDatum.tests
---   PoCReferenceInput.tests
---   PoCReferenceScript.tests
---   PoCSerialiseData.tests
---   PoCECDSA.testScenario
---   PoCSchnorrSecp256k1.tests
+        plutipGroup "POC Plutip tests" do
+          PoCInlineDatum.tests
+          PoCReferenceInput.tests
+          PoCReferenceScript.tests
+          PoCSerialiseData.tests
+          PoCECDSA.testScenario
+          PoCSchnorrSecp256k1.tests
 
--- group "Roundtrips" $ do
---   Data.tests
+        group "Roundtrips" $ do
+          Data.tests

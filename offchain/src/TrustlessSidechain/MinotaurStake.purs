@@ -7,18 +7,12 @@ import Contract.Prelude
 import Contract.PlutusData
   ( Datum(Datum)
   , Redeemer(Redeemer)
-  , fromData
   , toData
   )
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts as Scripts
-import Contract.Transaction
-  ( OutputDatum(OutputDatum)
-  , TransactionOutput(TransactionOutput)
-  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
-  )
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
   , TxConstraints
@@ -26,32 +20,20 @@ import Contract.TxConstraints
 import Contract.TxConstraints as Constraints
 import Contract.Value (TokenName, Value)
 import Contract.Value as Value
-import Ctl.Internal.Types.PubKeyHash
-  ( PaymentPubKeyHash(PaymentPubKeyHash)
-  , StakePubKeyHash(StakePubKeyHash)
-  )
-import Data.Array (nub, sort, (\\))
-import Data.Array as Array
-import Data.BigInt as BigInt
-import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import Run (Run)
-import Run.Except (EXCEPT, throw)
-import Run.Except as Run
+import Run.Except (EXCEPT)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
-import TrustlessSidechain.Effects.Transaction (utxosAt) as Effect
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
-  ( OffchainError(InvalidData, InvalidCLIParams)
+  ( OffchainError
   )
-import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.MinotaurStake.Types
   ( MinotaurStakeDatum(MinotaurStakeDatum)
   , MinotaurStakePolicyRedeemer(MintMinotaurStake)
   )
 import TrustlessSidechain.MinotaurStake.Utils as MinotaurStake
-import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address as Utils
 import Type.Row (type (+))
 
@@ -75,12 +57,12 @@ mkMinotaurDelegateLookupsAndConstraints
   { minotaurStakeMintingPolicy, minotaurStakeCurrencySymbol } ←
     MinotaurStake.getMinotaurStakeMintingPolicyAndCurrencySymbol
 
-  -- { minotaurStakeValidator, minotaurStakeValidatorAddress} <-
-  --   MinotaurStake.getMinotaurStakeValidatorAndAddress
-  ownPubKeyHash ← Utils.getOwnPaymentPubKeyHash
+  { minotaurStakeValidatorAddress } ←
+    MinotaurStake.getMinotaurStakeValidatorAndAddress
 
   stakePubKeyHash ← Utils.getOwnStakePubKeyHash
-
+  minotaurStakeValidatorHash ← Utils.toValidatorHash
+    minotaurStakeValidatorAddress
   let
     value ∷ Value
     value = Value.singleton
@@ -107,9 +89,8 @@ mkMinotaurDelegateLookupsAndConstraints
         (Redeemer $ toData MintMinotaurStake)
         minotaurStakeTokenName
         one
-        <> Constraints.mustPayToPubKeyAddressWithDatum
-          ownPubKeyHash
-          stakePubKeyHash
+        <> Constraints.mustPayToScript
+          minotaurStakeValidatorHash
           minotaurStakeDatum
           DatumInline
           value
