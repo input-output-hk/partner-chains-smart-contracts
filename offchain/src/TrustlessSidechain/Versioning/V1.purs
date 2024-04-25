@@ -34,6 +34,7 @@ import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.FUELBurningPolicy.V1 as FUELBurningPolicy.V1
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import TrustlessSidechain.MerkleRoot as MerkleRoot
+import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash.Utils
   ( getUpdateCommitteeHashValidator
@@ -50,6 +51,7 @@ import TrustlessSidechain.Versioning.Types
       , DsKeyPolicy
       , CommitteeCertificateVerificationPolicy
       , CommitteeOraclePolicy
+      , PermissionedCandidatesValidator
       )
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
@@ -121,6 +123,9 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
 
   committeeCandidateValidator ← getCommitteeCandidateValidator sp
 
+  { permissionedCandidatesValidator } ←
+    PermissionedCandidates.getPermissionedCandidatesValidatorAndAddress sp
+
   let
     versionedValidators = List.fromFoldable
       [ MerkleRootTokenValidator /\ merkleRootTokenValidator
@@ -128,10 +133,10 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
       , CommitteeHashValidator /\ committeeHashValidator
       , CommitteeCandidateValidator /\ committeeCandidateValidator
       --, DParameterValidator /\ dParameterValidator
-      --, PermissionedCandidatesValidator /\ permissionedCandidatesValidator
+      , PermissionedCandidatesValidator /\ permissionedCandidatesValidator
       ]
 
-  pure $ { versionedPolicies, versionedValidators }
+  pure { versionedPolicies, versionedValidators }
 
 getMerkleRootPoliciesAndValidators ∷
   ∀ r.
@@ -161,8 +166,15 @@ getCandidatePermissionTokenPoliciesAndValidators ∷
     { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
     , versionedValidators ∷ List (Tuple ScriptId Validator)
     }
-getCandidatePermissionTokenPoliciesAndValidators _sp = do
-  pure $ { versionedPolicies: mempty, versionedValidators: mempty }
+getCandidatePermissionTokenPoliciesAndValidators sp = do
+  { permissionedCandidatesValidator } ←
+    PermissionedCandidates.getPermissionedCandidatesValidatorAndAddress sp
+
+  let
+    versionedValidators = List.fromFoldable
+      [ PermissionedCandidatesValidator /\ permissionedCandidatesValidator ]
+
+  pure { versionedPolicies: mempty, versionedValidators }
 
 getCommitteeSelectionPoliciesAndValidators ∷
   ∀ r.
