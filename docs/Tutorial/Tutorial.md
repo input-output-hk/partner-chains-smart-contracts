@@ -347,9 +347,10 @@ For convenience, we will first put the list of files in an environment variable
     `ECDSA_SECP256K1_SC_COMMITTEE` with the following commands.
 
 ```bash
-ECDSA_SECP256K1_SC_COMMITTEE=
+ECDSA_SECP256K1_SC_COMMITTEE=()
 for i in $(seq 1 1 4)
-do ECDSA_SECP256K1_SC_COMMITTEE="$ECDSA_SECP256K1_SC_COMMITTEE EcdsaSecp256k1ScCommitteeMember$i.json"
+do
+  ECDSA_SECP256K1_SC_COMMITTEE+=("EcdsaSecp256k1ScCommitteeMember$i.json")
 done
 echo $ECDSA_SECP256K1_SC_COMMITTEE
 ```
@@ -362,7 +363,7 @@ EcdsaSecp256k1ScCommitteeMember1.json EcdsaSecp256k1ScCommitteeMember2.json Ecds
 Then, we can generate the sidechain committee with the following command.
 
 ```bash
-for SC_MEMBER in $ECDSA_SECP256K1_SC_COMMITTEE
+for SC_MEMBER in "${ECDSA_SECP256K1_SC_COMMITTEE[@]}"
 do nix run .#sidechain-main-cli -- utils key-gen ecdsa-secp256k1 \
     | tee "$SC_MEMBER" \
     | jq
