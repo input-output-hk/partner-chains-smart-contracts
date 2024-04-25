@@ -353,7 +353,7 @@ for i in $(seq 1 1 4)
 do
   ECDSA_SECP256K1_SC_COMMITTEE+=("EcdsaSecp256k1ScCommitteeMember$i.json")
 done
-echo $ECDSA_SECP256K1_SC_COMMITTEE
+echo "${ECDSA_SECP256K1_SC_COMMITTEE[@]}"
 ```
 
 Standard output.
