@@ -165,6 +165,7 @@ For example, I have these set as follows.
 ```bash
 ADDR=$(cat ./payment.addr)
 SIGNING_KEY=./payment.skey
+VERIFICATION_KEY=$(cat ./payment.vkey)
 echo $ADDR
 echo $SIGNING_KEY
 ```
@@ -507,9 +508,10 @@ Note: `cardano-cli` is in a separate repo:
 The command we need to run is as follows:
 
 ```bash
-GOVERNANCE_AUTHORITY=$(nix run {path/to/cardano-cli}#cardano-cli -- address \
-  key-hash \
-  --payment-verification-key-file {your-path}/{your-wallet}.vkey)
+GOVERNANCE_AUTHORITY=$(docker exec \
+        -e CARDANO_NODE_SOCKET_PATH="/ipc/node.socket" ctl-runtime_cardano-node_1 \
+        cardano-cli address key-hash --payment-verification-key "$VERIFICATION_KEY")
+
 echo $GOVERNANCE_AUTHORITY
 ```
 
