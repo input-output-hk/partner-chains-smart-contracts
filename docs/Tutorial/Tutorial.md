@@ -514,62 +514,14 @@ GOVERNANCE_AUTHORITY=$(docker exec \
 
 echo $GOVERNANCE_AUTHORITY
 ```
+# Initialise the sidechain in parts
 
-# Option 1: Initialise the sidechain in full
+Each feature of a sidechain can be initialised separately. Some
+functionality requires multiple features to be initialized. To
+fully initialize a sidechain, run all `init-*` commands.
 
-```bash
-nix run .#sidechain-main-cli -- init \
-    --payment-signing-key-file $SIGNING_KEY \
-    --genesis-committee-hash-utxo $ECDSA_SECP256K1_GENESIS_UTXO \
-    --sidechain-id 69 \
-    --sidechain-genesis-hash 112233 \
-    --threshold-numerator 1 \
-    --threshold-denominator 2 \
-    --atms-kind plain-ecdsa-secp256k1 \
-    --version 1 \
-    --governance-authority $GOVERNANCE_AUTHORITY \
-    $(for SC_MEMBER in $ECDSA_SECP256K1_SC_COMMITTEE
-        do printf " --committee-pub-key %s " "$(jq -r .rawHexPublicKey "$SC_MEMBER")"
-        done) \
-    --sidechain-epoch 0 \
-    | jq
-```
-
-Standard output.
-```
-{
-  "endpoint": "Init",
-  "transactionId": "ce8d56efc762737f4ca9976c29173dde182398151b9cd4355557d02aa582d6b8",
-  "sidechainParams": {
-    "chainId": 69,
-    "genesisHash": "112233",
-    "genesisUtxo": "0ff11e7677123926dd2339ba83e72bdba6da2bd2828f60da283c6aca9f61d106#1",
-    "thresholdDenominator": 2,
-    "thresholdNumerator": 1
-  },
-  "addresses": {
-    "CommitteeCandidateValidator": "addr_test1wp2wn3q2uz3mvly4n6yjmyrw79us7h5t9jk4tcswtls3htqrg87h8",
-    "MerkleRootTokenValidator": "addr_test1wztts5l05ys58r75nyg8mp4l0rm9qqryu7a9f30ujge90ack59fxe",
-    "CommitteeHashValidator": "addr_test1wpn5th4xk5njhtmnaja7ykqdna4v8jd4gkh0srg9etvt6ccdenjvc",
-    "DSConfValidator": "addr_test1wq7lj84g3jskpuq0fpddefexg56muvcpr54eg5gqyr3qejchxw5pa",
-    "DSInsertValidator": "addr_test1wqzrzg03rvfyttw96vjk79c2ec5lg83yjgkks7jz64hmv2sewf5t9",
-    "CheckpointValidator": "addr_test1wqyry33893mkquln9jlvqyldae7vwlhey7u56qe0q9qfpuc76pa9e"
-  },
-  "cborEncodedAddresses": {
-    "CommitteeHashValidator": "d8799fd87a9f581c6745dea6b5272baf73ecbbe2580d9f6ac3c9b545aef80d05cad8bd63ffd87a80ff"
-  },
-  "mintingPolicies": {
-    "FuelMintingPolicyId": "b3ab8b3f5abe1fb9bfbf9d26d72273d95688420ad39392f62babdad7",
-    "MerkleRootTokenMintingPolicyId": "3d065fbb26eb78817495b74c66f7e2eee9ba12ec6242e39136e36b75",
-    "CommitteeNftPolicyId": "ec4840201f87872170c23fa9f43a1701e650eb7dd42e70dfc5798796",
-    "DSKeyPolicy": "49f2790a7a63b19a354454526fb18ab0d3d323a2d7b28aa23037e123",
-    "DSConfPolicy": "4f4a63d762be87e64b3c2dfa5aebdda1304e42f35e12bd39dd70ac6a",
-    "CheckpointPolicy": "71191d80679238c7f7764d8a8ee49828b35252e1fec7930d7039ccd0"
-  }
-}
-```
-
-# Option 2: Initialise the sidechain in parts
+`init-tokens-mint` must be run first, but otherwise the commands
+can be run in any order.
 
 ```bash
 # Create initialisation tokens

@@ -57,7 +57,7 @@ We discuss the state transitions.
 
 - `register` (not included in the state machine) allows one to register as a committee candidate.
 
-- `init` initialises the sidechain. In particular this determines the `initial committee` stored onchain which has authority over what merkle roots get saved in the `save-root` command along with who the succeeding committee will be in the `committee-hash` command. Moreover, this initialises internal data structures used for the `claim` endpoint that will not be further discussed.
+- The various `init-*` commands initialise specific features of the sidechain. In particular `init-committee-selection` determines the `initial committee` stored onchain which has authority over what merkle roots get saved in the `save-root` command along with who the succeeding committee will be in the `committee-hash` command. Moreover, other commands initialise internal data structures used for the `claim` endpoint that will not be further discussed.
 
 - `committee-hash` allows the `current committee` to sign off a `new committee` to replace them.
 

@@ -53,6 +53,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 ## Removed
 
+  * Removed monolithic `init` command in favor of individual `init-*` commands
   * Removed `init-tokens-mint` command.
   * Removed `use-init-tokens` flag from `init` command.
   * Removed `candidate-permission-token-utxo` and
