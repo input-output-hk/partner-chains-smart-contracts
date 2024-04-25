@@ -67,6 +67,11 @@ testInitCandidatePermissionToken =
                 , governanceAuthority: initGovernanceAuthority
                 }
 
+            -- Initialise tokens
+            void $ InitMint.initTokensMint sidechainParams
+              initATMSKind
+              version
+
             void $ InitCandidatePermission.initCandidatePermissionToken
               sidechainParams
               initCandidatePermissionTokenMintInfo
@@ -111,7 +116,7 @@ testInitCandidatePermissionTokenIdempotent =
               initATMSKind
               version
 
-            -- Initialise checkpoint
+            -- Initialise candidate permission tokens
             void $ InitCandidatePermission.initCandidatePermissionToken
               sidechainParams
               initCandidatePermissionTokenMintInfo
