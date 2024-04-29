@@ -662,6 +662,7 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
                 minotaurDelegationsForGivenStakePoolId
             )
         ]
+
     MinotaurCancelDelegationResp
       { transactionId } →
       J.fromObject $ Object.fromFoldable

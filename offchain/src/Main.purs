@@ -740,6 +740,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
           { stakePoolId }
           <#> { minotaurDelegationsForGivenStakePoolId: _ }
           >>> GetMinotaurDelegationsForGivenStakePoolIdResp
+
       MinotaurCancelDelegation
         { stakePoolId, partnerChainRewardAddress } →
         MinotaurStake.mkMinotaurCancelDelegationLookupsAndConstraints
