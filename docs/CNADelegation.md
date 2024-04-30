@@ -68,7 +68,6 @@ delegator's stake key public key hash and if it satisfies the constraints
 the validator script imposes.
 
 ### 2.2 Validator script
-<!-- TODO: Review this section once the validator logic is written -->
 When a `Minotaur Stake` token is minted, it is sent to the address of the
 validator script. The validator script's conditions must be met in order
 to spend the UTxO containing the stake token and hence to cancel a delegation.
@@ -136,30 +135,38 @@ group by (minotaur_delegation_datum_helper.value)
 <!-- TODO: -->
 
 ## 3. CLI commands
-<!-- TODO: update this section once the CLI commands are written -->
 
 The `trustless-sidechain` CLI application provides two sub-commands related to
 CNA delegation:
 
-* `delegate-stake`, to delegate PC native tokens
-* `cancel-delegate-stake` to remove a delegation.
+* `minotaur-delegate`, to delegate PC native tokens
+* `minotaur-cancel-delegation` to remove a delegation.
 * `get-own-minotaur-delegations` to get information about all delegations signed by the owner's stake pub key hash.
 * `get-minotaur-delegations-for-stake-pool` to get information about all delegations to the given stake pool.
 
-### 3.1 `delegate-stake`
+### 3.1 `minotaur-delegate`
 ```bash
-sidechain-main-cli delegate-stake --spo-id <SPO_ID> --partner-chain-reward-address <PARTNER-CHAIN-REWARD-ADDRESS>
+sidechain-main-cli minotaur-delegate --spo-id <SPO_ID> --partner-chain-reward-address <PARTNER-CHAIN-REWARD-ADDRESS>
 ```
 
 For example, to delegate native tokens held at wallet address to stake pool
 "cadabra" with reward address "abcabc" you can do
 
 ```bash
-sidechain-main-cli delegate-stake --spo-id "cadabra" --partner-chain-reward-address "abcabc"
+sidechain-main-cli minotaur-delegate --spo-id "cadabra" --partner-chain-reward-address "abcabc"
 ```
 
-### 3.2 `cancel-delegate-stake`
-<!-- TODO: update this section once the `cancel-delegate-stake` command is written -->
+### 3.2 `minotaur-cancel-delegation`
+```bash
+sidechain-main-cli minotaur-cancel-delegation --spo-id <SPO_ID> --partner-chain-reward-address <PARTNER-CHAIN-REWARD-ADDRESS>
+```
+
+For example, to cancel delgation of native tokens held at wallet address to stake pool
+"cadabra" with reward address "abcabc" you can do
+
+```bash
+sidechain-main-cli minotaur-cancel-delegation --spo-id "cadabra" --partner-chain-reward-address "abcabc"
+```
 
 ### 3.3 `get-own-minotaur-delegations`
 ```bash
