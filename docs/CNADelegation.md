@@ -82,14 +82,58 @@ the `Minotaur Stake` token satisfies the following:
   who minted the `Minotaur Stake` token originally.
 
 ### 2.3 Computing stake delegation distribution
-<!-- TODO: Would be nice to have an example query for how to do this with db-sync-->
 
 To compute the stake delegation distribution in the PC native token, it is enough
 to query for all UTxOs held at the validator's address. Each such UTxO should hold
 exactly one `Minotaur Stake` token. Then, the amount of native tokens delegated to
-each stake pool id can be computed by inspecting the datum of each of those UTxOs:
-The quantity of tokens at the given wallet address is grouped by stake pool id and
-summed.
+a particular stake pool id can be computed by inspecting the datum of each of those UTxOs:
+The quantity of tokens at addresses corresponding to each PubStakeKeyHash is summed.
+
+You can use this SQL query on the `cardano-db-sync` PostgreSQL database.
+`<MinotaurStakeValidator>` and `<MinotaurStakePolicy>` can be obtained using
+`sidechain-main-cli addresses` command. `<STAKE_POOL_ID>` is the id of a stake pool
+for which you want to calculate the total stake distribution. `<CNA_POLICY>` is a
+Cardano Native Asset that is being staked. It is chosen by the partner chain that
+wants to use CNA stake delegation mechanism.
+
+```sql
+select minotaur_delegation_datum_helper.value->'list'->1->>'bytes' as stakePubKeyHash,
+       minotaur_delegation_datum_helper.value->'list'->0->>'bytes' as partnerChainRewardAddress,
+       minotaur_delegation_datum_helper.value->'list'->2->>'bytes' as stakePoolId,
+       Sum(stake_ma_tx_out.quantity) as stake_amount
+from utxo_view as minotaur_delegation_utxo
+join ma_tx_out as minotaur_delegation_ma_tx_out
+on minotaur_delegation_ma_tx_out.tx_out_id = minotaur_delegation_utxo.id
+join multi_asset as minotaur_delegation_multi_asset
+on minotaur_delegation_multi_asset.id = minotaur_delegation_ma_tx_out.ident
+join datum as minotaur_delegation_datum
+on minotaur_delegation_datum.hash = minotaur_delegation_utxo.data_hash
+JOIN (SELECT *,
+             ROW_NUMBER() OVER (PARTITION BY (minotaur_delegation_datum.value->'list'->1->>'bytes') ORDER BY  minotaur_delegation_datum.tx_id DESC) AS rn
+      from datum as minotaur_delegation_datum
+      where minotaur_delegation_datum.value->'list'->1->>'bytes' is not null
+) as minotaur_delegation_datum_helper
+on minotaur_delegation_datum_helper.id = minotaur_delegation_datum.id
+and minotaur_delegation_datum_helper.rn = 1
+join stake_address as stake_address
+on stake_address.hash_raw = decode('e0'||(minotaur_delegation_datum.value->'list'->1->>'bytes'), 'hex')
+join utxo_view as staked_utxo
+on staked_utxo.stake_address_id = stake_address.id
+join ma_tx_out as stake_ma_tx_out
+on stake_ma_tx_out.tx_out_id = staked_utxo.id
+join multi_asset as stake_multi_asset
+on stake_multi_asset.id = stake_ma_tx_out.ident
+where minotaur_delegation_utxo.address = <MinotaurStakeValidator>
+and minotaur_delegation_multi_asset.policy = decode(<MinotaurStakePolicy>, 'hex')
+and minotaur_delegation_ma_tx_out.quantity > 0
+and minotaur_delegation_datum.value->'list'->2->>'bytes' = <STAKE_POOL_ID>
+and stake_multi_asset.policy = decode(<CNA_POLICY>, 'hex')
+group by (minotaur_delegation_datum_helper.value)
+```
+
+"
+
+
 
 ### 2.4 Versioning
 <!-- TODO: -->
@@ -102,17 +146,37 @@ CNA delegation:
 
 * `delegate-stake`, to delegate PC native tokens
 * `cancel-delegate-stake` to remove a delegation.
+* `get-own-minotaur-delegations` to get information about all delegations signed by the owner's stake pub key hash.
+* `get-minotaur-delegations-for-stake-pool` to get information about all delegations to the given stake pool.
 
-Each command takes a delegator stake public key hash and stake pool id, both
-as strings, as shown below
-
+### 3.1 `delegate-stake`
 ```bash
-Usage: sidechain-main-cli COMMAND --stake-pubkey BYTESRTING --spo-id BYTESTRING
+sidechain-main-cli delegate-stake --spo-id <SPO_ID> --partner-chain-reward-address <PARTNER-CHAIN-REWARD-ADDRESS>
 ```
 
-For example, to delegate native tokens held at wallet address "abra" to stake pool
-"cadabra",
+For example, to delegate native tokens held at wallet address to stake pool
+"cadabra" with reward address "abcabc" you can do
 
 ```bash
-sidechain-main-cli delegate-stake --stake-pubkey "abra" --spo-id "cadabra"
+sidechain-main-cli delegate-stake --spo-id "cadabra" --partner-chain-reward-address "abcabc"
+```
+
+### 3.2 `cancel-delegate-stake`
+<!-- TODO: update this section once the `cancel-delegate-stake` command is written -->
+
+### 3.3 `get-own-minotaur-delegations`
+```bash
+sidechain-main-cli get-own-minotaur-delegations
+```
+
+This command takes no extra arguments. The stake pub key hash for which the delegations are searched for is obtained during runtime by the CTL.
+
+### 3.4 `get-minotaur-delegations-for-stake-pool`
+```bash
+sidechain-main-cli get-minotaur-delegations-for-stake-pool --spo-id <SPO-ID>
+```
+
+For example, to get all delegations made to the SPO "cadabra" you can do
+```bash
+sidechain-main-cli get-minotaur-delegations-for-stake-pool "cadabra"
 ```

@@ -16,6 +16,7 @@
   , "effect"
   , "either"
   , "exceptions"
+  , "filterable"
   , "foldable-traversable"
   , "foreign-object"
   , "integers"

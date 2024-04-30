@@ -32,10 +32,12 @@ import Contract.Value
   )
 import Data.Argonaut (Json)
 import Data.Argonaut.Core as J
+import Data.Argonaut.Parser as JP
 import Data.Bifunctor (rmap)
 import Data.BigInt (BigInt)
 import Data.Codec.Argonaut as CA
 import Data.Codec.Argonaut.Compat as CAC
+import Data.Filterable (filterMap)
 import Data.List (List)
 import Foreign.Object as Object
 import TrustlessSidechain.FUELMintingPolicy.V1
@@ -47,6 +49,7 @@ import TrustlessSidechain.MerkleTree
   , RootHash
   , unRootHash
   )
+import TrustlessSidechain.MinotaurStake.Types (MinotaurStakeDatum)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (currencySymbolToHex)
 import TrustlessSidechain.Utils.Codecs
@@ -193,6 +196,10 @@ data EndpointResp
       }
   | MinotaurDelegateResp
       { transactionId ∷ ByteArray }
+  | GetOwnMinotaurDelegationsResp
+      { ownMinotaurDelegations ∷ Array MinotaurStakeDatum }
+  | GetMinotaurDelegationsForGivenStakePoolIdResp
+      { minotaurDelegationsForGivenStakePoolId ∷ Array MinotaurStakeDatum }
 
 -- | `serialisePlutusDataToHex` serialises plutus data to CBOR, and shows the
 -- | hex encoded CBOR.
@@ -634,6 +641,24 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "MinotaurDelegate"
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
+        ]
+
+    GetOwnMinotaurDelegationsResp
+      { ownMinotaurDelegations } →
+      J.fromObject $ Object.fromFoldable
+        [ "endpoint" /\ J.fromString "GetOwnMinotaurDelegations"
+        , "ownMinotaurDelegations" /\ J.fromArray
+            (filterMap (hush <<< JP.jsonParser <<< show) ownMinotaurDelegations)
+        ]
+
+    GetMinotaurDelegationsForGivenStakePoolIdResp
+      { minotaurDelegationsForGivenStakePoolId } →
+      J.fromObject $ Object.fromFoldable
+        [ "endpoint" /\ J.fromString "GetMinotaurDelegationsForGivenStakePoolId"
+        , "minotaurDelegationsForGivenStakePoolId" /\ J.fromArray
+            ( filterMap (hush <<< JP.jsonParser <<< show)
+                minotaurDelegationsForGivenStakePoolId
+            )
         ]
 
 -- | Encode the endpoint response to a json object

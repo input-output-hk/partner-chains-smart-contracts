@@ -1,5 +1,7 @@
 module TrustlessSidechain.MinotaurStake
   ( mkMinotaurDelegateLookupsAndConstraints
+  , getOwnMinotaurDelegations
+  , getMinotaurDelegationsForGivenStakePoolId
   ) where
 
 import Contract.Prelude
@@ -7,12 +9,18 @@ import Contract.Prelude
 import Contract.PlutusData
   ( Datum(Datum)
   , Redeemer(Redeemer)
+  , fromData
   , toData
   )
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts as Scripts
+import Contract.Transaction
+  ( OutputDatum(OutputDatum)
+  , TransactionOutput(TransactionOutput)
+  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
+  )
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
   , TxConstraints
@@ -20,11 +28,16 @@ import Contract.TxConstraints
 import Contract.TxConstraints as Constraints
 import Contract.Value (TokenName, Value)
 import Contract.Value as Value
+import Control.Alternative (guard)
+import Data.Array as Array
+import Data.BigInt as BigInt
+import Data.Filterable (filterMap)
+import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import Run (Run)
 import Run.Except (EXCEPT)
-import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
   ( OffchainError
@@ -97,3 +110,79 @@ mkMinotaurDelegateLookupsAndConstraints
         <> Constraints.mustBeSignedBy (wrap $ unwrap stakePubKeyHash)
 
   pure { lookups, constraints }
+
+getOwnMinotaurDelegations ∷
+  ∀ r.
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
+    (Array MinotaurStakeDatum)
+getOwnMinotaurDelegations = do
+  ownStakePubKeyHash ← Utils.getOwnStakePubKeyHash
+  { minotaurStakeCurrencySymbol } ←
+    MinotaurStake.getMinotaurStakeMintingPolicyAndCurrencySymbol
+
+  { minotaurStakeValidatorAddress } ←
+    MinotaurStake.getMinotaurStakeValidatorAndAddress
+
+  allMinotaurUtxos ← utxosAt minotaurStakeValidatorAddress
+
+  let
+    minotaurUtxos =
+      Array.fromFoldable
+        $ Map.values
+        $ filterMap
+            ( \output → case output of
+                ( TransactionOutputWithRefScript
+                    { output:
+                        (TransactionOutput { amount, datum: OutputDatum (Datum d) })
+                    }
+                ) → do
+                  guard
+                    ( Value.valueOf amount minotaurStakeCurrencySymbol
+                        minotaurStakeTokenName > BigInt.fromInt 0
+                    )
+                  minoDatum@(MinotaurStakeDatum { stakePubKeyHash }) ← fromData d
+                  guard (stakePubKeyHash == unwrap ownStakePubKeyHash)
+                  pure minoDatum
+                _ → Nothing
+            )
+            allMinotaurUtxos
+
+  pure minotaurUtxos
+
+getMinotaurDelegationsForGivenStakePoolId ∷
+  ∀ r.
+  { stakePoolId ∷ ByteArray } →
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
+    (Array MinotaurStakeDatum)
+getMinotaurDelegationsForGivenStakePoolId { stakePoolId } = do
+  { minotaurStakeCurrencySymbol } ←
+    MinotaurStake.getMinotaurStakeMintingPolicyAndCurrencySymbol
+
+  { minotaurStakeValidatorAddress } ←
+    MinotaurStake.getMinotaurStakeValidatorAndAddress
+
+  allMinotaurUtxos ← utxosAt minotaurStakeValidatorAddress
+
+  let
+    minotaurUtxos =
+      Array.fromFoldable
+        $ Map.values
+        $ filterMap
+            ( \output → case output of
+                ( TransactionOutputWithRefScript
+                    { output:
+                        (TransactionOutput { amount, datum: OutputDatum (Datum d) })
+                    }
+                ) → do
+                  guard
+                    ( Value.valueOf amount minotaurStakeCurrencySymbol
+                        minotaurStakeTokenName > BigInt.fromInt 0
+                    )
+                  minoDatum@(MinotaurStakeDatum { stakePoolId: spId }) ← fromData d
+                  guard (spId == stakePoolId)
+                  pure minoDatum
+                _ → Nothing
+            )
+            allMinotaurUtxos
+
+  pure minotaurUtxos
