@@ -11,10 +11,14 @@ import Ctl.Internal.Test.UtxoDistribution
 import Ctl.Internal.Wallet.Key (PrivateStakeKey(PrivateStakeKey))
 import Data.BigInt as BigInt
 import Mote.Monad as Mote.Monad
+import Test.InitSidechain.Utils (failMsg)
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
+import Test.Unit.Assert (assert)
 import Test.Utils (WrappedTests, plutipGroup)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Util (fromMaybeThrow) as Effect
+import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.MinotaurStake as MinotaurStake
 import TrustlessSidechain.Utils.Transaction
   ( balanceSignAndSubmit
@@ -29,7 +33,7 @@ tests pk = plutipGroup "Minting, and burning a Minotaur Stake Token" $
 
 testScenarioSuccess ∷ PrivateKey → PlutipTest
 testScenarioSuccess privateKey =
-  Mote.Monad.test "Minting and updating a Minotaur Stake Token"
+  Mote.Monad.test "Making Minotaur Stake Delegation"
     $ Test.PlutipTest.mkPlutipConfigTest
         ( InitialUTxOsWithStakeKey (PrivateStakeKey privateKey)
             [ BigInt.fromInt 1_000_000
@@ -41,9 +45,10 @@ testScenarioSuccess privateKey =
 
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
 
+        let stakePoolId = ByteArray.hexToByteArrayUnsafe "abababababa"
         _ ←
           ( MinotaurStake.mkMinotaurDelegateLookupsAndConstraints
-              { stakePoolId: ByteArray.hexToByteArrayUnsafe "abababababa"
+              { stakePoolId
               , partnerChainRewardAddress: ByteArray.hexToByteArrayUnsafe
                   "abababababa"
               }
@@ -51,4 +56,21 @@ testScenarioSuccess privateKey =
                 balanceSignAndSubmit
                   "Test: delegate minotaur stake"
           )
+        ownDelegations ← MinotaurStake.getOwnMinotaurDelegations
+        Effect.fromMaybeThrow (GenericInternalError "Unreachable")
+          $ map Just
+          $ liftAff
+          $ assert (failMsg "Own delegation was not found" ownDelegations)
+              (length ownDelegations == 1)
         pure unit
+
+        stakePoolDelegations ←
+          MinotaurStake.getMinotaurDelegationsForGivenStakePoolId
+            { stakePoolId }
+
+        Effect.fromMaybeThrow (GenericInternalError "Unreachable")
+          $ map Just
+          $ liftAff
+          $ assert
+              (failMsg "Stake pool delegation was not found" stakePoolDelegations)
+              (length stakePoolDelegations == 1)

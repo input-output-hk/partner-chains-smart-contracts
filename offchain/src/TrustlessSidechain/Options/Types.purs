@@ -280,6 +280,9 @@ data TxEndpoint
       { partnerChainRewardAddress ∷ ByteArray
       , stakePoolId ∷ ByteArray
       }
+  | GetOwnMinotaurDelegations
+  | GetMinotaurDelegationsForGivenStakePoolId
+      { stakePoolId ∷ ByteArray }
 
 -- | `CandidatePermissionTokenMintInit` is a type alias for minting the
 -- | candidate permission token when initializing the sidechain

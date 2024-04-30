@@ -128,6 +128,8 @@ import TrustlessSidechain.Options.Types
       , InitTokenStatus
       , ListVersionedScripts
       , MinotaurDelegate
+      , GetOwnMinotaurDelegations
+      , GetMinotaurDelegationsForGivenStakePoolId
       )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
@@ -295,6 +297,21 @@ optSpec maybeConfig =
         ( info (withCommonOpts maybeConfig minotaurDelegateSpec)
             ( progDesc
                 "Delegate your tokens to the partner chain SPO using the Minotaur protocol"
+            )
+        )
+    , command "get-own-minotaur-delegations"
+        ( info (withCommonOpts maybeConfig (pure GetOwnMinotaurDelegations))
+            ( progDesc
+                "Get the delegations of the user to the partner chain SPO using the Minotaur protocol"
+            )
+        )
+    , command "get-minotaur-delegations-for-stake-pool"
+        ( info
+            ( withCommonOpts maybeConfig
+                getMinotaurDelegationsForGivenStakePoolIdSpec
+            )
+            ( progDesc
+                "Get the delegations of the user to the partner chain SPO using the Minotaur protocol for a given stake pool"
             )
         )
     ]
@@ -1533,6 +1550,11 @@ minotaurDelegateSpec = ado
   partnerChainRewardAddress ← parsePartnerChainRewardAddress
   stakePoolId ← parseStakePoolId
   in MinotaurDelegate { partnerChainRewardAddress, stakePoolId }
+
+getMinotaurDelegationsForGivenStakePoolIdSpec ∷ Parser TxEndpoint
+getMinotaurDelegationsForGivenStakePoolIdSpec = ado
+  stakePoolId ← parseStakePoolId
+  in GetMinotaurDelegationsForGivenStakePoolId { stakePoolId }
 
 parsePartnerChainRewardAddress ∷ Parser ByteArray
 parsePartnerChainRewardAddress = option byteArray $ fold

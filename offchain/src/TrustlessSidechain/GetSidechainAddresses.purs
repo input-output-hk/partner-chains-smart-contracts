@@ -43,6 +43,7 @@ import TrustlessSidechain.Effects.Wallet (getNetworkId) as Effect
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.FUELProxyPolicy (getFuelProxyMintingPolicy)
 import TrustlessSidechain.InitSidechain.Utils as InitSidechain
+import TrustlessSidechain.MinotaurStake.Utils as MinotaurStake
 import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address
@@ -70,6 +71,8 @@ import TrustlessSidechain.Versioning.Types
       , PermissionedCandidatesValidator
       , DParameterValidator
       , InitTokenPolicy
+      , MinotaurStakeValidator
+      , MinotaurStakePolicy
       )
   )
 import TrustlessSidechain.Versioning.Utils
@@ -221,6 +224,14 @@ getSidechainAddresses
   { dParameterValidator } ←
     DParameter.getDParameterValidatorAndAddress sidechainParams
 
+  { minotaurStakeCurrencySymbol } ←
+    MinotaurStake.getMinotaurStakeMintingPolicyAndCurrencySymbol
+
+  let minotaurStakePolicyId = currencySymbolToHex minotaurStakeCurrencySymbol
+
+  { minotaurStakeValidator } ←
+    MinotaurStake.getMinotaurStakeValidatorAndAddress
+
   let
     mintingPolicies =
       [ DsConfPolicy /\ dsConfPolicyId
@@ -230,6 +241,7 @@ getSidechainAddresses
       , PermissionedCandidatesPolicy /\ permissionedCandidatesPolicyId
       , DParameterPolicy /\ dParameterPolicyId
       , InitTokenPolicy /\ initTokenPolicyId
+      , MinotaurStakePolicy /\ minotaurStakePolicyId
       ]
         <>
           Array.catMaybes
@@ -257,6 +269,7 @@ getSidechainAddresses
       , VersionOracleValidator /\ versionOracleValidator
       , PermissionedCandidatesValidator /\ permissionedCandidatesValidator
       , DParameterValidator /\ dParameterValidator
+      , MinotaurStakeValidator /\ minotaurStakeValidator
       ] <> List.toUnfoldable versionedValidators
 
   addresses ← traverse (traverse getAddr) validators

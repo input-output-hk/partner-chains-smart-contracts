@@ -457,6 +457,18 @@
       installPhase = "ln -s $src $out";
     };
 
+    "filterable" = pkgs.stdenv.mkDerivation {
+      name = "filterable";
+      version = "v5.0.0";
+      src = pkgs.fetchgit {
+        url = "https://github.com/purescript/purescript-filterable.git";
+        rev = "7c5b8c72779997f2b17d12ce478ff81e7ddda285";
+        sha256 = "1mx4pm8ij1f1vlpw4wrs8gxrw7y6sr9mq5cx1wfx4ks9gs3v765l";
+      };
+      phases = "installPhase";
+      installPhase = "ln -s $src $out";
+    };
+
     "foldable-traversable" = pkgs.stdenv.mkDerivation {
       name = "foldable-traversable";
       version = "v5.0.1";

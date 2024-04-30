@@ -67,6 +67,8 @@ import TrustlessSidechain.EndpointResp
       , InitTokenStatusResp
       , ListVersionedScriptsResp
       , MinotaurDelegateResp
+      , GetOwnMinotaurDelegationsResp
+      , GetMinotaurDelegationsForGivenStakePoolIdResp
       )
   , stringifyEndpointResp
   )
@@ -128,6 +130,8 @@ import TrustlessSidechain.Options.Types
       , InitTokenStatus
       , ListVersionedScripts
       , MinotaurDelegate
+      , GetOwnMinotaurDelegations
+      , GetMinotaurDelegationsForGivenStakePoolId
       )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
@@ -722,6 +726,18 @@ runTxEndpoint sidechainEndpointParams endpoint =
           <#> unwrap
           >>> { transactionId: _ }
           >>> MinotaurDelegateResp
+
+      GetOwnMinotaurDelegations →
+        MinotaurStake.getOwnMinotaurDelegations
+          <#> { ownMinotaurDelegations: _ }
+          >>> GetOwnMinotaurDelegationsResp
+
+      GetMinotaurDelegationsForGivenStakePoolId
+        { stakePoolId } →
+        MinotaurStake.getMinotaurDelegationsForGivenStakePoolId
+          { stakePoolId }
+          <#> { minotaurDelegationsForGivenStakePoolId: _ }
+          >>> GetMinotaurDelegationsForGivenStakePoolIdResp
 
 -- | Executes an endpoint for the `utils` subcommand. Note that this does _not_
 -- | need to be in the Contract monad.
