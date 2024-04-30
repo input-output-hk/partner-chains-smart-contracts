@@ -131,9 +131,6 @@ and stake_multi_asset.policy = decode(<CNA_POLICY>, 'hex')
 group by (minotaur_delegation_datum_helper.value)
 ```
 
-"
-
-
 
 ### 2.4 Versioning
 <!-- TODO: -->
