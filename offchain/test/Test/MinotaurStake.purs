@@ -90,12 +90,14 @@ testScenarioSuccessCancelDelegation privateKey =
 
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
 
+        let
+          partnerChainRewardAddress = ByteArray.hexToByteArrayUnsafe
+            "abababababa"
+          stakePoolId = ByteArray.hexToByteArrayUnsafe "abababababa"
+
         _ ←
           ( MinotaurStake.mkMinotaurDelegateLookupsAndConstraints
-              { stakePoolId: ByteArray.hexToByteArrayUnsafe "abababababa"
-              , partnerChainRewardAddress: ByteArray.hexToByteArrayUnsafe
-                  "abababababa"
-              }
+              { stakePoolId, partnerChainRewardAddress }
               >>=
                 balanceSignAndSubmit
                   "Test: delegate minotaur stake"
@@ -103,47 +105,7 @@ testScenarioSuccessCancelDelegation privateKey =
 
         _ ←
           ( MinotaurStake.mkMinotaurCancelDelegationLookupsAndConstraints
-              { stakePoolId: ByteArray.hexToByteArrayUnsafe "abababababa"
-              , partnerChainRewardAddress: ByteArray.hexToByteArrayUnsafe
-                  "abababababa"
-              }
-              >>=
-                balanceSignAndSubmit
-                  "Test: cancel delegation of minotaur stake"
-          )
-        pure unit
-
-testScenarioSuccessCancelDelegation ∷ PrivateKey → PlutipTest
-testScenarioSuccessCancelDelegation privateKey =
-  Mote.Monad.test "Minting then burning a Minotaur Stake Token"
-    $ Test.PlutipTest.mkPlutipConfigTest
-        ( InitialUTxOsWithStakeKey (PrivateStakeKey privateKey)
-            [ BigInt.fromInt 1_000_000
-            , BigInt.fromInt 5_000_000
-            , BigInt.fromInt 150_000_000
-            , BigInt.fromInt 150_000_000
-            ]
-        )
-
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-
-        _ ←
-          ( MinotaurStake.mkMinotaurDelegateLookupsAndConstraints
-              { stakePoolId: ByteArray.hexToByteArrayUnsafe "abababababa"
-              , partnerChainRewardAddress: ByteArray.hexToByteArrayUnsafe
-                  "abababababa"
-              }
-              >>=
-                balanceSignAndSubmit
-                  "Test: delegate minotaur stake"
-          )
-
-        _ ←
-          ( MinotaurStake.mkMinotaurCancelDelegationLookupsAndConstraints
-              { stakePoolId: ByteArray.hexToByteArrayUnsafe "abababababa"
-              , partnerChainRewardAddress: ByteArray.hexToByteArrayUnsafe
-                  "abababababa"
-              }
+              { stakePoolId, partnerChainRewardAddress }
               >>=
                 balanceSignAndSubmit
                   "Test: cancel delegation of minotaur stake"

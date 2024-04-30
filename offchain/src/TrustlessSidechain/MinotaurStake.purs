@@ -7,25 +7,19 @@ module TrustlessSidechain.MinotaurStake
 
 import Contract.Prelude
 
-import Contract.PlutusData
-  ( Datum(Datum)
-  , Redeemer(Redeemer)
-  , fromData
-  , toData
-  )
+import Contract.Address (StakePubKeyHash)
+import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer), fromData, toData)
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( OutputDatum(OutputDatum)
+  , TransactionInput
   , TransactionOutput(TransactionOutput)
   , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   )
-import Contract.TxConstraints
-  ( DatumPresence(DatumInline)
-  , TxConstraints
-  )
+import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
 import Contract.TxConstraints as Constraints
 import Contract.Value (TokenName, Value)
 import Contract.Value as Value
@@ -37,15 +31,15 @@ import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import Run (Run)
-import Run.Except (EXCEPT)
+import Run.Except (EXCEPT, throw)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
-  ( OffchainError
+  ( OffchainError(NotFoundUtxo, GenericInternalError)
   )
 import TrustlessSidechain.MinotaurStake.Types
   ( MinotaurStakeDatum(MinotaurStakeDatum)
-  , MinotaurStakePolicyRedeemer(MintMinotaurStake)
+  , MinotaurStakePolicyRedeemer(MintMinotaurStake, BurnMinotaurStake)
   )
 import TrustlessSidechain.MinotaurStake.Utils as MinotaurStake
 import TrustlessSidechain.Utils.Address as Utils
@@ -57,23 +51,17 @@ minotaurStakeTokenName =
     $ Value.mkTokenName
     =<< byteArrayFromAscii "Minotaur Stake"
 
--- | Lookups and constraints for minting/burning exactly
--- | one Minotaur Stake token for use in the CLI endpoints
--- | for delegating or canceling a delegation.
-mkMinotaurStakeMintBurnLookupsAndConstraints ∷
+mkMinotaurDelegateLookupsAndConstraints ∷
   ∀ r.
   { partnerChainRewardAddress ∷ ByteArray
   , stakePoolId ∷ ByteArray
   } →
-  -- | `True` if minting (delegating), otherwise `False`.
-  Boolean →
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
-mkMinotaurStakeMintBurnLookupsAndConstraints
-  { partnerChainRewardAddress, stakePoolId }
-  isMint = do
+mkMinotaurDelegateLookupsAndConstraints
+  { partnerChainRewardAddress, stakePoolId } = do
   { minotaurStakeMintingPolicy, minotaurStakeCurrencySymbol } ←
     MinotaurStake.getMinotaurStakeMintingPolicyAndCurrencySymbol
 
@@ -84,13 +72,11 @@ mkMinotaurStakeMintBurnLookupsAndConstraints
   minotaurStakeValidatorHash ← Utils.toValidatorHash
     minotaurStakeValidatorAddress
   let
-    quantity = if isMint then one else -one
-
     value ∷ Value
     value = Value.singleton
       minotaurStakeCurrencySymbol
       minotaurStakeTokenName
-      quantity
+      one
 
     minotaurStakeDatum ∷ Datum
     minotaurStakeDatum = Datum $ toData $
@@ -196,19 +182,6 @@ getMinotaurDelegationsForGivenStakePoolId { stakePoolId } = do
 
   pure minotaurUtxos
 
-mkMinotaurDelegateLookupsAndConstraints ∷
-  ∀ r.
-  { partnerChainRewardAddress ∷ ByteArray
-  , stakePoolId ∷ ByteArray
-  } →
-  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
-    }
-mkMinotaurDelegateLookupsAndConstraints = flip
-  mkMinotaurStakeMintBurnLookupsAndConstraints
-  true
-
 mkMinotaurCancelDelegationLookupsAndConstraints ∷
   ∀ r.
   { partnerChainRewardAddress ∷ ByteArray
@@ -218,6 +191,115 @@ mkMinotaurCancelDelegationLookupsAndConstraints ∷
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
-mkMinotaurCancelDelegationLookupsAndConstraints = flip
-  mkMinotaurStakeMintBurnLookupsAndConstraints
-  false
+mkMinotaurCancelDelegationLookupsAndConstraints
+  { partnerChainRewardAddress
+  , stakePoolId
+  } = do
+
+  stakePubKeyHash ← Utils.getOwnStakePubKeyHash
+
+  { minotaurStakeValidatorTxIn
+  , minotaurStakeValidatorTxOut
+  , minotaurStakeValidator
+  } ← getMinotaurDelegatedTokenTxIn stakePubKeyHash
+    { partnerChainRewardAddress, stakePoolId }
+
+  let
+    lookups ∷ ScriptLookups Void
+    lookups = Lookups.validator minotaurStakeValidator
+      <> Lookups.unspentOutputs
+        (Map.singleton minotaurStakeValidatorTxIn minotaurStakeValidatorTxOut)
+
+    constraints ∷ TxConstraints Void Void
+    constraints =
+      Constraints.mustSpendScriptOutput
+        minotaurStakeValidatorTxIn
+        (Redeemer $ toData BurnMinotaurStake)
+        <> Constraints.mustBeSignedBy (wrap $ unwrap stakePubKeyHash)
+
+  pure { lookups, constraints }
+
+-- | Internal. Finds the UTxO at the validator address
+-- | associated with a delegation of native Partner Chain
+-- | tokens of this wallet, returning the TxIn and related
+-- | fields needed to construct lookups and constraints.
+getMinotaurDelegatedTokenTxIn ∷
+  ∀ r.
+  StakePubKeyHash →
+  { partnerChainRewardAddress ∷ ByteArray
+  , stakePoolId ∷ ByteArray
+  } →
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
+    { minotaurStakeValidatorTxIn ∷ TransactionInput
+    , minotaurStakeValidatorTxOut ∷ TransactionOutputWithRefScript
+    , minotaurStakeValidatorHash ∷ Scripts.ValidatorHash
+    , minotaurStakeValidator ∷ Scripts.Validator
+    , minotaurStakeMintingPolicy ∷ Scripts.MintingPolicy
+    , minotaurStakeCurrencySymbol ∷ Value.CurrencySymbol
+    }
+getMinotaurDelegatedTokenTxIn
+  stakePubKeyHash
+  { partnerChainRewardAddress
+  , stakePoolId
+  } = do
+  { minotaurStakeMintingPolicy, minotaurStakeCurrencySymbol } ←
+    MinotaurStake.getMinotaurStakeMintingPolicyAndCurrencySymbol
+
+  { minotaurStakeValidatorAddress, minotaurStakeValidator } ←
+    MinotaurStake.getMinotaurStakeValidatorAndAddress
+
+  minotaurStakeValidatorHash ← Utils.toValidatorHash
+    minotaurStakeValidatorAddress
+
+  validatorUtxos ← utxosAt minotaurStakeValidatorAddress
+
+  let
+    isDelegatedToken
+      ( TransactionOutputWithRefScript
+          { output: (TransactionOutput { amount, datum: OutputDatum (Datum d) })
+          }
+      ) =
+      let
+        amountCheck =
+          Value.valueOf amount minotaurStakeCurrencySymbol minotaurStakeTokenName
+            > BigInt.fromInt 0
+        datumCheck =
+          maybe false
+            ( \( MinotaurStakeDatum
+                   { stakePubKeyHash: k
+                   , partnerChainRewardAddress: ra
+                   , stakePoolId: spid
+                   }
+               ) → k
+                == unwrap stakePubKeyHash
+                && ra
+                == partnerChainRewardAddress
+                && spid
+                == stakePoolId
+            )
+            (fromData d)
+      in
+        amountCheck && datumCheck
+    isDelegatedToken _ = false
+
+    delegatedUTxOs = Map.toUnfoldable $ Map.filter isDelegatedToken
+      validatorUtxos
+
+  (minotaurStakeValidatorTxIn /\ minotaurStakeValidatorTxOut) ←
+    case delegatedUTxOs of
+      [ x ] → pure x
+      [] → throw $ NotFoundUtxo
+        "UTxO with Minotaur delegated stake not found at validator address"
+      _ → throw $ GenericInternalError
+        """More than one UTxO with Minotaur delegated stake found
+         at validator address for given stakePubKeyHash, reward address and
+         stake pool id. Should never happen."""
+
+  pure
+    { minotaurStakeValidatorTxIn
+    , minotaurStakeValidatorTxOut
+    , minotaurStakeValidatorHash
+    , minotaurStakeValidator
+    , minotaurStakeMintingPolicy
+    , minotaurStakeCurrencySymbol
+    }
