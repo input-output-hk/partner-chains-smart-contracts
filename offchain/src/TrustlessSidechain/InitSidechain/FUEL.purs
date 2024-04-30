@@ -7,7 +7,6 @@ import Contract.Prelude
   , Void
   , bind
   , discard
-  , not
   , one
   , pure
   , show
@@ -26,7 +25,6 @@ import Contract.TxConstraints as Constraints
 import Contract.Value (TokenName)
 import Contract.Value as Value
 import Data.Array ((:))
-import Data.Maybe (isJust)
 import Data.Unit (Unit, unit)
 import Run (Run)
 import Run.Except (EXCEPT, note, throw)

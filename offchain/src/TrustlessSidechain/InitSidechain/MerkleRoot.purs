@@ -1,9 +1,8 @@
 module TrustlessSidechain.InitSidechain.MerkleRoot where
 
-import Contract.Prelude (Maybe(..), bind, discard, not, pure, ($))
+import Contract.Prelude (Maybe(..), bind, discard, pure, ($))
 import Contract.Transaction (TransactionHash)
 import Contract.Value (TokenName)
-import Data.Maybe (isJust)
 import Data.Unit (Unit, unit)
 import Run (Run)
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
@@ -13,7 +12,7 @@ import TrustlessSidechain.DataStoragePolicy
   , retrieveDataStorage
   )
 import TrustlessSidechain.Effects.App (APP)
-import TrustlessSidechain.Effects.Log (logDebug', logInfo')
+import TrustlessSidechain.Effects.Log (logDebug')
 import TrustlessSidechain.GetSidechainAddresses
   ( SidechainAddresses
   , SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
