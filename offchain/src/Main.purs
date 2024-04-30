@@ -69,6 +69,7 @@ import TrustlessSidechain.EndpointResp
       , MinotaurDelegateResp
       , GetOwnMinotaurDelegationsResp
       , GetMinotaurDelegationsForGivenStakePoolIdResp
+      , MinotaurCancelDelegationResp
       )
   , stringifyEndpointResp
   )
@@ -132,6 +133,7 @@ import TrustlessSidechain.Options.Types
       , MinotaurDelegate
       , GetOwnMinotaurDelegations
       , GetMinotaurDelegationsForGivenStakePoolId
+      , MinotaurCancelDelegation
       )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
@@ -738,6 +740,14 @@ runTxEndpoint sidechainEndpointParams endpoint =
           { stakePoolId }
           <#> { minotaurDelegationsForGivenStakePoolId: _ }
           >>> GetMinotaurDelegationsForGivenStakePoolIdResp
+      MinotaurCancelDelegation
+        { stakePoolId, partnerChainRewardAddress } →
+        MinotaurStake.mkMinotaurCancelDelegationLookupsAndConstraints
+          { stakePoolId, partnerChainRewardAddress }
+          >>= balanceSignAndSubmit "MinotaurCancelDelegation"
+          <#> unwrap
+          >>> { transactionId: _ }
+          >>> MinotaurCancelDelegationResp
 
 -- | Executes an endpoint for the `utils` subcommand. Note that this does _not_
 -- | need to be in the Contract monad.

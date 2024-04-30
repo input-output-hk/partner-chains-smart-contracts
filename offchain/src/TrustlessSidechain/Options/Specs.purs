@@ -130,6 +130,7 @@ import TrustlessSidechain.Options.Types
       , MinotaurDelegate
       , GetOwnMinotaurDelegations
       , GetMinotaurDelegationsForGivenStakePoolId
+      , MinotaurCancelDelegation
       )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
@@ -312,6 +313,12 @@ optSpec maybeConfig =
             )
             ( progDesc
                 "Get the delegations of the user to the partner chain SPO using the Minotaur protocol for a given stake pool"
+            )
+        )
+    , command "minotaur-cancel-delegation"
+        ( info (withCommonOpts maybeConfig minotaurCancelDelegationSpec)
+            ( progDesc
+                "Cancel delegation of your tokens to the partner chain SPO using the Minotaur protocol"
             )
         )
     ]
@@ -1555,6 +1562,12 @@ getMinotaurDelegationsForGivenStakePoolIdSpec ∷ Parser TxEndpoint
 getMinotaurDelegationsForGivenStakePoolIdSpec = ado
   stakePoolId ← parseStakePoolId
   in GetMinotaurDelegationsForGivenStakePoolId { stakePoolId }
+
+minotaurCancelDelegationSpec ∷ Parser TxEndpoint
+minotaurCancelDelegationSpec = ado
+  partnerChainRewardAddress ← parsePartnerChainRewardAddress
+  stakePoolId ← parseStakePoolId
+  in MinotaurCancelDelegation { partnerChainRewardAddress, stakePoolId }
 
 parsePartnerChainRewardAddress ∷ Parser ByteArray
 parsePartnerChainRewardAddress = option byteArray $ fold

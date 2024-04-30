@@ -2,6 +2,7 @@ module TrustlessSidechain.MinotaurStake
   ( mkMinotaurDelegateLookupsAndConstraints
   , getOwnMinotaurDelegations
   , getMinotaurDelegationsForGivenStakePoolId
+  , mkMinotaurCancelDelegationLookupsAndConstraints
   ) where
 
 import Contract.Prelude
@@ -56,17 +57,23 @@ minotaurStakeTokenName =
     $ Value.mkTokenName
     =<< byteArrayFromAscii "Minotaur Stake"
 
-mkMinotaurDelegateLookupsAndConstraints ∷
+-- | Lookups and constraints for minting/burning exactly
+-- | one Minotaur Stake token for use in the CLI endpoints
+-- | for delegating or canceling a delegation.
+mkMinotaurStakeMintBurnLookupsAndConstraints ∷
   ∀ r.
   { partnerChainRewardAddress ∷ ByteArray
   , stakePoolId ∷ ByteArray
   } →
+  -- | `True` if minting (delegating), otherwise `False`.
+  Boolean →
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
-mkMinotaurDelegateLookupsAndConstraints
-  { partnerChainRewardAddress, stakePoolId } = do
+mkMinotaurStakeMintBurnLookupsAndConstraints
+  { partnerChainRewardAddress, stakePoolId }
+  isMint = do
   { minotaurStakeMintingPolicy, minotaurStakeCurrencySymbol } ←
     MinotaurStake.getMinotaurStakeMintingPolicyAndCurrencySymbol
 
@@ -77,11 +84,13 @@ mkMinotaurDelegateLookupsAndConstraints
   minotaurStakeValidatorHash ← Utils.toValidatorHash
     minotaurStakeValidatorAddress
   let
+    quantity = if isMint then one else -one
+
     value ∷ Value
     value = Value.singleton
       minotaurStakeCurrencySymbol
       minotaurStakeTokenName
-      one
+      quantity
 
     minotaurStakeDatum ∷ Datum
     minotaurStakeDatum = Datum $ toData $
@@ -186,3 +195,29 @@ getMinotaurDelegationsForGivenStakePoolId { stakePoolId } = do
             allMinotaurUtxos
 
   pure minotaurUtxos
+
+mkMinotaurDelegateLookupsAndConstraints ∷
+  ∀ r.
+  { partnerChainRewardAddress ∷ ByteArray
+  , stakePoolId ∷ ByteArray
+  } →
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
+    { lookups ∷ ScriptLookups Void
+    , constraints ∷ TxConstraints Void Void
+    }
+mkMinotaurDelegateLookupsAndConstraints = flip
+  mkMinotaurStakeMintBurnLookupsAndConstraints
+  true
+
+mkMinotaurCancelDelegationLookupsAndConstraints ∷
+  ∀ r.
+  { partnerChainRewardAddress ∷ ByteArray
+  , stakePoolId ∷ ByteArray
+  } →
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
+    { lookups ∷ ScriptLookups Void
+    , constraints ∷ TxConstraints Void Void
+    }
+mkMinotaurCancelDelegationLookupsAndConstraints = flip
+  mkMinotaurStakeMintBurnLookupsAndConstraints
+  false

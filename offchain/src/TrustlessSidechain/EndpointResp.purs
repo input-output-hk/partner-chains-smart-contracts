@@ -200,6 +200,8 @@ data EndpointResp
       { ownMinotaurDelegations ∷ Array MinotaurStakeDatum }
   | GetMinotaurDelegationsForGivenStakePoolIdResp
       { minotaurDelegationsForGivenStakePoolId ∷ Array MinotaurStakeDatum }
+  | MinotaurCancelDelegationResp
+      { transactionId ∷ ByteArray }
 
 -- | `serialisePlutusDataToHex` serialises plutus data to CBOR, and shows the
 -- | hex encoded CBOR.
@@ -659,6 +661,12 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
             ( filterMap (hush <<< JP.jsonParser <<< show)
                 minotaurDelegationsForGivenStakePoolId
             )
+        ]
+    MinotaurCancelDelegationResp
+      { transactionId } →
+      J.fromObject $ Object.fromFoldable
+        [ "endpoint" /\ J.fromString "MinotaurCancelDelegation"
+        , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
         ]
 
 -- | Encode the endpoint response to a json object
