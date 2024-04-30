@@ -8,7 +8,6 @@ import Contract.Prelude
   , bind
   , discard
   , not
-  , null
   , one
   , pure
   , show
@@ -22,16 +21,21 @@ import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts as Scripts
 import Contract.Transaction (TransactionHash)
-import Contract.TxConstraints
-  ( DatumPresence(DatumInline)
-  , TxConstraints
-  )
+import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
 import Contract.TxConstraints as Constraints
+import Contract.Value (TokenName)
 import Contract.Value as Value
 import Data.Array ((:))
+import Data.Maybe (isJust)
+import Data.Unit (Unit, unit)
 import Run (Run)
 import Run.Except (EXCEPT, note, throw)
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
+import TrustlessSidechain.DataStoragePolicy
+  ( createDataStorage
+  , mkDataStorageTokenName
+  , retrieveDataStorage
+  )
 import TrustlessSidechain.DistributedSet
   ( Ds(Ds)
   , DsConfDatum(DsConfDatum)
@@ -91,61 +95,65 @@ initFuel
   sidechainParams
   initATMSKind
   version = do
-  let
-    msg = "Initialize FUEL and Distributed Set"
-    run = init
-      ( \op sp → initFuelAndDsLookupsAndConstraints sp version >>=
-          balanceSignAndSubmit op
-      )
-      msg
+  exists ∷ Maybe Unit ← retrieveDataStorage dataStorageTokenName sidechainParams
+  case exists of
+    Nothing → do
+      let
+        msg = "Initialize FUEL and Distributed Set"
+        run = init
+          ( \op sp → initFuelAndDsLookupsAndConstraints sp version >>=
+              balanceSignAndSubmit op
+          )
+          msg
 
-  logDebug' "Attempting to initialize FUEL versioning scripts"
-  scriptsInitTxIdFuel ← insertScriptsIdempotent getFuelPoliciesAndValidators
-    sidechainParams
-    initATMSKind
-    version
+      logDebug' "Attempting to initialize FUEL versioning scripts"
+      scriptsInitTxIdFuel ← insertScriptsIdempotent getFuelPoliciesAndValidators
+        sidechainParams
+        initATMSKind
+        version
 
-  logDebug' "Attempting to initialize Ds versioning scripts"
-  scriptsInitTxIdDs ← insertScriptsIdempotent getDsPoliciesAndValidators
-    sidechainParams
-    initATMSKind
-    version
+      logDebug' "Attempting to initialize Ds versioning scripts"
+      scriptsInitTxIdDs ← insertScriptsIdempotent getDsPoliciesAndValidators
+        sidechainParams
+        initATMSKind
+        version
 
-  let
-    scriptsInitTxId = scriptsInitTxIdFuel <> scriptsInitTxIdDs
+      let
+        scriptsInitTxId = scriptsInitTxIdFuel <> scriptsInitTxIdDs
 
-  if not $ null scriptsInitTxId then do
-    sidechainAddresses ←
-      GetSidechainAddresses.getSidechainAddresses $
-        SidechainAddressesEndpointParams
-          { sidechainParams
-          , atmsKind: initATMSKind
-          -- NOTE: This field is used to configure minting the candidate
-          -- permission tokens themselves, not the candidate permission
-          -- init tokens. However it does affect the sidechainAddresses
-          -- output. Whether to remove permission tokens is an ongoing
-          -- discussion as of April 4, 2024. --brendanrbrown
-          , usePermissionToken: false
-          , version
-          }
+      sidechainAddresses ←
+        GetSidechainAddresses.getSidechainAddresses $
+          SidechainAddressesEndpointParams
+            { sidechainParams
+            , atmsKind: initATMSKind
+            -- NOTE: This field is used to configure minting the candidate
+            -- permission tokens themselves, not the candidate permission
+            -- init tokens. However it does affect the sidechainAddresses
+            -- output. Whether to remove permission tokens is an ongoing
+            -- discussion as of April 4, 2024. --brendanrbrown
+            , usePermissionToken: false
+            , version
+            }
 
-    -- NOTE: We check whether init-fuel is allowed
-    -- by checking whether the DistributedSet.dsInitTokenName
-    -- exists. There is no such init token for FUELMintingPolicy,
-    -- FUELProxyPolicy etc.
-    logInfo' msg
-    fuelInitTxId ← run DistributedSet.dsInitTokenName sidechainParams
+      -- NOTE: We check whether init-fuel is allowed
+      -- by checking whether the DistributedSet.dsInitTokenName
+      -- exists. There is no such init token for FUELMintingPolicy,
+      -- FUELProxyPolicy etc.
+      logInfo' msg
+      fuelInitTxId ← run DistributedSet.dsInitTokenName sidechainParams
+      createDataStorage dataStorageTokenName sidechainParams unit
 
-    pure
-      ( Just
-          { initTransactionIds: fuelInitTxId : scriptsInitTxId
-          , sidechainParams
-          , sidechainAddresses
-          }
-      )
-  else do
-    logInfo' "Versioning scripts for FUEL and Ds have already been initialized"
-    pure Nothing
+      pure
+        ( Just
+            { initTransactionIds: fuelInitTxId : scriptsInitTxId
+            , sidechainParams
+            , sidechainAddresses
+            }
+        )
+    Just _ → pure Nothing
+  where
+  dataStorageTokenName ∷ TokenName
+  dataStorageTokenName = mkDataStorageTokenName "InitFUELCompleted"
 
 -- | `initFuelAndDsLookupsAndConstraints` creates the lookups and
 -- | constraints required when initalizing the distributed set used

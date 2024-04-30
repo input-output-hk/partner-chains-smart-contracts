@@ -8,6 +8,7 @@ import Contract.Prelude hiding (note)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.Transaction (TransactionHash)
 import Contract.TxConstraints (TxConstraints)
+import Contract.Value (TokenName)
 import Data.Array ((:))
 import Data.Maybe (isJust)
 import Run (Run)
@@ -18,6 +19,11 @@ import TrustlessSidechain.CandidatePermissionToken
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
+import TrustlessSidechain.DataStoragePolicy
+  ( createDataStorage
+  , mkDataStorageTokenName
+  , retrieveDataStorage
+  )
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.GetSidechainAddresses
@@ -51,40 +57,51 @@ initCandidatePermissionToken
   initCandidatePermissionTokenMintInfo
   initATMSKind
   version = do
-  let
-    run = init
-      ( \op → balanceSignAndSubmit op
-          <=< initCandidatePermissionTokenLookupsAndConstraints
-            initCandidatePermissionTokenMintInfo
-      )
-      "Candidate permission token init"
-      candidatePermissionInitTokenName
-
-  scriptsInitTxId ← insertScriptsIdempotent
-    getCandidatePermissionTokenPoliciesAndValidators
+  exists ∷ Maybe Unit ← retrieveDataStorage dataStorageTokenName
     sidechainParams
-    initATMSKind
-    version
+  case exists of
+    Nothing → do
+      let
+        run = init
+          ( \op → balanceSignAndSubmit op
+              <=< initCandidatePermissionTokenLookupsAndConstraints
+                initCandidatePermissionTokenMintInfo
+          )
+          "Candidate permission token init"
+          candidatePermissionInitTokenName
 
-  if not $ null scriptsInitTxId then do
-    sidechainAddresses ←
-      GetSidechainAddresses.getSidechainAddresses $
-        SidechainAddressesEndpointParams
-          { sidechainParams
-          , atmsKind: initATMSKind
-          , usePermissionToken: isJust
-              initCandidatePermissionTokenMintInfo
-          , version
-          }
-    candidatePermissionTokenInitTxId ← run sidechainParams
-    pure
-      ( Just
-          { initTransactionIds: candidatePermissionTokenInitTxId : scriptsInitTxId
-          , sidechainParams
-          , sidechainAddresses
-          }
-      )
-  else pure Nothing
+      scriptsInitTxId ← insertScriptsIdempotent
+        getCandidatePermissionTokenPoliciesAndValidators
+        sidechainParams
+        initATMSKind
+        version
+
+      sidechainAddresses ←
+        GetSidechainAddresses.getSidechainAddresses $
+          SidechainAddressesEndpointParams
+            { sidechainParams
+            , atmsKind: initATMSKind
+            , usePermissionToken: isJust
+                initCandidatePermissionTokenMintInfo
+            , version
+            }
+
+      candidatePermissionTokenInitTxId ← run sidechainParams
+      createDataStorage dataStorageTokenName sidechainParams unit
+
+      pure
+        ( Just
+            { initTransactionIds: candidatePermissionTokenInitTxId :
+                scriptsInitTxId
+            , sidechainParams
+            , sidechainAddresses
+            }
+        )
+    Just _ → pure Nothing
+  where
+  dataStorageTokenName ∷ TokenName
+  dataStorageTokenName = mkDataStorageTokenName
+    "InitCandPermComp"
 
 -- | `initCandidatePermissionTokenLookupsAndConstraints` creates the lookups and
 -- | constraints required when initalizing the candidiate permission tokens (this does NOT

@@ -14,6 +14,7 @@ import Contract.Scripts (validatorHash)
 import Contract.Transaction (TransactionHash)
 import Contract.TxConstraints (DatumPresence(..), TxConstraints)
 import Contract.TxConstraints as Constraints
+import Contract.Value (TokenName)
 import Contract.Value as Value
 import Data.Array ((:))
 import Data.BigInt as BigInt
@@ -27,6 +28,11 @@ import TrustlessSidechain.Checkpoint (CheckpointDatum(..), checkpointNftTn)
 import TrustlessSidechain.Checkpoint.Types as Checkpoint.Types
 import TrustlessSidechain.Checkpoint.Utils as Checkpoint
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
+import TrustlessSidechain.DataStoragePolicy
+  ( createDataStorage
+  , mkDataStorageTokenName
+  , retrieveDataStorage
+  )
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
@@ -64,38 +70,45 @@ initCheckpoint
   initGenesisHash
   initATMSKind
   version = do
-  let
-    run = init
-      ( \op → balanceSignAndSubmit op
-          <=< initCheckpointLookupsAndConstraints initGenesisHash
-      )
-      "Checkpoint init"
-      Checkpoint.checkpointInitTokenName
+  exists ∷ Maybe Unit ← retrieveDataStorage dataStorageTokenName sidechainParams
+  case exists of
+    Nothing → do
+      let
+        run = init
+          ( \op → balanceSignAndSubmit op
+              <=< initCheckpointLookupsAndConstraints initGenesisHash
+          )
+          "Checkpoint init"
+          Checkpoint.checkpointInitTokenName
 
-  scriptsInitTxId ← insertScriptsIdempotent getCheckpointPoliciesAndValidators
-    sidechainParams
-    initATMSKind
-    version
+      scriptsInitTxId ← insertScriptsIdempotent getCheckpointPoliciesAndValidators
+        sidechainParams
+        initATMSKind
+        version
+      sidechainAddresses ←
+        GetSidechainAddresses.getSidechainAddresses $
+          SidechainAddressesEndpointParams
+            { sidechainParams
+            , atmsKind: initATMSKind
+            , usePermissionToken: isJust
+                initCandidatePermissionTokenMintInfo
+            , version
+            }
+      checkpointInitTxId ← run sidechainParams
+      createDataStorage dataStorageTokenName sidechainParams unit
 
-  if not $ null scriptsInitTxId then do
-    sidechainAddresses ←
-      GetSidechainAddresses.getSidechainAddresses $
-        SidechainAddressesEndpointParams
-          { sidechainParams
-          , atmsKind: initATMSKind
-          , usePermissionToken: isJust
-              initCandidatePermissionTokenMintInfo
-          , version
-          }
-    checkpointInitTxId ← run sidechainParams
-    pure
-      ( Just
-          { initTransactionIds: checkpointInitTxId : scriptsInitTxId
-          , sidechainParams
-          , sidechainAddresses
-          }
-      )
-  else pure Nothing
+      pure
+        ( Just
+            { initTransactionIds: checkpointInitTxId : scriptsInitTxId
+            , sidechainParams
+            , sidechainAddresses
+            }
+        )
+    Just _ → pure Nothing
+  where
+  dataStorageTokenName ∷ TokenName
+  dataStorageTokenName = mkDataStorageTokenName
+    "InitChkptComp"
 
 -- | `initCheckpointLookupsAndConstraints` creates lookups and constraints to
 -- | mint and pay the NFT which uniquely identifies the utxo that holds the

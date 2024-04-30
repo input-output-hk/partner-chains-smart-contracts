@@ -28,7 +28,7 @@ import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 
 -- | `tests` aggregates all the tests together in one convenient function
 tests ∷ WrappedTests
-tests = plutipGroup "Initialising the checkpoint mechanism" $ do
+tests = plutipGroup "Initialising the candidate permission mechanism" $ do
   -- InitCandidatePermissionToken endpoint
   testInitCandidatePermissionToken
   testInitCandidatePermissionTokenIdempotent
@@ -66,6 +66,11 @@ testInitCandidatePermissionToken =
                 , thresholdDenominator: BigInt.fromInt 3
                 , governanceAuthority: initGovernanceAuthority
                 }
+
+            -- Initialise tokens
+            void $ InitMint.initTokensMint sidechainParams
+              initATMSKind
+              version
 
             void $ InitCandidatePermission.initCandidatePermissionToken
               sidechainParams

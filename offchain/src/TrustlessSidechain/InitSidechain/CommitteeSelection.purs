@@ -10,6 +10,7 @@ import Contract.Scripts (validatorHash)
 import Contract.Transaction (TransactionHash)
 import Contract.TxConstraints (DatumPresence(..), TxConstraints)
 import Contract.TxConstraints as Constraints
+import Contract.Value (TokenName)
 import Contract.Value as Value
 import Data.Array ((:))
 import Data.BigInt (BigInt)
@@ -21,6 +22,11 @@ import TrustlessSidechain.CandidatePermissionToken
   )
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
+import TrustlessSidechain.DataStoragePolicy
+  ( createDataStorage
+  , mkDataStorageTokenName
+  , retrieveDataStorage
+  )
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
@@ -64,40 +70,47 @@ initCommitteeSelection
   initAggregatedCommittee
   initATMSKind
   version = do
-  let
-    run = init
-      ( \op → balanceSignAndSubmit op
-          <=< initCommitteeHashLookupsAndConstraints
-            initSidechainEpoch
-            initAggregatedCommittee
-      )
-      "Committee init"
-      CommitteeOraclePolicy.committeeOracleInitTokenName
+  exists ∷ Maybe Unit ← retrieveDataStorage dataStorageTokenName sidechainParams
+  case exists of
+    Nothing → do
+      let
+        run = init
+          ( \op → balanceSignAndSubmit op
+              <=< initCommitteeHashLookupsAndConstraints
+                initSidechainEpoch
+                initAggregatedCommittee
+          )
+          "Committee init"
+          CommitteeOraclePolicy.committeeOracleInitTokenName
 
-  scriptsInitTxId ← insertScriptsIdempotent
-    (getCommitteeSelectionPoliciesAndValidators initATMSKind)
-    sidechainParams
-    initATMSKind
-    version
+      scriptsInitTxId ← insertScriptsIdempotent
+        (getCommitteeSelectionPoliciesAndValidators initATMSKind)
+        sidechainParams
+        initATMSKind
+        version
 
-  if not $ null scriptsInitTxId then do
-    sidechainAddresses ←
-      GetSidechainAddresses.getSidechainAddresses $
-        SidechainAddressesEndpointParams
-          { sidechainParams
-          , atmsKind: initATMSKind
-          , usePermissionToken: isJust initCandidatePermissionTokenMintInfo
-          , version
-          }
-    committeeSelectionInitTxId ← run sidechainParams
-    pure
-      ( Just
-          { initTransactionIds: committeeSelectionInitTxId : scriptsInitTxId
-          , sidechainParams
-          , sidechainAddresses
-          }
-      )
-  else pure Nothing
+      sidechainAddresses ←
+        GetSidechainAddresses.getSidechainAddresses $
+          SidechainAddressesEndpointParams
+            { sidechainParams
+            , atmsKind: initATMSKind
+            , usePermissionToken: isJust initCandidatePermissionTokenMintInfo
+            , version
+            }
+      committeeSelectionInitTxId ← run sidechainParams
+      createDataStorage dataStorageTokenName sidechainParams unit
+      pure
+        ( Just
+            { initTransactionIds: committeeSelectionInitTxId : scriptsInitTxId
+            , sidechainParams
+            , sidechainAddresses
+            }
+        )
+    Just _ → pure Nothing
+  where
+  dataStorageTokenName ∷ TokenName
+  dataStorageTokenName = mkDataStorageTokenName
+    "InitCmteSlctnComp"
 
 -- | `initCommitteeHashLookupsAndConstraints` creates lookups and constraints
 -- | to pay the NFT (which uniquely identifies the committee hash utxo) to the
