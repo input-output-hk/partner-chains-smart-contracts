@@ -33,6 +33,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
     candidate permission token mechanism.
 
 ## Changed
+  * implemented (iogx)(https://github.com/input-output-hk/iogx) nix framework
   * `init` now prints more human friendly message, when selected genesis utxo
     is not available at user's wallet address.
     ([714](https://github.com/input-output-hk/trustless-sidechain/pull/714))

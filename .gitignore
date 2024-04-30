@@ -6,6 +6,7 @@ dist-newstyle/
 # nix-build results
 result
 result-*
+.pre-commit-config.yaml
 
 .direnv
 .envrc
