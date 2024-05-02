@@ -27,7 +27,7 @@ import TrustlessSidechain.Utils.Transaction
 -- | `tests` aggregate all the DParameterPolicy tests in one convenient
 -- | function
 tests ∷ PrivateKey → WrappedTests
-tests pk = plutipGroup "Minting, and burning a Minotaur Stake Token" $
+tests pk = plutipGroup "Minting and burning a Minotaur Stake Token" $
   do
     testScenarioSuccess pk
     testScenarioSuccessCancelDelegation pk
@@ -63,7 +63,6 @@ testScenarioSuccess privateKey =
           $ liftAff
           $ assert (failMsg "Own delegation was not found" ownDelegations)
               (length ownDelegations == 1)
-        pure unit
 
         stakePoolDelegations ←
           MinotaurStake.getMinotaurDelegationsForGivenStakePoolId
@@ -110,4 +109,10 @@ testScenarioSuccessCancelDelegation privateKey =
                 balanceSignAndSubmit
                   "Test: cancel delegation of minotaur stake"
           )
-        pure unit
+
+        ownDelegations ← MinotaurStake.getOwnMinotaurDelegations
+        Effect.fromMaybeThrow (GenericInternalError "Unreachable")
+          $ map Just
+          $ liftAff
+          $ assert (failMsg "Own delegation removed" ownDelegations)
+              (length ownDelegations == 0)

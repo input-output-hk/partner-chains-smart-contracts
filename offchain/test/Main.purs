@@ -66,8 +66,6 @@ main = do
           ConfigFile.tests
 
         group "Plutip integration tests" do
-          -- TODO: ETCM-6904 this goes after garbage collector
-          MinotaurStake.tests pk
           InitCandidatePermissionToken.tests
           InitMerkleRoot.tests
           InitSidechain.tests
@@ -89,6 +87,7 @@ main = do
           DParameter.tests
           PermissionedCandidates.tests
           GarbageCollector.tests
+          MinotaurStake.tests pk
 
         plutipGroup "POC Plutip tests" do
           PoCInlineDatum.tests
