@@ -8,7 +8,13 @@ module TrustlessSidechain.MinotaurStake
 import Contract.Prelude
 
 import Contract.Address (StakePubKeyHash)
-import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer), fromData, toData)
+import Contract.PlutusData
+  ( Datum(Datum)
+  , Redeemer(Redeemer)
+  , fromData
+  , toData
+  , unitRedeemer
+  )
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
@@ -201,20 +207,49 @@ mkMinotaurCancelDelegationLookupsAndConstraints
   { minotaurStakeValidatorTxIn
   , minotaurStakeValidatorTxOut
   , minotaurStakeValidator
+  , minotaurStakeValidatorHash
+  , minotaurStakeMintingPolicy
+  , minotaurStakeCurrencySymbol
   } ← getMinotaurDelegatedTokenTxIn stakePubKeyHash
     { partnerChainRewardAddress, stakePoolId }
 
   let
+    --value ∷ Value
+    --value = Value.singleton
+    --  minotaurStakeCurrencySymbol
+    --  minotaurStakeTokenName
+    --  -- TODO: ETCM-6904 seems wrong
+    --  zero
+    --minotaurStakeDatum ∷ Datum
+    --minotaurStakeDatum = Datum $ toData $
+    --  MinotaurStakeDatum
+    --    { partnerChainRewardAddress
+    --    , stakePoolId
+    --    , stakeCurrencySymbol: minotaurStakeCurrencySymbol
+    --    , stakePubKeyHash: unwrap stakePubKeyHash
+    --    }
     lookups ∷ ScriptLookups Void
-    lookups = Lookups.validator minotaurStakeValidator
+    lookups = Lookups.mintingPolicy minotaurStakeMintingPolicy
+      <> Lookups.validator minotaurStakeValidator
       <> Lookups.unspentOutputs
         (Map.singleton minotaurStakeValidatorTxIn minotaurStakeValidatorTxOut)
 
     constraints ∷ TxConstraints Void Void
     constraints =
-      Constraints.mustSpendScriptOutput
-        minotaurStakeValidatorTxIn
+      Constraints.mustMintCurrencyWithRedeemer
+        (Scripts.mintingPolicyHash minotaurStakeMintingPolicy)
         (Redeemer $ toData BurnMinotaurStake)
+        minotaurStakeTokenName
+        (-one)
+        <> Constraints.mustSpendScriptOutput
+          minotaurStakeValidatorTxIn
+          (Redeemer $ toData BurnMinotaurStake)
+        -- TODO: ETCM-6904 seems wrong
+        --<> Constraints.mustPayToScript
+        --  minotaurStakeValidatorHash
+        --  minotaurStakeDatum
+        --  DatumInline
+        --  value
         <> Constraints.mustBeSignedBy (wrap $ unwrap stakePubKeyHash)
 
   pure { lookups, constraints }

@@ -12,7 +12,6 @@ import Plutus.V1.Ledger.Value (
   assetClassValueOf,
  )
 import Plutus.V2.Ledger.Api (
-  Address,
   Datum (Datum),
   OutputDatum (OutputDatum),
   Script,
@@ -58,14 +57,11 @@ import TrustlessSidechain.Utils (
 --   ERROR-MINO-VALIDATOR-07: Invalid script context
 {-# INLINEABLE mkMinotaurStakeValidator #-}
 mkMinotaurStakeValidator ::
-  -- | Validator address
-  Address ->
   MinotaurStakeDatum ->
   MinotaurStakeRedeemer ->
   ScriptContext ->
   Bool
 mkMinotaurStakeValidator
-  validatorAddress
   (MinotaurStakeDatum _ stakePkh poolId currSymbol)
   BurnMinotaurStake
   (ScriptContext txInfo (Spending _)) =
@@ -92,8 +88,7 @@ mkMinotaurStakeValidator
         fromSingleton
           "ERROR-MINO-VALIDATOR-04"
           [ PlutusTx.fromBuiltinData datum
-          | (TxInInfo _ (TxOut address _ (OutputDatum (Datum datum)) _)) <- txInfoInputs txInfo
-          , address == validatorAddress
+          | (TxInInfo _ (TxOut _ _ (OutputDatum (Datum datum)) _)) <- txInfoInputs txInfo
           ]
 
       correctDatum :: Bool
@@ -102,13 +97,11 @@ mkMinotaurStakeValidator
           (traceError "ERROR-MINO-VALIDATOR-05")
           validateDatum
           datumAtValidatorAddress
-mkMinotaurStakeValidator _ _ MintMinotaurStake _ = traceError "ERROR-MINO-VALIDATOR-06"
-mkMinotaurStakeValidator _ _ _ _ = traceError "ERROR-MINO-VALIDATOR-07"
+mkMinotaurStakeValidator _ MintMinotaurStake _ = traceError "ERROR-MINO-VALIDATOR-06"
+mkMinotaurStakeValidator _ _ _ = traceError "ERROR-MINO-VALIDATOR-07"
 
 {-# INLINEABLE mkMinotaurStakeValidatorUntyped #-}
 mkMinotaurStakeValidatorUntyped ::
-  -- | Validator address
-  BuiltinData ->
   -- | Datum
   BuiltinData ->
   -- | Redeemer
@@ -117,7 +110,7 @@ mkMinotaurStakeValidatorUntyped ::
   BuiltinData ->
   ()
 mkMinotaurStakeValidatorUntyped =
-  mkUntypedValidator . mkMinotaurStakeValidator . unsafeFromBuiltinData
+  mkUntypedValidator mkMinotaurStakeValidator
 
 serialisableMinotaurStakeValidator ::
   Script
