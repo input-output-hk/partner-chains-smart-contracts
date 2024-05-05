@@ -3,6 +3,7 @@
   [ "aeson"
   , "aff"
   , "argonaut"
+  , "argonaut-codecs"
   , "argonaut-core"
   , "arrays"
   , "bifunctors"

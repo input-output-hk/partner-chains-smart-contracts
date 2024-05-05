@@ -30,15 +30,17 @@ import Contract.Value
   ( CurrencySymbol
   , TokenName
   )
-import Data.Argonaut (Json)
+import Ctl.Internal.Serialization.Hash (ed25519KeyHashToBytes)
+import Ctl.Internal.Types.RawBytes (rawBytesToHex)
+import Data.Argonaut (Json, fromObject)
 import Data.Argonaut.Core as J
-import Data.Argonaut.Parser as JP
+import Data.Argonaut.Encode.Class (class EncodeJson, encodeJson)
 import Data.Bifunctor (rmap)
 import Data.BigInt (BigInt)
 import Data.Codec.Argonaut as CA
 import Data.Codec.Argonaut.Compat as CAC
-import Data.Filterable (filterMap)
 import Data.List (List)
+import Foreign.Object (fromFoldable)
 import Foreign.Object as Object
 import TrustlessSidechain.FUELMintingPolicy.V1
   ( CombinedMerkleProof
@@ -49,7 +51,9 @@ import TrustlessSidechain.MerkleTree
   , RootHash
   , unRootHash
   )
-import TrustlessSidechain.MinotaurStake.Types (MinotaurStakeDatum)
+import TrustlessSidechain.MinotaurStake.Types
+  ( MinotaurStakeDatum(MinotaurStakeDatum)
+  )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (currencySymbolToHex)
 import TrustlessSidechain.Utils.Codecs
@@ -650,7 +654,7 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "GetOwnMinotaurDelegations"
         , "ownMinotaurDelegations" /\ J.fromArray
-            (filterMap (hush <<< JP.jsonParser <<< show) ownMinotaurDelegations)
+            (map (encodeJson <<< MinotaurStakeDatum') ownMinotaurDelegations)
         ]
 
     GetMinotaurDelegationsForGivenStakePoolIdResp
@@ -658,7 +662,7 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "GetMinotaurDelegationsForGivenStakePoolId"
         , "minotaurDelegationsForGivenStakePoolId" /\ J.fromArray
-            ( filterMap (hush <<< JP.jsonParser <<< show)
+            ( map (encodeJson <<< MinotaurStakeDatum')
                 minotaurDelegationsForGivenStakePoolId
             )
         ]
@@ -677,3 +681,25 @@ encodeEndpointResp = CA.encode endpointRespCodec
 -- | Encode the endpoint response to a json encoded string
 stringifyEndpointResp ∷ EndpointResp → String
 stringifyEndpointResp = encodeEndpointResp >>> J.stringify
+
+newtype MinotaurStakeDatum' = MinotaurStakeDatum' MinotaurStakeDatum
+
+instance EncodeJson MinotaurStakeDatum' where
+  encodeJson
+    ( MinotaurStakeDatum'
+        ( MinotaurStakeDatum
+            { partnerChainRewardAddress
+            , stakePubKeyHash
+            , stakePoolId
+            , stakeCurrencySymbol
+            }
+        )
+    ) = fromObject $ fromFoldable $
+    [ "partnerChainRewardAddress" /\ J.fromString
+        (byteArrayToHex partnerChainRewardAddress)
+    , "stakePubKeyHash" /\ J.fromString
+        (rawBytesToHex $ ed25519KeyHashToBytes $ unwrap stakePubKeyHash)
+    , "stakePoolId" /\ J.fromString (byteArrayToHex stakePoolId)
+    , "stakeCurrencySymbol" /\ J.fromString
+        (currencySymbolToHex stakeCurrencySymbol)
+    ]

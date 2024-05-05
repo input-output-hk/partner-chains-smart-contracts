@@ -40,7 +40,7 @@ import Run.Except (EXCEPT, throw)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
-  ( OffchainError(NotFoundUtxo, GenericInternalError)
+  ( OffchainError(NotFoundUtxo)
   )
 import TrustlessSidechain.MinotaurStake.Types
   ( MinotaurStakeDatum(MinotaurStakeDatum)
@@ -298,14 +298,10 @@ getMinotaurDelegatedTokenTxIn
       validatorUtxos
 
   (minotaurStakeValidatorTxIn /\ minotaurStakeValidatorTxOut) ←
-    case delegatedUTxOs of
-      [ x ] → pure x
-      [] → throw $ NotFoundUtxo
+    case Array.head delegatedUTxOs of
+      Nothing → throw $ NotFoundUtxo
         "UTxO with Minotaur delegated stake not found at validator address"
-      _ → throw $ GenericInternalError
-        """More than one UTxO with Minotaur delegated stake found
-         at validator address for given stakePubKeyHash, reward address and
-         stake pool id. Should never happen."""
+      Just x → pure x
 
   pure
     { minotaurStakeValidatorTxIn

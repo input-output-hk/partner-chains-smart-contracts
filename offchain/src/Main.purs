@@ -729,10 +729,9 @@ runTxEndpoint sidechainEndpointParams endpoint =
           >>> { transactionId: _ }
           >>> MinotaurDelegateResp
 
-      GetOwnMinotaurDelegations →
-        MinotaurStake.getOwnMinotaurDelegations
-          <#> { ownMinotaurDelegations: _ }
-          >>> GetOwnMinotaurDelegationsResp
+      GetOwnMinotaurDelegations → do
+        ownMinotaurDelegations ← MinotaurStake.getOwnMinotaurDelegations
+        pure $ GetOwnMinotaurDelegationsResp { ownMinotaurDelegations }
 
       GetMinotaurDelegationsForGivenStakePoolId
         { stakePoolId } →

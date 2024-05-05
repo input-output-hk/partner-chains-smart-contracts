@@ -8,6 +8,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 ## Added
 
   * Added more minotaur tests.
+  * Added `CNADelegationAnalysys.md` document.
   * Added `minotaur-delegate` command.
   * Added `minotaur-cancel-delegation` command.
   * Added `use-candidate-permission-token` switch to `register` and `addresses`
