@@ -55,6 +55,7 @@ import Test.Versioning as Versioning
 main ∷ Effect Unit
 main = do
   pk ← freshPrivateKey
+  pk2 ← freshPrivateKey
   Test.Unit.Main.runTest
     $ interpretWrappedTest do
 
@@ -87,7 +88,7 @@ main = do
           DParameter.tests
           PermissionedCandidates.tests
           GarbageCollector.tests
-          MinotaurStake.tests pk
+          MinotaurStake.tests pk pk2
 
         plutipGroup "POC Plutip tests" do
           PoCInlineDatum.tests
