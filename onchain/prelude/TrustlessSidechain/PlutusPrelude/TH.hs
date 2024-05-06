@@ -147,6 +147,7 @@ makeUnsafeGetters name = do
         targetTypeL = case fieldType of
           ConT n -> [(ConT (makeNameUnqualified n), getterBodySimple)]
           AppT ListT (ConT n) -> [(AppT ListT (ConT (makeNameUnqualified n)), getterBodyList)]
+          AppT (ConT m) (ConT n) | show m == "GHC.Maybe.Maybe" -> [(AppT (ConT m) (ConT (makeNameUnqualified n)), getterBodyMaybe)]
           _ -> [] -- TODO support for fields with more complex types should be implemented as needed
 
         -- (nthFieldOf ix) (unwrap x)
@@ -160,6 +161,10 @@ makeUnsafeGetters name = do
         -- (fmap wrap) (Builtins.unsafeDataAsList ((nthFieldOf ix) (unwrap x)))
         getterBodyList =
           (fun "fmap" $$ fun "wrap") $$ fun "Builtins.unsafeDataAsList" $$ nthFieldOf_ix_unwrap_x
+
+        -- (fmap wrap) (unsafeDataAsMaybe (unwrap x))
+        getterBodyMaybe =
+          (fun "fmap" $$ fun "wrap") $$ fun "unsafeDataAsMaybe" $$ fun "unwrap" $$ var "x"
 
         getterDec :: (Type, Exp) -> [Dec]
         getterDec (targetType, getterBody) =
