@@ -2,10 +2,13 @@
 {-# LANGUAGE TemplateHaskell #-}
 -- Needed for Arbitrary instances for Plutus types
 {-# OPTIONS_GHC -Wno-orphans #-}
+-- Some top binds are used by TH generated code only
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module TrustlessSidechain.Types.Unsafe (
   Packable (..),
   Codable (..),
+  -- | From TrustlessSidechain.Types
   BlockProducerRegistration (..),
   auraKey,
   grandpaKey,
@@ -14,8 +17,6 @@ module TrustlessSidechain.Types.Unsafe (
   sidechainPubKey,
   sidechainSignature,
   stakeOwnership,
-  Signature (..),
-  StakeOwnership (..),
   GovernanceAuthority (..),
   SidechainParams (..),
   chainId,
@@ -23,7 +24,16 @@ module TrustlessSidechain.Types.Unsafe (
   governanceAuthority,
   thresholdDenominator,
   thresholdNumerator,
+  Signature (..),
+  StakeOwnership (..),
+  UpdateCommitteeHashRedeemer (..),
+  previousMerkleRoot,
+  -- | From Plutus.V2.Ledger.Api
   Address (..),
+  addressCredential,
+  Credential (..),
+  getPubKeyCredential,
+  getScriptCredential,
   CurrencySymbol (..),
   DCert (..),
   LedgerBytes (..),
@@ -59,10 +69,9 @@ module TrustlessSidechain.Types.Unsafe (
   txOutDatum,
   txOutValue,
   TxOutRef (..),
+  ValidatorHash (..),
   Value (..),
-  nthFieldOf,
-  nthCtorOf,
-  isNthCtorOf,
+  -- | Unsafe versions of ledger API functions
   ownCurrencySymbol,
   getContinuingOutputs,
   findOwnInput,
@@ -116,12 +125,21 @@ n `isNthCtorOf` bd = case Builtins.unsafeDataAsConstr bd of
   (ix, _) | n == ix -> True
   _ -> False
 
+{-# INLINEABLE unsafeDataAsMaybe #-}
+unsafeDataAsMaybe :: BuiltinData -> Maybe BuiltinData
+unsafeDataAsMaybe bd = case Builtins.unsafeDataAsConstr bd of
+  (0, [x]) -> Just x
+  (1, []) -> Nothing
+  _ -> traceError "unsafeDataAsMaybe: unreachable"
+
 makeUnsafeNewtypes ''Types.BlockProducerRegistration
-makeUnsafeNewtypes ''Types.SidechainParams
 makeUnsafeNewtypes ''Types.GovernanceAuthority
+makeUnsafeNewtypes ''Types.SidechainParams
 makeUnsafeNewtypes ''Types.Signature
 makeUnsafeNewtypes ''Types.StakeOwnership
+makeUnsafeNewtypes ''Types.UpdateCommitteeHashRedeemer
 makeUnsafeNewtypes ''V2.Address
+makeUnsafeNewtypes ''V2.Credential
 makeUnsafeNewtypes ''V2.CurrencySymbol
 makeUnsafeNewtypes ''V2.DCert
 makeUnsafeNewtypes ''V2.LedgerBytes
@@ -137,11 +155,15 @@ makeUnsafeNewtypes ''V2.TxInfo
 makeUnsafeNewtypes ''V2.TxInInfo
 makeUnsafeNewtypes ''V2.TxOut
 makeUnsafeNewtypes ''V2.TxOutRef
+makeUnsafeNewtypes ''V2.ValidatorHash
 makeUnsafeNewtypes ''V2.Value
 makeUnsafeNewtypes ''PTPrelude.Integer
 
 makeUnsafeGetters ''Types.BlockProducerRegistration
 makeUnsafeGetters ''Types.SidechainParams
+makeUnsafeGetters ''Types.UpdateCommitteeHashRedeemer
+makeUnsafeGetters ''V2.Address
+makeUnsafeGetters ''V2.Credential
 makeUnsafeGetters ''V2.ScriptContext
 makeUnsafeGetters ''V2.ScriptPurpose
 makeUnsafeGetters ''V2.TxInfo
