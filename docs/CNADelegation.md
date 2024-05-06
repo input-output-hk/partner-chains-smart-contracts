@@ -91,12 +91,13 @@ The quantity of tokens at addresses corresponding to each PubStakeKeyHash is sum
 You can use this SQL query on the `cardano-db-sync` PostgreSQL database.
 `<MinotaurStakeValidator>` and `<MinotaurStakePolicy>` can be obtained using
 `sidechain-main-cli addresses` command. `<STAKE_POOL_ID>` is the id of a stake pool
-for which you want to calculate the total stake distribution. `<CNA_POLICY>` is a
+for which you want to calculate the total stake distribution. `<CNA_FINGERPRINT>` is a
 Cardano Native Asset that is being staked. It is chosen by the partner chain that
 wants to use CNA stake delegation mechanism.
 
 ```sql
-select minotaur_delegation_datum_helper.value->'list'->1->>'bytes' as stakePubKeyHash,
+
+select distinct on ( minotaur_delegation_datum_helper.value->'list'->1->>'bytes') minotaur_delegation_datum_helper.value->'list'->1->>'bytes' as stakePubKeyHash,
        minotaur_delegation_datum_helper.value->'list'->0->>'bytes' as partnerChainRewardAddress,
        minotaur_delegation_datum_helper.value->'list'->2->>'bytes' as stakePoolId,
        Sum(stake_ma_tx_out.quantity) as stake_amount
@@ -107,10 +108,13 @@ join multi_asset as minotaur_delegation_multi_asset
 on minotaur_delegation_multi_asset.id = minotaur_delegation_ma_tx_out.ident
 join datum as minotaur_delegation_datum
 on minotaur_delegation_datum.hash = minotaur_delegation_utxo.data_hash
-JOIN (SELECT *,
-             ROW_NUMBER() OVER (PARTITION BY (minotaur_delegation_datum.value->'list'->1->>'bytes') ORDER BY  minotaur_delegation_datum.tx_id DESC) AS rn
-      from datum as minotaur_delegation_datum
-      where minotaur_delegation_datum.value->'list'->1->>'bytes' is not null
+JOIN (SELECT datum.*,
+             ROW_NUMBER() OVER (PARTITION BY (datum.value->'list'->1->>'bytes') ORDER BY  utxo_view.tx_id DESC) AS rn
+      from datum
+      join utxo_view
+      on utxo_view.data_hash = datum.hash
+      where datum.value->'list'->1->>'bytes' is not null
+      and utxo_view.address = <MinotaurStakeAddress>
 ) as minotaur_delegation_datum_helper
 on minotaur_delegation_datum_helper.id = minotaur_delegation_datum.id
 and minotaur_delegation_datum_helper.rn = 1
@@ -122,12 +126,14 @@ join ma_tx_out as stake_ma_tx_out
 on stake_ma_tx_out.tx_out_id = staked_utxo.id
 join multi_asset as stake_multi_asset
 on stake_multi_asset.id = stake_ma_tx_out.ident
-where minotaur_delegation_utxo.address = <MinotaurStakeValidator>
+where minotaur_delegation_utxo.address = <MinotaurStakeAddress>
 and minotaur_delegation_multi_asset.policy = decode(<MinotaurStakePolicy>, 'hex')
 and minotaur_delegation_ma_tx_out.quantity > 0
-and minotaur_delegation_datum.value->'list'->2->>'bytes' = <STAKE_POOL_ID>
-and stake_multi_asset.policy = decode(<CNA_POLICY>, 'hex')
-group by (minotaur_delegation_datum_helper.value)
+and minotaur_delegation_datum.value->'list'->2->>'bytes' = <SPO_ID>
+and stake_multi_asset.fingerprint = <CNA_FINGERPRINT>
+group by (minotaur_delegation_utxo.id, minotaur_delegation_datum_helper.value)
+
+
 ```
 
 
