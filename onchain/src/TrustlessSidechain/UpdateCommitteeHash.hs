@@ -15,22 +15,15 @@ module TrustlessSidechain.UpdateCommitteeHash (
 
 import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V2.Ledger.Api (
-  Credential (ScriptCredential),
   CurrencySymbol,
   Datum (getDatum),
   LedgerBytes (LedgerBytes),
   OutputDatum (OutputDatum),
   Script,
-  ScriptContext (scriptContextTxInfo),
   TokenName (TokenName),
-  TxInInfo (txInInfoResolved),
-  TxInfo (txInfoMint, txInfoOutputs, txInfoReferenceInputs),
-  TxOut (txOutAddress, txOutDatum, txOutValue),
   Value (getValue),
-  addressCredential,
   fromCompiledCode,
  )
-import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
@@ -48,11 +41,9 @@ import TrustlessSidechain.Types (
     sidechainParams,
     validatorHash
   ),
-  UpdateCommitteeHashRedeemer,
  )
+import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Utils (
-  mkUntypedMintingPolicy,
-  mkUntypedValidator,
   oneTokenBurned,
  )
 import TrustlessSidechain.Versioning (
@@ -60,7 +51,7 @@ import TrustlessSidechain.Versioning (
   VersionOracleConfig,
   committeeCertificateVerificationPolicyId,
   committeeOraclePolicyId,
-  getVersionedCurrencySymbol,
+  getVersionedCurrencySymbolUnsafe,
   merkleRootTokenPolicyId,
  )
 
@@ -109,8 +100,8 @@ mkUpdateCommitteeHashValidator ::
   SidechainParams ->
   VersionOracleConfig ->
   UpdateCommitteeDatum BuiltinData ->
-  UpdateCommitteeHashRedeemer ->
-  ScriptContext ->
+  Unsafe.UpdateCommitteeHashRedeemer ->
+  Unsafe.ScriptContext ->
   Bool
 mkUpdateCommitteeHashValidator sp versioningConfig dat red ctx =
   traceIfFalse "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-01" committeeOutputIsValid
@@ -118,39 +109,39 @@ mkUpdateCommitteeHashValidator sp versioningConfig dat red ctx =
       "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-02"
       referencesPreviousMerkleRoot
   where
-    info :: TxInfo
-    info = scriptContextTxInfo ctx
+    info :: Unsafe.TxInfo
+    info = Unsafe.scriptContextTxInfo ctx
 
     committeeOracleCurrencySymbol :: CurrencySymbol
     committeeOracleCurrencySymbol =
-      getVersionedCurrencySymbol
+      getVersionedCurrencySymbolUnsafe
         versioningConfig
         (VersionOracle {version = 1, scriptId = committeeOraclePolicyId})
         ctx
 
     committeeCertificateVerificationCurrencySymbol :: CurrencySymbol
     committeeCertificateVerificationCurrencySymbol =
-      getVersionedCurrencySymbol
+      getVersionedCurrencySymbolUnsafe
         versioningConfig
         (VersionOracle {version = 1, scriptId = committeeCertificateVerificationPolicyId})
         ctx
 
     mptRootTokenCurrencySymbol :: CurrencySymbol
     mptRootTokenCurrencySymbol =
-      getVersionedCurrencySymbol
+      getVersionedCurrencySymbolUnsafe
         versioningConfig
         (VersionOracle {version = 1, scriptId = merkleRootTokenPolicyId})
         ctx
 
     committeeOutputIsValid :: Bool
     committeeOutputIsValid =
-      let go :: [TxOut] -> Bool
+      let go :: [Unsafe.TxOut] -> Bool
           go [] = False
           go (o : os)
             | -- recall that 'committeeOracleCurrencySymbol' should be
               -- an NFT, so  (> 0) ==> exactly one.
-              Value.valueOf (txOutValue o) committeeOracleCurrencySymbol initCommitteeOracleTn > 0
-              , OutputDatum d <- txOutDatum o
+              Value.valueOf (Unsafe.decode $ Unsafe.txOutValue o) committeeOracleCurrencySymbol initCommitteeOracleTn > 0
+              , OutputDatum d <- Unsafe.decode $ Unsafe.txOutDatum o
               , ucd :: UpdateCommitteeDatum BuiltinData <- PlutusTx.unsafeFromBuiltinData (getDatum d) =
               -- Note that we build the @msg@ that we check is signed
               -- with the data in this transaction directly... so in a sense,
@@ -158,22 +149,22 @@ mkUpdateCommitteeHashValidator sp versioningConfig dat red ctx =
               -- transaction corresponds to the message
 
               let validatorHash' =
-                    case addressCredential $ txOutAddress o of
-                      ScriptCredential vh -> vh
+                    case Unsafe.getScriptCredential $ Unsafe.addressCredential $ Unsafe.txOutAddress o of
+                      Just vh -> Unsafe.decode vh
                       _ -> traceError "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-03"
 
                   msg =
                     UpdateCommitteeHashMessage
                       { sidechainParams = sp
                       , newAggregateCommitteePubKeys = get @"aggregateCommitteePubKeys" ucd
-                      , previousMerkleRoot = get @"previousMerkleRoot" red
+                      , previousMerkleRoot = Unsafe.decode <$> Unsafe.previousMerkleRoot red
                       , sidechainEpoch = get @"sidechainEpoch" ucd
                       , validatorHash = validatorHash'
                       }
                in traceIfFalse
                     "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-04"
                     ( Value.valueOf
-                        (txInfoMint info)
+                        (Unsafe.decode $ Unsafe.txInfoMint info)
                         committeeCertificateVerificationCurrencySymbol
                         (TokenName (Builtins.blake2b_256 (serialiseUchm msg)))
                         > 0
@@ -182,7 +173,7 @@ mkUpdateCommitteeHashValidator sp versioningConfig dat red ctx =
                       "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-05"
                       (get @"sidechainEpoch" dat < get @"sidechainEpoch" ucd)
             | otherwise = go os
-       in go (txInfoOutputs info)
+       in go (Unsafe.txInfoOutputs info)
 
     referencesPreviousMerkleRoot :: Bool
     referencesPreviousMerkleRoot =
@@ -192,16 +183,18 @@ mkUpdateCommitteeHashValidator sp versioningConfig dat red ctx =
       -- If we do want to reference the previous merkle root, we need to verify
       -- that there exists at least one input with a nonzero amount of the
       -- merkle root tokens.
-      case get @"previousMerkleRoot" red of
+      case Unsafe.previousMerkleRoot red of
         Nothing -> True
-        Just (LedgerBytes tn) ->
-          let go :: [TxInInfo] -> Bool
+        Just unsafeLedgerBytes ->
+          -- TODO replace with any
+          let LedgerBytes tn = Unsafe.decode unsafeLedgerBytes
+              go :: [Unsafe.TxInInfo] -> Bool
               go (txInInfo : rest) =
-                ( (Value.valueOf (txOutValue (txInInfoResolved txInInfo)) mptRootTokenCurrencySymbol (TokenName tn) > 0)
+                ( (Value.valueOf (Unsafe.decode $ Unsafe.txOutValue (Unsafe.txInInfoResolved txInInfo)) mptRootTokenCurrencySymbol (TokenName tn) > 0)
                     || go rest
                 )
               go [] = False
-           in go (txInfoReferenceInputs info)
+           in go (Unsafe.txInfoReferenceInputs info)
 
 -- * Initializing the committee hash
 
@@ -216,13 +209,13 @@ mkUpdateCommitteeHashValidator sp versioningConfig dat red ctx =
 -- ERROR-UPDATE-COMMITTEE-HASH-POLICY-02: wrong amount minted
 -- increasing
 {-# INLINEABLE mkCommitteeOraclePolicy #-}
-mkCommitteeOraclePolicy :: InitTokenAssetClass -> () -> ScriptContext -> Bool
+mkCommitteeOraclePolicy :: InitTokenAssetClass -> BuiltinData -> Unsafe.ScriptContext -> Bool
 mkCommitteeOraclePolicy itac _red ctx =
   traceIfFalse "ERROR-UPDATE-COMMITTEE-HASH-POLICY-01" initTokenBurned
     && traceIfFalse "ERROR-UPDATE-COMMITTEE-HASH-POLICY-02" checkMintedAmount
   where
     mint :: Value
-    mint = txInfoMint . scriptContextTxInfo $ ctx
+    mint = Unsafe.decode . Unsafe.txInfoMint . Unsafe.scriptContextTxInfo $ ctx
 
     initTokenBurned :: Bool
     initTokenBurned =
@@ -234,16 +227,18 @@ mkCommitteeOraclePolicy itac _red ctx =
     -- Assert that we have minted exactly one of this currency symbol
     checkMintedAmount :: Bool
     checkMintedAmount =
-      case fmap AssocMap.toList $ AssocMap.lookup (Contexts.ownCurrencySymbol ctx) $ getValue mint of
+      case fmap AssocMap.toList $ AssocMap.lookup (Unsafe.ownCurrencySymbol ctx) $ getValue mint of
         Just [(tn', amt)] -> tn' == initCommitteeOracleTn && amt == initCommitteeOracleMintAmount
         _ -> False
 
 mkCommitteeOraclePolicyUntyped ::
   BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkCommitteeOraclePolicyUntyped =
-  mkUntypedMintingPolicy
-    . mkCommitteeOraclePolicy
-    . PlutusTx.unsafeFromBuiltinData
+mkCommitteeOraclePolicyUntyped itac red ctx =
+  check $
+    mkCommitteeOraclePolicy
+      (PlutusTx.unsafeFromBuiltinData itac)
+      red
+      (Unsafe.wrap ctx)
 
 serialisableCommitteeOraclePolicy :: Script
 serialisableCommitteeOraclePolicy =
@@ -256,11 +251,14 @@ mkCommitteeHashValidatorUntyped ::
   BuiltinData ->
   BuiltinData ->
   ()
-mkCommitteeHashValidatorUntyped uch versioningConfig =
-  mkUntypedValidator $
+mkCommitteeHashValidatorUntyped uch versioningConfig dat red ctx =
+  check $
     mkUpdateCommitteeHashValidator
       (PlutusTx.unsafeFromBuiltinData uch)
       (PlutusTx.unsafeFromBuiltinData versioningConfig)
+      (PlutusTx.unsafeFromBuiltinData dat)
+      (Unsafe.wrap red)
+      (Unsafe.wrap ctx)
 
 serialisableCommitteeHashValidator :: Script
 serialisableCommitteeHashValidator =

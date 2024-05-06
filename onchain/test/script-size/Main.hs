@@ -75,11 +75,11 @@ main =
         , scriptFitsInto
             "mkCommitteeOraclePolicy (serialized)"
             UCH.serialisableCommitteeOraclePolicy
-            1_818
+            627
         , scriptFitsInto
             "mkUpdateCommitteeHashValidator (serialized)"
             UCH.serialisableCommitteeHashValidator
-            2_641
+            2_252
         , scriptFitsInto
             "mkCheckpointValidator (serialized)"
             CV.serialisableCheckpointValidator
