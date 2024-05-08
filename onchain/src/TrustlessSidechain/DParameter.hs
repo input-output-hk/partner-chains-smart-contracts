@@ -9,9 +9,7 @@ module TrustlessSidechain.DParameter (
 ) where
 
 import Plutus.V2.Ledger.Api (
-  Address,
   Script,
-  TxOut (TxOut),
   fromCompiledCode,
  )
 import PlutusTx qualified
@@ -34,7 +32,7 @@ import TrustlessSidechain.Utils (currencySymbolValueOf)
 --   ERROR-DPARAMETER-POLICY-03: Wrong ScriptContext - this should never happen
 mkMintingPolicy ::
   SidechainParams ->
-  Address ->
+  Unsafe.Address ->
   BuiltinData ->
   Unsafe.ScriptContext ->
   Bool
@@ -57,8 +55,9 @@ mkMintingPolicy
           outAmount =
             sum
               [ currencySymbolValueOf value currSym
-              | (TxOut address value _ _) <-
-                  Unsafe.decode <$> Unsafe.txInfoOutputs txInfo
+              | txOut <- Unsafe.txInfoOutputs txInfo
+              , let address = Unsafe.txOutAddress txOut
+              , let value = Unsafe.decode $ Unsafe.txOutValue txOut
               , -- look at UTxOs that are sent to the dParameterValidatorAddress
               address == dParameterValidatorAddress
               ]
@@ -129,7 +128,7 @@ mkMintingPolicyUntyped sp validatorAddress redeemer ctx =
   check $
     mkMintingPolicy
       (unsafeFromBuiltinData sp)
-      (unsafeFromBuiltinData validatorAddress)
+      (Unsafe.wrap validatorAddress)
       redeemer
       (Unsafe.wrap ctx)
 
