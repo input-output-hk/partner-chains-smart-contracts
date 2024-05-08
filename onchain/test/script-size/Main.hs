@@ -115,7 +115,7 @@ main =
         , scriptFitsInto
             "mkPermissionedCandidatesValidatorCode (PermissionedCandidates) serialized"
             PermissionedCandidates.serialisableValidator
-            1_777
+            638
         , scriptFitsInto
             "mkVersionOraclePolicyCode (Versioning) serialized"
             Versioning.serialisableVersionOraclePolicy
