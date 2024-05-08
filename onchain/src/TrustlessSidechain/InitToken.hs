@@ -7,10 +7,6 @@ module TrustlessSidechain.InitToken (
 
 import Plutus.V2.Ledger.Api (
   Script,
-  ScriptContext (ScriptContext),
-  ScriptPurpose (Minting),
-  TxInInfo (txInInfoOutRef),
-  TxInfo (txInfoInputs, txInfoMint),
   Value (getValue),
   fromCompiledCode,
  )
@@ -19,9 +15,8 @@ import PlutusTx.AssocMap qualified as AssocMap
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   InitTokenRedeemer (BurnInitToken, MintInitToken),
-  SidechainParams,
  )
-import TrustlessSidechain.Utils (mkUntypedMintingPolicy)
+import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 
 -- | 'mkInitTokenPolicy' is a minting policy which allows to:
 --
@@ -39,35 +34,37 @@ import TrustlessSidechain.Utils (mkUntypedMintingPolicy)
 --    ERROR-INIT-TOKENS-02: invalid script purpose.  Script can only be used for
 --    minting/burning
 mkInitTokenPolicy ::
-  SidechainParams ->
+  Unsafe.SidechainParams ->
   InitTokenRedeemer ->
-  ScriptContext ->
+  Unsafe.ScriptContext ->
   Bool
-mkInitTokenPolicy sp MintInitToken (ScriptContext txInfo (Minting _)) =
-  traceIfFalse "ERROR-INIT-TOKENS-01" isGenesisUtxoUsed
+mkInitTokenPolicy sp MintInitToken ctx
+  | isJust . Unsafe.getMinting . Unsafe.scriptContextPurpose $ ctx =
+    traceIfFalse "ERROR-INIT-TOKENS-01" isGenesisUtxoUsed
   where
     -- Ensure that the genesis UTxO is used by the transaction.
     isGenesisUtxoUsed :: Bool
     isGenesisUtxoUsed =
-      get @"genesisUtxo" sp `elem` map txInInfoOutRef (txInfoInputs txInfo)
-mkInitTokenPolicy _ BurnInitToken (ScriptContext txInfo (Minting cs)) =
-  traceIfFalse "ERROR-INIT-TOKENS-02" (allBurned ownMintedAmounts)
-  where
-    -- What this transaction mints
-    mintedValue = getValue (txInfoMint txInfo)
+      Unsafe.genesisUtxo sp `elem` map Unsafe.txInInfoOutRef (Unsafe.txInfoInputs $ Unsafe.scriptContextTxInfo ctx)
+mkInitTokenPolicy _ BurnInitToken ctx
+  | Just cs <- Unsafe.decode <$> (Unsafe.getMinting . Unsafe.scriptContextPurpose $ ctx) =
+    let -- What this transaction mints
+        mintedValue = getValue (Unsafe.decode . Unsafe.txInfoMint . Unsafe.scriptContextTxInfo $ ctx)
 
-    -- Amounts of own tokens minted/burned by transaction
-    ownMintedAmounts :: [Integer]
-    ownMintedAmounts =
-      maybe
-        []
-        (map snd . AssocMap.toList)
-        (AssocMap.lookup cs mintedValue)
+        -- Amounts of own tokens minted/burned by transaction
+        ownMintedAmounts :: [Integer]
+        ownMintedAmounts =
+          maybe
+            []
+            (map snd . AssocMap.toList)
+            (AssocMap.lookup cs mintedValue)
 
-    -- Check that we only burn tokens
-    allBurned :: [Integer] -> Bool
-    allBurned [] = True
-    allBurned (x : xs) = x < 0 || allBurned xs
+        -- Check that we only burn tokens
+        -- TODO replace with `all` (or `any`? why the `||`?)
+        allBurned :: [Integer] -> Bool
+        allBurned [] = True
+        allBurned (x : xs) = x < 0 || allBurned xs
+     in traceIfFalse "ERROR-INIT-TOKENS-02" (allBurned ownMintedAmounts)
 mkInitTokenPolicy _ _ _ =
   traceError "ERROR-INIT-TOKENS-03"
 
@@ -76,10 +73,12 @@ mkInitTokenPolicyUntyped ::
   BuiltinData ->
   BuiltinData ->
   ()
-mkInitTokenPolicyUntyped =
-  mkUntypedMintingPolicy
-    . mkInitTokenPolicy
-    . PlutusTx.unsafeFromBuiltinData
+mkInitTokenPolicyUntyped sp red ctx =
+  check $
+    mkInitTokenPolicy
+      (Unsafe.wrap sp)
+      (PlutusTx.unsafeFromBuiltinData red)
+      (Unsafe.wrap ctx)
 
 serialisableInitTokenPolicy :: Script
 serialisableInitTokenPolicy =

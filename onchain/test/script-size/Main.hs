@@ -127,7 +127,7 @@ main =
         , scriptFitsInto
             "mkInitTokenPolicy (InitToken) serialized"
             InitToken.serialisableInitTokenPolicy
-            1_936
+            735
         ]
     , testGroup
         "Distributed set"
