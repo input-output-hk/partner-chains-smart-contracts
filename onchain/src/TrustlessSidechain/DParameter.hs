@@ -11,9 +11,6 @@ module TrustlessSidechain.DParameter (
 import Plutus.V2.Ledger.Api (
   Address,
   Script,
-  ScriptContext (ScriptContext),
-  ScriptPurpose (Minting),
-  TxInfo (txInfoMint, txInfoOutputs),
   TxOut (TxOut),
   fromCompiledCode,
  )
@@ -23,7 +20,8 @@ import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   SidechainParams,
  )
-import TrustlessSidechain.Utils (currencySymbolValueOf, mkUntypedMintingPolicy, mkUntypedValidator)
+import TrustlessSidechain.Types.Unsafe qualified as Unsafe
+import TrustlessSidechain.Utils (currencySymbolValueOf)
 
 -- OnChain error descriptions:
 --
@@ -37,43 +35,46 @@ import TrustlessSidechain.Utils (currencySymbolValueOf, mkUntypedMintingPolicy, 
 mkMintingPolicy ::
   SidechainParams ->
   Address ->
-  () ->
-  ScriptContext ->
+  BuiltinData ->
+  Unsafe.ScriptContext ->
   Bool
 mkMintingPolicy
   sp
   dParameterValidatorAddress
-  _
-  (ScriptContext txInfo (Minting cs)) =
-    traceIfFalse "ERROR-DPARAMETER-POLICY-01" signedByGovernanceAuthority
-      && traceIfFalse
-        "ERROR-DPARAMETER-POLICY-02"
-        allTokensSentToDParameterValidator
-    where
-      -- Check that transaction was approved by governance authority
-      signedByGovernanceAuthority :: Bool
-      signedByGovernanceAuthority =
-        txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
+  _redeemer
+  ctx
+    | Just currSym <-
+        Unsafe.decode <$> (Unsafe.getMinting . Unsafe.scriptContextPurpose $ ctx) =
+      let txInfo = Unsafe.scriptContextTxInfo ctx
 
-      -- Amount of DParameterToken sent to the DParameterValidator address
-      outAmount :: Integer
-      outAmount =
-        sum
-          [ currencySymbolValueOf value cs
-          | (TxOut address value _ _) <-
-              txInfoOutputs txInfo
-          , -- look at UTxOs that are sent to the dParameterValidatorAddress
-          address == dParameterValidatorAddress
-          ]
+          -- Check that transaction was approved by governance authority
+          signedByGovernanceAuthority :: Bool
+          signedByGovernanceAuthority =
+            txInfo `Governance.isApprovedByUnsafe` get @"governanceAuthority" sp
 
-      -- Amount of DParameterToken minted by this transaction
-      mintAmount :: Integer
-      mintAmount = currencySymbolValueOf (txInfoMint txInfo) cs
+          -- Amount of DParameterToken sent to the DParameterValidator address
+          outAmount :: Integer
+          outAmount =
+            sum
+              [ currencySymbolValueOf value currSym
+              | (TxOut address value _ _) <-
+                  Unsafe.decode <$> Unsafe.txInfoOutputs txInfo
+              , -- look at UTxOs that are sent to the dParameterValidatorAddress
+              address == dParameterValidatorAddress
+              ]
 
-      -- Check wether the amount of tokens minted equal to the amount of tokens
-      -- sent to the DParameterValidator address
-      allTokensSentToDParameterValidator :: Bool
-      allTokensSentToDParameterValidator = mintAmount == outAmount
+          -- Amount of DParameterToken minted by this transaction
+          mintAmount :: Integer
+          mintAmount = currencySymbolValueOf (Unsafe.decode $ Unsafe.txInfoMint txInfo) currSym
+
+          -- Check wether the amount of tokens minted equal to the amount of tokens
+          -- sent to the DParameterValidator address
+          allTokensSentToDParameterValidator :: Bool
+          allTokensSentToDParameterValidator = mintAmount == outAmount
+       in traceIfFalse "ERROR-DPARAMETER-POLICY-01" signedByGovernanceAuthority
+            && traceIfFalse
+              "ERROR-DPARAMETER-POLICY-02"
+              allTokensSentToDParameterValidator
 mkMintingPolicy _ _ _ _ = traceError "ERROR-DPARAMETER-POLICY-03"
 
 -- OnChain error descriptions:
@@ -89,20 +90,16 @@ dParameterValidator ::
   -- to allow to spend from this validator even if UTxO contains invalid
   -- datum
   BuiltinData ->
-  () ->
-  ScriptContext ->
+  BuiltinData ->
+  Unsafe.ScriptContext ->
   Bool
-dParameterValidator
-  sp
-  _
-  _
-  (ScriptContext txInfo _) =
-    traceIfFalse "ERROR-DPARAMETER-VALIDATOR-01" signedByGovernanceAuthority
-    where
-      -- Check that transaction was approved by governance authority
-      signedByGovernanceAuthority :: Bool
-      signedByGovernanceAuthority =
-        txInfo `Governance.isApprovedBy` get @"governanceAuthority" sp
+dParameterValidator sp _dat _redeemer ctx =
+  traceIfFalse "ERROR-DPARAMETER-VALIDATOR-01" signedByGovernanceAuthority
+  where
+    -- Check that transaction was approved by governance authority
+    signedByGovernanceAuthority :: Bool
+    signedByGovernanceAuthority =
+      Unsafe.scriptContextTxInfo ctx `Governance.isApprovedByUnsafe` get @"governanceAuthority" sp
 
 mkValidatorUntyped ::
   BuiltinData ->
@@ -110,10 +107,13 @@ mkValidatorUntyped ::
   BuiltinData ->
   BuiltinData ->
   ()
-mkValidatorUntyped sp =
-  mkUntypedValidator $
+mkValidatorUntyped sp dat redeemer ctx =
+  check $
     dParameterValidator
       (unsafeFromBuiltinData sp)
+      dat
+      redeemer
+      (Unsafe.wrap ctx)
 
 serialisableValidator :: Script
 serialisableValidator =
@@ -125,11 +125,13 @@ mkMintingPolicyUntyped ::
   BuiltinData ->
   BuiltinData ->
   ()
-mkMintingPolicyUntyped sp validatorAddress =
-  mkUntypedMintingPolicy $
+mkMintingPolicyUntyped sp validatorAddress redeemer ctx =
+  check $
     mkMintingPolicy
       (unsafeFromBuiltinData sp)
       (unsafeFromBuiltinData validatorAddress)
+      redeemer
+      (Unsafe.wrap ctx)
 
 serialisableMintingPolicy :: Script
 serialisableMintingPolicy =
