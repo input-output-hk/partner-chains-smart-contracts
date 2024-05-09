@@ -24,6 +24,7 @@ import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.ConfigFile as ConfigFile
 import TrustlessSidechain.DParameter as DParameter
+import TrustlessSidechain.DelegationRegistration as DelegationRegistration
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Run (runAppLive)
 import TrustlessSidechain.EndpointResp
@@ -64,6 +65,7 @@ import TrustlessSidechain.EndpointResp
       , UpdatePermissionedCandidatesResp
       , BurnNFTsResp
       , InitTokenStatusResp
+      , DelegationRegistrationResp
       , ListVersionedScriptsResp
       )
   , stringifyEndpointResp
@@ -117,6 +119,7 @@ import TrustlessSidechain.Options.Types
       , UpdatePermissionedCandidates
       , BurnNFTs
       , InitTokenStatus
+      , DelegationRegistration
       , ListVersionedScripts
       )
   , UtilsEndpoint
@@ -663,6 +666,12 @@ runTxEndpoint sidechainEndpointParams endpoint =
           >>> BurnNFTsResp
 
       InitTokenStatus → map InitTokenStatusResp (getInitTokenStatus scParams)
+
+      DelegationRegistration
+        { stakePubKeyHash, partnerChainWallet } → map DelegationRegistrationResp
+        ( DelegationRegistration.getDelegationRegistration stakePubKeyHash
+            partnerChainWallet
+        )
 
       ListVersionedScripts
         { version } →

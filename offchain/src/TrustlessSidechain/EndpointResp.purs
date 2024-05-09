@@ -173,6 +173,8 @@ data EndpointResp
       { transactionId ∷ ByteArray }
   | InitTokenStatusResp
       { initTokenStatusData ∷ Plutus.Map TokenName BigInt }
+  | DelegationRegistrationResp
+      { transactionId ∷ ByteArray }
   | ListVersionedScriptsResp
       { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
       , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
@@ -556,6 +558,13 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "InitTokenStatus"
         , "initTokenStatusData" /\ encodeInitTokenStatusData initTokenStatusData
+        ]
+
+    DelegationRegistrationResp
+      { transactionId } →
+      J.fromObject $ Object.fromFoldable
+        [ "endpoint" /\ J.fromString "DelegationRegistration"
+        , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
         ]
 
     ListVersionedScriptsResp

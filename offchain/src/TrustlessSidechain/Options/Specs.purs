@@ -126,6 +126,7 @@ import TrustlessSidechain.Options.Types
       , UpdatePermissionedCandidates
       , BurnNFTs
       , InitTokenStatus
+      , DelegationRegistration
       , ListVersionedScripts
       )
   , UtilsEndpoint
@@ -274,6 +275,12 @@ optSpec maybeConfig =
     , command "init-token-status"
         ( info (withCommonOpts maybeConfig initTokenStatusSpec)
             (progDesc "List the number of each init token the wallet still holds")
+        )
+    , command "delegation-registration"
+        ( info (withCommonOpts maybeConfig delegationRegistrationSpec)
+            ( progDesc
+                "Registers the partner chain address wallet of an ADA delegator"
+            )
         )
     , command "cli-version"
         ( info (pure CLIVersion)
@@ -1265,6 +1272,24 @@ burnNFTsSpec = pure BurnNFTs
 
 initTokenStatusSpec ∷ Parser TxEndpoint
 initTokenStatusSpec = pure InitTokenStatus
+
+delegationRegistrationSpec ∷ Parser TxEndpoint
+delegationRegistrationSpec = ado
+  stakePubKeyHash ← option byteArray $ fold
+    [ long "public-key"
+    , metavar "PUBLIC_KEY"
+    , help "Hex encoded raw bytes of a stake public key hash"
+    ]
+  partnerChainWallet ← option sidechainAddress $ fold
+    [ long "wallet"
+    , metavar "ADDRESS"
+    , help "Hex encoded raw bytes of a partner chain wallet"
+    ]
+  in
+    DelegationRegistration
+      { stakePubKeyHash
+      , partnerChainWallet
+      }
 
 candidatePermissionTokenSpecHelper ∷ Parser CandidatePermissionTokenMintInfo
 candidatePermissionTokenSpecHelper = ado
