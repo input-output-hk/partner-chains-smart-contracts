@@ -142,7 +142,8 @@
           git
           jq
 
-          # Lint / Format
+          # Lint / Format / watch-file for continues build
+          watchexec
           fd
           dhall
 
