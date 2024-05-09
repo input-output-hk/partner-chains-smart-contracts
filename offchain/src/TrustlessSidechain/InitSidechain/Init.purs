@@ -36,7 +36,7 @@ import Type.Row (type (+))
 insertScriptsIdempotent ∷
   ∀ r.
   ( SidechainParams →
-    Int →
+    Int → -- Version number
     Run (APP + r)
       { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
       , versionedValidators ∷ List (Tuple ScriptId Validator)

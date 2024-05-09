@@ -59,6 +59,7 @@ import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning
   ( getDsPoliciesAndValidators
   , getFuelPoliciesAndValidators
+  , getMerkleRootPoliciesAndValidators
   )
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(FUELMintingPolicy, DsKeyPolicy)
@@ -67,14 +68,14 @@ import Type.Row (type (+))
 
 -- NOTE: `initFuel` does *not* do everything necessary to
 -- allow the user to mint / burn FUEL. It does not initialize
--- the committee, nor does it initialize the merkle root
--- mechanism. See this PR comment for a discussion of the
+-- the committee. See this PR comment for a discussion of the
 -- choice to leave it this way and possibly to alter the functionality
 -- later, to make it such that this command indeed does everything
 -- a user needs to mint / burn FUEL.
 -- https://github.com/input-output-hk/trustless-sidechain/pull/753#discussion_r1551920822
 
--- | Initialize the distributed set, FUELMintingPolicy and FUELBurningPolicy.
+-- | Initialize the distributed set, FUELMintingPolicy, FUELBurningPolicy, and
+-- | Merkle tree.
 initFuel ∷
   ∀ r.
   SidechainParams →
@@ -111,8 +112,15 @@ initFuel
     initATMSKind
     version
 
+  logDebug' "Attempting to initialize MerkleRoot versioning scripts"
+  scriptsInitTxIdMT ← insertScriptsIdempotent getMerkleRootPoliciesAndValidators
+    sidechainParams
+    initATMSKind
+    version
+
   let
-    scriptsInitTxId = scriptsInitTxIdFuel <> scriptsInitTxIdDs
+    scriptsInitTxId =
+      scriptsInitTxIdFuel <> scriptsInitTxIdDs <> scriptsInitTxIdMT
 
   if not $ null scriptsInitTxId then do
     sidechainAddresses ←

@@ -26,9 +26,8 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   * Added CLI endpoint `init-checkpoint` to insert scripts and initialise
     checkpointing.
   * Added CLI endpoint `init-fuel` to initialize the FUEL mechanism,
-    namely the distributed set and FUEL minting / burning versioning.
-  * Added CLI endpoint `init-merkle-root` to initialize the Merkle Root
-    policy and validator scripts.
+    namely the distributed set, FUEL minting / burning versioning, and the
+    Merkle Root policy and validator scripts.
   * Added CLI endpoint `init-candidate-permission-token` to initialise the
     candidate permission token mechanism.
 

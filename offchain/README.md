@@ -206,7 +206,6 @@ Available commands:
   init-committee-selection Initialise the committee selection mechanism
   init-checkpoint          Initialise the checkpointing mechanism
   init-fuel                Initialise the FUEL mechanism
-  init-merkle-root         Initialise the Merkle Root feature
   init-candidate-permission-token
                            Initialise the candidate permission token mechanism
   addresses                Get the script addresses for a given sidechain
@@ -332,20 +331,13 @@ Insert policies:
 * `DsKeyPolicy`
 * `FUELMintingPolicy`
 * `FUELBurningPolicy`
+* `MerkleRootTokenPolicy`
+
+Insert validators:
+* `MerkleRootTokenValidator`
 
 ```
 nix run .#sidechain-main-cli -- init-fuel --version 1
-```
-
-# Init Merkle Root
-
-Initialise the Merkle Root mechanism. Burn `"Checkpoint InitToken"`.
-
-Insert policy: `MerkleRootTokenPolicy`
-Insert validator: `MerkleRootTokenValidator`
-
-```
-nix run .#sidechain-main-cli -- init-merkle-root --version 1
 ```
 
 # Init Checkpoint

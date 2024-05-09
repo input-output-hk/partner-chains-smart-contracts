@@ -50,7 +50,7 @@ failMsg exp act = "Expected: "
 -- | and quantity. Requires the number of version oracle init tokens
 -- | to be passed.
 expectedInitTokens ∷
-  Int →
+  Int → -- How many version init tokens should have been burned at this point?
   List (Tuple Types.ScriptId MintingPolicy) →
   List (Tuple Types.ScriptId Validator) →
   Array TokenName →

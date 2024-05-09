@@ -109,7 +109,6 @@ import TrustlessSidechain.Options.Types
       , InitCommitteeSelection
       , InitCheckpoint
       , InitFuel
-      , InitMerkleRoot
       , Init
       , InitCandidatePermissionToken
       , CommitteeCandidateReg
@@ -179,10 +178,6 @@ optSpec maybeConfig =
     , command "init-fuel"
         ( info (withCommonOpts maybeConfig initFuelSpec)
             (progDesc "Initialise the FUEL mechanism")
-        )
-    , command "init-merkle-root"
-        ( info (withCommonOpts maybeConfig initMerkleRootSpec)
-            (progDesc "Initialise Merkle Root scripts")
         )
     , command "init-candidate-permission-token"
         ( info (withCommonOpts maybeConfig initCandidatePermissionTokenSpec)
@@ -1114,9 +1109,6 @@ initCheckpointSpec = ado
 
 initFuelSpec ∷ Parser TxEndpoint
 initFuelSpec = map (InitFuel <<< { version: _ }) parseVersion
-
-initMerkleRootSpec ∷ Parser TxEndpoint
-initMerkleRootSpec = map (InitMerkleRoot <<< { version: _ }) parseVersion
 
 insertVersionSpec ∷ Parser TxEndpoint
 insertVersionSpec = pure InsertVersion2

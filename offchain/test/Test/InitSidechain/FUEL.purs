@@ -7,16 +7,20 @@ import Contract.Prelude
 import Contract.AssocMap as Plutus.Map
 import Contract.Wallet as Wallet
 import Data.BigInt as BigInt
+import Data.List as List
 import Mote.Monad as Mote.Monad
-import Test.InitSidechain.Utils (failMsg)
+import Test.InitSidechain.Utils (expectedInitTokens, failMsg, unorderedEq)
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Unit.Assert (assert)
 import Test.Utils (WrappedTests, plutipGroup)
 import Test.Utils as Test.Utils
+import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
+import TrustlessSidechain.Checkpoint.Utils as Checkpoint
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
+import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Effects.Log (logInfo') as Effect
 import TrustlessSidechain.Effects.Run (withUnliftApp)
@@ -28,6 +32,19 @@ import TrustlessSidechain.InitSidechain.Init as Init
 import TrustlessSidechain.InitSidechain.TokensMint as InitMint
 import TrustlessSidechain.SidechainParams as SidechainParams
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
+import TrustlessSidechain.Versioning
+  ( getActualVersionedPoliciesAndValidators
+  , getExpectedVersionedPoliciesAndValidators
+  ) as Versioning
+import TrustlessSidechain.Versioning.Types
+  ( ScriptId
+      ( MerkleRootTokenPolicy
+      , MerkleRootTokenValidator
+      , DsKeyPolicy
+      , FUELMintingPolicy
+      , FUELBurningPolicy
+      )
+  )
 
 -- | `tests` aggregates all the tests together in one convenient function
 tests ∷ WrappedTests
@@ -72,22 +89,58 @@ initFuelSucceeds =
 
           fuelRes ← InitFuel.initFuel sidechainParams initATMSKind version
 
-          -- Was the DsInitToken burned?
+          -- Which tokens are on the wallet?  Were the DS init tokens burned?
           { initTokenStatusData: tokenStatus } ← Init.getInitTokenStatus
             sidechainParams
 
+          -- Which scripts are actually being versioned?
+          { versionedPolicies: actualPolicies
+          , versionedValidators: actualValidators
+          } ←
+            Versioning.getActualVersionedPoliciesAndValidators
+              { atmsKind: initATMSKind
+              , sidechainParams
+              }
+              version
+
+          -- For computing the number of versionOracle init tokens
+          { versionedPolicies, versionedValidators } ←
+            Versioning.getExpectedVersionedPoliciesAndValidators
+              { atmsKind: initATMSKind
+              , sidechainParams
+              }
+              version
+
           let
-            expected = true
             dsSpent = not $
               Plutus.Map.member
                 DistributedSet.dsInitTokenName
                 tokenStatus
-            res = isJust fuelRes && dsSpent
+            expectedTokens = expectedInitTokens (List.length expectedScripts)
+              versionedPolicies
+              versionedValidators
+              [ Checkpoint.checkpointInitTokenName
+              , CommitteeOraclePolicy.committeeOracleInitTokenName
+              , CandidatePermissionToken.candidatePermissionInitTokenName
+              ]
+            expectedScripts = List.fromFoldable
+              [ DsKeyPolicy
+              , FUELMintingPolicy
+              , FUELBurningPolicy
+              , MerkleRootTokenPolicy
+              , MerkleRootTokenValidator
+              ]
+            actualScripts = (map fst actualPolicies) <> (map fst actualValidators)
 
           Effect.fromMaybeThrow (GenericInternalError "Unreachable")
             $ map Just
             $ liftAff
-            $ assert (failMsg expected res) res
+            $ assert "FUEL init not attempted" (isJust fuelRes)
+            <* assert "DS init token not spent" dsSpent
+            <* assert (failMsg expectedTokens tokenStatus)
+              (unorderedEq expectedTokens tokenStatus)
+            <* assert (failMsg expectedScripts actualScripts)
+              (List.sort expectedScripts == List.sort actualScripts)
 
 -- | Second call to `initFuel` should return `Nothing`.
 initFuelIdempotent ∷ PlutipTest
@@ -128,11 +181,8 @@ initFuelIdempotent =
           -- Second call should do nothing.
           fuelRes ← InitFuel.initFuel sidechainParams initATMSKind version
 
-          let
-            expected = true
-            res = isNothing fuelRes
-
           Effect.fromMaybeThrow (GenericInternalError "Unreachable")
             $ map Just
             $ liftAff
-            $ assert (failMsg expected res) res
+            $ assert "Second call to initFuel submitted at least one transaction"
+                (isNothing fuelRes)

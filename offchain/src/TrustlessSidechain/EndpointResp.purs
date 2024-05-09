@@ -99,13 +99,6 @@ data EndpointResp
           , sidechainAddresses ∷ SidechainAddresses
           }
       )
-  | InitMerkleRootResp
-      ( Maybe
-          { initTransactionIds ∷ Array ByteArray
-          , sidechainParams ∷ SidechainParams
-          , sidechainAddresses ∷ SidechainAddresses
-          }
-      )
   | InitResp
       { transactionId ∷ ByteArray
       , initTransactionIds ∷ Array ByteArray
@@ -364,26 +357,6 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
           , sidechainAddresses
           } → J.fromObject $ Object.fromFoldable
           [ "endpoint" /\ J.fromString "InitFuel"
-          , "initTransactionIds" /\ J.fromArray
-              (map (J.fromString <<< byteArrayToHex) initTransactionIds)
-          , "sidechainParams" /\ CA.encode scParamsCodec sidechainParams
-          , "addresses" /\ J.fromObject
-              ( Object.fromFoldable
-                  ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
-                      sidechainAddresses.addresses
-                  )
-              )
-          ]
-
-    InitMerkleRootResp res →
-      case res of
-        Nothing → J.jsonNull
-        Just
-          { initTransactionIds
-          , sidechainParams
-          , sidechainAddresses
-          } → J.fromObject $ Object.fromFoldable
-          [ "endpoint" /\ J.fromString "InitMerkleRoot"
           , "initTransactionIds" /\ J.fromArray
               (map (J.fromString <<< byteArrayToHex) initTransactionIds)
           , "sidechainParams" /\ CA.encode scParamsCodec sidechainParams
