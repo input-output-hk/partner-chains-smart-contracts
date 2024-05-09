@@ -30,12 +30,8 @@ unorderedEq ∷
   Plutus.Map.Map k v →
   Plutus.Map.Map k v →
   Boolean
-unorderedEq m1 m2 =
-  let
-    kvs m = Array.sort $ Array.zip (Plutus.Map.keys m)
-      (Plutus.Map.elems m)
-  in
-    kvs m1 == kvs m2
+unorderedEq (Plutus.Map.Map m1) (Plutus.Map.Map m2) =
+  Array.sort m1 == Array.sort m2
 
 -- | Testing utility for showing expected/actual
 failMsg ∷ ∀ a b. Show a ⇒ Show b ⇒ a → b → String
