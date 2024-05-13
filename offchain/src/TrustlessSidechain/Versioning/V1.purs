@@ -65,73 +65,17 @@ getVersionedPoliciesAndValidators ∷
     , versionedValidators ∷ List (Tuple ScriptId Validator)
     }
 getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
-  -- Getting policies to version
-  -----------------------------------
-  -- some awkwardness that we need the committee hash policy first.
-  { mintingPolicy: committeeOraclePolicy
-  } ←
-    CommitteeOraclePolicy.committeeOracleCurrencyInfo sp
+  committeeScripts ← getCommitteeSelectionPoliciesAndValidators atmsKind sp
+  checkpointScripts ← getCheckpointPoliciesAndValidators sp
+  fuelScripts ← getFuelPoliciesAndValidators sp
+  dsScripts ← getDsPoliciesAndValidators sp
+  merkleRootScripts ← getMerkleRootPoliciesAndValidators sp
+  candidatePermisssionScripts ← getCandidatePermissionTokenPoliciesAndValidators
+    sp
 
-  let
-    committeeCertificateMint =
-      CommitteeCertificateMint
-        { thresholdNumerator: (unwrap sp).thresholdNumerator
-        , thresholdDenominator: (unwrap sp).thresholdDenominator
-        }
-
-  { mintingPolicy: committeeCertificateVerificationMintingPolicy } ←
-    CommitteeATMSSchemes.atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
-      { committeeCertificateMint, sidechainParams: sp }
-      atmsKind
-
-  { mintingPolicy: merkleRootTokenMintingPolicy } ←
-    MerkleRoot.merkleRootCurrencyInfo sp
-  { fuelMintingPolicy } ← FUELMintingPolicy.V1.getFuelMintingPolicy sp
-  { fuelBurningPolicy } ← FUELBurningPolicy.V1.getFuelBurningPolicy sp
-
-  ds ← DistributedSet.getDs sp
-  { mintingPolicy: dsKeyPolicy } ← DistributedSet.getDsKeyPolicy ds
-  let
-    versionedPolicies = List.fromFoldable
-      [ MerkleRootTokenPolicy /\ merkleRootTokenMintingPolicy
-      , FUELMintingPolicy /\ fuelMintingPolicy
-      , FUELBurningPolicy /\ fuelBurningPolicy
-      , DsKeyPolicy /\ dsKeyPolicy
-      , CommitteeCertificateVerificationPolicy /\
-          committeeCertificateVerificationMintingPolicy
-      , CommitteeOraclePolicy /\ committeeOraclePolicy
-      ]
-
-  checkpointAssetClass ← Checkpoint.checkpointAssetClass sp
-
-  -- Getting validators to version
-  -----------------------------------
-  merkleRootTokenValidator ← MerkleRoot.merkleRootTokenValidator sp
-
-  { validator: committeeHashValidator } ← getUpdateCommitteeHashValidator sp
-
-  versionOracleConfig ← Versioning.getVersionOracleConfig sp
-  checkpointValidator ← do
-    let
-      checkpointParam = CheckpointParameter
-        { sidechainParams: sp
-        , checkpointAssetClass
-        }
-    Checkpoint.checkpointValidator checkpointParam versionOracleConfig
-
-  committeeCandidateValidator ← getCommitteeCandidateValidator sp
-
-  let
-    versionedValidators = List.fromFoldable
-      [ MerkleRootTokenValidator /\ merkleRootTokenValidator
-      , CheckpointValidator /\ checkpointValidator
-      , CommitteeHashValidator /\ committeeHashValidator
-      , CommitteeCandidateValidator /\ committeeCandidateValidator
-      --, DParameterValidator /\ dParameterValidator
-      --, PermissionedCandidatesValidator /\ permissionedCandidatesValidator
-      ]
-
-  pure $ { versionedPolicies, versionedValidators }
+  pure $ committeeScripts <> checkpointScripts <> fuelScripts <> dsScripts
+    <> merkleRootScripts
+    <> candidatePermisssionScripts
 
 getMerkleRootPoliciesAndValidators ∷
   ∀ r.

@@ -22,30 +22,6 @@ import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Versioning.Types as Types
 import Type.Row (type (+))
 
--- | Validators to store in the versioning system.
-getVersionedValidators ∷
-  SidechainParams →
-  List (Tuple Types.ScriptId Validator)
-getVersionedValidators _sp = do
-  -- Getting validators to version
-  -----------------------------------
-  List.fromFoldable []
-
--- | Minting policies to store in the versioning system.
-getVersionedPolicies ∷
-  ∀ r.
-  SidechainParams →
-  Run (EXCEPT OffchainError + r) (List (Tuple Types.ScriptId MintingPolicy))
-getVersionedPolicies sp = do
-  -- Getting policies to version
-  -----------------------------------
-  { fuelMintingPolicy } ← FUELMintingPolicy.V2.getFuelMintingPolicy sp
-  { fuelBurningPolicy } ← FUELBurningPolicy.V2.getFuelBurningPolicy sp
-  pure $ List.fromFoldable
-    [ Types.FUELMintingPolicy /\ fuelMintingPolicy
-    , Types.FUELBurningPolicy /\ fuelBurningPolicy
-    ]
-
 -- | Validators and policies to store in the versioning system.
 getVersionedPoliciesAndValidators ∷
   ∀ r.
@@ -55,9 +31,17 @@ getVersionedPoliciesAndValidators ∷
     , versionedValidators ∷ (List (Tuple Types.ScriptId Validator))
     }
 getVersionedPoliciesAndValidators sp = do
-  versionedPolicies ← getVersionedPolicies sp
-  let versionedValidators = getVersionedValidators sp
-  pure $ { versionedPolicies, versionedValidators }
+  committeeScripts ← getCommitteeSelectionPoliciesAndValidators sp
+  checkpointScripts ← getCheckpointPoliciesAndValidators sp
+  fuelScripts ← getFuelPoliciesAndValidators sp
+  dsScripts ← getDsPoliciesAndValidators sp
+  merkleRootScripts ← getMerkleRootPoliciesAndValidators sp
+  candidatePermisssionScripts ← getCandidatePermissionTokenPoliciesAndValidators
+    sp
+
+  pure $ committeeScripts <> checkpointScripts <> fuelScripts <> dsScripts
+    <> merkleRootScripts
+    <> candidatePermisssionScripts
 
 getCommitteeSelectionPoliciesAndValidators ∷
   ∀ r.
@@ -97,8 +81,15 @@ getFuelPoliciesAndValidators ∷
     , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
     }
 getFuelPoliciesAndValidators sp = do
-  let versionedValidators = getVersionedValidators sp
-  versionedPolicies ← getVersionedPolicies sp
+  { fuelMintingPolicy } ← FUELMintingPolicy.V2.getFuelMintingPolicy sp
+  { fuelBurningPolicy } ← FUELBurningPolicy.V2.getFuelBurningPolicy sp
+  let
+    versionedValidators = mempty
+    versionedPolicies = List.fromFoldable
+      [ Types.FUELMintingPolicy /\ fuelMintingPolicy
+      , Types.FUELBurningPolicy /\ fuelBurningPolicy
+      ]
+
   pure { versionedPolicies, versionedValidators }
 
 -- | Get V2 policies and validators for the
