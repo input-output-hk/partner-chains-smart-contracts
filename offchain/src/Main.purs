@@ -41,7 +41,6 @@ import TrustlessSidechain.EndpointResp
       , InitResp
       , InitCandidatePermissionTokenResp
       , InitTokensMintResp
-      , InitCommitteeSelectionResp
       , InitFuelResp
       , CommitteeHandoverResp
       , SaveCheckpointResp
@@ -81,9 +80,6 @@ import TrustlessSidechain.InitSidechain.CandidatePermissionToken
   ( initCandidatePermissionToken
   )
 import TrustlessSidechain.InitSidechain.Checkpoint (initCheckpoint)
-import TrustlessSidechain.InitSidechain.CommitteeSelection
-  ( initCommitteeSelection
-  )
 import TrustlessSidechain.InitSidechain.FUEL (initFuel)
 import TrustlessSidechain.InitSidechain.Init (getInitTokenStatus)
 import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
@@ -107,7 +103,6 @@ import TrustlessSidechain.Options.Types
       , SaveRoot
       , InitCheckpoint
       , Init
-      , InitCommitteeSelection
       , InitCandidatePermissionToken
       , InitTokensMint
       , InitFuel
@@ -479,44 +474,6 @@ runTxEndpoint sidechainEndpointParams endpoint =
             , sidechainAddresses
             }
 
-      InitCommitteeSelection
-        { committeePubKeysInput
-        , initSidechainEpoch
-        , initCandidatePermissionTokenMintInfo
-        , genesisHash
-        , version
-        } → do
-        rawCommitteePubKeys ← ConfigFile.getCommittee
-          committeePubKeysInput
-
-        committeePubKeys ← CommitteeATMSSchemes.aggregateATMSPublicKeys
-          { atmsKind
-          , committeePubKeys: List.toUnfoldable rawCommitteePubKeys
-          }
-
-        let
-          sc = unwrap scParams
-          isc =
-            { initChainId: sc.chainId
-            , initGenesisHash: genesisHash
-            , initUtxo: sc.genesisUtxo
-            , initATMSKind: (unwrap sidechainEndpointParams).atmsKind
-            , initAggregatedCommittee: committeePubKeys
-            , initCandidatePermissionTokenMintInfo
-            , initSidechainEpoch
-            , initThresholdNumerator: sc.thresholdNumerator
-            , initThresholdDenominator: sc.thresholdDenominator
-            , initGovernanceAuthority: sc.governanceAuthority
-            }
-        resp ← initCommitteeSelection (toSidechainParams isc)
-          isc.initCandidatePermissionTokenMintInfo
-          isc.initSidechainEpoch
-          isc.initAggregatedCommittee
-          isc.initATMSKind
-          version
-        pure $ InitCommitteeSelectionResp $ map
-          (\r → r { initTransactionIds = map unwrap r.initTransactionIds })
-          resp
       InitCandidatePermissionToken
         { initCandidatePermissionTokenMintInfo
         , version

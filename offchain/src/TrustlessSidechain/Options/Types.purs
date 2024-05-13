@@ -221,14 +221,6 @@ data TxEndpoint
       , genesisHash ∷ ByteArray
       , version ∷ Int
       }
-  | InitCommitteeSelection
-      { committeePubKeysInput ∷ InputArgOrFile (List ByteArray)
-      , initSidechainEpoch ∷ BigInt
-      , initCandidatePermissionTokenMintInfo ∷
-          Maybe CandidatePermissionTokenMintInit
-      , genesisHash ∷ ByteArray
-      , version ∷ Int
-      }
   | InitCandidatePermissionToken
       { initCandidatePermissionTokenMintInfo ∷
           Maybe CandidatePermissionTokenMintInit

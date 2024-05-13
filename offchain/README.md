@@ -203,9 +203,8 @@ Available commands:
 ```
   init                     Initialise sidechain
   init-tokens-mint         Mint all sidechain initialisation tokens
-  init-committee-selection Initialise the committee selection mechanism
   init-checkpoint          Initialise the checkpointing mechanism
-  init-fuel                Initialise the FUEL mechanism
+  init-fuel                Initialise the FUEL and committee selection mechanisms
   init-candidate-permission-token
                            Initialise the candidate permission token mechanism
   addresses                Get the script addresses for a given sidechain
@@ -301,34 +300,10 @@ Mints:
 nix run .#sidechain-main-cli -- init-tokens-mint --version 1
 ```
 
-# Initialise Committee
+# Init FUEL and committee selection
 
-Initialise the Committee Selection mechanism. Burn `"Committee oracle InitToken"`
-which was created by `init-tokens-mint`.
-
-```
-nix run .#sidechain-main-cli -- init-committee-selection \
-  --committee-pub-key aabbcc \
-  --committee-pub-key ccbbaa \
-  --sidechain-epoch 0 \
-  --version 1
-  --candidate-permission-token-amount 42
-```
-
-Insert policies:
-* `CommitteeCertificateVerificationMintingPolicy`
-* `CommitteeOraclePolicy`
-
-Insert validators:
-* `CommitteeHashValidator`
-* `CommitteeCandidateValidator`
-
-# Init FUEL
-
-Initialise the FUEL mechanism.  Burn `"DistributedSet InitToken"` and
-`"Committee oracle InitToken"`.  Note that this command also initializes the
-committee selection mechanism, making a subsequent call to
-`init-committee-selection` redundant.
+Initialise the FUEL and committee selection mechanisms.  Burn `"DistributedSet
+InitToken"` and `"Committee oracle InitToken"`.
 
 Insert policies:
 * `CommitteeCertificateVerificationMintingPolicy`

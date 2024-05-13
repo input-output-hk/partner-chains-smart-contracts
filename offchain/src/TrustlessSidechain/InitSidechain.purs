@@ -46,11 +46,9 @@ import TrustlessSidechain.InitSidechain.CandidatePermissionToken
 import TrustlessSidechain.InitSidechain.Checkpoint
   ( initCheckpointLookupsAndConstraints
   )
-import TrustlessSidechain.InitSidechain.CommitteeSelection
-  ( initCommitteeHashLookupsAndConstraints
-  )
 import TrustlessSidechain.InitSidechain.FUEL
-  ( initFuelAndDsLookupsAndConstraints
+  ( initCommitteeHashLookupsAndConstraints
+  , initFuelAndDsLookupsAndConstraints
   )
 import TrustlessSidechain.InitSidechain.TokensMint (mintAllTokens)
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))

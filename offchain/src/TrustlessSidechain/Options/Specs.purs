@@ -107,7 +107,6 @@ import TrustlessSidechain.Options.Types
       , GetAddrs
       , CandidiatePermissionTokenAct
       , InitTokensMint
-      , InitCommitteeSelection
       , InitCheckpoint
       , InitFuel
       , Init
@@ -167,18 +166,13 @@ optSpec maybeConfig =
         ( info (withCommonOpts maybeConfig initTokensMintSpec)
             (progDesc "Mint all sidechain initialisation tokens")
         )
-    , command
-        "init-committee-selection"
-        ( info (withCommonOpts maybeConfig initCommitteeSelectionSpec)
-            (progDesc "Initialise commitee selection")
-        )
     , command "init-checkpoint"
         ( info (withCommonOpts maybeConfig initCheckpointSpec)
             (progDesc "Initialise checkpoint")
         )
     , command "init-fuel"
         ( info (withCommonOpts maybeConfig initFuelSpec)
-            (progDesc "Initialise the FUEL mechanism")
+            (progDesc "Initialise the FUEL and committee selection mechanisms")
         )
     , command "init-candidate-permission-token"
         ( info (withCommonOpts maybeConfig initCandidatePermissionTokenSpec)
@@ -1051,28 +1045,6 @@ initTokensMintSpec = ado
   version ← parseVersion
   in
     InitTokensMint { version }
-
-initCommitteeSelectionSpec ∷ Parser TxEndpoint
-initCommitteeSelectionSpec = ado
-  committeePubKeysInput ← parseCommittee
-    "committee-pub-key"
-    "Public key for a committee member at sidechain initialisation"
-    "committee-pub-key-file-path"
-    "Filepath of a JSON file containing public keys of the new committee\
-    \ e.g. `[{\"public-key\":\"aabb...\", }, ...]`"
-  initSidechainEpoch ← parseSidechainEpoch
-  initCandidatePermissionTokenMintInfo ←
-    optional initCandidatePermissionTokenMintHelper
-  genesisHash ← parseGenesisHash
-  version ← parseVersion
-  in
-    InitCommitteeSelection
-      { committeePubKeysInput
-      , initSidechainEpoch
-      , initCandidatePermissionTokenMintInfo
-      , genesisHash
-      , version
-      }
 
 initCandidatePermissionTokenSpec ∷ Parser TxEndpoint
 initCandidatePermissionTokenSpec = ado

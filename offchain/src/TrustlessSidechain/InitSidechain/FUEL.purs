@@ -20,6 +20,7 @@ import Contract.Prelude
   )
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
+import Contract.Scripts (validatorHash)
 import Contract.Scripts as Scripts
 import Contract.Transaction (TransactionHash)
 import Contract.TxConstraints
@@ -33,6 +34,7 @@ import Data.BigInt (BigInt)
 import Run (Run)
 import Run.Except (EXCEPT, note, throw)
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
+import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet
   ( Ds(Ds)
   , DsConfDatum(DsConfDatum)
@@ -53,11 +55,12 @@ import TrustlessSidechain.GetSidechainAddresses
   , SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
   )
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
-import TrustlessSidechain.InitSidechain.CommitteeSelection
-  ( initCommitteeHashLookupsAndConstraints
-  )
 import TrustlessSidechain.InitSidechain.Init (init, insertScriptsIdempotent)
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.UpdateCommitteeHash
+  ( UpdateCommitteeDatum(UpdateCommitteeDatum)
+  )
+import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning
@@ -69,15 +72,8 @@ import TrustlessSidechain.Versioning
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(FUELMintingPolicy, DsKeyPolicy)
   )
+import TrustlessSidechain.Versioning.Utils (getVersionOracleConfig)
 import Type.Row (type (+))
-
--- NOTE: `initFuel` does *not* do everything necessary to
--- allow the user to mint / burn FUEL. It does not initialize
--- the committee. See this PR comment for a discussion of the
--- choice to leave it this way and possibly to alter the functionality
--- later, to make it such that this command indeed does everything
--- a user needs to mint / burn FUEL.
--- https://github.com/input-output-hk/trustless-sidechain/pull/753#discussion_r1551920822
 
 -- | Initialize the distributed set, FUELMintingPolicy, FUELBurningPolicy, and
 -- | Merkle tree.
@@ -102,7 +98,7 @@ initFuel
   initATMSKind
   version = do
   let
-    msg = "Initialize FUEL and Distributed Set"
+    msg = "Initialize FUEL, Distributed Set, and committee selection"
     run = init
       ( \op sp → do
           fuel ← initFuelAndDsLookupsAndConstraints sp version
@@ -292,3 +288,78 @@ initFuelAndDsLookupsAndConstraints sidechainParams version = do
           dsConfValue
 
   pure $ burnDsInitToken <> { lookups, constraints }
+
+-- | `initCommitteeHashLookupsAndConstraints` creates lookups and constraints
+-- | to pay the NFT (which uniquely identifies the committee hash utxo) to the
+-- | validator script for the update committee hash.
+initCommitteeHashLookupsAndConstraints ∷
+  ∀ r.
+  BigInt →
+  PlutusData →
+  SidechainParams →
+  Run (EXCEPT OffchainError + WALLET + r)
+    { lookups ∷ ScriptLookups Void
+    , constraints ∷ TxConstraints Void Void
+    }
+initCommitteeHashLookupsAndConstraints
+  initSidechainEpoch
+  initAggregatedCommittee
+  sidechainParams =
+  do
+
+    -- Build lookups and constraints to burn committee oracle init token
+    burnCommitteeOracleInitToken ←
+      CommitteeOraclePolicy.burnOneCommitteeOracleInitToken sidechainParams
+
+    -- Build lookups and constraints to mint committee oracle NFT
+    -----------------------------------
+    committeeNft ←
+      CommitteeOraclePolicy.committeeOracleCurrencyInfo sidechainParams
+
+    let
+      committeeNftValue =
+        Value.singleton
+          committeeNft.currencySymbol
+          CommitteeOraclePolicy.committeeOracleTn
+          one
+
+      mintCommitteeNft =
+        { lookups: Lookups.mintingPolicy committeeNft.mintingPolicy
+        , constraints: Constraints.mustMintValue committeeNftValue
+        }
+
+    -- Setting up the update committee hash validator
+    -----------------------------------
+    let
+      aggregatedKeys = initAggregatedCommittee
+      committeeHashDatum = Datum
+        $ PlutusData.toData
+        $ UpdateCommitteeDatum
+            { aggregatePubKeys: aggregatedKeys
+            , sidechainEpoch: initSidechainEpoch
+            }
+
+    versionOracleConfig ← getVersionOracleConfig sidechainParams
+
+    committeeHashValidator ← UpdateCommitteeHash.updateCommitteeHashValidator
+      sidechainParams
+      versionOracleConfig
+
+    let
+      committeeHashValidatorHash = validatorHash committeeHashValidator
+
+    -- Building the transaction
+    -----------------------------------
+    let
+      lookups ∷ ScriptLookups Void
+      lookups =
+        Lookups.validator committeeHashValidator
+
+      constraints ∷ TxConstraints Void Void
+      constraints = Constraints.mustPayToScript committeeHashValidatorHash
+        committeeHashDatum
+        DatumInline
+        committeeNftValue
+
+    pure $ burnCommitteeOracleInitToken <> mintCommitteeNft <>
+      { constraints, lookups }
