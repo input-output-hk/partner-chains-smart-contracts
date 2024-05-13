@@ -208,7 +208,11 @@ data TxEndpoint
       , genesisHash ∷ ByteArray
       , version ∷ Int
       }
-  | InitFuel { version ∷ Int }
+  | InitFuel
+      { committeePubKeysInput ∷ InputArgOrFile (List ByteArray)
+      , initSidechainEpoch ∷ BigInt
+      , version ∷ Int
+      }
   | Init
       { committeePubKeysInput ∷ InputArgOrFile (List ByteArray)
       , initSidechainEpoch ∷ BigInt

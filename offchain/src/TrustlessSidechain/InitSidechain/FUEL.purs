@@ -1,6 +1,6 @@
 module TrustlessSidechain.InitSidechain.FUEL where
 
-import Contract.PlutusData (Datum(Datum))
+import Contract.PlutusData (Datum(Datum), PlutusData)
 import Contract.PlutusData as PlutusData
 import Contract.Prelude
   ( Maybe(..)
@@ -29,6 +29,7 @@ import Contract.TxConstraints
 import Contract.TxConstraints as Constraints
 import Contract.Value as Value
 import Data.Array ((:))
+import Data.BigInt (BigInt)
 import Run (Run)
 import Run.Except (EXCEPT, note, throw)
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
@@ -52,12 +53,16 @@ import TrustlessSidechain.GetSidechainAddresses
   , SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
   )
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
+import TrustlessSidechain.InitSidechain.CommitteeSelection
+  ( initCommitteeHashLookupsAndConstraints
+  )
 import TrustlessSidechain.InitSidechain.Init (init, insertScriptsIdempotent)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning
-  ( getDsPoliciesAndValidators
+  ( getCommitteeSelectionPoliciesAndValidators
+  , getDsPoliciesAndValidators
   , getFuelPoliciesAndValidators
   , getMerkleRootPoliciesAndValidators
   )
@@ -79,8 +84,10 @@ import Type.Row (type (+))
 initFuel ∷
   ∀ r.
   SidechainParams →
+  BigInt → -- sidechain epoch
+  PlutusData →
   ATMSKinds →
-  Int →
+  Int → -- version
   Run (APP + r)
     ( Maybe
         { initTransactionIds ∷ Array TransactionHash
@@ -90,13 +97,20 @@ initFuel ∷
     )
 initFuel
   sidechainParams
+  initSidechainEpoch
+  initAggregatedCommittee
   initATMSKind
   version = do
   let
     msg = "Initialize FUEL and Distributed Set"
     run = init
-      ( \op sp → initFuelAndDsLookupsAndConstraints sp version >>=
-          balanceSignAndSubmit op
+      ( \op sp → do
+          fuel ← initFuelAndDsLookupsAndConstraints sp version
+          committee ← initCommitteeHashLookupsAndConstraints
+            initSidechainEpoch
+            initAggregatedCommittee
+            sp
+          balanceSignAndSubmit op (fuel <> committee)
       )
       msg
 
@@ -118,9 +132,17 @@ initFuel
     initATMSKind
     version
 
+  logDebug' "Attempting to initialize committee selection scripts"
+  scriptsInitTxIdCommittee ← insertScriptsIdempotent
+    (getCommitteeSelectionPoliciesAndValidators initATMSKind)
+    sidechainParams
+    initATMSKind
+    version
+
   let
     scriptsInitTxId =
-      scriptsInitTxIdFuel <> scriptsInitTxIdDs <> scriptsInitTxIdMT
+      scriptsInitTxIdFuel <> scriptsInitTxIdDs <> scriptsInitTxIdMT <>
+        scriptsInitTxIdCommittee
 
   if not $ null scriptsInitTxId then do
     sidechainAddresses ←

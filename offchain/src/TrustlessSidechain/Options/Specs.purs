@@ -1111,7 +1111,21 @@ initCheckpointSpec = ado
       }
 
 initFuelSpec ∷ Parser TxEndpoint
-initFuelSpec = map (InitFuel <<< { version: _ }) parseVersion
+initFuelSpec = ado
+  committeePubKeysInput ← parseCommittee
+    "committee-pub-key"
+    "Public key for a committee member at sidechain initialisation"
+    "committee-pub-key-file-path"
+    "Filepath of a JSON file containing public keys of the new committee\
+    \ e.g. `[{\"public-key\":\"aabb...\", }, ...]`"
+  initSidechainEpoch ← parseSidechainEpoch
+  version ← parseVersion
+  in
+    InitFuel
+      { committeePubKeysInput
+      , initSidechainEpoch
+      , version
+      }
 
 insertVersionSpec ∷ Parser TxEndpoint
 insertVersionSpec = pure InsertVersion2

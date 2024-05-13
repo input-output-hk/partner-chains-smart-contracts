@@ -325,19 +325,30 @@ Insert validators:
 
 # Init FUEL
 
-Initialise the FUEL mechanism. Burn `"DistributedSet InitToken"`.
+Initialise the FUEL mechanism.  Burn `"DistributedSet InitToken"` and
+`"Committee oracle InitToken"`.  Note that this command also initializes the
+committee selection mechanism, making a subsequent call to
+`init-committee-selection` redundant.
 
 Insert policies:
+* `CommitteeCertificateVerificationMintingPolicy`
+* `CommitteeOraclePolicy`
 * `DsKeyPolicy`
 * `FUELMintingPolicy`
 * `FUELBurningPolicy`
 * `MerkleRootTokenPolicy`
 
 Insert validators:
+* `CommitteeHashValidator`
+* `CommitteeCandidateValidator`
 * `MerkleRootTokenValidator`
 
 ```
-nix run .#sidechain-main-cli -- init-fuel --version 1
+nix run .#sidechain-main-cli -- init-fuel
+  --committee-pub-key aabbcc \
+  --committee-pub-key ccbbaa \
+  --sidechain-epoch 0 \
+  --version 1
 ```
 
 # Init Checkpoint

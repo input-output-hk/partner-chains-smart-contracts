@@ -528,12 +528,24 @@ runTxEndpoint sidechainEndpointParams endpoint =
         pure $ InitCandidatePermissionTokenResp $ map
           (\r → r { initTransactionIds = map unwrap r.initTransactionIds })
           resp
-      InitFuel { version } → do
+      InitFuel { initSidechainEpoch, committeePubKeysInput, version } → do
         let
           toResp r = r { initTransactionIds = map unwrap r.initTransactionIds }
 
+        rawCommitteePubKeys ← ConfigFile.getCommittee
+          committeePubKeysInput
+
+        committeePubKeys ← CommitteeATMSSchemes.aggregateATMSPublicKeys
+          { atmsKind
+          , committeePubKeys: List.toUnfoldable rawCommitteePubKeys
+          }
+
         map (InitFuelResp <<< map toResp) $
-          initFuel scParams (unwrap sidechainEndpointParams).atmsKind version
+          initFuel scParams
+            initSidechainEpoch
+            committeePubKeys
+            (unwrap sidechainEndpointParams).atmsKind
+            version
 
       CommitteeHandover
         { merkleRoot

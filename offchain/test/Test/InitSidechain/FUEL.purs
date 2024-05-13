@@ -5,10 +5,13 @@ module Test.InitSidechain.FUEL
 import Contract.Prelude
 
 import Contract.AssocMap as Plutus.Map
+import Contract.PlutusData (toData)
 import Contract.Wallet as Wallet
+import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.List as List
 import Mote.Monad as Mote.Monad
+import Run (liftEffect) as Run
 import Test.InitSidechain.Utils (expectedInitTokens, failMsg, unorderedEq)
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
@@ -20,7 +23,6 @@ import TrustlessSidechain.Checkpoint.Utils as Checkpoint
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
-import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Effects.Log (logInfo') as Effect
 import TrustlessSidechain.Effects.Run (withUnliftApp)
@@ -32,6 +34,7 @@ import TrustlessSidechain.InitSidechain.Init as Init
 import TrustlessSidechain.InitSidechain.TokensMint as InitMint
 import TrustlessSidechain.SidechainParams as SidechainParams
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
+import TrustlessSidechain.Utils.Crypto as Crypto
 import TrustlessSidechain.Versioning
   ( getActualVersionedPoliciesAndValidators
   , getExpectedVersionedPoliciesAndValidators
@@ -43,6 +46,10 @@ import TrustlessSidechain.Versioning.Types
       , DsKeyPolicy
       , FUELMintingPolicy
       , FUELBurningPolicy
+      , CommitteeHashValidator
+      , CommitteeCandidateValidator
+      , CommitteeCertificateVerificationPolicy
+      , CommitteeOraclePolicy
       )
   )
 
@@ -73,9 +80,19 @@ initFuelSucceeds =
             (Governance.mkGovernanceAuthority <<< unwrap)
               <$> getOwnPaymentPubKeyHash
 
+          let committeeSize = 25
+          committeePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+            committeeSize
+            Crypto.generatePrivKey
+
           let
             version = 1
             initATMSKind = ATMSPlainEcdsaSecp256k1
+            initSidechainEpoch = zero
+            initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
+            initAggregatedCommittee = toData $ Crypto.aggregateKeys $ map
+              unwrap
+              initCommittee
             sidechainParams = SidechainParams.SidechainParams
               { chainId: BigInt.fromInt 9
               , genesisUtxo: genesisUtxo
@@ -87,7 +104,11 @@ initFuelSucceeds =
           -- First create init tokens
           void $ InitMint.initTokensMint sidechainParams initATMSKind version
 
-          fuelRes ← InitFuel.initFuel sidechainParams initATMSKind version
+          fuelRes ← InitFuel.initFuel sidechainParams
+            initSidechainEpoch
+            initAggregatedCommittee
+            initATMSKind
+            version
 
           -- Which tokens are on the wallet?  Were the DS init tokens burned?
           { initTokenStatusData: tokenStatus } ← Init.getInitTokenStatus
@@ -116,31 +137,55 @@ initFuelSucceeds =
               Plutus.Map.member
                 DistributedSet.dsInitTokenName
                 tokenStatus
-            expectedTokens = expectedInitTokens (List.length expectedScripts)
+            expectedTokens = expectedInitTokens
+              ( List.length expectedExistingValidators +
+                  List.length expectedExistingPolicies
+              )
               versionedPolicies
               versionedValidators
               [ Checkpoint.checkpointInitTokenName
-              , CommitteeOraclePolicy.committeeOracleInitTokenName
               , CandidatePermissionToken.candidatePermissionInitTokenName
               ]
-            expectedScripts = List.fromFoldable
-              [ DsKeyPolicy
+            expectedExistingValidators = Array.toUnfoldable
+              [ CommitteeHashValidator
+              , CommitteeCandidateValidator
+              , MerkleRootTokenValidator
+              ]
+            expectedExistingPolicies = Array.toUnfoldable
+              [ CommitteeCertificateVerificationPolicy
+              , CommitteeOraclePolicy
+              , DsKeyPolicy
               , FUELMintingPolicy
               , FUELBurningPolicy
               , MerkleRootTokenPolicy
-              , MerkleRootTokenValidator
               ]
-            actualScripts = (map fst actualPolicies) <> (map fst actualValidators)
+            actualExistingValidators = map fst actualValidators
+            actualExistingPolicies = map fst actualPolicies
 
           Effect.fromMaybeThrow (GenericInternalError "Unreachable")
             $ map Just
             $ liftAff
             $ assert "FUEL init not attempted" (isJust fuelRes)
             <* assert "DS init token not spent" dsSpent
-            <* assert (failMsg expectedTokens tokenStatus)
+            <* assert
+              ( "Incorrect tokens.  " <>
+                  failMsg expectedTokens tokenStatus
+              )
               (unorderedEq expectedTokens tokenStatus)
-            <* assert (failMsg expectedScripts actualScripts)
-              (List.sort expectedScripts == List.sort actualScripts)
+            <* assert
+              ( "Incorrect validators.  " <>
+                  failMsg expectedExistingValidators actualExistingValidators
+              )
+              ( List.sort expectedExistingValidators ==
+                  List.sort actualExistingValidators
+              )
+            <* assert
+              ( "Incorrect policies.  " <>
+                  failMsg expectedExistingPolicies actualExistingPolicies
+              )
+              ( List.sort expectedExistingPolicies ==
+                  List.sort actualExistingPolicies
+              )
 
 -- | Second call to `initFuel` should return `Nothing`.
 initFuelIdempotent ∷ PlutipTest
@@ -162,8 +207,18 @@ initFuelIdempotent =
             (Governance.mkGovernanceAuthority <<< unwrap)
               <$> getOwnPaymentPubKeyHash
 
+          let committeeSize = 25
+          committeePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+            committeeSize
+            Crypto.generatePrivKey
+
           let
             version = 1
+            initSidechainEpoch = zero
+            initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
+            initAggregatedCommittee = toData $ Crypto.aggregateKeys $ map
+              unwrap
+              initCommittee
             initATMSKind = ATMSPlainEcdsaSecp256k1
             sidechainParams = SidechainParams.SidechainParams
               { chainId: BigInt.fromInt 9
@@ -176,10 +231,18 @@ initFuelIdempotent =
           -- First create init tokens
           void $ InitMint.initTokensMint sidechainParams initATMSKind version
 
-          void $ InitFuel.initFuel sidechainParams initATMSKind version
+          void $ InitFuel.initFuel sidechainParams
+            initSidechainEpoch
+            initAggregatedCommittee
+            initATMSKind
+            version
 
           -- Second call should do nothing.
-          fuelRes ← InitFuel.initFuel sidechainParams initATMSKind version
+          fuelRes ← InitFuel.initFuel sidechainParams
+            initSidechainEpoch
+            initAggregatedCommittee
+            initATMSKind
+            version
 
           Effect.fromMaybeThrow (GenericInternalError "Unreachable")
             $ map Just
