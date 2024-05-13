@@ -36,9 +36,10 @@ jobs:
 
       - name: Copy nix scopes to nix cache
         run: |
-          nix copy --stdin --to \
-          "s3://cache.sc.iog.io?secret-key=${{ runner.temp }}/nix-key&region=$AWS_DEFAULT_REGION" \
-          < /tmp/outputs && rm /tmp/outputs
+          nix-store --stdin -qR --include-outputs \
+          < /tmp/outputs && rm /tmp/outputs \
+          | nix copy --stdin --to \
+          "s3://cache.sc.iog.io?secret-key=${{ runner.temp }}/nix-key&region=$AWS_DEFAULT_REGION"
   # build-and-test-arm64-darwin:
   #   permissions:
   #     id-token: write
