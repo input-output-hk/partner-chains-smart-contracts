@@ -9,9 +9,19 @@
       inputs.hackage.follows = "hackage";
       inputs.CHaP.follows = "CHaP";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.n2c.url = "github:nlewo/nix2container";
-      inputs.cardano-transaction-lib.url = "github:Plutonomicon/cardano-transaction-lib/b7e8d396711f95e7a7b755a2a7e7089df712aaf5";
     };
+    n2c = {
+      url = "github:nlewo/nix2container";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    cardano-transaction-lib = {
+      url = "github:Plutonomicon/cardano-transaction-lib/b7e8d396711f95e7a7b755a2a7e7089df712aaf5";
+    };
+    plutip.follows = "cardano-transaction-lib/plutip";
+    iohk-nix.follows = "cardano-transaction-lib/plutip/iohk-nix";
+    nixpkgs-ctl.follows = "cardano-transaction-lib/nixpkgs";
+    haskell-nix-ctl.url = "github:input-output-hk/haskell.nix/9af167fb4343539ca99465057262f289b44f55da";
 
     nixpkgs.follows = "haskell-nix/nixpkgs";
 

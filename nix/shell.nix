@@ -5,7 +5,6 @@ cabalProject:
 let
   cardano-cli = inputs.cardano-node.legacyPackages.cardano-cli;
   cardano-node = inputs.cardano-node.legacyPackages.cardano-node;
-
 in
 {
   name = "trustless-sidechain";
@@ -18,7 +17,6 @@ in
     pkgs.haskellPackages.hoogle
     pkgs.watchexec
   ];
-
   env = {
     CARDANO_CLI = "${cardano-cli}/bin/cardano-cli";
     CARDANO_NODE = "${cardano-node}/bin/cardano-node";
