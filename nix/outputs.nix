@@ -32,21 +32,21 @@ in [
     devShells = rec {
       default = pkgs.mkShell {
         inputsFrom = [ps hs];
-        nativeBuildInputs = with pkgs; [
+        nativeBuildInputs = [
           # Shell utils
-          bashInteractive
-          git
-          cabal-install
+          pkgs.bashInteractive
+          pkgs.git
+          pkgs.cabal-install
 
           # Lint / Format
-          fd
-          hlint
-          haskellPackages.apply-refact
-          haskellPackages.cabal-fmt
-          haskellPackages.fourmolu
+          pkgs.fd
+          pkgs.hlint
+          #pkgs.haskellPackages.apply-refact
+          #pkgs.haskellPackages.cabal-fmt
+          #pkgs.haskellPackages.fourmolu
           #nixpkgs-fmt
-          alejandra
-          graphviz
+          pkgs.alejandra
+          pkgs.graphviz
         ];
         shellHook = ''
           ${ps.shellHook}

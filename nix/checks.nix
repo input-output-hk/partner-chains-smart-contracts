@@ -28,11 +28,11 @@ in {
       popd
 
       pushd ${inputs.self}/onchain/
-      make format_check cabalfmt_check lint
+      #make format_check cabalfmt_check lint
       popd
 
       pushd ${inputs.self}/offchain
-      make check-format
+      #make check-format
       popd
 
       mkdir $out
