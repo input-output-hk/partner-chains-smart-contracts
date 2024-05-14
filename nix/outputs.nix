@@ -1,9 +1,13 @@
-{ repoRoot, inputs, pkgs, lib, system, ... }:
-
-let
+{
+  repoRoot,
+  inputs,
+  pkgs,
+  lib,
+  system,
+  ...
+}: let
   project = repoRoot.nix.project;
-in
-[
+in [
   (
     project.flake
   )
@@ -70,7 +74,8 @@ in
 
     # This is used for nix build .#check.<system> because nix flake check
     # does not work with haskell.nix import-from-derivtion.
-    check = pkgs.runCommand "combined-check"
+    check =
+      pkgs.runCommand "combined-check"
       {
         nativeBuildInputs =
           builtins.attrValues repoRoot.nix.checks
@@ -79,6 +84,5 @@ in
           ++ inputs.self.devShells.ps.nativeBuildInputs
           ++ inputs.self.devShells.ps.buildInputs;
       } "touch $out";
-
   }
 ]

@@ -2,7 +2,6 @@
   description = "trustless-sidechain";
 
   inputs = {
-
     iogx = {
       url = "github:input-output-hk/iogx";
       inputs.haskell-nix.follows = "haskell-nix";
@@ -46,14 +45,13 @@
     mithril.url = "github:input-output-hk/mithril";
   };
 
-
-  outputs = inputs: inputs.iogx.lib.mkFlake {
-    inherit inputs;
-    repoRoot = ./.;
-    systems = [ "x86_64-linux" "x86_64-darwin" "aarch64-darwin" ];
-    outputs = import ./nix/outputs.nix;
-  };
-
+  outputs = inputs:
+    inputs.iogx.lib.mkFlake {
+      inherit inputs;
+      repoRoot = ./.;
+      systems = ["x86_64-linux" "x86_64-darwin" "aarch64-darwin"];
+      outputs = import ./nix/outputs.nix;
+    };
 
   nixConfig = {
     extra-substituters = [
