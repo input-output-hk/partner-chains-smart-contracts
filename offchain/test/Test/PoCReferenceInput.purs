@@ -6,7 +6,7 @@ import Contract.Prelude
 import Contract.Address as Address
 import Contract.Log as Log
 import Contract.Monad as Monad
-import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer))
+import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer), unitDatum)
 import Contract.PlutusData as PlutusData
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
@@ -76,7 +76,7 @@ testScenario1 = Mote.Monad.test "PoCReferenceInput: testScenario1"
       let
         referenceValidator = Validator referenceApplied
         referenceValidatorHash = Scripts.validatorHash referenceValidator
-        referenceValidatorDat = Datum $ PlutusData.toData $ unit
+        referenceValidatorDat = unitDatum
         referenceValidatorAddress = Address.scriptHashAddress
           referenceValidatorHash
           Nothing
@@ -191,7 +191,7 @@ testScenario2 = Mote.Monad.test "PoCReferenceInput: testScenario2"
         referenceValidator = Validator referenceApplied
       let
         referenceValidatorHash = Scripts.validatorHash referenceValidator
-        referenceValidatorDat = Datum $ PlutusData.toData $ unit
+        referenceValidatorDat = unitDatum
         referenceValidatorAddress = Address.scriptHashAddress
           referenceValidatorHash
           Nothing

@@ -6,7 +6,7 @@ import Contract.Prelude
 import Contract.Address as Address
 import Contract.Log as Log
 import Contract.Monad as Monad
-import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer))
+import Contract.PlutusData (Redeemer(Redeemer), unitDatum)
 import Contract.PlutusData as PlutusData
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
@@ -87,7 +87,7 @@ testScenario1 = Mote.Monad.test "PoCReferenceScript: testScenario1"
       let
         toReferenceValidator = Validator toReferenceUnapplied
         toReferenceValidatorHash = Scripts.validatorHash toReferenceValidator
-        toReferenceValidatorDat = Datum $ PlutusData.toData $ unit
+        toReferenceValidatorDat = unitDatum
         toReferenceValidatorAddress = Address.scriptHashAddress
           toReferenceValidatorHash
           Nothing
@@ -100,7 +100,7 @@ testScenario1 = Mote.Monad.test "PoCReferenceScript: testScenario1"
       let
         referenceValidator = Validator referenceUnapplied
         referenceValidatorHash = Scripts.validatorHash referenceValidator
-        referenceValidatorDat = Datum $ PlutusData.toData $ unit
+        referenceValidatorDat = unitDatum
         referenceValidatorAddress = Address.scriptHashAddress
           referenceValidatorHash
           Nothing
@@ -200,7 +200,7 @@ testScenario2 = Mote.Monad.test "PoCReferenceScript: testScenario2"
       let
         toReferenceValidator = Validator toReferenceUnapplied
         toReferenceValidatorHash = Scripts.validatorHash toReferenceValidator
-        toReferenceValidatorDat = Datum $ PlutusData.toData $ unit
+        toReferenceValidatorDat = unitDatum
         toReferenceValidatorAddress = Address.scriptHashAddress
           toReferenceValidatorHash
           Nothing
@@ -214,7 +214,7 @@ testScenario2 = Mote.Monad.test "PoCReferenceScript: testScenario2"
       let
         referenceValidator = Validator referenceUnapplied
         referenceValidatorHash = Scripts.validatorHash referenceValidator
-        referenceValidatorDat = Datum $ PlutusData.toData $ unit
+        referenceValidatorDat = unitDatum
         referenceValidatorAddress = Address.scriptHashAddress
           referenceValidatorHash
           Nothing
