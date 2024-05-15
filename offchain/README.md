@@ -453,23 +453,43 @@ And use it's output for the registration:
 
 ```
 nix run .#sidechain-main-cli -- register \
-  --spo-public-key 67663ee94098ceca0dacbf7f947946bfdc4de1848d76da5249b1c3a18a41a57a \
-  --sidechain-public-key 02599181389043ba0b83e53d3d665c2dfaa187453a24a4538723766f8f0509c55d \
-  --spo-signature cf5fc5b10dff794ac0f5908c38d28a1d8e8430f17c2036cf14f4b28c990b6794f754ca809d69ecd52e4c4d542f90c43b017ff7f23cf46efc4d8f6b07a3895403 \
-  --sidechain-signature 9da47b68b68cbca5cbaf7a0bd2a2bfedfe8c58e90ab8a709b8aed4c1644065885823203526b331284d15b238d11a60abb5c0cb3a8f2ef1102fbae736d98146bd \
-  --registration-utxo a03ebf281ed96549f74d0e724841fcf928194c44f6ff9a8056d1829598042c62#1
+ --spo-public-key 67663ee94098ceca0dacbf7f947946bfdc4de1848d76da5249b1c3a18a41a57a \
+ --sidechain-public-keys 02599181389043ba0b83e53d3d665c2dfaa187453a24a4538723766f8f0509c55d:02599181389043ba0b83e53d3d665c2dfaa187453a24a4538723766f8f0509c55d:02599181389043ba0b83e53d3d665c2dfaa187453a24a4538723766f8f0509c55d  \
+ --spo-signature cf5fc5b10dff794ac0f5908c38d28a1d8e8430f17c2036cf14f4b28c990b6794f754ca809d69ecd52e4c4d542f90c43b017ff7f23cf46efc4d8f6b07a3895403  \
+ --sidechain-signature 9da47b68b68cbca5cbaf7a0bd2a2bfedfe8c58e90ab8a709b8aed4c1644065885823203526b331284d15b238d11a60abb5c0cb3a8f2ef1102fbae736d98146bd  \
+ --registration-utxo a03ebf281ed96549f74d0e724841fcf928194c44f6ff9a8056d1829598042c62#1 \
+ --use-candidate-permission-token
+ --payment-signing-key-file /dev/keys/spopayment.sk \
+ --sidechain-id 1 \
+ --threshold-numerator  1 \
+ --threshold-denominator 1 \
+ --genesis-committee-hash-utxo 3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1  \
+ --governance-authority ab2d6145e1700cd11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
+ --sidechain-collected-spo-token-info 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c  \
+ --atms-kind plain-ecdsa-secp256k1 \
+ --ada-based-staking
 ```
 
 Optionally, assuming that we are using a permissioned candidates system, one
 can include the candidate permission token when registering as follows.
 ```
 nix run .#sidechain-main-cli -- register \
-  --spo-public-key e734ea6c2b6257de72355e472aa05a4c487e6b463c029ed306df2f01b5636b58 \
-  --sidechain-public-key 0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d \
-  --spo-signature de9a8ac3db51bab648a97b56bdbe6757d189633dac91b129156607cf6f3db51217ec1b3c327ab781c6e2de3c4338e3a989449e119daed60a3530aaf268cd3709 \
-  --sidechain-signature 5fe405ba531216cf5bfe65f2826d618c5d4a84df7016fcc4f4a6a68323ecb5f56799e08aa8dba6bc087b9131c5b76483ededa250da0ddbf2d24e00991b627e6e \
-  --registration-utxo "fff1c0f7f2834cb30a2136c7aadeb37a4680b30e3ae6ea088edc4e1ece939026#3" \
-  --use-candidate-permission-token
+ --spo-public-key 67663ee94098ceca0dacbf7f947946bfdc4de1848d76da5249b1c3a18a41a57a \
+ --sidechain-public-keys 02599181389043ba0b83e53d3d665c2dfaa187453a24a4538723766f8f0509c55d:02599181389043ba0b83e53d3d665c2dfaa187453a24a4538723766f8f0509c55d:02599181389043ba0b83e53d3d665c2dfaa187453a24a4538723766f8f0509c55d  \
+ --spo-signature cf5fc5b10dff794ac0f5908c38d28a1d8e8430f17c2036cf14f4b28c990b6794f754ca809d69ecd52e4c4d542f90c43b017ff7f23cf46efc4d8f6b07a3895403  \
+ --sidechain-signature 9da47b68b68cbca5cbaf7a0bd2a2bfedfe8c58e90ab8a709b8aed4c1644065885823203526b331284d15b238d11a60abb5c0cb3a8f2ef1102fbae736d98146bd  \
+ --registration-utxo a03ebf281ed96549f74d0e724841fcf928194c44f6ff9a8056d1829598042c62#1 \
+ --use-candidate-permission-token
+ --payment-signing-key-file /dev/keys/spopayment.sk \
+ --sidechain-id 1 \
+ --threshold-numerator  1 \
+ --threshold-denominator 1 \
+ --genesis-committee-hash-utxo 3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1  \
+ --governance-authority ab2d6145e1700cd11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
+ --sidechain-collected-spo-token-info 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c  \
+ --atms-kind plain-ecdsa-secp256k1 \
+ --ada-based-staking \
+ --use-candidate-permission-token
 ```
 
 #### 3.3.7. Deregister committee candidate

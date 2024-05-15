@@ -540,6 +540,7 @@ genBPR = do
   auraKey ← genGH
   grandpaKey ← genGH
   sidechainSignature ← genGH
+  spoTokenInfo ← genByteArrayLen 10
   ArbitraryTransactionInput inputUtxo ← arbitrary
   ArbitraryPaymentPubKeyHash ownPkh ← arbitrary
   pure $ BlockProducerRegistration
@@ -550,6 +551,7 @@ genBPR = do
     , ownPkh
     , auraKey
     , grandpaKey
+    , spoTokenInfo
     }
 
 genPK ∷ Gen EcdsaSecp256k1PubKey

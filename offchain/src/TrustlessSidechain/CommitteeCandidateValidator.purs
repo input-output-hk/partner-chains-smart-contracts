@@ -74,6 +74,7 @@ newtype RegisterParams = RegisterParams
   , usePermissionToken ∷ Boolean
   , auraKey ∷ ByteArray
   , grandpaKey ∷ ByteArray
+  , spoTokenInfo ∷ ByteArray -- contains partnerchain spo_fixed_fee and spo_poll_margin
   }
 
 newtype DeregisterParams = DeregisterParams
@@ -128,6 +129,7 @@ newtype BlockProducerRegistration = BlockProducerRegistration
   , ownPkh ∷ PaymentPubKeyHash -- Owner public key hash
   , auraKey ∷ ByteArray -- sidechain authority discovery key
   , grandpaKey ∷ ByteArray -- sidechain grandpa key
+  , spoTokenInfo ∷ ByteArray -- contains partnerchain spo_fixed_fee and spo_poll_margin
   }
 
 derive instance Generic BlockProducerRegistration _
@@ -149,6 +151,7 @@ instance ToData BlockProducerRegistration where
         , ownPkh
         , auraKey
         , grandpaKey
+        , spoTokenInfo
         }
     ) =
     Constr (BigNum.fromInt 0)
@@ -159,11 +162,12 @@ instance ToData BlockProducerRegistration where
       , toData ownPkh
       , toData auraKey
       , toData grandpaKey
+      , toData spoTokenInfo
       ]
 
 instance FromData BlockProducerRegistration where
   fromData plutusData = case plutusData of
-    Constr n [ x1, x2, x3, x4, x5, x6, x7 ] → do
+    Constr n [ x1, x2, x3, x4, x5, x6, x7, x8 ] → do
       guard (n == BigNum.fromInt 0)
       x1' ← fromData x1
       x2' ← fromData x2
@@ -172,6 +176,7 @@ instance FromData BlockProducerRegistration where
       x5' ← fromData x5
       x6' ← fromData x6
       x7' ← fromData x7
+      x8' ← fromData x8
       pure
         ( BlockProducerRegistration
             { stakeOwnership: x1'
@@ -181,6 +186,7 @@ instance FromData BlockProducerRegistration where
             , ownPkh: x5'
             , auraKey: x6'
             , grandpaKey: x7'
+            , spoTokenInfo: x8'
             }
         )
     _ → Nothing
@@ -239,6 +245,7 @@ register
       , usePermissionToken
       , auraKey
       , grandpaKey
+      , spoTokenInfo
       }
   ) = do
   ownPkh ← getOwnPaymentPubKeyHash
@@ -264,6 +271,7 @@ register
       , ownPkh
       , auraKey
       , grandpaKey
+      , spoTokenInfo
       }
 
     matchingKeys (BlockProducerRegistration r1) (BlockProducerRegistration r2) =

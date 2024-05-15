@@ -80,6 +80,7 @@ import TrustlessSidechain.Options.Parsers
   , plutusDataParser
   , pubKeyBytesAndSignatureBytes
   , registrationSidechainKeys
+  , registrationSpoDatum
   , rootHash
   , schnorrSecp256k1PrivateKey
   , sidechainAddress
@@ -699,6 +700,7 @@ regSpec = ado
     , help
         "Use candidate permission tokens during committee candidate registration"
     ]
+  spoTokenInfo ← parseRegistrationSpoDatum
   in
     CommitteeCandidateReg
       { stakeOwnership
@@ -708,6 +710,7 @@ regSpec = ado
       , usePermissionToken
       , auraKey
       , grandpaKey
+      , spoTokenInfo
       }
 
 -- | Parse all parameters for the `deregister` endpoint
@@ -1184,6 +1187,16 @@ updateDParameterSpec = ado
   permissionedCandidatesCount ← parseDParameterPermissionedCandidatesCount
   registeredCandidatesCount ← parseDParameterRegisteredCandidatesCount
   in UpdateDParameter { permissionedCandidatesCount, registeredCandidatesCount }
+
+parseRegistrationSpoDatum ∷ Parser ByteArray
+parseRegistrationSpoDatum = option registrationSpoDatum
+  ( fold
+      [ long "sidechain-collected-spo-token-info"
+      , metavar "SIDECHAIN:DATUMBLOB:SPOTOKEN"
+      , help
+          "A hex string of data represining the sidechain-collected-spo-token-info"
+      ]
+  )
 
 parseRegistrationSidechainKeys ∷
   Parser

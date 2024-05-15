@@ -7,6 +7,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 ## Added
 
+  * Added new CLI parameter `sidechain-collected-spo-token-info` to the `register` command in the offchain code. This field takes an input blob of data in the datum of the UTXO registration.
   * Added `use-candidate-permission-token` switch to `register` and `addresses`
     command.  Using this flag will assume usage of candidate permission tokens.
   * Added CLI endpoint `list-versioned-scripts` switch to return currently versioned scripts.
