@@ -668,10 +668,13 @@ runTxEndpoint sidechainEndpointParams endpoint =
       InitTokenStatus → map InitTokenStatusResp (getInitTokenStatus scParams)
 
       DelegationRegistration
-        { stakePubKeyHash, partnerChainWallet } → map DelegationRegistrationResp
-        ( DelegationRegistration.getDelegationRegistration stakePubKeyHash
-            partnerChainWallet
-        )
+        { stakePubKeyHash, partnerChainWallet } →
+        DelegationRegistration.getDelegationRegistration stakePubKeyHash
+          partnerChainWallet
+          >>= balanceSignAndSubmit "DelegationRegistration"
+          <#> unwrap
+          >>> { transactionId: _ }
+          >>> DelegationRegistrationResp
 
       ListVersionedScripts
         { version } →
