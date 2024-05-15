@@ -22,6 +22,7 @@ import Ctl.Internal.Serialization.Hash (ed25519KeyHashFromBytes)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.List (List)
+import Data.List.Types (NonEmptyList)
 import Data.UInt (UInt)
 import Data.UInt as UInt
 import Options.Applicative
@@ -851,10 +852,10 @@ parseCommittee ∷
   String →
   String →
   String →
-  Parser (InputArgOrFile (List ByteArray))
+  Parser (InputArgOrFile (NonEmptyList ByteArray))
 parseCommittee longflag hdesc filelongflag filehdesc =
   map InputFromArg
-    ( many
+    ( some
         ( option byteArray
             ( fold
                 [ long longflag
@@ -877,7 +878,7 @@ parseCommittee longflag hdesc filelongflag filehdesc =
         )
 
 -- `parseNewCommitteePubKeys` wraps `parseCommittee` with sensible defaults.
-parseNewCommitteePubKeys ∷ Parser (InputArgOrFile (List ByteArray))
+parseNewCommitteePubKeys ∷ Parser (InputArgOrFile (NonEmptyList ByteArray))
 parseNewCommitteePubKeys =
   parseCommittee
     "new-committee-pub-key"
@@ -887,17 +888,16 @@ parseNewCommitteePubKeys =
     \ e.g. `[{\"public-key\":\"aabb...\", }, ...]`"
 
 -- `parseCommitteeSignatures` gives the options for parsing the current
--- committees' signatures. This is used in both `saveRootSpec` and
--- `committeeHashSpec`.
+-- committees' signatures.
 parseCommitteeSignatures ∷
   String →
   String →
   String →
   String →
-  Parser (InputArgOrFile (List (ByteArray /\ Maybe ByteArray)))
+  Parser (InputArgOrFile (NonEmptyList (ByteArray /\ Maybe ByteArray)))
 parseCommitteeSignatures longflag hdesc filelongflag filehdesc =
   map InputFromArg
-    ( many
+    ( some
         ( option pubKeyBytesAndSignatureBytes
             ( fold
                 [ long longflag

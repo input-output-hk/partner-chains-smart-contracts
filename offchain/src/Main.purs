@@ -11,6 +11,7 @@ import Control.Monad.Error.Class (throwError)
 import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.List as List
+import Data.List.NonEmpty as NonEmpty
 import Data.List.Types as Data.List.Types
 import Effect.Class (liftEffect)
 import Effect.Exception (error)
@@ -333,7 +334,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
         aggregateSignature ←
           CommitteeATMSSchemes.toATMSAggregateSignatures
             { atmsKind
-            , committeePubKeyAndSigs: List.toUnfoldable committeeSignatures
+            , committeePubKeyAndSigs: NonEmpty.toUnfoldable committeeSignatures
             }
 
         rawNewCommitteePubKeys ← ConfigFile.getCommittee newCommitteePubKeysInput
@@ -341,7 +342,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
         newAggregatePubKeys ←
           CommitteeATMSSchemes.aggregateATMSPublicKeys
             { atmsKind
-            , committeePubKeys: List.toUnfoldable rawNewCommitteePubKeys
+            , committeePubKeys: NonEmpty.toUnfoldable rawNewCommitteePubKeys
             }
         let
           params = UpdateCommitteeHashParams
@@ -363,7 +364,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
         aggregateSignature ←
           CommitteeATMSSchemes.toATMSAggregateSignatures
             { atmsKind
-            , committeePubKeyAndSigs: List.toUnfoldable committeeSignatures
+            , committeePubKeyAndSigs: NonEmpty.toUnfoldable committeeSignatures
             }
         let
           params = SaveRootParams
@@ -388,7 +389,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
 
         committeePubKeys ← CommitteeATMSSchemes.aggregateATMSPublicKeys
           { atmsKind
-          , committeePubKeys: List.toUnfoldable rawCommitteePubKeys
+          , committeePubKeys: NonEmpty.toUnfoldable rawCommitteePubKeys
           }
         let
           sc = unwrap scParams
@@ -425,7 +426,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
         committeePubKeys ←
           CommitteeATMSSchemes.aggregateATMSPublicKeys
             { atmsKind
-            , committeePubKeys: List.toUnfoldable rawCommitteePubKeys
+            , committeePubKeys: NonEmpty.toUnfoldable rawCommitteePubKeys
             }
         let
           sc = unwrap scParams
@@ -494,7 +495,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
 
         committeePubKeys ← CommitteeATMSSchemes.aggregateATMSPublicKeys
           { atmsKind
-          , committeePubKeys: List.toUnfoldable rawCommitteePubKeys
+          , committeePubKeys: NonEmpty.toUnfoldable rawCommitteePubKeys
           }
 
         map (InitFuelResp <<< map toResp) $
@@ -519,7 +520,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
         newCommitteeAggregateSignature ←
           CommitteeATMSSchemes.toATMSAggregateSignatures
             { atmsKind
-            , committeePubKeyAndSigs: List.toUnfoldable newCommitteeSignatures
+            , committeePubKeyAndSigs: NonEmpty.toUnfoldable newCommitteeSignatures
             }
 
         newMerkleRootSignatures ← ConfigFile.getCommitteeSignatures
@@ -527,7 +528,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
         newMerkleRootAggregateSignature ←
           CommitteeATMSSchemes.toATMSAggregateSignatures
             { atmsKind
-            , committeePubKeyAndSigs: List.toUnfoldable newMerkleRootSignatures
+            , committeePubKeyAndSigs: NonEmpty.toUnfoldable newMerkleRootSignatures
             }
 
         rawNewCommitteePubKeys ← ConfigFile.getCommittee newCommitteePubKeysInput
@@ -535,7 +536,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
         newAggregatePubKeys ←
           CommitteeATMSSchemes.aggregateATMSPublicKeys
             { atmsKind
-            , committeePubKeys: List.toUnfoldable rawNewCommitteePubKeys
+            , committeePubKeys: NonEmpty.toUnfoldable rawNewCommitteePubKeys
             }
 
         let
@@ -573,7 +574,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
         aggregateSignature ←
           CommitteeATMSSchemes.toATMSAggregateSignatures
             { atmsKind
-            , committeePubKeyAndSigs: List.toUnfoldable committeeSignatures
+            , committeePubKeyAndSigs: NonEmpty.toUnfoldable committeeSignatures
             }
         let
           params = Checkpoint.CheckpointEndpointParam

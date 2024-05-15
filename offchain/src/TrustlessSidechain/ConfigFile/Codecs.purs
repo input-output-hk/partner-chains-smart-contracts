@@ -16,7 +16,8 @@ import Data.Codec.Argonaut as CA
 import Data.Codec.Argonaut.Common as CAM
 import Data.Codec.Argonaut.Compat as CAC
 import Data.Codec.Argonaut.Record as CAR
-import Data.List (List)
+import Data.List.NonEmpty as NonEmpty
+import Data.List.Types (NonEmptyList)
 import Data.UInt as UInt
 import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSKinds)
 import TrustlessSidechain.Options.Types (Config)
@@ -83,8 +84,8 @@ configCodec =
 
 -- | Accepts the format: `[ {"public-key":"aabb...", "signature":null}, ... ]`
 committeeSignaturesCodec ∷
-  CA.JsonCodec (List (ByteArray /\ Maybe ByteArray))
-committeeSignaturesCodec = CAM.list memberCodec
+  CA.JsonCodec (NonEmptyList (ByteArray /\ Maybe ByteArray))
+committeeSignaturesCodec = nonEmptyListCodec memberCodec
   where
   memberRecord ∷
     CA.JsonCodec
@@ -115,8 +116,8 @@ committeeSignaturesCodec = CAM.list memberCodec
   enc (p /\ signature) = { "public-key": p, signature }
 
 -- | Accepts the format `[ {"public-key":"aabb..."}, ... ]`
-committeeCodec ∷ CA.JsonCodec (List ByteArray)
-committeeCodec = CAM.list memberCodec
+committeeCodec ∷ CA.JsonCodec (NonEmptyList ByteArray)
+committeeCodec = nonEmptyListCodec memberCodec
   where
   memberCodec ∷ CA.JsonCodec ByteArray
   memberCodec = CA.prismaticCodec "member" dec enc $ CAR.object "member"
@@ -175,3 +176,10 @@ networkIdCodec = CA.prismaticCodec "Network" dec enc CA.string
   enc = case _ of
     MainnetId → "mainnet"
     TestnetId → "testnet"
+
+-- TODO replace this with `CAM.nonEmptyList` after upgrading
+-- `purescript-codec-argonaut` to v10.0.0
+nonEmptyListCodec ∷ ∀ a. CA.JsonCodec a → CA.JsonCodec (NonEmptyList a)
+nonEmptyListCodec c = CA.prismaticCodec "NonEmptyList" NonEmpty.fromList
+  NonEmpty.toList
+  (CAM.list c)

@@ -15,7 +15,7 @@ import Contract.Transaction
   )
 import Data.Argonaut.Parser (jsonParser)
 import Data.Codec.Argonaut as CA
-import Data.List (List)
+import Data.List.Types (NonEmptyList)
 import Data.UInt as UInt
 import Effect.Exception as Exception
 import Node.Encoding (Encoding(ASCII))
@@ -59,16 +59,16 @@ optExample =
 --- | `getCommitteeSignatures` grabs the committee from CLI argument or a JSON file
 getCommittee ∷
   ∀ r.
-  InputArgOrFile (List ByteArray) →
-  Run (EFFECT + r) (List ByteArray)
+  InputArgOrFile (NonEmptyList ByteArray) →
+  Run (EFFECT + r) (NonEmptyList ByteArray)
 getCommittee =
   liftEffect <<< getInputArgOrFile "committee" committeeCodec
 
 --- | `getCommitteeSignatures` grabs the committee signatures from CLI argument or a JSON file
 getCommitteeSignatures ∷
   ∀ r.
-  InputArgOrFile (List (ByteArray /\ Maybe ByteArray)) →
-  Run (EFFECT + r) (List (ByteArray /\ Maybe ByteArray))
+  InputArgOrFile (NonEmptyList (ByteArray /\ Maybe ByteArray)) →
+  Run (EFFECT + r) (NonEmptyList (ByteArray /\ Maybe ByteArray))
 getCommitteeSignatures =
   liftEffect <<< getInputArgOrFile "committee signatures"
     committeeSignaturesCodec

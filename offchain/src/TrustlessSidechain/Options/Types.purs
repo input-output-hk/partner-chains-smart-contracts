@@ -169,9 +169,9 @@ data TxEndpoint
       CandidatePermissionTokenMintInfo
   | CommitteeCandidateDereg { spoPubKey ∷ Maybe PubKey }
   | CommitteeHash
-      { newCommitteePubKeysInput ∷ InputArgOrFile (List ByteArray)
+      { newCommitteePubKeysInput ∷ InputArgOrFile (NonEmptyList ByteArray)
       , committeeSignaturesInput ∷
-          InputArgOrFile (List (ByteArray /\ Maybe ByteArray))
+          InputArgOrFile (NonEmptyList (ByteArray /\ Maybe ByteArray))
       , previousMerkleRoot ∷ Maybe RootHash
       , sidechainEpoch ∷ BigInt
       , mNewCommitteeValidatorHash ∷ Maybe ValidatorHash
@@ -180,7 +180,7 @@ data TxEndpoint
       { merkleRoot ∷ RootHash
       , previousMerkleRoot ∷ Maybe RootHash
       , committeeSignaturesInput ∷
-          InputArgOrFile (List (ByteArray /\ Maybe ByteArray))
+          InputArgOrFile (NonEmptyList (ByteArray /\ Maybe ByteArray))
       }
   |
     -- `CommitteeHandover` is a convenient alias for saving the root,
@@ -188,11 +188,11 @@ data TxEndpoint
     CommitteeHandover
       { merkleRoot ∷ RootHash
       , previousMerkleRoot ∷ Maybe RootHash
-      , newCommitteePubKeysInput ∷ InputArgOrFile (List ByteArray)
+      , newCommitteePubKeysInput ∷ InputArgOrFile (NonEmptyList ByteArray)
       , newCommitteeSignaturesInput ∷
-          InputArgOrFile (List (ByteArray /\ Maybe ByteArray))
+          InputArgOrFile (NonEmptyList (ByteArray /\ Maybe ByteArray))
       , newMerkleRootSignaturesInput ∷
-          InputArgOrFile (List (ByteArray /\ Maybe ByteArray))
+          InputArgOrFile (NonEmptyList (ByteArray /\ Maybe ByteArray))
       , sidechainEpoch ∷ BigInt
       , mNewCommitteeValidatorHash ∷ Maybe ValidatorHash
       }
@@ -201,7 +201,7 @@ data TxEndpoint
   | InitTokensMint
       { version ∷ Int }
   | InitCheckpoint
-      { committeePubKeysInput ∷ InputArgOrFile (List ByteArray)
+      { committeePubKeysInput ∷ InputArgOrFile (NonEmptyList ByteArray)
       , initSidechainEpoch ∷ BigInt
       , initCandidatePermissionTokenMintInfo ∷
           Maybe CandidatePermissionTokenMintInit
@@ -209,12 +209,12 @@ data TxEndpoint
       , version ∷ Int
       }
   | InitFuel
-      { committeePubKeysInput ∷ InputArgOrFile (List ByteArray)
+      { committeePubKeysInput ∷ InputArgOrFile (NonEmptyList ByteArray)
       , initSidechainEpoch ∷ BigInt
       , version ∷ Int
       }
   | Init
-      { committeePubKeysInput ∷ InputArgOrFile (List ByteArray)
+      { committeePubKeysInput ∷ InputArgOrFile (NonEmptyList ByteArray)
       , initSidechainEpoch ∷ BigInt
       , initCandidatePermissionTokenMintInfo ∷
           Maybe CandidatePermissionTokenMintInit
@@ -228,7 +228,7 @@ data TxEndpoint
       }
   | SaveCheckpoint
       { committeeSignaturesInput ∷
-          InputArgOrFile (List (ByteArray /\ Maybe ByteArray))
+          InputArgOrFile (NonEmptyList (ByteArray /\ Maybe ByteArray))
       , newCheckpointBlockHash ∷ ByteArray
       , newCheckpointBlockNumber ∷ BigInt
       , sidechainEpoch ∷ BigInt

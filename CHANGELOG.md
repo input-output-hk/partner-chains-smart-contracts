@@ -50,6 +50,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   * `insert-version` is now called `insert-version-2`. It only updates
     a protocol from version 1 to version 2 and only attempts to update the
     version for features already existing in version 1.
+  * Any command where providing a committee was previously optional now requires it.
 
 ## Removed
 
