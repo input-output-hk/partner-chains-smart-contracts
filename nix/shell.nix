@@ -9,6 +9,7 @@
   cardano-node = inputs.cardano-node.legacyPackages.cardano-node;
 in {
   name = "trustless-sidechain";
+  welcomeMessage = "Welcome to the Trustless Sidechain shell";
   packages = [
     cardano-cli
     cardano-node
