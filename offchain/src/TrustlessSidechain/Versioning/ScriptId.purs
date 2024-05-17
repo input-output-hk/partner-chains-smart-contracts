@@ -59,6 +59,7 @@ data ScriptId
   | PermissionedCandidatesValidator
   | ScriptCache
   | InitTokenPolicy
+  | DelegationRegistrationValidator
 
 derive instance Eq ScriptId
 derive instance Ord ScriptId
@@ -119,6 +120,8 @@ instance FromData ScriptId where
     Just ScriptCache
   fromData (Integer i) | i == BigInt.fromInt 27 =
     Just InitTokenPolicy
+  fromData (Integer i) | i == BigInt.fromInt 28 =
+    Just DelegationRegistrationValidator
   fromData _ = Nothing
 
 instance ToData ScriptId where
@@ -148,3 +151,4 @@ instance ToData ScriptId where
   toData PermissionedCandidatesValidator = Integer (BigInt.fromInt 25)
   toData ScriptCache = Integer (BigInt.fromInt 26)
   toData InitTokenPolicy = Integer (BigInt.fromInt 27)
+  toData DelegationRegistrationValidator = Integer (BigInt.fromInt 28)

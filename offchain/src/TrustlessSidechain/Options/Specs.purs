@@ -85,6 +85,7 @@ import TrustlessSidechain.Options.Parsers
   , rootHash
   , schnorrSecp256k1PrivateKey
   , sidechainAddress
+  , stakePubKeyHash
   , transactionInput
   , uint
   , validatorHashParser
@@ -1275,7 +1276,7 @@ initTokenStatusSpec = pure InitTokenStatus
 
 delegationRegistrationSpec ∷ Parser TxEndpoint
 delegationRegistrationSpec = ado
-  stakePubKeyHash ← option byteArray $ fold
+  stakePubKeyHash ← option stakePubKeyHash $ fold
     [ long "public-key"
     , metavar "PUBLIC_KEY"
     , help "Hex encoded raw bytes of a stake public key hash"

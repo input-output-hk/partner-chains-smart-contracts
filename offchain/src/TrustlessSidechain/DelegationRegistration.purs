@@ -2,6 +2,7 @@ module TrustlessSidechain.DelegationRegistration where
 
 import Contract.Prelude
 
+import Contract.Address (StakePubKeyHash)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
@@ -11,20 +12,35 @@ import Contract.PlutusData
   , fromData
   , toData
   )
-import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
-import Contract.TxConstraints (TxConstraints)
+import Contract.ScriptLookups as Lookups
+import Contract.Scripts as Scripts
+import Contract.TxConstraints
+  ( TxConstraints
+  )
 import Contract.TxConstraints as TxConstraints
+import Contract.Value as Value
+import Data.BigInt as BigInt
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Transaction (utxosAt) as Effect
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
+import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Address
+  ( getOwnWalletAddress
+  , toAddress
+  )
+import TrustlessSidechain.Utils.Scripts (mkValidatorWithParams)
+import TrustlessSidechain.Versioning.ScriptId
+  ( ScriptId(DelegationRegistrationValidator)
+  )
 import Type.Row (type (+))
 
 newtype DelegatorWalletEntry = DelegatorWalletEntry
-  { stakePubKeyHash ∷ ByteArray
+  { stakePubKeyHash ∷ StakePubKeyHash
   , partnerChainWallet ∷ ByteArray
   }
 
@@ -56,18 +72,31 @@ instance Show DelegatorWalletEntry where
 
 getDelegationRegistration ∷
   ∀ r.
-  ByteArray →
+  SidechainParams →
+  StakePubKeyHash →
   ByteArray →
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     { lookups ∷ ScriptLookups Void
     , constraints ∷ TxConstraints Void Void
     }
-getDelegationRegistration stakePubKeyHash partnerChainWallet = do
+getDelegationRegistration sp stakePubKeyHash partnerChainWallet = do
+  let datum = DelegatorWalletEntry { stakePubKeyHash, partnerChainWallet }
+  delegationRegistrationValidator ← mkValidatorWithParams
+    DelegationRegistrationValidator
+    [ toData sp, toData datum ]
+  ownAddr ← getOwnWalletAddress
   let
-    datum = Datum $ PlutusData.toData $ DelegatorWalletEntry
-      { stakePubKeyHash, partnerChainWallet }
-    constraints = TxConstraints.mustIncludeDatum datum
+    val = Value.lovelaceValueOf (BigInt.fromInt 1)
+    valHash = Scripts.validatorHash delegationRegistrationValidator
+  valAddr ← toAddress valHash
+  ownUtxos ← Effect.utxosAt ownAddr
+  valUtxos ← Effect.utxosAt valAddr
+
   pure
-    { lookups: mempty
-    , constraints
+    { lookups: Lookups.unspentOutputs ownUtxos
+        <> Lookups.validator delegationRegistrationValidator
+        <> Lookups.unspentOutputs valUtxos
+    , constraints: TxConstraints.mustPayToScript valHash (Datum $ toData datum)
+        TxConstraints.DatumInline
+        val
     }

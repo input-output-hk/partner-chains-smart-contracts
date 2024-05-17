@@ -20,18 +20,19 @@ module TrustlessSidechain.Options.Parsers
   , parsePubKeyAndSignature
   , parsePubKeyBytesAndSignatureBytes
   , parseTokenName
-  , registrationSidechainKeys
-  , registrationSpoDatum
   , permissionedCandidateKeys
   , permissionedCandidatesCount
   , plutusDataParser
   , pubKeyBytesAndSignatureBytes
   , pubKeyHash
   , registeredCandidatesCount
+  , registrationSidechainKeys
+  , registrationSpoDatum
   , rootHash
   , schnorrSecp256k1PrivateKey
   , sidechainAddress
   , sidechainSignature
+  , stakePubKeyHash
   , tokenName
   , transactionInput
   , uint
@@ -40,7 +41,11 @@ module TrustlessSidechain.Options.Parsers
 
 import Contract.Prelude
 
-import Contract.Address (Address, PubKeyHash(PubKeyHash))
+import Contract.Address
+  ( Address
+  , PubKeyHash(PubKeyHash)
+  , StakePubKeyHash(StakePubKeyHash)
+  )
 import Contract.CborBytes (CborBytes, cborBytesFromByteArray, hexToCborBytes)
 import Contract.Credential
   ( Credential(ScriptCredential)
@@ -268,6 +273,15 @@ pubKeyHash = maybeReader
   $ hexToByteArray
   >=> ed25519KeyHashFromBytes
   >=> PubKeyHash
+  >>> pure
+
+-- | Parses a StakePubKeyHash from hexadecimal representation.
+stakePubKeyHash ∷ ReadM StakePubKeyHash
+stakePubKeyHash = maybeReader
+  $ hexToByteArray
+  >=> ed25519KeyHashFromBytes
+  >=> PubKeyHash
+  >>> StakePubKeyHash
   >>> pure
 
 -- | Parses a GovernanceAuthority from hexadecimal representation.

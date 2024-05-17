@@ -669,7 +669,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
 
       DelegationRegistration
         { stakePubKeyHash, partnerChainWallet } →
-        DelegationRegistration.getDelegationRegistration stakePubKeyHash
+        DelegationRegistration.getDelegationRegistration scParams stakePubKeyHash
           partnerChainWallet
           >>= balanceSignAndSubmit "DelegationRegistration"
           <#> unwrap

@@ -28,6 +28,7 @@ import TrustlessSidechain.CommitteeCandidateValidator qualified as CommitteeCand
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy qualified as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy qualified as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import TrustlessSidechain.DParameter qualified as DParameter
+import TrustlessSidechain.DelegationRegistration qualified as DelegationRegistration
 import TrustlessSidechain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.FUELProxyPolicy qualified as FUELProxyPolicy
@@ -358,6 +359,7 @@ main =
             ( "PermissionedCandidatesValidator"
             , PermissionedCandidates.serialisableValidator
             )
+          , ("DelegationRegistrationValidator", DelegationRegistration.serialisableValidator)
           ]
         -- Validators for proof of concept tests.
         plutusPoCScripts =

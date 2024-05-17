@@ -15,6 +15,7 @@ module TrustlessSidechain.Types (
   CheckpointParameter (..),
   CombinedMerkleProof (..),
   CommitteeCertificateMint (..),
+  DelegatorWalletEntry (..),
   DParameterValidatorDatum (..),
   EcdsaSecp256k1PubKey (..),
   FUELMintingRedeemer (..),
@@ -928,3 +929,12 @@ instance FromData InitTokenAssetClass where
 instance UnsafeFromData InitTokenAssetClass where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 InitTokenAssetClass
+
+data DelegatorWalletEntry = DelegatorWalletEntry
+  { stakePubKeyHash :: PubKeyHash
+  , partnerChainWallet :: LedgerBytes
+  }
+  deriving stock (TSPrelude.Show, TSPrelude.Eq)
+
+PlutusTx.makeLift ''DelegatorWalletEntry
+makeIsDataIndexed ''DelegatorWalletEntry [('DelegatorWalletEntry, 0)]

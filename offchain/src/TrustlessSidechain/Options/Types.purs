@@ -11,7 +11,7 @@ module TrustlessSidechain.Options.Types
 
 import Contract.Prelude
 
-import Contract.Address (Address, NetworkId)
+import Contract.Address (Address, NetworkId, StakePubKeyHash)
 import Contract.Config (ContractParams, ServerConfig)
 import Contract.PlutusData (PlutusData)
 import Contract.Prim.ByteArray (ByteArray)
@@ -273,7 +273,7 @@ data TxEndpoint
   | BurnNFTs
   | InitTokenStatus
   | DelegationRegistration
-      { stakePubKeyHash ∷ ByteArray
+      { stakePubKeyHash ∷ StakePubKeyHash
       , partnerChainWallet ∷ ByteArray
       }
 
