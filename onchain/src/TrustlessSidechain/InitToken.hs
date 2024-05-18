@@ -6,11 +6,7 @@ module TrustlessSidechain.InitToken (
 ) where
 
 import PlutusLedgerApi.V2 (
-  ScriptContext (ScriptContext),
-  ScriptPurpose (Minting),
-  TxInInfo (txInInfoOutRef),
-  TxInfo (txInfoInputs, txInfoMint),
-  Value (getValue),
+  getValue,
  )
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
@@ -19,7 +15,6 @@ import TrustlessSidechain.Types (
   InitTokenRedeemer (BurnInitToken, MintInitToken),
  )
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
-import TrustlessSidechain.Utils (mkUntypedMintingPolicy)
 import PlutusLedgerApi.Common (SerialisedScript, serialiseCompiledCode)
 
 -- | 'mkInitTokenPolicy' is a minting policy which allows to:

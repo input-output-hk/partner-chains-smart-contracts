@@ -6,12 +6,13 @@ module TrustlessSidechain.PoCMintingPolicy (
   serialisablePoCMintingPolicy,
 ) where
 
+import PlutusLedgerApi.Common(SerialisedScript, serialiseCompiledCode)
 import PlutusLedgerApi.V2.Contexts (
   ScriptContext (ScriptContext),
   ScriptPurpose (Minting),
   txInfoMint,
  )
-import PlutusTx (compile, CompiledCode)
+import PlutusTx (compile)
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (SidechainParams)
 import TrustlessSidechain.Utils (currencySymbolValueOf, mkUntypedMintingPolicy)
@@ -45,7 +46,6 @@ mkPoCMintingPolicyUntyped ::
 mkPoCMintingPolicyUntyped params =
   mkUntypedMintingPolicy $ mkPoCMintingPolicy (unsafeFromBuiltinData params)
 
-serialisablePoCMintingPolicy ::
-  CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> ())
-serialisablePoCMintingPolicy =
-  $$(PlutusTx.compile [||mkPoCMintingPolicyUntyped||])
+serialisablePoCMintingPolicy :: SerialisedScript
+serialisablePoCMintingPolicy = serialiseCompiledCode
+  $$(compile [||mkPoCMintingPolicyUntyped||])

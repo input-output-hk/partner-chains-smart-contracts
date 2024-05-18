@@ -14,6 +14,7 @@ module TrustlessSidechain.PoCInlineDatum (
   serialisablePoCInlineDatumValidator,
 ) where
 
+import PlutusLedgerApi.Common (serialiseCompiledCode, SerialisedScript)
 import PlutusLedgerApi.V2 (
   Datum (getDatum),
   OutputDatum (NoOutputDatum, OutputDatum, OutputDatumHash),
@@ -52,7 +53,6 @@ mkPoCInlineDatumValidatorUntyped = mkUntypedValidator mkPoCInlineDatumValidator
 
 -- | 'serialisablePoCInlineDatumValidator' is a serialisable untyped script of
 -- 'mkPoCInlineDatumValidator'
-serialisablePoCInlineDatumValidator ::
-  PlutusTx.CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> ())
-serialisablePoCInlineDatumValidator =
+serialisablePoCInlineDatumValidator :: SerialisedScript
+serialisablePoCInlineDatumValidator = serialiseCompiledCode
   $$(PlutusTx.compile [||mkPoCInlineDatumValidatorUntyped||])

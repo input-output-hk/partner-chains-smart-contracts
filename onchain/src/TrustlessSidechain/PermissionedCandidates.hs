@@ -12,8 +12,6 @@ module TrustlessSidechain.PermissionedCandidates (
 
 import PlutusLedgerApi.V2 (
   Address,
-  ScriptContext (ScriptContext),
-  TxInfo (txInfoMint, txInfoOutputs),
   TxOut (TxOut),
   serialiseCompiledCode,
  )
@@ -32,7 +30,7 @@ import TrustlessSidechain.Types (
   SidechainParams,
  )
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
-import TrustlessSidechain.Utils (currencySymbolValueOf, mkUntypedMintingPolicy, mkUntypedValidator)
+import TrustlessSidechain.Utils (currencySymbolValueOf)
 import PlutusLedgerApi.Common (SerialisedScript)
 
 -- OnChain error descriptions:

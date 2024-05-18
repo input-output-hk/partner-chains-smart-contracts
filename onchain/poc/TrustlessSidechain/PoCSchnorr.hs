@@ -112,6 +112,7 @@ module TrustlessSidechain.PoCSchnorr (
   serialisablePolicy,
 ) where
 
+import PlutusLedgerApi.Common(SerialisedScript, serialiseCompiledCode)
 import PlutusLedgerApi.V2 (ScriptContext)
 import PlutusTx qualified
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
@@ -144,8 +145,7 @@ mkPolicy redeemer _context =
 untypedPolicy :: BuiltinData -> BuiltinData -> ()
 untypedPolicy = mkUntypedMintingPolicy mkPolicy
 
-serialisablePolicy ::
-  PlutusTx.CompiledCode (BuiltinData -> BuiltinData -> ())
+serialisablePolicy :: SerialisedScript
 
-serialisablePolicy =
+serialisablePolicy = serialiseCompiledCode
   $$(PlutusTx.compile [||untypedPolicy||])

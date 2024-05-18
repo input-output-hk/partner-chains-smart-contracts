@@ -3,9 +3,11 @@ module Sizer (
   scriptFitsUnder,
 ) where
 
+import Data.ByteString.Short qualified
 import Data.String qualified as HString
+import GHC.Num (integerFromInt)
+import PlutusLedgerApi.Common (SerialisedScript)
 import Data.Tagged (Tagged (Tagged))
--- import Plutonomy.UPLC qualified @TODO unclear what to replace this with
 import Test.Tasty (TestTree)
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
@@ -15,31 +17,27 @@ import Test.Tasty.Providers (
  )
 import TrustlessSidechain.HaskellPrelude
 import Type.Reflection (Typeable)
-import UntypedPlutusCore qualified as UPLC
-import PlutusTx (CompiledCode)
 
-import Prelude (undefined) -- @TODO remove me
-
-type Script = CompiledCode
 scriptFitsUnder ::
   HString.String ->
-  (HString.String, Script ()) ->
-  (HString.String, Script ()) ->
+  (HString.String, SerialisedScript) ->
+  (HString.String, SerialisedScript) ->
   TestTree
 scriptFitsUnder name test target = singleTest name $ ScriptSizeComparison @() test target
 
 scriptFitsInto ::
   HString.String ->
-  Script () ->
+  SerialisedScript  ->
   Integer ->
   TestTree
-scriptFitsInto name script limit = singleTest name $ ScriptSizeBound @() script limit
+scriptFitsInto name script limit =
+  singleTest name $ ScriptSizeBound @() script limit
 
 -- Helpers
 
 data SizeTest (a :: Type)
-  = ScriptSizeBound (Script a )Integer
-  | ScriptSizeComparison (HString.String, Script a) (HString.String, Script a)
+  = ScriptSizeBound SerialisedScript  Integer
+  | ScriptSizeComparison (HString.String, SerialisedScript ) (HString.String, SerialisedScript )
 
 instance Typeable a => IsTest (SizeTest a) where
   testOptions = Tagged []
@@ -132,6 +130,5 @@ renderExcess tData mData diff =
 --    If monotonicity doesn't hold then our size estimations will be useless,
 --    because then it can happen that making the AST size smaller will make the
 --    flat encoding larger.
-scriptSize :: Script a -> Integer
-scriptSize   =  undefined
--- scriptSize   = UPLC.serialisedSize . Plutonomy.UPLC.optimizeUPLC
+scriptSize :: SerialisedScript -> Integer
+scriptSize   = integerFromInt . Data.ByteString.Short.length

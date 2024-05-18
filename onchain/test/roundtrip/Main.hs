@@ -3,6 +3,7 @@
 module Main (main) where
 
 import Crypto.Secp256k1 qualified as SECP
+import Crypto.Secp256k1.Internal.Context qualified as SECP.Internal (createContext)
 import Data.Bits (unsafeShiftL)
 import GHC.Exts (fromList)
 import Laws (toDataSafeLaws', toDataUnsafeLaws')
@@ -27,6 +28,7 @@ import Test.QuickCheck (
   shrink,
   vectorOf,
  )
+import System.IO.Unsafe (unsafePerformIO)
 import Test.QuickCheck.Extra (
   ArbitraryAssetClass (ArbitraryAssetClass),
   ArbitraryBytes (ArbitraryBytes),
@@ -137,7 +139,7 @@ import TrustlessSidechain.Types (
     previousMerkleRoot,
     sidechainEpoch,
     sidechainParams,
-    validatorHash
+    scriptHash
   ),
   UpdateCommitteeHashRedeemer (UpdateCommitteeHashRedeemer),
  )
@@ -479,6 +481,10 @@ genBPR = do
       auraKey
       grandpaKey
 
+-- | A local context.
+ctx :: SECP.Ctx
+ctx = unsafePerformIO SECP.Internal.createContext
+
 genPK :: Gen EcdsaSecp256k1PubKey
 genPK = do
   seed <- fromList @ByteString <$> vectorOf 32 arbitrary
@@ -488,8 +494,8 @@ genPK = do
         . EcdsaSecp256k1PubKey
         . LedgerBytes
         . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
-        . SECP.exportPubKey True
-        . SECP.derivePubKey
+        . SECP.exportPubKey ctx True
+        . SECP.derivePubKey ctx
         $ privKey
     Nothing -> genPK -- we assume this isn't gonna happen too often
 
@@ -632,7 +638,7 @@ shrinkUCHM (UpdateCommitteeHashMessage {..}) = do
   nacpk' <- shrink newAggregateCommitteePubKeys
   pmr' <- shrinkPMR previousMerkleRoot
   NonNegative se' <- shrink (NonNegative sidechainEpoch)
-  ArbitraryScriptHash vh' <- shrink (ArbitraryScriptHash validatorHash)
+  ArbitraryScriptHash vh' <- shrink (ArbitraryScriptHash scriptHash)
   pure . UpdateCommitteeHashMessage sp' nacpk' pmr' se' $ vh'
 
 shrinkAPAPK ::

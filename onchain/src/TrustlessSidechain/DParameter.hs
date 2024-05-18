@@ -9,11 +9,6 @@ module TrustlessSidechain.DParameter (
 ) where
 
 import PlutusLedgerApi.V2 (
-  Address,
-  ScriptContext (ScriptContext),
-  ScriptPurpose (Minting),
-  TxInfo (txInfoMint, txInfoOutputs),
-  TxOut (TxOut),
   SerialisedScript, serialiseCompiledCode,
  )
 import PlutusTx qualified

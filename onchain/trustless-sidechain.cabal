@@ -329,7 +329,7 @@ test-suite script-size
     Sizer
 
   build-depends:
-    -- , plutonomy
+    , bytestring
     , cardano-api
     , plutus-core
     , plutus-ledger-api

@@ -11,8 +11,7 @@ import Data.ByteString.Lazy.Char8 qualified as ByteString.Lazy.Char8
 import Data.Foldable qualified as Foldable
 import Data.List qualified as List
 import Data.String qualified as HString
-import PlutusTx (CompiledCode)
-import PlutusTx.Prelude (BuiltinData)
+import PlutusLedgerApi.Common (SerialisedScript)
 import System.Console.GetOpt (
   ArgDescr (NoArg, OptArg, ReqArg),
   ArgOrder (RequireOrder),
@@ -132,14 +131,14 @@ getOpts =
 
 -- Note: CTL uses the usual TextEnvelope format now.
 
-serialiseScript :: FilePath -> FilePath -> CompiledCode a -> IO ()
+serialiseScript :: FilePath -> FilePath -> SerialisedScript -> IO ()
 serialiseScript outputDir name script =
   let out :: PlutusScript PlutusScriptV2
       out = scriptToPlutusScript script
       file = outputDir FilePath.</> name
    in do
         IO.putStrLn $ "serialising " <> file
-        writeFileTextEnvelope ( file) Nothing out >>= either print pure
+        writeFileTextEnvelope ( File file) Nothing out >>= either print pure
 
 serialiseScriptsToPurescript ::
   -- | Purescript module name
@@ -150,7 +149,7 @@ serialiseScriptsToPurescript ::
   --
   -- NOTE: The names should not include any Unicode characters, which are
   -- nonetheless valid names in PureScript.
-  [(HString.String, Script)] ->
+  [(HString.String, SerialisedScript)] ->
   -- | Handle to append the purescript module to.
   --
   -- Note: one probably wants to clear the file before calling this function.
@@ -237,7 +236,7 @@ serialisePoCScriptsToPurescript ::
   -- | Name of the script, and the associated script
   -- Entries should be unique w.r.t the name; and the name should be
   -- characters for a valid purescript identifier
-  [(HString.String, CompiledCode a)] ->
+  [(HString.String, SerialisedScript)] ->
   -- | Handle to append the purescript module to.
   --
   -- Note: one probably wants to clear the file before calling this function.
