@@ -12,7 +12,6 @@ maintainer:         TODO
 copyright:          TODO
 category:           TODO
 build-type:         Simple
-tested-with:        GHC ==8.10.7
 extra-source-files: README.md
 
 source-repository head
@@ -27,11 +26,7 @@ common common-lang
     -Wincomplete-uni-patterns -Wredundant-constraints -Werror
     -fexpose-all-unfoldings
 
-<<<<<<< HEAD
-  build-depends:      base ^>=4.14
-=======
-  build-depends:     base >=4.8 && <5
->>>>>>> 2ad5700f (ghc9.6 upgrade)
+  build-depends:      base
   default-extensions:
     NoStarIsType
     BangPatterns
@@ -111,11 +106,11 @@ library
     TrustlessSidechain.Versioning
 
   build-depends:
-    , aeson                        ^>=1.5.0.0
+    , aeson
     , attoparsec
     , base16-bytestring
     , bech32
-    , bytestring                   ^>=0.10.12.0
+    , bytestring
     , cardano-addresses
     , cardano-api
     , cardano-binary
@@ -126,7 +121,7 @@ library
     , deepseq
     , either
     , lens
-    , plutonomy
+    -- , plutonomy
     , plutus-core
     , plutus-ledger-api
     , plutus-shim-prelude
@@ -151,11 +146,11 @@ library onchain-poc
     TrustlessSidechain.PoCSerialiseData
 
   build-depends:
-    , aeson                        ^>=1.5.0.0
+    , aeson
     , attoparsec
     , base16-bytestring
     , bech32
-    , bytestring                   ^>=0.10.12.0
+    , bytestring
     , cardano-addresses
     , cardano-api
     , cardano-binary
@@ -166,7 +161,7 @@ library onchain-poc
     , deepseq
     , either
     , lens
-    , plutonomy
+    -- , plutonomy
     , plutus-core
     , plutus-ledger-api
     , plutus-shim-prelude
@@ -178,10 +173,7 @@ library onchain-poc
     , trustless-sidechain
     , trustless-sidechain-prelude
 
-<<<<<<< HEAD
-=======
    -- , plutonomy
->>>>>>> 2ad5700f (ghc9.6 upgrade)
   hs-source-dirs:  poc
 
 library trustless-sidechain-prelude
@@ -262,13 +254,10 @@ executable trustless-sidechain-serialise
     , cardano-api
     , filepath
     , onchain-poc
-    , plutonomy
+    -- , plutonomy
     , plutus-ledger-api
-<<<<<<< HEAD
     , text
-=======
     , plutus-tx
->>>>>>> 2ad5700f (ghc9.6 upgrade)
     , trustless-sidechain
     , trustless-sidechain-prelude
 
@@ -340,11 +329,8 @@ test-suite script-size
     Sizer
 
   build-depends:
-<<<<<<< HEAD
-    , plutonomy
-=======
+    -- , plutonomy
     , cardano-api
->>>>>>> 2ad5700f (ghc9.6 upgrade)
     , plutus-core
     , plutus-ledger-api
     , plutus-shim-prelude

@@ -1,5 +1,5 @@
 repository cardano-haskell-packages
-  url: https://chap.intersectmbo.org/
+  url: https://input-output-hk.github.io/cardano-haskell-packages
   secure: True
   root-keys:
     3e0cce471cf09815f930210f7827266fd09045445d65923e6d0238a6cd15126f
@@ -9,34 +9,25 @@ repository cardano-haskell-packages
     c00aae8461a256275598500ea0e187588c35a5d5d7454fb57eac18d9edb86a56
     d4a35cd3121aa00d18544bb0ac01c3e1691d618f462c46129271bccf39f7e8ee
 
-index-state:  2024-05-23T00:00:00Z
+index-state:  2024-05-10T03:50:29Z
 
 packages:
   ./.
+-- constraints:
+    -- , plutus-core ^>=1.27.0.0
+    -- , plutus-ledger-api ^>=1.27.0.0
+    -- , plutus-tx ^>=1.27.0.0
+    -- , plutus-tx-plugin ^>=1.27.0.0
 
-tests: true
-benchmarks: true
-test-show-details: direct
-
-allow-newer:
-    *:aeson
-  , size-based:template-haskell
-
-constraints:
-    , plutus-core ^>=1.27.0.0
-    , plutus-ledger-api ^>=1.27.0.0
-    , plutus-tx ^>=1.27.0.0
-    , plutus-tx-plugin ^>=1.27.0.0
-
-    , cardano-address ^>=3.12.0
-    , cardano-api ^>=8.46.0.0
-    , cardano-binary ^>=1.7.1.0
-    , cardano-crypto ^>=1.1.2
-    , cardano-crypto-class ^>=2.1.4.0
-    , cardano-ledger-alonzo ^>=1.8.0.0
+    -- , cardano-address ^>=3.12.0
+    -- -- , cardano-api ^>=8.7.0.0
+    -- , cardano-binary ^>=1.7.1.0
+    -- , cardano-crypto ^>=1.1.2
+    -- , cardano-crypto-class ^>=2.1.4.0
+    -- , cardano-ledger-alonzo ^>=1.8.0.0
 
 -- Configure plutonomy to use the closest plutus version to ours
 -- In the future, we might need to change to +chap
 -- future is here :)  thank you for the note
-flags: +chap
+-- flags: +chap
 -- flags: +plutus-f680ac697

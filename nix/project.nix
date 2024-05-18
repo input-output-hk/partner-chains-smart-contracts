@@ -30,7 +30,7 @@
     shell.withHoogle = false;
 
     inputMap = {
-      "https://chap.intersectmbo.org/" = inputs.CHaP;
+      "https://input-output-hk.github.io/cardano-haskell-packages" = inputs.CHaP;
     };
 
     modules = [
