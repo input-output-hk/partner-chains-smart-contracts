@@ -2,7 +2,6 @@ module TrustlessSidechain.CandidatePermissionToken
   ( candidatePermissionCurrencyInfo
   , candidatePermissionTokenName
   , candidatePermissionInitTokenName
-  , CandidatePermissionTokenMintInfo
   , candidatePermissionTokenLookupsAndConstraints
   , runCandidatePermissionToken
   , mintOneCandidatePermissionInitToken
@@ -107,12 +106,6 @@ burnOneCandidatePermissionInitToken sp =
 --------------------------------
 -- Endpoint code
 --------------------------------
-
--- | `CandidatePermissionTokenMintInfo` wraps up some of the required information for
--- | minting a candidate permission token. This isn't used onchain, but used
--- | offchain for wrapping up this data consistently
-type CandidatePermissionTokenMintInfo =
-  { candidatePermissionTokenAmount ∷ BigInt }
 
 -- | `candidatePermissionTokenLookupsAndConstraints` creates the required
 -- | lookups and constraints to build the transaction to mint the tokens.

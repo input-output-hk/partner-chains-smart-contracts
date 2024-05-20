@@ -6,7 +6,6 @@ module TrustlessSidechain.Options.Types
   , SidechainEndpointParams(..)
   , TxEndpoint(..)
   , UtilsEndpoint(..)
-  , CandidatePermissionTokenMintInit
   ) where
 
 import Contract.Prelude
@@ -21,9 +20,6 @@ import Data.BigInt (BigInt)
 import Data.List (List)
 import Data.List.NonEmpty (NonEmptyList)
 import Node.Path (FilePath)
-import TrustlessSidechain.CandidatePermissionToken
-  ( CandidatePermissionTokenMintInfo
-  )
 import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSKinds)
 import TrustlessSidechain.CommitteeCandidateValidator
   ( BlockProducerRegistrationMsg
@@ -166,7 +162,7 @@ data TxEndpoint
       , spoTokenInfo ∷ ByteArray -- contains partnerchain spo_fixed_fee and spo_poll_margin
       }
   | CandidiatePermissionTokenAct
-      CandidatePermissionTokenMintInfo
+      { candidatePermissionTokenAmount ∷ BigInt }
   | CommitteeCandidateDereg { spoPubKey ∷ Maybe PubKey }
   | CommitteeHash
       { newCommitteePubKeysInput ∷ InputArgOrFile (NonEmptyList ByteArray)
@@ -203,8 +199,7 @@ data TxEndpoint
   | InitCheckpoint
       { committeePubKeysInput ∷ InputArgOrFile (NonEmptyList ByteArray)
       , initSidechainEpoch ∷ BigInt
-      , initCandidatePermissionTokenMintInfo ∷
-          Maybe CandidatePermissionTokenMintInit
+      , initCandidatePermissionTokenMintInfo ∷ Maybe BigInt
       , genesisHash ∷ ByteArray
       , version ∷ Int
       }
@@ -216,14 +211,12 @@ data TxEndpoint
   | Init
       { committeePubKeysInput ∷ InputArgOrFile (NonEmptyList ByteArray)
       , initSidechainEpoch ∷ BigInt
-      , initCandidatePermissionTokenMintInfo ∷
-          Maybe CandidatePermissionTokenMintInit
+      , initCandidatePermissionTokenMintInfo ∷ Maybe BigInt
       , genesisHash ∷ ByteArray
       , version ∷ Int
       }
   | InitCandidatePermissionToken
-      { initCandidatePermissionTokenMintInfo ∷
-          Maybe CandidatePermissionTokenMintInit
+      { initCandidatePermissionTokenMintInfo ∷ Maybe BigInt
       , version ∷ Int
       }
   | SaveCheckpoint
@@ -272,12 +265,6 @@ data TxEndpoint
       }
   | BurnNFTs
   | InitTokenStatus
-
--- | `CandidatePermissionTokenMintInit` is a type alias for minting the
--- | candidate permission token when initializing the sidechain
-type CandidatePermissionTokenMintInit =
-  { candidatePermissionTokenAmount ∷ BigInt
-  }
 
 -- | `InputArgOrFile` represents that we may either allow an option as input
 -- | via a CLI argument or a filepath of a JSON file

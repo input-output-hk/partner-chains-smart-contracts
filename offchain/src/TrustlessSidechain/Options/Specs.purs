@@ -51,9 +51,6 @@ import Options.Applicative
   , switch
   , value
   )
-import TrustlessSidechain.CandidatePermissionToken
-  ( CandidatePermissionTokenMintInfo
-  )
 import TrustlessSidechain.CommitteeCandidateValidator
   ( BlockProducerRegistrationMsg(BlockProducerRegistrationMsg)
   , StakeOwnership(AdaBasedStaking, TokenBasedStaking)
@@ -91,8 +88,7 @@ import TrustlessSidechain.Options.Parsers
   )
 import TrustlessSidechain.Options.Parsers as Parsers
 import TrustlessSidechain.Options.Types
-  ( CandidatePermissionTokenMintInit
-  , Config
+  ( Config
   , InputArgOrFile(InputFromArg, InputFromFile)
   , Options
       ( TxOptions
@@ -994,14 +990,13 @@ parseGenesisHash =
 -- | `initCandidatePermissionTokenMintHelper` helps mint candidate permission
 -- | tokens from initializing the sidechain
 initCandidatePermissionTokenMintHelper ∷
-  Parser CandidatePermissionTokenMintInit
-initCandidatePermissionTokenMintHelper = ado
-  candidatePermissionTokenAmount ← option bigInt $ fold
+  Parser BigInt
+initCandidatePermissionTokenMintHelper =
+  option bigInt $ fold
     [ long "candidate-permission-token-amount"
     , metavar "INT"
     , help "Amount of the candidate permission token to be minted"
     ]
-  in { candidatePermissionTokenAmount }
 
 parseVersion ∷ Parser Int
 parseVersion =
@@ -1266,19 +1261,15 @@ burnNFTsSpec = pure BurnNFTs
 initTokenStatusSpec ∷ Parser TxEndpoint
 initTokenStatusSpec = pure InitTokenStatus
 
-candidatePermissionTokenSpecHelper ∷ Parser CandidatePermissionTokenMintInfo
-candidatePermissionTokenSpecHelper = ado
+-- | Parse all parameters for the `candidiate-permission-token` endpoint
+candidatePermissionTokenSpec ∷ Parser TxEndpoint
+candidatePermissionTokenSpec = ado
   candidatePermissionTokenAmount ← option bigInt $ fold
     [ long "candidate-permission-token-amount"
     , metavar "INT"
     , help "Amount of the candidate permission token to be minted"
     ]
-  in { candidatePermissionTokenAmount }
-
--- | Parse all parameters for the `candidiate-permission-token` endpoint
-candidatePermissionTokenSpec ∷ Parser TxEndpoint
-candidatePermissionTokenSpec =
-  map CandidiatePermissionTokenAct candidatePermissionTokenSpecHelper
+  in CandidiatePermissionTokenAct { candidatePermissionTokenAmount }
 
 -- | `getAddrSpec` provides a parser for getting the required information for
 -- | the `addresses` endpoint

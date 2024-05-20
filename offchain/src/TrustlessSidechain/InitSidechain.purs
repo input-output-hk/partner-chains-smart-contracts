@@ -16,9 +16,6 @@ import Data.Array (concat)
 import Data.BigInt (BigInt)
 import Data.Maybe (isJust)
 import Run (Run)
-import TrustlessSidechain.CandidatePermissionToken
-  ( CandidatePermissionTokenMintInfo
-  )
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.GetSidechainAddresses
@@ -52,7 +49,7 @@ newtype InitSidechainParams = InitSidechainParams
     initUtxo ∷ TransactionInput
   , initThresholdNumerator ∷ BigInt
   , initThresholdDenominator ∷ BigInt
-  , initCandidatePermissionTokenMintInfo ∷ Maybe CandidatePermissionTokenMintInfo
+  , initCandidatePermissionTokenMintInfo ∷ Maybe BigInt
   , initATMSKind ∷ ATMSKinds
   , initGovernanceAuthority ∷ Governance.GovernanceAuthority
   , initAggregatedCommittee ∷ PlutusData

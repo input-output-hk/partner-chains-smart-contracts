@@ -8,12 +8,12 @@ import Contract.ScriptLookups (ScriptLookups)
 import Contract.Transaction (TransactionHash)
 import Contract.TxConstraints (TxConstraints)
 import Data.Array ((:))
+import Data.BigInt (BigInt)
 import Data.Maybe (isJust)
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.CandidatePermissionToken
-  ( CandidatePermissionTokenMintInfo
-  , candidatePermissionInitTokenName
+  ( candidatePermissionInitTokenName
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
@@ -35,7 +35,7 @@ import Type.Row (type (+))
 initCandidatePermissionToken ∷
   ∀ r.
   SidechainParams →
-  Maybe CandidatePermissionTokenMintInfo →
+  Maybe BigInt →
   ATMSKinds →
   Int → -- version
   Run (APP + r)
@@ -96,7 +96,7 @@ initCandidatePermissionToken
 -- |     `initCandidatePermissionTokenMintInfo` is `Just` (otherwise returns empty)
 initCandidatePermissionTokenLookupsAndConstraints ∷
   ∀ r.
-  Maybe CandidatePermissionTokenMintInfo →
+  Maybe BigInt →
   SidechainParams →
   Run (EXCEPT OffchainError + r)
     { lookups ∷ ScriptLookups Void
@@ -107,7 +107,7 @@ initCandidatePermissionTokenLookupsAndConstraints
   sidechainParams =
   case initCandidatePermissionTokenMintInfo of
     Nothing → pure mempty
-    Just { candidatePermissionTokenAmount: amount } → do
+    Just amount → do
       CandidatePermissionToken.candidatePermissionTokenLookupsAndConstraints
         sidechainParams
         amount

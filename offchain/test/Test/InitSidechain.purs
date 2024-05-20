@@ -204,10 +204,7 @@ testScenario3 =
               , initThresholdNumerator: BigInt.fromInt 2
               , initThresholdDenominator: BigInt.fromInt 3
               , initATMSKind: ATMSPlainEcdsaSecp256k1
-              , initCandidatePermissionTokenMintInfo:
-                  Just
-                    { candidatePermissionTokenAmount: one
-                    }
+              , initCandidatePermissionTokenMintInfo: Just one
               , initGovernanceAuthority
               }
 
@@ -222,7 +219,7 @@ testScenario3 =
 -- | token in `initSidechain`. Otherwise, no init tokens should remain.
 initSimpleSidechain ∷
   ∀ r.
-  Maybe { candidatePermissionTokenAmount ∷ BigInt.BigInt } →
+  Maybe BigInt.BigInt →
   Run (APP + BASE + r) SidechainParams.SidechainParams
 initSimpleSidechain amt = do
   genesisUtxo ← Test.Utils.getOwnTransactionInput

@@ -15,13 +15,11 @@ import Contract.TxConstraints (DatumPresence(..), TxConstraints)
 import Contract.TxConstraints as Constraints
 import Contract.Value as Value
 import Data.Array ((:))
+import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Maybe (isJust)
 import Run (Run)
 import Run.Except (EXCEPT)
-import TrustlessSidechain.CandidatePermissionToken
-  ( CandidatePermissionTokenMintInfo
-  )
 import TrustlessSidechain.Checkpoint (CheckpointDatum(..), checkpointNftTn)
 import TrustlessSidechain.Checkpoint.Types as Checkpoint.Types
 import TrustlessSidechain.Checkpoint.Utils as Checkpoint
@@ -46,7 +44,7 @@ import Type.Row (type (+))
 initCheckpoint ∷
   ∀ r.
   SidechainParams →
-  Maybe CandidatePermissionTokenMintInfo →
+  Maybe BigInt →
   ByteArray →
   ATMSKinds →
   Int →

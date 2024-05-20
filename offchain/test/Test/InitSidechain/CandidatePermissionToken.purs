@@ -56,8 +56,7 @@ testInitCandidatePermissionToken =
               <$> getOwnPaymentPubKeyHash
             let
               version = 1
-              initCandidatePermissionTokenMintInfo = Just
-                { candidatePermissionTokenAmount: fromInt 1 }
+              initCandidatePermissionTokenMintInfo = Just (fromInt 1)
               initATMSKind = ATMSPlainEcdsaSecp256k1
               sidechainParams = SidechainParams.SidechainParams
                 { chainId: BigInt.fromInt 9
@@ -95,8 +94,7 @@ testInitCandidatePermissionTokenIdempotent =
               <$> getOwnPaymentPubKeyHash
             let
               version = 1
-              initCandidatePermissionTokenMintInfo = Just
-                { candidatePermissionTokenAmount: fromInt 1 }
+              initCandidatePermissionTokenMintInfo = Just (fromInt 1)
               initATMSKind = ATMSPlainEcdsaSecp256k1
               sidechainParams = SidechainParams.SidechainParams
                 { chainId: BigInt.fromInt 9
