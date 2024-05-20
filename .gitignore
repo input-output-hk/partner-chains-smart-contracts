@@ -9,7 +9,6 @@ result-*
 .pre-commit-config.yaml
 
 .direnv
-.envrc
 *.sw*
 */Session.vim
 
