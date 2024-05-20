@@ -59,10 +59,11 @@ in [
       in
         pkgs.mkShell {
           inputsFrom = [shell];
-          packages = [pkgs-ctl.nodejs];
+          packages = [pkgs-ctl.nodejs pkgs.git];
           shellHook = ''
-            if [ ! -e "offchain/src/TrustlessSidechain/CLIVersion.purs" ]; then
-              pushd offchain
+            PROJ_ROOT=$(git rev-parse --show-toplevel)
+            if [ ! -e "$PROJ_ROOT/offchain/src/TrustlessSidechain/CLIVersion.purs" ]; then
+              pushd $PROJ_ROOT/offchain
               make version
               popd
             fi
