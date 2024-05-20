@@ -1,18 +1,22 @@
 -- | `InitSidechain` implements the endpoint for intializing the sidechain.
--- | There's two ways to initialize the sidechain.
--- |
--- |      1. In a single transaction with `initSidechain` (the old way)
--- |
--- |      2. In two transactions. This is the new way which is to accomodate the
--- |      time difference between sidechain creation, and the first committee setup:
--- |
--- |          - Start with `initSidechainTokens` (returns the sidechain
--- |          parameters), which will mint the genesis token for the committee hash
--- |          (and set up other required tokens for the distributed set)
--- |
--- |          - Then, call `paySidechainTokens` which will pay the genesis
--- |          token for the committee hash (assuming you have it in your wallet)
--- |          to the required committee hash validator (with the initial committee).
+-- Sidechain initialization consists of:
+--
+--   1. Burning genesis UTxO and using it to mint multiple initialization
+--      tokens.  See SIP-06 for a detailed explanation.
+--
+--   2. Running all individual initialization commands, currently consistint of:
+--
+--      a) Fuel initialization.  This includes initializing the distributed set,
+--         committee selection and the merkle tree machinery.
+--
+--      b) Checkpointing initialization
+--
+--      c) Candidate permission token initialization
+--
+-- Sidechain initialization is idempotent, i.e. in case of failure it should be
+-- possible to simply re-run the command and have it finish the initialization
+-- step that have not yet been conducted.
+
 module TrustlessSidechain.InitSidechain
   ( InitSidechainParams'
   , InitSidechainParams(..)
@@ -26,6 +30,7 @@ import Contract.Prelude
 import Contract.PlutusData (PlutusData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Transaction (TransactionHash, TransactionInput)
+import Data.Array (concat)
 import Data.BigInt (BigInt)
 import Data.Maybe (isJust)
 import Run (Run)
@@ -41,23 +46,22 @@ import TrustlessSidechain.GetSidechainAddresses
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain.CandidatePermissionToken
-  ( initCandidatePermissionTokenLookupsAndConstraints
+  ( initCandidatePermissionToken
   )
 import TrustlessSidechain.InitSidechain.Checkpoint
-  ( initCheckpointLookupsAndConstraints
+  ( initCheckpoint
   )
 import TrustlessSidechain.InitSidechain.FUEL
-  ( initCommitteeHashLookupsAndConstraints
-  , initFuelAndDsLookupsAndConstraints
+  ( initFuel
   )
 import TrustlessSidechain.InitSidechain.TokensMint (mintAllTokens)
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
-import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
-import TrustlessSidechain.Versioning as Versioning
+import TrustlessSidechain.Utils.Maybe
+  ( maybeToArray
+  )
 import Type.Row (type (+))
 
--- | Parameters for the first step (see description above) of the initialisation procedure
--- | Using a open row type, to allow composing the two contracts
+-- | Parameters for the initialisation procedure.
 type InitTokensParams r =
   { initChainId ∷ BigInt
   , initGenesisHash ∷ ByteArray
@@ -82,10 +86,8 @@ derive instance Generic InitSidechainParams _
 
 derive instance Newtype InitSidechainParams _
 
--- | Parameters for the second step (see description above) of the
--- | initialisation procedure.
--- | In particular, note that this augments `InitSidechainParams` with an
--- | initial committee, and the initial committee's epoch
+-- | This augments `InitSidechainParams` with an initial committee,
+-- and the initial committee's epoch.
 type InitSidechainParams' =
   InitTokensParams
     ( -- `initAggregatedCommittee` is the initial aggregated committee of the
@@ -96,7 +98,7 @@ type InitSidechainParams' =
     )
 
 -- | `toSidechainParams` creates a `SidechainParams` from an
--- | `InitSidechainParams` the canonical way.
+-- `InitSidechainParams` the canonical way.
 toSidechainParams ∷ ∀ (r ∷ Row Type). InitTokensParams r → SidechainParams
 toSidechainParams isp = SidechainParams
   { chainId: isp.initChainId
@@ -106,26 +108,27 @@ toSidechainParams isp = SidechainParams
   , governanceAuthority: isp.initGovernanceAuthority
   }
 
--- | `initSidechain` creates the `SidechainParams` and executes
--- | `initSidechainTokens` and `paySidechainTokens` in one transaction. Briefly,
--- | this will do the following:
--- |
--- |     - Mints the committee hash NFT
--- |
--- |     - Pays the committee hash NFT to the update committee hash validator
--- |
--- |     - Mints the checkpoint NFT
--- |
--- |     - Pays the checkpoint NFT to the checkpoint hash validator
--- |
--- |     - Mints various tokens for the distributed set (and pay to the required
--- |       validators)
--- |
--- |     - Mints and pays versioning tokens to versioning script
--- |
--- |     - Optionally, mints candidate permission tokens
--- |
--- | For details, see `initSidechainTokens` and `paySidechainTokens`.
+-- | `InitSidechain` implements the endpoint for intializing the sidechain.
+-- Sidechain initialization consists of:
+--
+--   1. Burning genesis UTxO and using it to mint multiple initialization
+--      tokens.  See SIP-06 for a detailed explanation.
+--
+--   2. Running all individual initialization commands, currently consistint of:
+--
+--      a) Fuel initialization.  This includes initializing the distributed set,
+--         committee selection and the merkle tree machinery.
+--
+--      b) Checkpointing initialization
+--
+--      c) Candidate permission token initialization
+--
+-- See documentation for `initFuel`, `initCheckpoint`, and
+-- `initCandidatePermissionToken` for details.
+--
+-- Sidechain initialization is idempotent, i.e. in case of failure it should be
+-- possible to simply re-run the command and have it finish the initialization
+-- step that have not yet been conducted.
 initSidechain ∷
   ∀ r.
   InitSidechainParams →
@@ -139,41 +142,36 @@ initSidechain ∷
 initSidechain (InitSidechainParams isp) version = do
   let sidechainParams = toSidechainParams isp
 
-  -- Grabbing all contraints for initialising the committee hash
-  -- and distributed set.
-  -- Note: this uses the monoid instance of functions to monoids to run
-  -- all functions to get the desired lookups and contraints.
-  ----------------------------------------
-  -- TODO: lookups and constraints should be constructed depending on the
-  -- version argument.  See Issue #10
+  -- Burn genesis UTxO and mint initialization tokens
   { transactionId: txId } ← mintAllTokens sidechainParams isp.initATMSKind
     version
 
-  -- Mint and pay versioning tokens to versioning script.
-  ----------------------------------------
-  versionedScriptsTxIds ← Versioning.initializeVersion
-    { atmsKind: isp.initATMSKind, sidechainParams }
-    version
-
-  checkpointInitTxId ←
-    initCheckpointLookupsAndConstraints isp.initGenesisHash sidechainParams
-      >>= balanceSignAndSubmit "Checkpoint init"
-  dsInitTxId ← initFuelAndDsLookupsAndConstraints sidechainParams version
-    >>= balanceSignAndSubmit "Distributed set init"
-  permissionTokensInitTxId ←
-    initCandidatePermissionTokenLookupsAndConstraints
-      isp.initCandidatePermissionTokenMintInfo
-      sidechainParams
-      >>= balanceSignAndSubmit "Candidate permission tokens init"
-  committeeInitTxId ←
-    initCommitteeHashLookupsAndConstraints isp.initSidechainEpoch
+  -- Initialize FUEL, including distributed set, merkle root, and committee
+  -- selection.
+  fuelInitTx ←
+    initFuel sidechainParams
+      isp.initSidechainEpoch
       isp.initAggregatedCommittee
-      sidechainParams
-      >>= balanceSignAndSubmit "Committee init"
+      isp.initATMSKind
+      version
+
+  -- Initialize checkpointing.
+  checkpointInitTx ←
+    initCheckpoint sidechainParams
+      isp.initCandidatePermissionTokenMintInfo
+      isp.initGenesisHash
+      isp.initATMSKind
+      version
+
+  -- Initialize candidate permission tokens.
+  permissionTokensInitTx ←
+    initCandidatePermissionToken sidechainParams
+      isp.initCandidatePermissionTokenMintInfo
+      isp.initATMSKind
+      version
 
   -- Grabbing the required sidechain addresses of particular validators /
-  -- minting policies as in issue #224
-  -----------------------------------------
+  -- minting policies
   sidechainAddresses ←
     GetSidechainAddresses.getSidechainAddresses $
       SidechainAddressesEndpointParams
@@ -184,12 +182,11 @@ initSidechain (InitSidechainParams isp) version = do
         }
   pure
     { transactionId: txId
-    , initTransactionIds: versionedScriptsTxIds <>
-        [ checkpointInitTxId
-        , dsInitTxId
-        , permissionTokensInitTxId
-        , committeeInitTxId
-        ]
+    , initTransactionIds: concat
+        $ (_.initTransactionIds <$> maybeToArray fuelInitTx)
+        <> (_.initTransactionIds <$> maybeToArray permissionTokensInitTx)
+        <>
+          (_.initTransactionIds <$> maybeToArray checkpointInitTx)
     , sidechainParams
     , sidechainAddresses
     }

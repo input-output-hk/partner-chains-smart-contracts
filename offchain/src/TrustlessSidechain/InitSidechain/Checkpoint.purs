@@ -1,6 +1,5 @@
 module TrustlessSidechain.InitSidechain.Checkpoint
   ( initCheckpoint
-  , initCheckpointLookupsAndConstraints
   ) where
 
 import Contract.Prelude hiding (note)

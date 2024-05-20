@@ -1,6 +1,5 @@
 module TrustlessSidechain.InitSidechain.CandidatePermissionToken
   ( initCandidatePermissionToken
-  , initCandidatePermissionTokenLookupsAndConstraints
   ) where
 
 import Contract.Prelude hiding (note)
@@ -38,7 +37,7 @@ initCandidatePermissionToken ∷
   SidechainParams →
   Maybe CandidatePermissionTokenMintInfo →
   ATMSKinds →
-  Int →
+  Int → -- version
   Run (APP + r)
     ( Maybe
         { initTransactionIds ∷ Array TransactionHash
@@ -66,25 +65,27 @@ initCandidatePermissionToken
     initATMSKind
     version
 
-  if not $ null scriptsInitTxId then do
-    sidechainAddresses ←
-      GetSidechainAddresses.getSidechainAddresses $
-        SidechainAddressesEndpointParams
-          { sidechainParams
-          , atmsKind: initATMSKind
-          , usePermissionToken: isJust
-              initCandidatePermissionTokenMintInfo
-          , version
-          }
-    candidatePermissionTokenInitTxId ← run sidechainParams
-    pure
-      ( Just
-          { initTransactionIds: candidatePermissionTokenInitTxId : scriptsInitTxId
-          , sidechainParams
-          , sidechainAddresses
-          }
-      )
-  else pure Nothing
+  -- JSTOLAREK: a temporary solution until #772 is properly fixed
+  -- if not $ null scriptsInitTxId then do
+  sidechainAddresses ←
+    GetSidechainAddresses.getSidechainAddresses $
+      SidechainAddressesEndpointParams
+        { sidechainParams
+        , atmsKind: initATMSKind
+        , usePermissionToken: isJust
+            initCandidatePermissionTokenMintInfo
+        , version
+        }
+  candidatePermissionTokenInitTxId ← run sidechainParams
+  pure
+    ( Just
+        { initTransactionIds: candidatePermissionTokenInitTxId : scriptsInitTxId
+        , sidechainParams
+        , sidechainAddresses
+        }
+    )
+
+--  else pure Nothing
 
 -- | `initCandidatePermissionTokenLookupsAndConstraints` creates the lookups and
 -- | constraints required when initalizing the candidiate permission tokens (this does NOT

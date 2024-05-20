@@ -1,4 +1,6 @@
-module TrustlessSidechain.InitSidechain.FUEL where
+module TrustlessSidechain.InitSidechain.FUEL
+  ( initFuel
+  ) where
 
 import Contract.PlutusData (Datum(Datum), PlutusData)
 import Contract.PlutusData as PlutusData
