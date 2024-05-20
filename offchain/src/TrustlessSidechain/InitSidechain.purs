@@ -1,26 +1,8 @@
--- | `InitSidechain` implements the endpoint for intializing the sidechain.
--- Sidechain initialization consists of:
---
---   1. Burning genesis UTxO and using it to mint multiple initialization
---      tokens.  See SIP-06 for a detailed explanation.
---
---   2. Running all individual initialization commands, currently consistint of:
---
---      a) Fuel initialization.  This includes initializing the distributed set,
---         committee selection and the merkle tree machinery.
---
---      b) Checkpointing initialization
---
---      c) Candidate permission token initialization
---
--- Sidechain initialization is idempotent, i.e. in case of failure it should be
--- possible to simply re-run the command and have it finish the initialization
--- step that have not yet been conducted.
+-- | `InitSidechain` implements the endpoint for intializing the sidechain with
+-- | a set of default features.
 
 module TrustlessSidechain.InitSidechain
-  ( InitSidechainParams'
-  , InitSidechainParams(..)
-  , InitTokensParams
+  ( InitSidechainParams(..)
   , initSidechain
   , toSidechainParams
   ) where
@@ -61,8 +43,8 @@ import TrustlessSidechain.Utils.Maybe
   )
 import Type.Row (type (+))
 
--- | Parameters for the initialisation procedure.
-type InitTokensParams r =
+-- | Parameters to initialize a sidechain (purely an offchain type)
+newtype InitSidechainParams = InitSidechainParams
   { initChainId ∷ BigInt
   , initGenesisHash ∷ ByteArray
   , -- `initUtxo` is a `TransactionInput` used for creating `AssetClass`s for the
@@ -73,11 +55,10 @@ type InitTokensParams r =
   , initCandidatePermissionTokenMintInfo ∷ Maybe CandidatePermissionTokenMintInfo
   , initATMSKind ∷ ATMSKinds
   , initGovernanceAuthority ∷ Governance.GovernanceAuthority
-  | r
+  , initAggregatedCommittee ∷ PlutusData
+  , -- `initSidechainEpoch` is the initial sidechain epoch of the first committee
+    initSidechainEpoch ∷ BigInt
   }
-
--- | Parameters to initialize a sidechain (purely an offchain type)
-newtype InitSidechainParams = InitSidechainParams InitSidechainParams'
 
 instance Show InitSidechainParams where
   show = genericShow
@@ -86,20 +67,18 @@ derive instance Generic InitSidechainParams _
 
 derive instance Newtype InitSidechainParams _
 
--- | This augments `InitSidechainParams` with an initial committee,
--- and the initial committee's epoch.
-type InitSidechainParams' =
-  InitTokensParams
-    ( -- `initAggregatedCommittee` is the initial aggregated committee of the
-      -- sidechain
-      initAggregatedCommittee ∷ PlutusData
-    , -- `initSidechainEpoch` is the initial sidechain epoch of the first committee
-      initSidechainEpoch ∷ BigInt
-    )
-
 -- | `toSidechainParams` creates a `SidechainParams` from an
 -- `InitSidechainParams` the canonical way.
-toSidechainParams ∷ ∀ (r ∷ Row Type). InitTokensParams r → SidechainParams
+toSidechainParams ∷
+  ∀ (r ∷ Row Type).
+  { initChainId ∷ BigInt
+  , initUtxo ∷ TransactionInput
+  , initThresholdNumerator ∷ BigInt
+  , initThresholdDenominator ∷ BigInt
+  , initGovernanceAuthority ∷ Governance.GovernanceAuthority
+  | r
+  } →
+  SidechainParams
 toSidechainParams isp = SidechainParams
   { chainId: isp.initChainId
   , genesisUtxo: isp.initUtxo
