@@ -21,19 +21,41 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ github.token }}
-
+      - name: Add signing key for nix
+        run: echo "${{ secrets.NIX_SIGNING_KEY }}" > "${{ runner.temp }}/nix-key"
+      - name: Run nixci to build/test all outputs
+        run: nixci -v > /tmp/outputs
       - name: Acquire AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_DEFAULT_REGION }}
+      - name: Copy nix scopes to nix cache
+        run: |
+          nix-store --stdin -q --deriver < /tmp/outputs | nix-store --stdin -qR --include-outputs \
+          | nix copy --stdin --to \
+          "s3://cache.sc.iog.io?secret-key=${{ runner.temp }}/nix-key&region=$AWS_DEFAULT_REGION" \
+          && rm /tmp/outputs
 
+  build-and-test-x64-macos:
+    permissions:
+      id-token: write
+      contents: read
+    runs-on: [ self-hosted, macOS ]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
       - name: Add signing key for nix
         run: echo "${{ secrets.NIX_SIGNING_KEY }}" > "${{ runner.temp }}/nix-key"
-
       - name: Run nixci to build/test all outputs
-        run: nixci -v > /tmp/outputs
-
+        run: nixci -v -- --system x86_64-darwin > /tmp/outputs
+      - name: Acquire AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_DEFAULT_REGION }}
       - name: Copy nix scopes to nix cache
         run: |
           nix-store --stdin -q --deriver < /tmp/outputs | nix-store --stdin -qR --include-outputs \
