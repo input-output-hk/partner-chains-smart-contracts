@@ -2,7 +2,6 @@ module TrustlessSidechain.Versioning
   ( getActualVersionedPoliciesAndValidators
   , getCommitteeSelectionPoliciesAndValidators
   , getCheckpointPoliciesAndValidators
-  , getCandidatePermissionTokenPoliciesAndValidators
   , getExpectedVersionedPoliciesAndValidators
   , initializeVersion
   , insertVersion
@@ -383,23 +382,6 @@ getCheckpointPoliciesAndValidators sidechainParams version = do
     1 → V1.getCheckpointPoliciesAndValidators sidechainParams
     2 → V2.getCheckpointPoliciesAndValidators sidechainParams
     _ → throw $ GenericInternalError ("Invalid version: " <> show version)
-
-getCandidatePermissionTokenPoliciesAndValidators ∷
-  ∀ r.
-  SidechainParams →
-  Int →
-  Run (EXCEPT OffchainError + WALLET + r)
-    { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
-    }
-getCandidatePermissionTokenPoliciesAndValidators
-  sidechainParams
-  version =
-  do
-    case version of
-      1 → V1.getCandidatePermissionTokenPoliciesAndValidators sidechainParams
-      2 → V2.getCandidatePermissionTokenPoliciesAndValidators sidechainParams
-      _ → throw $ GenericInternalError ("Invalid version: " <> show version)
 
 -- | Get the list of "actual" validators and minting policies that should be versioned.
 --

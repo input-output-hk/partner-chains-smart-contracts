@@ -5,7 +5,6 @@ module TrustlessSidechain.Versioning.V2
   , getFuelPoliciesAndValidators
   , getDsPoliciesAndValidators
   , getMerkleRootPoliciesAndValidators
-  , getCandidatePermissionTokenPoliciesAndValidators
   ) where
 
 import Contract.Prelude
@@ -36,12 +35,9 @@ getVersionedPoliciesAndValidators sp = do
   fuelScripts ← getFuelPoliciesAndValidators sp
   dsScripts ← getDsPoliciesAndValidators sp
   merkleRootScripts ← getMerkleRootPoliciesAndValidators sp
-  candidatePermisssionScripts ← getCandidatePermissionTokenPoliciesAndValidators
-    sp
 
   pure $ committeeScripts <> checkpointScripts <> fuelScripts <> dsScripts
     <> merkleRootScripts
-    <> candidatePermisssionScripts
 
 getCommitteeSelectionPoliciesAndValidators ∷
   ∀ r.
@@ -57,22 +53,7 @@ getCommitteeSelectionPoliciesAndValidators _ =
   in
     pure $ { versionedPolicies, versionedValidators }
 
-getCandidatePermissionTokenPoliciesAndValidators ∷
-  ∀ r.
-  SidechainParams →
-  Run (EXCEPT OffchainError + r)
-    { versionedPolicies ∷ (List (Tuple Types.ScriptId MintingPolicy))
-    , versionedValidators ∷ (List (Tuple Types.ScriptId Validator))
-    }
-getCandidatePermissionTokenPoliciesAndValidators _ =
-  let
-    versionedPolicies = List.fromFoldable []
-    versionedValidators = List.fromFoldable []
-  in
-    pure $ { versionedPolicies, versionedValidators }
-
--- | Get V2 policies and validators for FUEL
--- | minting and burning.
+-- | Get V2 policies and validators for FUEL minting and burning.
 getFuelPoliciesAndValidators ∷
   ∀ r.
   SidechainParams →
@@ -92,8 +73,7 @@ getFuelPoliciesAndValidators sp = do
 
   pure { versionedPolicies, versionedValidators }
 
--- | Get V2 policies and validators for the
--- | Ds* types.
+-- | Get V2 policies and validators for the Ds* types.
 getDsPoliciesAndValidators ∷
   ∀ r.
   SidechainParams →

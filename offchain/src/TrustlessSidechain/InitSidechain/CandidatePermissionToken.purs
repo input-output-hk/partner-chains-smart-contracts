@@ -7,7 +7,6 @@ import Contract.Prelude hiding (note)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.Transaction (TransactionHash)
 import Contract.TxConstraints (TxConstraints)
-import Data.Array ((:))
 import Data.BigInt (BigInt)
 import Data.Maybe (isJust)
 import Run (Run)
@@ -24,12 +23,9 @@ import TrustlessSidechain.GetSidechainAddresses
   , SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
   )
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
-import TrustlessSidechain.InitSidechain.Init (init, insertScriptsIdempotent)
+import TrustlessSidechain.InitSidechain.Init (init)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
-import TrustlessSidechain.Versioning
-  ( getCandidatePermissionTokenPoliciesAndValidators
-  )
 import Type.Row (type (+))
 
 initCandidatePermissionToken ∷
@@ -59,11 +55,10 @@ initCandidatePermissionToken
       "Candidate permission token init"
       candidatePermissionInitTokenName
 
-  scriptsInitTxId ← insertScriptsIdempotent
-    getCandidatePermissionTokenPoliciesAndValidators
-    sidechainParams
-    initATMSKind
-    version
+  -- Note: normally we would need to insert versioned scripts in this place -
+  -- c.f. other initialization routines in the InitSidechain directory - but the
+  -- candidate permission token mechanism does not version any validators or
+  -- minting policies.
 
   -- JSTOLAREK: a temporary solution until #772 is properly fixed
   -- if not $ null scriptsInitTxId then do
@@ -79,7 +74,7 @@ initCandidatePermissionToken
   candidatePermissionTokenInitTxId ← run sidechainParams
   pure
     ( Just
-        { initTransactionIds: candidatePermissionTokenInitTxId : scriptsInitTxId
+        { initTransactionIds: [ candidatePermissionTokenInitTxId ]
         , sidechainParams
         , sidechainAddresses
         }
