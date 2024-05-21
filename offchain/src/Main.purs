@@ -397,7 +397,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
             { initChainId: sc.chainId
             , initGenesisHash: genesisHash
             , initUtxo: sc.genesisUtxo
-            , initATMSKind: (unwrap sidechainEndpointParams).atmsKind
+            , initATMSKind: atmsKind
             , initAggregatedCommittee: committeePubKeys
             , initCandidatePermissionTokenMintInfo
             , initSidechainEpoch
@@ -434,7 +434,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
             { initChainId: sc.chainId
             , initGenesisHash: genesisHash
             , initUtxo: sc.genesisUtxo
-            , initATMSKind: (unwrap sidechainEndpointParams).atmsKind
+            , initATMSKind: atmsKind
             , initAggregatedCommittee: committeePubKeys
             , initCandidatePermissionTokenMintInfo
             , initSidechainEpoch
@@ -460,14 +460,11 @@ runTxEndpoint sidechainEndpointParams endpoint =
       InitTokensMint
         { version } →
         do
-          let
-            initATMSKind = (unwrap sidechainEndpointParams).atmsKind
-
           { transactionId
           , sidechainParams
           , sidechainAddresses
           } ←
-            initTokensMint scParams initATMSKind version
+            initTokensMint scParams atmsKind version
 
           pure $ InitTokensMintResp
             { transactionId: map unwrap transactionId
@@ -486,6 +483,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
         pure $ InitCandidatePermissionTokenResp $ map
           (\r → r { initTransactionIds = map unwrap r.initTransactionIds })
           resp
+
       InitFuel { initSidechainEpoch, committeePubKeysInput, version } → do
         let
           toResp r = r { initTransactionIds = map unwrap r.initTransactionIds }
