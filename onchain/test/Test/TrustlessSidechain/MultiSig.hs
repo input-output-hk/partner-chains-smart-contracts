@@ -229,7 +229,8 @@ signWithKey :: SECP.Ctx -> SECP.SecKey -> SECP.Msg -> LedgerBytes
 signWithKey ctx sk =
   LedgerBytes
     . toBuiltin
-    . SECP.exportSig ctx
+    . (\(SECP.CompactSig sig) -> sig)
+    . SECP.exportCompactSig ctx
     . SECP.signMsg ctx sk
 <<<<<<< HEAD
 
