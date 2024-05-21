@@ -142,8 +142,6 @@ initSidechain (InitSidechainParams isp) version = do
   permissionTokensInitTx ←
     initCandidatePermissionToken sidechainParams
       isp.initCandidatePermissionTokenMintInfo
-      isp.initATMSKind
-      version
 
   -- Grabbing the required sidechain addresses of particular validators /
   -- minting policies

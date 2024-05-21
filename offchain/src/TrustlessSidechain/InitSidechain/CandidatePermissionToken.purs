@@ -8,21 +8,14 @@ import Contract.ScriptLookups (ScriptLookups)
 import Contract.Transaction (TransactionHash)
 import Contract.TxConstraints (TxConstraints)
 import Data.BigInt (BigInt)
-import Data.Maybe (isJust)
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.CandidatePermissionToken
   ( candidatePermissionInitTokenName
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
-import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Error (OffchainError)
-import TrustlessSidechain.GetSidechainAddresses
-  ( SidechainAddresses
-  , SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
-  )
-import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.InitSidechain.Init (init)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
@@ -32,20 +25,14 @@ initCandidatePermissionToken ∷
   ∀ r.
   SidechainParams →
   Maybe BigInt →
-  ATMSKinds →
-  Int → -- version
   Run (APP + r)
     ( Maybe
         { initTransactionIds ∷ Array TransactionHash
-        , sidechainParams ∷ SidechainParams
-        , sidechainAddresses ∷ SidechainAddresses
         }
     )
 initCandidatePermissionToken
   sidechainParams
-  initCandidatePermissionTokenMintInfo
-  initATMSKind
-  version = do
+  initCandidatePermissionTokenMintInfo = do
   let
     run = init
       ( \op → balanceSignAndSubmit op
@@ -62,25 +49,13 @@ initCandidatePermissionToken
 
   -- JSTOLAREK: a temporary solution until #772 is properly fixed
   -- if not $ null scriptsInitTxId then do
-  sidechainAddresses ←
-    GetSidechainAddresses.getSidechainAddresses $
-      SidechainAddressesEndpointParams
-        { sidechainParams
-        , atmsKind: initATMSKind
-        , usePermissionToken: isJust
-            initCandidatePermissionTokenMintInfo
-        , version
-        }
   candidatePermissionTokenInitTxId ← run sidechainParams
   pure
     ( Just
         { initTransactionIds: [ candidatePermissionTokenInitTxId ]
-        , sidechainParams
-        , sidechainAddresses
         }
     )
-
---  else pure Nothing
+  --  else pure Nothing
 
 -- | `initCandidatePermissionTokenLookupsAndConstraints` creates the lookups and
 -- | constraints required when initalizing the candidiate permission tokens (this does NOT

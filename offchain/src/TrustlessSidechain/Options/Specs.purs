@@ -1045,11 +1045,9 @@ initCandidatePermissionTokenSpec ∷ Parser TxEndpoint
 initCandidatePermissionTokenSpec = ado
   initCandidatePermissionTokenMintInfo ←
     optional initCandidatePermissionTokenMintHelper
-  version ← parseVersion
   in
     InitCandidatePermissionToken
       { initCandidatePermissionTokenMintInfo
-      , version
       }
 
 -- `initSpec` includes the sub parser from `initTokensSpec` (to optionally mint

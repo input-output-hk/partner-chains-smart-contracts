@@ -72,8 +72,6 @@ testInitCandidatePermissionToken =
             void $ InitCandidatePermission.initCandidatePermissionToken
               sidechainParams
               initCandidatePermissionTokenMintInfo
-              initATMSKind
-              version
 
 -- | Test running `initCandidatePermissionToken` twice, having run
 -- | `initTokensMint`, expecting idempotency
@@ -116,15 +114,11 @@ testInitCandidatePermissionTokenIdempotent =
             void $ InitCandidatePermission.initCandidatePermissionToken
               sidechainParams
               initCandidatePermissionTokenMintInfo
-              initATMSKind
-              version
 
             -- Then do it again
             res ← InitCandidatePermission.initCandidatePermissionToken
               sidechainParams
               initCandidatePermissionTokenMintInfo
-              initATMSKind
-              version
 
             Effect.fromMaybeThrow (GenericInternalError "Unreachable")
               $ map Just

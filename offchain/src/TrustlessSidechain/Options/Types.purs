@@ -217,7 +217,6 @@ data TxEndpoint
       }
   | InitCandidatePermissionToken
       { initCandidatePermissionTokenMintInfo ∷ Maybe BigInt
-      , version ∷ Int
       }
   | SaveCheckpoint
       { committeeSignaturesInput ∷

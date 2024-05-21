@@ -473,12 +473,9 @@ runTxEndpoint sidechainEndpointParams endpoint =
 
       InitCandidatePermissionToken
         { initCandidatePermissionTokenMintInfo
-        , version
         } → do
         resp ← initCandidatePermissionToken scParams
           initCandidatePermissionTokenMintInfo
-          (unwrap sidechainEndpointParams).atmsKind
-          version
         pure $ InitCandidatePermissionTokenResp $ map
           (\r → r { initTransactionIds = map unwrap r.initTransactionIds })
           resp
@@ -499,7 +496,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
           initFuel scParams
             initSidechainEpoch
             committeePubKeys
-            (unwrap sidechainEndpointParams).atmsKind
+            atmsKind
             version
 
       CommitteeHandover
