@@ -68,7 +68,6 @@ testInitCheckpointUninitialised =
               <$> getOwnPaymentPubKeyHash
             let
               initGenesisHash = ByteArray.hexToByteArrayUnsafe "abababababa"
-              initCandidatePermissionTokenMintInfo = Nothing
               initATMSKind = ATMSPlainEcdsaSecp256k1
               sidechainParams = SidechainParams.SidechainParams
                 { chainId: BigInt.fromInt 9
@@ -79,7 +78,6 @@ testInitCheckpointUninitialised =
                 }
 
             void $ InitCheckpoint.initCheckpoint sidechainParams
-              initCandidatePermissionTokenMintInfo
               initGenesisHash
               initATMSKind
               1
@@ -107,7 +105,6 @@ testInitCheckpoint =
             let
               version = 1
               initGenesisHash = ByteArray.hexToByteArrayUnsafe "abababababa"
-              initCandidatePermissionTokenMintInfo = Nothing
               initATMSKind = ATMSPlainEcdsaSecp256k1
               sidechainParams = SidechainParams.SidechainParams
                 { chainId: BigInt.fromInt 9
@@ -122,7 +119,6 @@ testInitCheckpoint =
               version
 
             void $ InitCheckpoint.initCheckpoint sidechainParams
-              initCandidatePermissionTokenMintInfo
               initGenesisHash
               initATMSKind
               version
@@ -195,7 +191,6 @@ testInitCheckpointIdempotent =
             let
               version = 1
               initGenesisHash = ByteArray.hexToByteArrayUnsafe "abababababa"
-              initCandidatePermissionTokenMintInfo = Nothing
               initATMSKind = ATMSPlainEcdsaSecp256k1
               sidechainParams = SidechainParams.SidechainParams
                 { chainId: BigInt.fromInt 9
@@ -212,14 +207,12 @@ testInitCheckpointIdempotent =
 
             -- Initialise checkpoint
             void $ InitCheckpoint.initCheckpoint sidechainParams
-              initCandidatePermissionTokenMintInfo
               initGenesisHash
               initATMSKind
               version
 
             -- Then do it again
             res ← InitCheckpoint.initCheckpoint sidechainParams
-              initCandidatePermissionTokenMintInfo
               initGenesisHash
               initATMSKind
               version

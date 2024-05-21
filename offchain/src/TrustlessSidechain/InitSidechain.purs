@@ -134,7 +134,6 @@ initSidechain (InitSidechainParams isp) version = do
   -- Initialize checkpointing.
   checkpointInitTx ←
     initCheckpoint sidechainParams
-      isp.initCandidatePermissionTokenMintInfo
       isp.initGenesisHash
       isp.initATMSKind
       version

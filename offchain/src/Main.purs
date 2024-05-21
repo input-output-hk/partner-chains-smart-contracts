@@ -407,7 +407,6 @@ runTxEndpoint sidechainEndpointParams endpoint =
             }
 
         resp ← initCheckpoint (toSidechainParams isc)
-          isc.initCandidatePermissionTokenMintInfo
           isc.initGenesisHash
           isc.initATMSKind
           version

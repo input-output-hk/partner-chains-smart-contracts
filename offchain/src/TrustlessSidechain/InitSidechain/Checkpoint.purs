@@ -15,9 +15,7 @@ import Contract.TxConstraints (DatumPresence(..), TxConstraints)
 import Contract.TxConstraints as Constraints
 import Contract.Value as Value
 import Data.Array ((:))
-import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
-import Data.Maybe (isJust)
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.Checkpoint (CheckpointDatum(..), checkpointNftTn)
@@ -27,11 +25,6 @@ import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
-import TrustlessSidechain.GetSidechainAddresses
-  ( SidechainAddresses
-  , SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
-  )
-import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.InitSidechain.Init (init, insertScriptsIdempotent)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
@@ -44,20 +37,16 @@ import Type.Row (type (+))
 initCheckpoint ∷
   ∀ r.
   SidechainParams →
-  Maybe BigInt →
   ByteArray →
   ATMSKinds →
   Int →
   Run (APP + r)
     ( Maybe
         { initTransactionIds ∷ Array TransactionHash
-        , sidechainParams ∷ SidechainParams
-        , sidechainAddresses ∷ SidechainAddresses
         }
     )
 initCheckpoint
   sidechainParams
-  initCandidatePermissionTokenMintInfo
   initGenesisHash
   initATMSKind
   version = do
@@ -75,21 +64,10 @@ initCheckpoint
     version
 
   if not $ null scriptsInitTxId then do
-    sidechainAddresses ←
-      GetSidechainAddresses.getSidechainAddresses $
-        SidechainAddressesEndpointParams
-          { sidechainParams
-          , atmsKind: initATMSKind
-          , usePermissionToken: isJust
-              initCandidatePermissionTokenMintInfo
-          , version
-          }
     checkpointInitTxId ← run sidechainParams
     pure
       ( Just
           { initTransactionIds: checkpointInitTxId : scriptsInitTxId
-          , sidechainParams
-          , sidechainAddresses
           }
       )
   else pure Nothing
