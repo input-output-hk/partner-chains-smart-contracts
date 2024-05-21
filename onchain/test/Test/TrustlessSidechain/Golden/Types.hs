@@ -8,7 +8,7 @@ import Data.ByteString.Base16 (decodeLenient)
 import Data.Text qualified as Text
 import Data.Text.Encoding (encodeUtf8)
 import PlutusLedgerApi.V1.Value qualified as Value
-import PlutusLedgerApi.V2 (TxOutRef (TxOutRef), ScriptHash (ScriptHash), toBuiltin)
+import PlutusLedgerApi.V2 (ScriptHash (ScriptHash), TxOutRef (TxOutRef), toBuiltin)
 import PlutusTx.Builtins qualified as Builtins
 import Test.Tasty (TestTree, testGroup)
 import Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest)
@@ -138,9 +138,9 @@ import TrustlessSidechain.Types (
     UpdateCommitteeHashMessage,
     newAggregateCommitteePubKeys,
     previousMerkleRoot,
+    scriptHash,
     sidechainEpoch,
-    sidechainParams,
-    validatorHash
+    sidechainParams
   ),
   UpdateCommitteeHashRedeemer (
     UpdateCommitteeHashRedeemer,
@@ -385,7 +385,7 @@ sampleUpdateCommitteeHashMessage1 =
     , newAggregateCommitteePubKeys = CommitteePlainATMSPolicy.aggregateKeys $ fmap getEcdsaSecp256k1PubKey sampleCommitteePubKeys'
     , previousMerkleRoot = Just "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
     , sidechainEpoch = 12
-    , validatorHash = ScriptHash $ hexTextToBuiltinByteString "c446faf0e8117442c1ebbc9a3a5692e29ce1135df45c5d75eb63d672"
+    , scriptHash = ScriptHash $ hexTextToBuiltinByteString "c446faf0e8117442c1ebbc9a3a5692e29ce1135df45c5d75eb63d672"
     }
 
 sampleUpdateCommitteeHashMessage2 :: UpdateCommitteeHashMessage ATMSPlainAggregatePubKey
@@ -395,7 +395,7 @@ sampleUpdateCommitteeHashMessage2 =
     , newAggregateCommitteePubKeys = CommitteePlainATMSPolicy.aggregateKeys $ fmap getEcdsaSecp256k1PubKey sampleCommitteePubKeys'
     , previousMerkleRoot = Nothing
     , sidechainEpoch = 12
-    , validatorHash = ScriptHash $ hexTextToBuiltinByteString "c446faf0e8117442c1ebbc9a3a5692e29ce1135df45c5d75eb63d672"
+    , scriptHash = ScriptHash $ hexTextToBuiltinByteString "c446faf0e8117442c1ebbc9a3a5692e29ce1135df45c5d75eb63d672"
     }
 
 sampleCheckpointDatum :: CheckpointDatum

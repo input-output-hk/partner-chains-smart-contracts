@@ -49,162 +49,163 @@ import TrustlessSidechain.Versioning qualified as Versioning
 
 main :: IO ()
 main =
-  defaultMain . testGroup "Size" $
-    [ testGroup
-        "Core"
-        [ scriptFitsInto
-            "mkMintingPolicy (FUEL) serialized"
-            FUEL.serialisableMintingPolicy
-            3_234
-        , scriptFitsInto
-            "mkBurningPolicy (FUEL) serialized"
-            FUEL.serialisableBurningPolicy
-            8
-        , scriptFitsInto
-            "mkMintingPolicy (MerkleRoot) serialized"
-            MerkleRoot.serialisableMintingPolicy
-            2_607
-        , scriptFitsInto
-            "mkCommitteeCandidateValidator (serialized)"
-            CCV.serialisableValidator
-            369
-        , scriptFitsInto
-            "mkCandidatePermissionMintingPolicy (serialized)"
-            CPMP.serialisableCandidatePermissionMintingPolicy
-            402
-        , scriptFitsInto
-            "mkCommitteeOraclePolicy (serialized)"
-            UCH.serialisableCommitteeOraclePolicy
-            1_818
-        , scriptFitsInto
-            "mkUpdateCommitteeHashValidator (serialized)"
-            UCH.serialisableCommitteeHashValidator
-            2_641
-        , scriptFitsInto
-            "mkCheckpointValidator (serialized)"
-            CV.serialisableCheckpointValidator
-            2_409
-        , scriptFitsInto
-            "mkCheckpointPolicy (serialized)"
-            CV.serialisableCheckpointPolicy
-            605
-        , scriptFitsInto
-            "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy) serialized"
-            CPEATMSP.serialisableMintingPolicy
-            2_254
-        , scriptFitsInto
-            "mkMintingPolicy (CommitteePlainSchnorrSecp256k1ATMSPolicy) serialized"
-            CPSATMSP.serialisableMintingPolicy
-            2_254
-        , scriptFitsInto
-            "mkDParameterValidatorCode (DParameter) serialized"
-            DParameter.serialisableValidator
-            512
-        , scriptFitsInto
-            "mkDParameterPolicyCode (DParameter) serialized"
-            DParameter.serialisableMintingPolicy
-            964
-        , scriptFitsInto
-            "mkFuelProxyPolicyCode (FUELProxyPolicy) serialized"
-            FUELProxyPolicy.serialisableFuelProxyPolicy
-            2_461
-        , scriptFitsInto
-            "mkPermissionedCandidatePolicyCode (PermissionedCandidates) serialized"
-            PermissionedCandidates.serialisableCandidatePermissionMintingPolicy
-            402
-        , scriptFitsInto
-            "mkPermissionedCandidatesValidatorCode (PermissionedCandidates) serialized"
-            PermissionedCandidates.serialisableValidator
-            638
-        , scriptFitsInto
-            "mkVersionOraclePolicyCode (Versioning) serialized"
-            Versioning.serialisableVersionOraclePolicy
-            2_662
-        , scriptFitsInto
-            "mkVersionOracleValidatorCode (Versioning) serialized"
-            Versioning.serialisableVersionOracleValidator
-            1_035
-        , scriptFitsInto
-            "mkInitTokenPolicy (InitToken) serialized"
-            InitToken.serialisableInitTokenPolicy
-            735
-        ]
-    , testGroup
-        "Distributed set"
-        [ scriptFitsInto
-            "mkInsertValidator (serialized)"
-            DS.serialisableInsertValidator
-            2_863
-        , scriptFitsInto
-            "mkDsConfPolicy (serialized)"
-            DS.serialisableDsConfPolicy
-            597
-        , scriptFitsInto
-            "mkDsKeyPolicy (serialized)"
-            DS.serialisableDsKeyPolicy
-            1_447
-        ]
-    , testGroup
-        "Data rep"
-        [ scriptFitsUnder
-            "toBuiltinData"
-            ("handwritten",  Compiled.toDataHandwritten)
-            ("generated",  Compiled.toDataGenerated)
-        , scriptFitsUnder
-            "fromBuiltinData"
-            ("handwritten",  Compiled.fromDataHandwritten)
-            ("generated",  Compiled.fromDataGenerated)
-        , scriptFitsUnder
-            "unsafeFromBuiltinData"
-            ("handwritten",  Compiled.unsafeFromDataHandwritten)
-            ("generated",  Compiled.unsafeFromDataGenerated)
-        , scriptFitsUnder
-            "toBuiltinData (pair)"
-            ("handwritten",  Compiled.pairToDataHandwritten)
-            ("generated",  Compiled.pairToDataGenerated)
-        , scriptFitsUnder
-            "fromBuiltinData (pair)"
-            ("handwritten",  Compiled.pairFromDataHandwritten)
-            ("generated",  Compiled.pairFromDataGenerated)
-        , scriptFitsUnder
-            "unsafeFromBuiltinData (pair)"
-            ("handwritten",  Compiled.pairUnsafeFromDataHandwritten)
-            ("generated",  Compiled.pairUnsafeFromDataGenerated)
-        , scriptFitsUnder
-            "toBuiltinData (list)"
-            ("handwritten",  Compiled.listToDataHandwritten)
-            ("generated",  Compiled.listToDataGenerated)
-        , scriptFitsUnder
-            "fromBuiltinData (list)"
-            ("handwritten",  Compiled.listFromDataHandwritten)
-            ("generated",  Compiled.listFromDataGenerated)
-        , scriptFitsUnder
-            "unsafeFromBuiltinData (list)"
-            ("handwritten",  Compiled.listUnsafeFromDataHandwritten)
-            ("generated",  Compiled.listUnsafeFromDataGenerated)
-        , scriptFitsUnder
-            "toBuiltinData (solution 3)"
-            ("using wrappers",  Compiled.toDataWrapper)
-            ("direct",  Compiled.toDataDirect)
-        , scriptFitsUnder
-            "fromBuiltinData (solution 3)"
-            ("using wrappers",  Compiled.fromDataWrapper)
-            ("direct",  Compiled.fromDataDirect)
-        , scriptFitsUnder
-            "unsafeFromBuiltinData (solution 3)"
-            ("using wrappers",  Compiled.unsafeFromDataWrapper)
-            ("direct",  Compiled.unsafeFromDataDirect)
-        , scriptFitsUnder
-            "toBuiltinData (CPS versus direct)"
-            ("cps",  Compiled.toData3CPS)
-            ("direct",  Compiled.toData3Direct)
-        , scriptFitsUnder
-            "fromBuiltinData (CPS versus direct)"
-            ("cps",  Compiled.fromData3CPS)
-            ("direct",  Compiled.fromData3Direct)
-        , scriptFitsUnder
-            "unsafeFromBuiltinData (CPS versus direct)"
-            ("cps",  Compiled.unsafeFromData3CPS)
-            ("direct",  Compiled.unsafeFromData3Direct)
-        ]
-    ]
+  defaultMain
+    . testGroup "Size"
+    $ [ testGroup
+          "Core"
+          [ scriptFitsInto
+              "mkMintingPolicy (FUEL) serialized"
+              FUEL.serialisableMintingPolicy
+              2_977
+          , scriptFitsInto
+              "mkBurningPolicy (FUEL) serialized"
+              FUEL.serialisableBurningPolicy
+              8
+          , scriptFitsInto
+              "mkMintingPolicy (MerkleRoot) serialized"
+              MerkleRoot.serialisableMintingPolicy
+              2_657
+          , scriptFitsInto
+              "mkCommitteeCandidateValidator (serialized)"
+              CCV.serialisableValidator
+              276
+          , scriptFitsInto
+              "mkCandidatePermissionMintingPolicy (serialized)"
+              CPMP.serialisableCandidatePermissionMintingPolicy
+              347
+          , scriptFitsInto
+              "mkCommitteeOraclePolicy (serialized)"
+              UCH.serialisableCommitteeOraclePolicy
+              1_761
+          , scriptFitsInto
+              "mkUpdateCommitteeHashValidator (serialized)"
+              UCH.serialisableCommitteeHashValidator
+              2_483
+          , scriptFitsInto
+              "mkCheckpointValidator (serialized)"
+              CV.serialisableCheckpointValidator
+              2_313
+          , scriptFitsInto
+              "mkCheckpointPolicy (serialized)"
+              CV.serialisableCheckpointPolicy
+              756
+          , scriptFitsInto
+              "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy) serialized"
+              CPEATMSP.serialisableMintingPolicy
+              2_203
+          , scriptFitsInto
+              "mkMintingPolicy (CommitteePlainSchnorrSecp256k1ATMSPolicy) serialized"
+              CPSATMSP.serialisableMintingPolicy
+              2_203
+          , scriptFitsInto
+              "mkDParameterValidatorCode (DParameter) serialized"
+              DParameter.serialisableValidator
+              438
+          , scriptFitsInto
+              "mkDParameterPolicyCode (DParameter) serialized"
+              DParameter.serialisableMintingPolicy
+              1_277
+          , scriptFitsInto
+              "mkFuelProxyPolicyCode (FUELProxyPolicy) serialized"
+              FUELProxyPolicy.serialisableFuelProxyPolicy
+              2_493
+          , scriptFitsInto
+              "mkPermissionedCandidatePolicyCode (PermissionedCandidates) serialized"
+              PermissionedCandidates.serialisableCandidatePermissionMintingPolicy
+              347
+          , scriptFitsInto
+              "mkPermissionedCandidatesValidatorCode (PermissionedCandidates) serialized"
+              PermissionedCandidates.serialisableValidator
+              502
+          , scriptFitsInto
+              "mkVersionOraclePolicyCode (Versioning) serialized"
+              Versioning.serialisableVersionOraclePolicy
+              3_477 -- 2_662
+          , scriptFitsInto
+              "mkVersionOracleValidatorCode (Versioning) serialized"
+              Versioning.serialisableVersionOracleValidator
+              847 -- 1_035
+          , scriptFitsInto
+              "mkInitTokenPolicy (InitToken) serialized"
+              InitToken.serialisableInitTokenPolicy
+              736
+          ]
+      , testGroup
+          "Distributed set"
+          [ scriptFitsInto
+              "mkInsertValidator (serialized)"
+              DS.serialisableInsertValidator
+              2_362 -- 2_863
+          , scriptFitsInto
+              "mkDsConfPolicy (serialized)"
+              DS.serialisableDsConfPolicy
+              592
+          , scriptFitsInto
+              "mkDsKeyPolicy (serialized)"
+              DS.serialisableDsKeyPolicy
+              1_258 -- 1_447
+          ]
+      , testGroup
+          "Data rep"
+          [ scriptFitsUnder
+              "toBuiltinData"
+              ("handwritten", Compiled.toSerialised Compiled.toDataHandwritten)
+              ("generated", Compiled.toSerialised Compiled.toDataGenerated)
+          , scriptFitsUnder
+              "fromBuiltinData"
+              ("handwritten", Compiled.toSerialised Compiled.fromDataHandwritten)
+              ("generated", Compiled.toSerialised Compiled.fromDataGenerated)
+          , scriptFitsUnder
+              "unsafeFromBuiltinData"
+              ("handwritten", Compiled.toSerialised Compiled.unsafeFromDataHandwritten)
+              ("generated", Compiled.toSerialised Compiled.unsafeFromDataGenerated)
+          , scriptFitsUnder
+              "toBuiltinData (pair)"
+              ("handwritten", Compiled.toSerialised Compiled.pairToDataHandwritten)
+              ("generated", Compiled.toSerialised Compiled.pairToDataGenerated)
+          , scriptFitsUnder
+              "fromBuiltinData (pair)"
+              ("handwritten", Compiled.toSerialised Compiled.pairFromDataHandwritten)
+              ("generated", Compiled.toSerialised Compiled.pairFromDataGenerated)
+          , scriptFitsUnder
+              "unsafeFromBuiltinData (pair)"
+              ("handwritten", Compiled.toSerialised Compiled.pairUnsafeFromDataHandwritten)
+              ("generated", Compiled.toSerialised Compiled.pairUnsafeFromDataGenerated)
+          , scriptFitsUnder
+              "toBuiltinData (list)"
+              ("handwritten", Compiled.toSerialised Compiled.listToDataHandwritten)
+              ("generated", Compiled.toSerialised Compiled.listToDataGenerated)
+          , scriptFitsUnder
+              "fromBuiltinData (list)"
+              ("handwritten", Compiled.toSerialised Compiled.listFromDataHandwritten)
+              ("generated", Compiled.toSerialised Compiled.listFromDataGenerated)
+          , scriptFitsUnder
+              "unsafeFromBuiltinData (list)"
+              ("handwritten", Compiled.toSerialised Compiled.listUnsafeFromDataHandwritten)
+              ("generated", Compiled.toSerialised Compiled.listUnsafeFromDataGenerated)
+          , scriptFitsUnder
+              "toBuiltinData (solution 3)"
+              ("using wrappers", Compiled.toSerialised Compiled.toDataWrapper)
+              ("direct", Compiled.toSerialised Compiled.toDataDirect)
+          , scriptFitsUnder
+              "fromBuiltinData (solution 3)"
+              ("using wrappers", Compiled.toSerialised Compiled.fromDataWrapper)
+              ("direct", Compiled.toSerialised Compiled.fromDataDirect)
+          , scriptFitsUnder
+              "unsafeFromBuiltinData (solution 3)"
+              ("using wrappers", Compiled.toSerialised Compiled.unsafeFromDataWrapper)
+              ("direct", Compiled.toSerialised Compiled.unsafeFromDataDirect)
+          , scriptFitsUnder
+              "toBuiltinData (CPS versus direct)"
+              ("cps", Compiled.toSerialised Compiled.toData3CPS)
+              ("direct", Compiled.toSerialised Compiled.toData3Direct)
+          , scriptFitsUnder
+              "fromBuiltinData (CPS versus direct)"
+              ("cps", Compiled.toSerialised Compiled.fromData3CPS)
+              ("direct", Compiled.toSerialised Compiled.fromData3Direct)
+          , scriptFitsUnder
+              "unsafeFromBuiltinData (CPS versus direct)"
+              ("cps", Compiled.toSerialised Compiled.unsafeFromData3CPS)
+              ("direct", Compiled.toSerialised Compiled.unsafeFromData3Direct)
+          ]
+      ]

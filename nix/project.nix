@@ -59,4 +59,4 @@
     shellArgs = repoRoot.nix.shell;
   };
 in
-project
+  project

@@ -31,10 +31,12 @@ module Compiled (
   fromData3Direct,
   unsafeFromData3CPS,
   unsafeFromData3Direct,
+  toSerialised,
 ) where
 
 import Data.Generated qualified as Generated
 import Data.Handwritten qualified as Handwritten
+import PlutusLedgerApi.Common (SerialisedScript, serialiseCompiledCode)
 import PlutusTx.Code (CompiledCode)
 import PlutusTx.TH (compile)
 import TrustlessSidechain.PlutusPrelude
@@ -128,3 +130,6 @@ unsafeFromDataGenerated = $$(compile [||unsafeFromBuiltinData||])
 
 unsafeFromDataHandwritten :: CompiledCode (BuiltinData -> Handwritten.Foo)
 unsafeFromDataHandwritten = $$(compile [||unsafeFromBuiltinData||])
+
+toSerialised :: CompiledCode a -> SerialisedScript
+toSerialised = serialiseCompiledCode

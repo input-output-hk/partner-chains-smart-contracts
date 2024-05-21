@@ -4,11 +4,11 @@ module TrustlessSidechain.MerkleRootTokenValidator (
   serialisableValidator,
 ) where
 
+import PlutusLedgerApi.Common (SerialisedScript, serialiseCompiledCode)
 import PlutusTx (compile, unsafeFromBuiltinData)
 import PlutusTx.Trace qualified as Trace
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (SidechainParams)
-import PlutusLedgerApi.Common (serialiseCompiledCode, SerialisedScript)
 
 -- | 'mkMptRootTokenValidator' always fails.
 --

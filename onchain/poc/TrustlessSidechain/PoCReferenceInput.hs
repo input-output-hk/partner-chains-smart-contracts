@@ -31,7 +31,7 @@ import PlutusLedgerApi.V2 (
   ScriptContext (scriptContextTxInfo),
   TxInInfo (txInInfoResolved),
   TxInfo (txInfoReferenceInputs),
-  TxOut (txOutAddress, txOutDatum)
+  TxOut (txOutAddress, txOutDatum),
  )
 import PlutusLedgerApi.V2.Contexts qualified as Contexts
 import PlutusTx qualified
@@ -56,8 +56,9 @@ mkPoCToReferenceInputValidatorUntyped =
 -- | 'serialisablePoCToReferenceInputValidator' is a serialisable untyped script of
 -- 'mkPoCToReferenceInputValidator'
 serialisablePoCToReferenceInputValidator :: SerialisedScript
-serialisablePoCToReferenceInputValidator = serialiseCompiledCode
-  $$(PlutusTx.compile [||mkPoCToReferenceInputValidatorUntyped||])
+serialisablePoCToReferenceInputValidator =
+  serialiseCompiledCode
+    $$(PlutusTx.compile [||mkPoCToReferenceInputValidatorUntyped||])
 
 -- * Reference
 
@@ -67,15 +68,16 @@ serialisablePoCToReferenceInputValidator = serialiseCompiledCode
 mkPoCReferenceInputValidator :: Address -> () -> Integer -> ScriptContext -> Bool
 mkPoCReferenceInputValidator addr _dat red ctx
   | [txInInfo] <- filter ((addr ==) . txOutAddress . txInInfoResolved) $ txInfoReferenceInputs info =
-    case () of
-      _
-        | OutputDatumHash dh <- txOutDatum (txInInfoResolved txInInfo)
+      case () of
+        _
+          | OutputDatumHash dh <- txOutDatum (txInInfoResolved txInInfo)
           , Just d <- Contexts.findDatum dh info ->
-          traceIfFalse
-            "error 'mkPoCReferenceInputValidator': reference input and redeemer mismatch"
-            $ PlutusTx.unsafeFromBuiltinData (getDatum d) == red
-        | otherwise ->
-          traceError "error 'mkPoCReferenceInputValidator': failed to get witness datum"
+              traceIfFalse
+                "error 'mkPoCReferenceInputValidator': reference input and redeemer mismatch"
+                $ PlutusTx.unsafeFromBuiltinData (getDatum d)
+                == red
+          | otherwise ->
+              traceError "error 'mkPoCReferenceInputValidator': failed to get witness datum"
   | otherwise = traceError "error 'mkPoCReferenceInputValidator': not spending exactly one reference input of given address"
   where
     info :: TxInfo
@@ -89,5 +91,6 @@ mkPoCReferenceInputValidatorUntyped =
 -- | 'serialisablePoCReferenceInputValidator' is a serialisable untyped script of
 -- 'mkPoCReferenceInputValidator'
 serialisablePoCReferenceInputValidator :: SerialisedScript
-serialisablePoCReferenceInputValidator = serialiseCompiledCode
-  $$(PlutusTx.compile [||mkPoCReferenceInputValidatorUntyped||])
+serialisablePoCReferenceInputValidator =
+  serialiseCompiledCode
+    $$(PlutusTx.compile [||mkPoCReferenceInputValidatorUntyped||])

@@ -35,5 +35,6 @@ untypedValidator :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 untypedValidator = mkUntypedValidator mkValidator
 
 serialisableValidator :: SerialisedScript
-serialisableValidator = serialiseCompiledCode
-  $$(PlutusTx.compile [||untypedValidator||])
+serialisableValidator =
+  serialiseCompiledCode
+    $$(PlutusTx.compile [||untypedValidator||])

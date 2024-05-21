@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Data.Handwritten (
@@ -142,7 +143,7 @@ listToData ::
   (ToData a) =>
   [a] ->
   BuiltinData
-listToData ell = Unsafe.mkList (go ell)
+listToData !ell = Unsafe.mkList (go ell)
   where
     go :: [a] -> BuiltinList BuiltinData
     go = \case

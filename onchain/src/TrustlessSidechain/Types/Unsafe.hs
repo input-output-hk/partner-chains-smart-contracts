@@ -184,7 +184,7 @@ ownCurrencySymbol bd = case getMinting $ scriptContextPurpose bd of
 getContinuingOutputs :: ScriptContext -> [TxOut]
 getContinuingOutputs ctx
   | Just inInfo <- findOwnInput ctx =
-    filter (f (txOutAddress . txInInfoResolved $ inInfo)) (txInfoOutputs $ scriptContextTxInfo ctx)
+      filter (f (txOutAddress . txInInfoResolved $ inInfo)) (txInfoOutputs $ scriptContextTxInfo ctx)
   where
     f addr out = addr == txOutAddress out
 getContinuingOutputs _ = traceError "Lf" -- "Can't get any continuing outputs"
@@ -195,9 +195,9 @@ getContinuingOutputs _ = traceError "Lf" -- "Can't get any continuing outputs"
 findOwnInput :: ScriptContext -> Maybe TxInInfo
 findOwnInput sc
   | Just txOutRef <- getSpending $ scriptContextPurpose sc =
-    find
-      (\inInfo -> (unTxOutRef . txInInfoOutRef $ inInfo) == unTxOutRef txOutRef)
-      (txInfoInputs . scriptContextTxInfo $ sc)
+      find
+        (\inInfo -> (unTxOutRef . txInInfoOutRef $ inInfo) == unTxOutRef txOutRef)
+        (txInfoInputs . scriptContextTxInfo $ sc)
 findOwnInput _ = Nothing
 
 -- | Check if a transaction was signed by the given public key.

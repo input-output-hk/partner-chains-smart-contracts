@@ -7,7 +7,7 @@ module TrustlessSidechain.ScriptCache (
   serialisableScriptCache,
 ) where
 
-import PlutusLedgerApi.V2 (PubKeyHash, SerialisedScript, serialiseCompiledCode )
+import PlutusLedgerApi.V2 (PubKeyHash, SerialisedScript, serialiseCompiledCode)
 import PlutusLedgerApi.V2.Contexts (ScriptContext (ScriptContext), txSignedBy)
 import PlutusTx (compile, unsafeFromBuiltinData)
 import TrustlessSidechain.PlutusPrelude
@@ -37,8 +37,8 @@ mkScriptCacheUntyped ::
   BuiltinData ->
   ()
 mkScriptCacheUntyped pkh =
-  mkUntypedValidator $
-    mkScriptCache
+  mkUntypedValidator
+    $ mkScriptCache
       (PlutusTx.unsafeFromBuiltinData pkh)
 
 serialisableScriptCache :: SerialisedScript

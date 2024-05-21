@@ -9,6 +9,7 @@ module TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy (
   serialisableMintingPolicy,
 ) where
 
+import PlutusLedgerApi.Common (SerialisedScript, serialiseCompiledCode)
 import PlutusTx (compile)
 import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CommitteePlainATMSPolicy
 import TrustlessSidechain.PlutusPrelude
@@ -18,7 +19,6 @@ import TrustlessSidechain.Types (
  )
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Versioning (VersionOracleConfig)
-import PlutusLedgerApi.Common (serialiseCompiledCode, SerialisedScript)
 
 {-# INLINEABLE mkMintingPolicy #-}
 
@@ -32,8 +32,8 @@ mkMintingPolicy =
 
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkMintingPolicyUntyped ccm versionOracleConfig redeemer ctx =
-  check $
-    mkMintingPolicy
+  check
+    $ mkMintingPolicy
       (unsafeFromBuiltinData ccm)
       (unsafeFromBuiltinData versionOracleConfig)
       (unsafeFromBuiltinData redeemer)

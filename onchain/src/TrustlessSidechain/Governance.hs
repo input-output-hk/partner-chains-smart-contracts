@@ -10,7 +10,7 @@ module TrustlessSidechain.Governance (
 import PlutusLedgerApi.V2 (PubKeyHash, TxInfo)
 import PlutusLedgerApi.V2.Contexts (txSignedBy)
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.Types ( GovernanceAuthority(..) )
+import TrustlessSidechain.Types (GovernanceAuthority (..))
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 
 {-# INLINEABLE mkGovernanceAuthority #-}

@@ -5,9 +5,9 @@ module Sizer (
 
 import Data.ByteString.Short qualified
 import Data.String qualified as HString
+import Data.Tagged (Tagged (Tagged))
 import GHC.Num (integerFromInt)
 import PlutusLedgerApi.Common (SerialisedScript)
-import Data.Tagged (Tagged (Tagged))
 import Test.Tasty (TestTree)
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
@@ -27,7 +27,7 @@ scriptFitsUnder name test target = singleTest name $ ScriptSizeComparison @() te
 
 scriptFitsInto ::
   HString.String ->
-  SerialisedScript  ->
+  SerialisedScript ->
   Integer ->
   TestTree
 scriptFitsInto name script limit =
@@ -36,10 +36,10 @@ scriptFitsInto name script limit =
 -- Helpers
 
 data SizeTest (a :: Type)
-  = ScriptSizeBound SerialisedScript  Integer
-  | ScriptSizeComparison (HString.String, SerialisedScript ) (HString.String, SerialisedScript )
+  = ScriptSizeBound SerialisedScript Integer
+  | ScriptSizeComparison (HString.String, SerialisedScript) (HString.String, SerialisedScript)
 
-instance Typeable a => IsTest (SizeTest a) where
+instance (Typeable a) => IsTest (SizeTest a) where
   testOptions = Tagged []
   run _ testData _ = case testData of
     ScriptSizeBound script limit -> do
@@ -47,19 +47,21 @@ instance Typeable a => IsTest (SizeTest a) where
       let diff = limit - estimate
       pure $ case signum diff of
         -1 ->
-          testFailed $
-            "Known script size INCREASED by " <> show (abs diff)
-              <> " (New size: "
-              <> show estimate
-              <> ")"
-              <> " Please make sure this is intentional!"
+          testFailed
+            $ "Known script size INCREASED by "
+            <> show (abs diff)
+            <> " (New size: "
+            <> show estimate
+            <> ")"
+            <> " Please make sure this is intentional!"
         0 -> testPassed $ "Size: " <> show estimate
         _ ->
-          testFailed $
-            "Known script size decreased by " <> show diff
-              <> " (New size: "
-              <> show estimate
-              <> ")"
+          testFailed
+            $ "Known script size decreased by "
+            <> show diff
+            <> " (New size: "
+            <> show estimate
+            <> ")"
     ScriptSizeComparison (mName, mScript) (tName, tScript) -> do
       let tEstimate = scriptSize tScript
       let mEstimate = scriptSize mScript
@@ -131,4 +133,4 @@ renderExcess tData mData diff =
 --    because then it can happen that making the AST size smaller will make the
 --    flat encoding larger.
 scriptSize :: SerialisedScript -> Integer
-scriptSize   = integerFromInt . Data.ByteString.Short.length
+scriptSize = integerFromInt . Data.ByteString.Short.length

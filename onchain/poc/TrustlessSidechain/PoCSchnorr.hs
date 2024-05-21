@@ -112,7 +112,7 @@ module TrustlessSidechain.PoCSchnorr (
   serialisablePolicy,
 ) where
 
-import PlutusLedgerApi.Common(SerialisedScript, serialiseCompiledCode)
+import PlutusLedgerApi.Common (SerialisedScript, serialiseCompiledCode)
 import PlutusLedgerApi.V2 (ScriptContext)
 import PlutusTx qualified
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
@@ -122,12 +122,12 @@ import TrustlessSidechain.Utils (
  )
 
 data SchnorrRedeemer = SchnorrRedeemer
-  { -- | arbitrary byte array
-    message :: BuiltinByteString
-  , -- | 64 bytes
-    signature :: BuiltinByteString
-  , -- | 32 bytes
-    publicKey :: BuiltinByteString
+  { message :: BuiltinByteString
+  -- ^ arbitrary byte array
+  , signature :: BuiltinByteString
+  -- ^ 64 bytes
+  , publicKey :: BuiltinByteString
+  -- ^ 32 bytes
   }
   deriving stock (TSPrelude.Eq, TSPrelude.Show)
 
@@ -146,6 +146,6 @@ untypedPolicy :: BuiltinData -> BuiltinData -> ()
 untypedPolicy = mkUntypedMintingPolicy mkPolicy
 
 serialisablePolicy :: SerialisedScript
-
-serialisablePolicy = serialiseCompiledCode
-  $$(PlutusTx.compile [||untypedPolicy||])
+serialisablePolicy =
+  serialiseCompiledCode
+    $$(PlutusTx.compile [||untypedPolicy||])

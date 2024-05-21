@@ -27,7 +27,7 @@ import PlutusLedgerApi.V2 (
   ScriptHash,
   TxInInfo (txInInfoResolved),
   TxInfo (txInfoInputs),
-  TxOut (txOutReferenceScript)
+  TxOut (txOutReferenceScript),
  )
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
@@ -49,8 +49,9 @@ mkPoCToReferenceScriptValidatorUntyped = mkUntypedValidator mkPoCToReferenceScri
 -- | 'serialisablePoCToReferenceScriptValidator' is a serialisable untyped script of
 -- 'mkPoCToReferenceScriptValidator'
 serialisablePoCToReferenceScriptValidator :: SerialisedScript
-serialisablePoCToReferenceScriptValidator = serialiseCompiledCode
-  $$(PlutusTx.compile [||mkPoCToReferenceScriptValidatorUntyped||])
+serialisablePoCToReferenceScriptValidator =
+  serialiseCompiledCode
+    $$(PlutusTx.compile [||mkPoCToReferenceScriptValidatorUntyped||])
 
 -- * Reference
 
@@ -59,9 +60,9 @@ serialisablePoCToReferenceScriptValidator = serialiseCompiledCode
 -- given 'Address''s witness datum is the redeemer.
 mkPoCReferenceScriptValidator :: () -> ScriptHash -> ScriptContext -> Bool
 mkPoCReferenceScriptValidator _dat red ctx =
-  traceIfFalse "error 'mkPoCReferenceScriptValidator': no tx with given reference script's script hash" $
-    any (\txin -> txOutReferenceScript (txInInfoResolved txin) == Just red) $
-      txInfoInputs info
+  traceIfFalse "error 'mkPoCReferenceScriptValidator': no tx with given reference script's script hash"
+    $ any (\txin -> txOutReferenceScript (txInInfoResolved txin) == Just red)
+    $ txInfoInputs info
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
@@ -73,5 +74,6 @@ mkPoCReferenceScriptValidatorUntyped = mkUntypedValidator mkPoCReferenceScriptVa
 -- | 'serialisablePoCReferenceScriptValidator' is a serialisable untyped script of
 -- 'mkPoCReferenceScriptValidator'
 serialisablePoCReferenceScriptValidator :: SerialisedScript
-serialisablePoCReferenceScriptValidator = serialiseCompiledCode
-  $$(PlutusTx.compile [||mkPoCReferenceScriptValidatorUntyped||])
+serialisablePoCReferenceScriptValidator =
+  serialiseCompiledCode
+    $$(PlutusTx.compile [||mkPoCReferenceScriptValidatorUntyped||])

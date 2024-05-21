@@ -21,6 +21,7 @@ import PlutusLedgerApi.V2 (
   LedgerBytes (LedgerBytes),
   OutputDatum (OutputDatum),
   ScriptContext (scriptContextTxInfo),
+  SerialisedScript,
   TokenName (TokenName),
   TxInInfo (txInInfoResolved),
   TxInfo (txInfoMint, txInfoOutputs, txInfoReferenceInputs),
@@ -28,7 +29,6 @@ import PlutusLedgerApi.V2 (
   Value (getValue),
   addressCredential,
   serialiseCompiledCode,
-  SerialisedScript
  )
 import PlutusLedgerApi.V2.Contexts qualified as Contexts
 import PlutusTx qualified
@@ -44,9 +44,9 @@ import TrustlessSidechain.Types (
     UpdateCommitteeHashMessage,
     newAggregateCommitteePubKeys,
     previousMerkleRoot,
+    scriptHash,
     sidechainEpoch,
-    sidechainParams,
-    scriptHash
+    sidechainParams
   ),
   UpdateCommitteeHashRedeemer,
  )
@@ -68,7 +68,7 @@ import TrustlessSidechain.Versioning (
 
 -- | 'serialiseUchm' serialises an 'UpdateCommitteeHashMessage' via converting
 -- to the Plutus data representation, then encoding it to cbor via the builtin.
-serialiseUchm :: ToData aggregatePubKeys => UpdateCommitteeHashMessage aggregatePubKeys -> BuiltinByteString
+serialiseUchm :: (ToData aggregatePubKeys) => UpdateCommitteeHashMessage aggregatePubKeys -> BuiltinByteString
 serialiseUchm = Builtins.serialiseData . IsData.toBuiltinData
 
 -- | 'initCommitteeOracleTn'  is the token name of the NFT which identifies
@@ -150,37 +150,37 @@ mkUpdateCommitteeHashValidator sp versioningConfig dat red ctx =
             | -- recall that 'committeeOracleCurrencySymbol' should be
               -- an NFT, so  (> 0) ==> exactly one.
               Value.valueOf (txOutValue o) committeeOracleCurrencySymbol initCommitteeOracleTn > 0
-              , OutputDatum d <- txOutDatum o
-              , ucd :: UpdateCommitteeDatum BuiltinData <- PlutusTx.unsafeFromBuiltinData (getDatum d) =
-              -- Note that we build the @msg@ that we check is signed
-              -- with the data in this transaction directly... so in a sense,
-              -- checking if this message is signed is checking if the
-              -- transaction corresponds to the message
+            , OutputDatum d <- txOutDatum o
+            , ucd :: UpdateCommitteeDatum BuiltinData <- PlutusTx.unsafeFromBuiltinData (getDatum d) =
+                -- Note that we build the @msg@ that we check is signed
+                -- with the data in this transaction directly... so in a sense,
+                -- checking if this message is signed is checking if the
+                -- transaction corresponds to the message
 
-              let scriptHash' =
-                    case addressCredential $ txOutAddress o of
-                      ScriptCredential vh -> vh
-                      _ -> traceError "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-03"
+                let scriptHash' =
+                      case addressCredential $ txOutAddress o of
+                        ScriptCredential vh -> vh
+                        _ -> traceError "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-03"
 
-                  msg =
-                    UpdateCommitteeHashMessage
-                      { sidechainParams = sp
-                      , newAggregateCommitteePubKeys = get @"aggregateCommitteePubKeys" ucd
-                      , previousMerkleRoot = get @"previousMerkleRoot" red
-                      , sidechainEpoch = get @"sidechainEpoch" ucd
-                      , scriptHash = scriptHash'
-                      }
-               in traceIfFalse
-                    "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-04"
-                    ( Value.valueOf
-                        (txInfoMint info)
-                        committeeCertificateVerificationCurrencySymbol
-                        (TokenName (Builtins.blake2b_256 (serialiseUchm msg)))
-                        > 0
-                    )
-                    && traceIfFalse
-                      "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-05"
-                      (get @"sidechainEpoch" dat < get @"sidechainEpoch" ucd)
+                    msg =
+                      UpdateCommitteeHashMessage
+                        { sidechainParams = sp
+                        , newAggregateCommitteePubKeys = get @"aggregateCommitteePubKeys" ucd
+                        , previousMerkleRoot = get @"previousMerkleRoot" red
+                        , sidechainEpoch = get @"sidechainEpoch" ucd
+                        , scriptHash = scriptHash'
+                        }
+                 in traceIfFalse
+                      "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-04"
+                      ( Value.valueOf
+                          (txInfoMint info)
+                          committeeCertificateVerificationCurrencySymbol
+                          (TokenName (Builtins.blake2b_256 (serialiseUchm msg)))
+                          > 0
+                      )
+                      && traceIfFalse
+                        "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-05"
+                        (get @"sidechainEpoch" dat < get @"sidechainEpoch" ucd)
             | otherwise = go os
        in go (txInfoOutputs info)
 
@@ -245,7 +245,7 @@ mkCommitteeOraclePolicyUntyped =
     . mkCommitteeOraclePolicy
     . PlutusTx.unsafeFromBuiltinData
 
-serialisableCommitteeOraclePolicy ::  SerialisedScript
+serialisableCommitteeOraclePolicy :: SerialisedScript
 serialisableCommitteeOraclePolicy =
   serialiseCompiledCode $$(PlutusTx.compile [||mkCommitteeOraclePolicyUntyped||])
 
@@ -257,8 +257,8 @@ mkCommitteeHashValidatorUntyped ::
   BuiltinData ->
   ()
 mkCommitteeHashValidatorUntyped uch versioningConfig =
-  mkUntypedValidator $
-    mkUpdateCommitteeHashValidator
+  mkUntypedValidator
+    $ mkUpdateCommitteeHashValidator
       (PlutusTx.unsafeFromBuiltinData uch)
       (PlutusTx.unsafeFromBuiltinData versioningConfig)
 
