@@ -52,11 +52,6 @@ import TrustlessSidechain.Error
   )
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import TrustlessSidechain.FUELMintingPolicy.V2 as FUELMintingPolicy.V2
-import TrustlessSidechain.GetSidechainAddresses
-  ( SidechainAddresses
-  , SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
-  )
-import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.InitSidechain.Init (init, insertScriptsIdempotent)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash
@@ -89,8 +84,6 @@ initFuel ∷
   Run (APP + r)
     ( Maybe
         { initTransactionIds ∷ Array TransactionHash
-        , sidechainParams ∷ SidechainParams
-        , sidechainAddresses ∷ SidechainAddresses
         }
     )
 initFuel
@@ -143,20 +136,6 @@ initFuel
         scriptsInitTxIdCommittee
 
   if not $ null scriptsInitTxId then do
-    sidechainAddresses ←
-      GetSidechainAddresses.getSidechainAddresses $
-        SidechainAddressesEndpointParams
-          { sidechainParams
-          , atmsKind: initATMSKind
-          -- NOTE: This field is used to configure minting the candidate
-          -- permission tokens themselves, not the candidate permission
-          -- init tokens. However it does affect the sidechainAddresses
-          -- output. Whether to remove permission tokens is an ongoing
-          -- discussion as of April 4, 2024. --brendanrbrown
-          , usePermissionToken: false
-          , version
-          }
-
     -- NOTE: We check whether init-fuel is allowed
     -- by checking whether the DistributedSet.dsInitTokenName
     -- exists. There is no such init token for FUELMintingPolicy,
@@ -167,8 +146,6 @@ initFuel
     pure
       ( Just
           { initTransactionIds: fuelInitTxId : scriptsInitTxId
-          , sidechainParams
-          , sidechainAddresses
           }
       )
   else do
