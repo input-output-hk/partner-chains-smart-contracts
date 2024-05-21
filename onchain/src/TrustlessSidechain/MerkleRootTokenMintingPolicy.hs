@@ -10,21 +10,20 @@ module TrustlessSidechain.MerkleRootTokenMintingPolicy (
   serialisableMintingPolicy,
 ) where
 
-import Plutus.V1.Ledger.Value qualified as Value
-import Plutus.V2.Ledger.Api (
+import PlutusLedgerApi.V1.Value qualified as Value
+import PlutusLedgerApi.V2 (
   CurrencySymbol,
   LedgerBytes (LedgerBytes, getLedgerBytes),
-  Script,
   ScriptContext,
   TokenName (TokenName, unTokenName),
   TxInInfo (txInInfoResolved),
   TxInfo (txInfoMint, txInfoOutputs, txInfoReferenceInputs),
   TxOut (txOutAddress, txOutValue),
   Value (getValue),
-  fromCompiledCode,
+  serialiseCompiledCode,
   scriptContextTxInfo,
  )
-import Plutus.V2.Ledger.Contexts qualified as Contexts
+import PlutusLedgerApi.V2.Contexts qualified as Contexts
 import PlutusTx (compile)
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
@@ -50,6 +49,7 @@ import TrustlessSidechain.Versioning (
   getVersionedValidatorAddress,
   merkleRootTokenValidatorId,
  )
+import PlutusLedgerApi.Common (SerialisedScript)
 
 -- | 'serialiseMte' serialises a 'MerkleTreeEntry' with cbor via 'PlutusTx.Builtins.serialiseData'
 {-# INLINEABLE serialiseMte #-}
@@ -176,6 +176,6 @@ mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinDa
 mkMintingPolicyUntyped sp versioningConfig =
   mkUntypedMintingPolicy $ mkMintingPolicy (IsData.unsafeFromBuiltinData sp) (IsData.unsafeFromBuiltinData versioningConfig)
 
-serialisableMintingPolicy :: Script
+serialisableMintingPolicy :: SerialisedScript
 serialisableMintingPolicy =
-  fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
+  serialiseCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])

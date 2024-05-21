@@ -5,10 +5,12 @@ module TrustlessSidechain.InitToken (
   serialisableInitTokenPolicy,
 ) where
 
-import Plutus.V2.Ledger.Api (
-  Script,
+import PlutusLedgerApi.V2 (
+  ScriptContext (ScriptContext),
+  ScriptPurpose (Minting),
+  TxInInfo (txInInfoOutRef),
+  TxInfo (txInfoInputs, txInfoMint),
   Value (getValue),
-  fromCompiledCode,
  )
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
@@ -17,6 +19,8 @@ import TrustlessSidechain.Types (
   InitTokenRedeemer (BurnInitToken, MintInitToken),
  )
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
+import TrustlessSidechain.Utils (mkUntypedMintingPolicy)
+import PlutusLedgerApi.Common (SerialisedScript, serialiseCompiledCode)
 
 -- | 'mkInitTokenPolicy' is a minting policy which allows to:
 --
@@ -80,6 +84,6 @@ mkInitTokenPolicyUntyped sp red ctx =
       (PlutusTx.unsafeFromBuiltinData red)
       (Unsafe.wrap ctx)
 
-serialisableInitTokenPolicy :: Script
+serialisableInitTokenPolicy :: SerialisedScript
 serialisableInitTokenPolicy =
-  fromCompiledCode $$(PlutusTx.compile [||mkInitTokenPolicyUntyped||])
+  serialiseCompiledCode $$(PlutusTx.compile [||mkInitTokenPolicyUntyped||])

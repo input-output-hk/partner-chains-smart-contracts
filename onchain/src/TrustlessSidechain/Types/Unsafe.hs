@@ -69,7 +69,6 @@ module TrustlessSidechain.Types.Unsafe (
   txOutDatum,
   txOutValue,
   TxOutRef (..),
-  ValidatorHash (..),
   Value (..),
   -- | Unsafe versions of ledger API functions
   ownCurrencySymbol,
@@ -88,7 +87,7 @@ module TrustlessSidechain.Types.Unsafe (
 -- - it causes the entire structure gets decoded strictly, regardless of
 --   how many fields are used.
 
-import Plutus.V2.Ledger.Api qualified as V2
+import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import TrustlessSidechain.PlutusPrelude hiding (Integer)
@@ -155,7 +154,6 @@ makeUnsafeNewtypes ''V2.TxInfo
 makeUnsafeNewtypes ''V2.TxInInfo
 makeUnsafeNewtypes ''V2.TxOut
 makeUnsafeNewtypes ''V2.TxOutRef
-makeUnsafeNewtypes ''V2.ValidatorHash
 makeUnsafeNewtypes ''V2.Value
 makeUnsafeNewtypes ''PTPrelude.Integer
 

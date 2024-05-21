@@ -6,10 +6,6 @@ module TrustlessSidechain.CandidatePermissionMintingPolicy (
   serialisableCandidatePermissionMintingPolicy,
 ) where
 
-import Plutus.V2.Ledger.Api (
-  Script,
-  fromCompiledCode,
- )
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (InitTokenAssetClass)
@@ -17,6 +13,7 @@ import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Utils (
   oneTokenBurned,
  )
+import PlutusLedgerApi.Common (SerialisedScript, serialiseCompiledCode)
 
 -- | 'mkCandidatePermissionMintingPolicy' is a minting policy which verifies:
 --
@@ -59,6 +56,6 @@ mkCandidatePermissionMintingPolicyUntyped initTokenAssetClass a scriptContext =
       a
       (Unsafe.wrap scriptContext)
 
-serialisableCandidatePermissionMintingPolicy :: Script
+serialisableCandidatePermissionMintingPolicy :: SerialisedScript
 serialisableCandidatePermissionMintingPolicy =
-  fromCompiledCode $$(PlutusTx.compile [||mkCandidatePermissionMintingPolicyUntyped||])
+  serialiseCompiledCode $$(PlutusTx.compile [||mkCandidatePermissionMintingPolicyUntyped||])

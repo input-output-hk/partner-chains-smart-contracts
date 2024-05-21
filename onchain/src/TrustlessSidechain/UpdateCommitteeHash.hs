@@ -13,14 +13,13 @@ module TrustlessSidechain.UpdateCommitteeHash (
   serialisableCommitteeHashValidator,
 ) where
 
-import Plutus.V1.Ledger.Value qualified as Value
-import Plutus.V2.Ledger.Api (
+import PlutusLedgerApi.V1.Value qualified as Value
+import PlutusLedgerApi.V2 (
   Credential (ScriptCredential),
   CurrencySymbol,
   Datum (getDatum),
   LedgerBytes (LedgerBytes),
   OutputDatum (OutputDatum),
-  Script,
   ScriptContext (scriptContextTxInfo),
   TokenName (TokenName),
   TxInInfo (txInInfoResolved),
@@ -28,9 +27,10 @@ import Plutus.V2.Ledger.Api (
   TxOut (txOutAddress, txOutDatum, txOutValue),
   Value (getValue),
   addressCredential,
-  fromCompiledCode,
+  serialiseCompiledCode,
+  SerialisedScript
  )
-import Plutus.V2.Ledger.Contexts qualified as Contexts
+import PlutusLedgerApi.V2.Contexts qualified as Contexts
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
@@ -46,7 +46,7 @@ import TrustlessSidechain.Types (
     previousMerkleRoot,
     sidechainEpoch,
     sidechainParams,
-    validatorHash
+    scriptHash
   ),
   UpdateCommitteeHashRedeemer,
  )
@@ -157,7 +157,7 @@ mkUpdateCommitteeHashValidator sp versioningConfig dat red ctx =
               -- checking if this message is signed is checking if the
               -- transaction corresponds to the message
 
-              let validatorHash' =
+              let scriptHash' =
                     case addressCredential $ txOutAddress o of
                       ScriptCredential vh -> vh
                       _ -> traceError "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-03"
@@ -168,7 +168,7 @@ mkUpdateCommitteeHashValidator sp versioningConfig dat red ctx =
                       , newAggregateCommitteePubKeys = get @"aggregateCommitteePubKeys" ucd
                       , previousMerkleRoot = get @"previousMerkleRoot" red
                       , sidechainEpoch = get @"sidechainEpoch" ucd
-                      , validatorHash = validatorHash'
+                      , scriptHash = scriptHash'
                       }
                in traceIfFalse
                     "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-04"
@@ -245,9 +245,9 @@ mkCommitteeOraclePolicyUntyped =
     . mkCommitteeOraclePolicy
     . PlutusTx.unsafeFromBuiltinData
 
-serialisableCommitteeOraclePolicy :: Script
+serialisableCommitteeOraclePolicy ::  SerialisedScript
 serialisableCommitteeOraclePolicy =
-  fromCompiledCode $$(PlutusTx.compile [||mkCommitteeOraclePolicyUntyped||])
+  serialiseCompiledCode $$(PlutusTx.compile [||mkCommitteeOraclePolicyUntyped||])
 
 mkCommitteeHashValidatorUntyped ::
   BuiltinData ->
@@ -262,6 +262,6 @@ mkCommitteeHashValidatorUntyped uch versioningConfig =
       (PlutusTx.unsafeFromBuiltinData uch)
       (PlutusTx.unsafeFromBuiltinData versioningConfig)
 
-serialisableCommitteeHashValidator :: Script
+serialisableCommitteeHashValidator :: SerialisedScript
 serialisableCommitteeHashValidator =
-  fromCompiledCode $$(PlutusTx.compile [||mkCommitteeHashValidatorUntyped||])
+  serialiseCompiledCode $$(PlutusTx.compile [||mkCommitteeHashValidatorUntyped||])

@@ -4,11 +4,11 @@ module TrustlessSidechain.MerkleRootTokenValidator (
   serialisableValidator,
 ) where
 
-import Plutus.V2.Ledger.Api (Script, fromCompiledCode)
 import PlutusTx (compile, unsafeFromBuiltinData)
 import PlutusTx.Trace qualified as Trace
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (SidechainParams)
+import PlutusLedgerApi.Common (serialiseCompiledCode, SerialisedScript)
 
 -- | 'mkMptRootTokenValidator' always fails.
 --
@@ -25,6 +25,6 @@ mkValidatorUntyped ::
   BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkValidatorUntyped = mkMptRootTokenValidator . PlutusTx.unsafeFromBuiltinData
 
-serialisableValidator :: Script
+serialisableValidator :: SerialisedScript
 serialisableValidator =
-  fromCompiledCode $$(PlutusTx.compile [||mkValidatorUntyped||])
+  serialiseCompiledCode $$(PlutusTx.compile [||mkValidatorUntyped||])

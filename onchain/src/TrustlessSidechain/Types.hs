@@ -37,15 +37,15 @@ module TrustlessSidechain.Types (
   UpdateCommitteeHashRedeemer (..),
 ) where
 
-import Plutus.V1.Ledger.Crypto (PubKeyHash)
-import Plutus.V1.Ledger.Value (AssetClass)
-import Plutus.V2.Ledger.Api (
+import PlutusLedgerApi.V1.Crypto (PubKeyHash)
+import PlutusLedgerApi.V1.Value (AssetClass)
+import PlutusLedgerApi.V2 (
   BuiltinData (BuiltinData),
   CurrencySymbol,
   LedgerBytes (LedgerBytes),
   TokenName,
   TxOutRef,
-  ValidatorHash,
+  ScriptHash,
  )
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
@@ -478,7 +478,7 @@ data UpdateCommitteeHashMessage aggregatePubKeys = UpdateCommitteeHashMessage
   , previousMerkleRoot :: Maybe LedgerBytes
   , sidechainEpoch :: Integer
   , -- | @since v5.0.0
-    validatorHash :: ValidatorHash
+    scriptHash :: ScriptHash
   }
   deriving stock
     ( -- | @since v4.0.0
@@ -491,7 +491,7 @@ data UpdateCommitteeHashMessage aggregatePubKeys = UpdateCommitteeHashMessage
 instance ToData aggregatePubKeys => ToData (UpdateCommitteeHashMessage aggregatePubKeys) where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (UpdateCommitteeHashMessage {..}) =
-    productToData5 sidechainParams newAggregateCommitteePubKeys previousMerkleRoot sidechainEpoch validatorHash
+    productToData5 sidechainParams newAggregateCommitteePubKeys previousMerkleRoot sidechainEpoch scriptHash
 
 -- | @since v4.0.0
 instance FromData aggregatePubKeys => FromData (UpdateCommitteeHashMessage aggregatePubKeys) where

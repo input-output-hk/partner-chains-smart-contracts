@@ -10,7 +10,7 @@ module TrustlessSidechain.CommitteeCandidateValidator (
   serialisableValidator,
 ) where
 
-import Plutus.V2.Ledger.Api (PubKeyHash, Script, fromCompiledCode)
+import PlutusLedgerApi.V2 (PubKeyHash, SerialisedScript, serialiseCompiledCode)
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
@@ -51,6 +51,6 @@ committeeCandidateValidatorUntyped sidechainParams datum red ctx =
       red
       (Unsafe.ScriptContext ctx)
 
-serialisableValidator :: Script
+serialisableValidator :: SerialisedScript
 serialisableValidator =
-  fromCompiledCode $$(PlutusTx.compile [||committeeCandidateValidatorUntyped||])
+  serialiseCompiledCode $$(PlutusTx.compile [||committeeCandidateValidatorUntyped||])

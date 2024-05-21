@@ -10,11 +10,12 @@ module TrustlessSidechain.PermissionedCandidates (
   mkMintingPolicy,
 ) where
 
-import Plutus.V2.Ledger.Api (
+import PlutusLedgerApi.V2 (
   Address,
-  Script,
+  ScriptContext (ScriptContext),
+  TxInfo (txInfoMint, txInfoOutputs),
   TxOut (TxOut),
-  fromCompiledCode,
+  serialiseCompiledCode,
  )
 import PlutusTx qualified
 import TrustlessSidechain.Governance qualified as Governance
@@ -31,7 +32,8 @@ import TrustlessSidechain.Types (
   SidechainParams,
  )
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
-import TrustlessSidechain.Utils (currencySymbolValueOf)
+import TrustlessSidechain.Utils (currencySymbolValueOf, mkUntypedMintingPolicy, mkUntypedValidator)
+import PlutusLedgerApi.Common (SerialisedScript)
 
 -- OnChain error descriptions:
 --
@@ -180,9 +182,9 @@ mkMintingPolicyUntyped sp validatorAddress redeemer ctx =
       (unsafeFromBuiltinData redeemer)
       (Unsafe.wrap ctx)
 
-serialisableMintingPolicy :: Script
+serialisableMintingPolicy :: SerialisedScript
 serialisableMintingPolicy =
-  fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
+  serialiseCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
 
 mkValidatorUntyped ::
   BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
@@ -194,6 +196,6 @@ mkValidatorUntyped sp address redeemer ctx =
       (unsafeFromBuiltinData redeemer)
       (Unsafe.wrap ctx)
 
-serialisableValidator :: Script
+serialisableValidator :: SerialisedScript
 serialisableValidator =
-  fromCompiledCode $$(PlutusTx.compile [||mkValidatorUntyped||])
+  serialiseCompiledCode $$(PlutusTx.compile [||mkValidatorUntyped||])
