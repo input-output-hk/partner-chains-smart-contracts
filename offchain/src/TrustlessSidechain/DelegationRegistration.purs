@@ -1,4 +1,7 @@
-module TrustlessSidechain.DelegationRegistration where
+module TrustlessSidechain.DelegationRegistration
+  ( DelegatorWalletEntry(..)
+  , delegationRegistration
+  ) where
 
 import Contract.Prelude
 
@@ -13,27 +16,24 @@ import Contract.PlutusData
   , toData
   )
 import Contract.Prim.ByteArray (ByteArray)
-import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts as Scripts
-import Contract.TxConstraints
-  ( TxConstraints
+import Contract.Transaction
+  ( TransactionHash
   )
 import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
 import Data.BigInt as BigInt
 import Run (Run)
-import Run.Except (EXCEPT)
-import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Transaction (utxosAt) as Effect
-import TrustlessSidechain.Effects.Wallet (WALLET)
-import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address
   ( getOwnWalletAddress
   , toAddress
   )
 import TrustlessSidechain.Utils.Scripts (mkValidatorWithParams)
+import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(DelegationRegistrationValidator)
   )
@@ -70,16 +70,13 @@ instance ToData DelegatorWalletEntry where
 instance Show DelegatorWalletEntry where
   show = genericShow
 
-getDelegationRegistration ∷
+delegationRegistration ∷
   ∀ r.
   SidechainParams →
   StakePubKeyHash →
   ByteArray →
-  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
-    }
-getDelegationRegistration sp stakePubKeyHash partnerChainWallet = do
+  Run (APP + r) TransactionHash
+delegationRegistration sp stakePubKeyHash partnerChainWallet = do
   let datum = DelegatorWalletEntry { stakePubKeyHash, partnerChainWallet }
   delegationRegistrationValidator ← mkValidatorWithParams
     DelegationRegistrationValidator
@@ -100,3 +97,4 @@ getDelegationRegistration sp stakePubKeyHash partnerChainWallet = do
         TxConstraints.DatumInline
         val
     }
+    >>= balanceSignAndSubmit "DelegationRegistration"
