@@ -27,8 +27,8 @@ import Contract.TxConstraints as Constraints
 import Contract.Value (TokenName, Value)
 import Contract.Value as Value
 import Data.Array as Array
-import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
 import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe

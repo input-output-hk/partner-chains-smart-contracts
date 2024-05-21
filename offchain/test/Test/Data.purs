@@ -7,8 +7,8 @@ import Contract.Prim.ByteArray (ByteArray, byteArrayFromIntArrayUnsafe)
 import Contract.Scripts (ValidatorHash(ValidatorHash))
 import Control.Alt ((<|>))
 import Data.Array.NonEmpty as NE
-import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
 import Data.String.CodeUnits (fromCharArray)
 import Mote.Monad (test)
 import Test.QuickCheck.Arbitrary (arbitrary)

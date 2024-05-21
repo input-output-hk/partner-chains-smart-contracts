@@ -28,8 +28,8 @@ import Contract.Value
   , TokenName
   )
 import Contract.Value as Value
-import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import Run (Run)

@@ -36,9 +36,11 @@ import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Contract.Wallet (getWalletUtxos)
 import Control.Monad.Error.Class as MonadError
+
 import Ctl.Internal.Serialization.Hash as Hash
-import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
+
 import Data.Const (Const)
 import Data.Function (on)
 import Data.List ((:))

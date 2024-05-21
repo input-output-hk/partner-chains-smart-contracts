@@ -27,7 +27,7 @@ import Contract.Scripts
   )
 import Contract.Scripts as Scripts
 import Contract.Value (CurrencySymbol)
-import Data.BigInt (BigInt)
+import JS.BigInt (BigInt)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import TrustlessSidechain.Utils.Data (productFromData2, productToData2)

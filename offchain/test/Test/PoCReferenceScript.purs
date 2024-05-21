@@ -23,8 +23,10 @@ import Contract.TxConstraints
 import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
 import Contract.Wallet as Wallet
+
 import Ctl.Internal.Hashing (scriptRefHash)
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
+
 import Data.Map as Map
 import Mote.Monad as Mote.Monad
 import Test.PlutipTest (PlutipTest)

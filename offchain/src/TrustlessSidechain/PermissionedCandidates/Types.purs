@@ -21,7 +21,7 @@ import Contract.PlutusData
   , toData
   )
 import Contract.Prim.ByteArray (ByteArray)
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import TrustlessSidechain.Utils.Data
   ( productFromData3
   , productToData3

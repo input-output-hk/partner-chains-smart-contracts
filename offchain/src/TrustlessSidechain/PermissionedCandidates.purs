@@ -27,7 +27,7 @@ import Contract.Value (TokenName, Value)
 import Contract.Value as Value
 import Data.Array (nub, sort, (\\))
 import Data.Array as Array
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe

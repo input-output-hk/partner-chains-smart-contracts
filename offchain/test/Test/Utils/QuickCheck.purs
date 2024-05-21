@@ -72,8 +72,8 @@ import Ctl.Internal.Types.ByteArray
   , byteArrayToIntArray
   )
 import Data.Array.NonEmpty as NEA
-import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
 import Data.List.Types as NE
 import Data.NonEmpty (NonEmpty(NonEmpty))
 import Data.Ord (abs)

@@ -16,8 +16,8 @@ import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
 import Data.Array (mapWithIndex)
 import Data.Array as Array
-import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Run (liftEffect) as Run
 import Run.Except (note) as Run

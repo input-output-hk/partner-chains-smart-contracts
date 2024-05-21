@@ -24,7 +24,7 @@ import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
-import Data.BigInt (BigInt)
+import JS.BigInt (BigInt)
 import Data.Maybe as Maybe
 import Partial.Unsafe (unsafePartial)
 import Run (Run)

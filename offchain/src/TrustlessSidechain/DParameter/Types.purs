@@ -8,7 +8,7 @@ import Contract.PlutusData
   ( class FromData
   , class ToData
   )
-import Data.BigInt (BigInt)
+import JS.BigInt (BigInt)
 import TrustlessSidechain.Utils.Data
   ( productFromData2
   , productToData2

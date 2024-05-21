@@ -23,7 +23,7 @@ import Contract.Utxos as Utxos
 import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Control.Applicative as Applicative
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Data.FoldableWithIndex as FoldableWithIndex
 import Data.Map as Map
 import Mote.Monad as Mote.Monad

@@ -26,7 +26,7 @@ import Contract.TxConstraints
 import Contract.TxConstraints as TxConstraints
 import Contract.Value (flattenValue)
 import Data.Array (filter)
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as EcdsaATMSPolicy

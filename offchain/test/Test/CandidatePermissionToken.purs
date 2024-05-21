@@ -9,7 +9,7 @@ import Contract.Prelude
 
 import Contract.Scripts as Scripts
 import Contract.Wallet as Wallet
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Run (Run)
 import Run.Except (EXCEPT)

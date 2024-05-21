@@ -11,7 +11,7 @@ import Contract.Prim.ByteArray as ByteArray
 import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Data.Array as Array
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Data.Maybe as Maybe
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe as Unsafe

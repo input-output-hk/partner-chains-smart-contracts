@@ -29,7 +29,7 @@ import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Contract.Wallet as Wallet
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Data.Semiring as Semiring
 import Data.String as String
 import Mote.Monad as Mote.Monad

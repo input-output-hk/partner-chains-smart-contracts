@@ -13,7 +13,7 @@ import Contract.Scripts (MintingPolicy, Validator)
 import Contract.Transaction (TransactionHash)
 import Contract.Value (CurrencySymbol, TokenName, Value)
 import Contract.Value as Value
-import Data.BigInt (BigInt)
+import JS.BigInt (BigInt)
 import Data.List (List, filter)
 import Data.List as List
 import Run (Run)

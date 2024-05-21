@@ -22,7 +22,7 @@ import Contract.Prelude
 import Contract.PlutusData (class FromData, class ToData)
 import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
 import Contract.Value (TokenName)
-import Data.BigInt (BigInt)
+import JS.BigInt (BigInt)
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PubKey
   , EcdsaSecp256k1Signature

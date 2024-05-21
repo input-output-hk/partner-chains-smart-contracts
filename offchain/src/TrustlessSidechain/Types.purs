@@ -19,7 +19,7 @@ import Contract.Scripts
   )
 import Contract.Value (CurrencySymbol, TokenName, Value, valueOf)
 import Contract.Value as Value
-import Data.BigInt (BigInt)
+import JS.BigInt (BigInt)
 
 -- * Utility types relating to cryptography
 type PubKey = ByteArray

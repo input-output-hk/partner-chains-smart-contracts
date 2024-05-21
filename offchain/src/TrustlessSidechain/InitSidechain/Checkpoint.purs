@@ -16,7 +16,7 @@ import Contract.TxConstraints (DatumPresence(..), TxConstraints)
 import Contract.TxConstraints as Constraints
 import Contract.Value as Value
 import Data.Array ((:))
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Data.Maybe (isJust)
 import Run (Run)
 import Run.Except (EXCEPT)

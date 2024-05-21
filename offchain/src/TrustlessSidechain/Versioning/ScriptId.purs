@@ -9,7 +9,7 @@ import Contract.PlutusData
   , class ToData
   , PlutusData(Integer)
   )
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 

@@ -31,8 +31,8 @@ import Ctl.Internal.Serialization.Hash
 import Data.Argonaut (Json)
 import Data.Argonaut.Core as J
 import Data.Array as Array
-import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
 import Data.Codec.Argonaut as CA
 import Data.Codec.Argonaut.Record as CAR
 import Data.Profunctor (wrapIso)

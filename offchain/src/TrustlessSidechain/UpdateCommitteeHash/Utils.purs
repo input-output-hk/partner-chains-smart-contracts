@@ -37,7 +37,7 @@ import Contract.Transaction
   , TransactionOutputWithRefScript
   )
 import Contract.Value as Value
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy

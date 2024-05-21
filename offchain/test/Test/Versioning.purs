@@ -6,7 +6,7 @@ import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
 import Data.Array as Array
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Data.List as List
 import Mote.Monad as Mote.Monad
 import Run (AFF, EFFECT, Run)

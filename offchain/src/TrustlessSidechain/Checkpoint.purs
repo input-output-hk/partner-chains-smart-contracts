@@ -15,7 +15,7 @@ import Contract.Transaction (TransactionHash)
 import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol)
-import Data.BigInt (BigInt)
+import JS.BigInt (BigInt)
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT)

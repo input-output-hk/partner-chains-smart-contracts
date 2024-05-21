@@ -11,7 +11,7 @@ import Contract.PlutusData
   , PlutusData(Integer)
   )
 import Contract.Value (CurrencySymbol, TokenName)
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import TrustlessSidechain.Utils.Data
   ( productFromData2
   , productToData2

@@ -29,7 +29,7 @@ import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as Constraints
 import Contract.Value as Value
 import Data.Array (fromFoldable) as Array
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Data.List (List)
 import Data.List as List
 import Data.Map as Map

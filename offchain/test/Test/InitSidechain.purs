@@ -12,7 +12,7 @@ import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Control.Monad.Error.Class as MonadError
 import Data.Array as Array
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Data.Map as Map
 import Data.Set as Set
 import Mote.Monad as Mote.Monad

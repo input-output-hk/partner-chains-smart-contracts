@@ -33,7 +33,7 @@ import Contract.Value
 import Data.Argonaut (Json)
 import Data.Argonaut.Core as J
 import Data.Bifunctor (rmap)
-import Data.BigInt (BigInt)
+import JS.BigInt (BigInt)
 import Data.Codec.Argonaut as CA
 import Data.Codec.Argonaut.Compat as CAC
 import Data.List (List)

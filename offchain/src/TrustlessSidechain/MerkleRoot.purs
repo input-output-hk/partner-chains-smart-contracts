@@ -24,7 +24,7 @@ import Contract.TxConstraints
   )
 import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT)

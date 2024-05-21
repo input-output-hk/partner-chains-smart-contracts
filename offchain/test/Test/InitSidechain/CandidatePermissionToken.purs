@@ -4,8 +4,8 @@ import Contract.Prelude
 
 import Contract.Log as Log
 import Contract.Wallet as Wallet
-import Data.BigInt (fromInt)
-import Data.BigInt as BigInt
+import JS.BigInt (fromInt)
+import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Test.InitSidechain.Utils (failMsg)
 import Test.PlutipTest (PlutipTest)

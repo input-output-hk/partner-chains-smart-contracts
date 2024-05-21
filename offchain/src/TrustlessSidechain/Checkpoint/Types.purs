@@ -16,7 +16,7 @@ import Contract.PlutusData
   , toData
   )
 import Contract.Prim.ByteArray (ByteArray)
-import Data.BigInt (BigInt)
+import JS.BigInt (BigInt)
 import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSAggregateSignatures)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (AssetClass)

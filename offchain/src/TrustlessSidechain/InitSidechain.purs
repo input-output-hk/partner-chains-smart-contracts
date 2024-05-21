@@ -26,7 +26,7 @@ import Contract.Prelude
 import Contract.PlutusData (PlutusData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Transaction (TransactionHash, TransactionInput)
-import Data.BigInt (BigInt)
+import JS.BigInt (BigInt)
 import Data.Maybe (isJust)
 import Run (Run)
 import TrustlessSidechain.CandidatePermissionToken

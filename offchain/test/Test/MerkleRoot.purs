@@ -16,7 +16,7 @@ import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.Bifunctor (lmap)
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Run (Run)
 import Run (liftEffect) as Run

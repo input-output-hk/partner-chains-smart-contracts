@@ -39,7 +39,7 @@ import Contract.Utxos (UtxoMap)
 import Contract.Value as Value
 import Control.Alternative (guard)
 import Data.Array (catMaybes)
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT, throw)

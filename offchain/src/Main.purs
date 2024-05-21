@@ -9,7 +9,7 @@ import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Control.Monad.Error.Class (throwError)
 import Data.Array as Array
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Data.List as List
 import Data.List.NonEmpty as NonEmpty
 import Data.List.Types as Data.List.Types

@@ -14,7 +14,7 @@ import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as Constraints
 import Contract.Value (TokenName)
 import Contract.Value as Value
-import Data.BigInt (BigInt)
+import JS.BigInt (BigInt)
 import TrustlessSidechain.Types (CurrencyInfo)
 
 -- | Build lookups and constraints to mint one token of a given name for a

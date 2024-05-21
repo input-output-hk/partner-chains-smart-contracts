@@ -43,8 +43,8 @@ import Contract.Prim.ByteArray as ByteArray
 import Contract.Value (TokenName)
 import Contract.Value as Value
 import Data.Array as Array
-import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
 import Data.Function (on)
 import Data.Maybe as Maybe
 import Data.Ord as Ord

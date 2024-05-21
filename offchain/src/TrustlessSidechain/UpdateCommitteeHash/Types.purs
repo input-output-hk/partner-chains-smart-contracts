@@ -18,7 +18,7 @@ import Contract.PlutusData
   , toData
   )
 import Contract.Scripts (ValidatorHash)
-import Data.BigInt (BigInt)
+import JS.BigInt (BigInt)
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Data

@@ -62,8 +62,8 @@ import Ctl.Internal.Serialization.Hash
   ( ed25519KeyHashFromBytes
   , scriptHashFromBytes
   )
-import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
 import Data.Either as Either
 import Data.String (Pattern(Pattern), split, stripPrefix)
 import Data.UInt (UInt)

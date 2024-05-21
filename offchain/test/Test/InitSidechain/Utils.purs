@@ -12,8 +12,8 @@ import Contract.Scripts (MintingPolicy, Validator)
 import Contract.Value (TokenName)
 import Ctl.Internal.Types.TokenName as Value
 import Data.Array as Array
-import Data.BigInt (fromInt)
-import Data.BigInt as BigInt
+import JS.BigInt (fromInt)
+import JS.BigInt as BigInt
 import Data.List (List)
 import Data.List as List
 import TrustlessSidechain.Versioning.ScriptId as Types
