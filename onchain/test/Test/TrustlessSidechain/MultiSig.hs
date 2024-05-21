@@ -4,12 +4,15 @@ module Test.TrustlessSidechain.MultiSig (test) where
 import Control.Applicative ((<|>))
 import Control.Monad (fail, guard)
 import Crypto.Secp256k1 qualified as SECP
+import Crypto.Secp256k1.Internal.Context qualified as SECP.Internal (createContext)
+
 import Data.List qualified as List
 import Data.String qualified as HString
 import Data.Word (Word8)
 import GHC.Exts (fromListN)
 import GHC.Real (fromRational)
 import PlutusLedgerApi.V2 (LedgerBytes (LedgerBytes))
+import System.IO.Unsafe (unsafePerformIO)
 import Test.QuickCheck (
   Arbitrary (arbitrary, shrink),
   Property,
@@ -27,8 +30,6 @@ import Test.Tasty.QuickCheck (QuickCheckTests, testProperty)
 import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CommitteePlainATMSPolicy
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
-
-import Prelude (undefined) -- todo remove when liftG is removded
 
 test :: TestTree
 test =
@@ -122,7 +123,7 @@ instance Arbitrary SufficientVerification where
   arbitrary = do
     privKeys <- Gen.listOf1 $ QCExtra.suchThatMap (Gen.vectorOf 32 arbitrary) mkPrivKey
     -- need a function that lifts IO Ctx to
-    ctx <- genCtx
+    let ctx  = unsafePerformIO SECP.Internal.createContext
     let pubKeys = TSPrelude.fmap (SECP.derivePubKey ctx) privKeys
     (message, messageBS) <- QCExtra.suchThatMap (Gen.vectorOf 32 arbitrary) $ \bytes -> do
       let bs = fromListN 32 bytes
@@ -230,6 +231,7 @@ signWithKey ctx sk =
     . toBuiltin
     . SECP.exportSig ctx
     . SECP.signMsg ctx sk
+<<<<<<< HEAD
 
 -- TODO remove this oncde we find `lift` like function
 genCtx :: Gen  SECP.Ctx
@@ -239,3 +241,5 @@ genCtx  = undefined
 -- genCtx' :: MonadIO m => m (Gen SECP.Ctx)
 -- genCtx' =
 --   liftIO createContext >>= return . return
+=======
+>>>>>>> d108cab0 (693/onchain-ghc9.x)
