@@ -36,7 +36,7 @@ import Contract.Transaction as BalanceTxError
 import Contract.TxConstraints (TxConstraints)
 import Contract.Utxos (UtxoMap)
 import Contract.Utxos (getUtxo, utxosAt) as Transaction
-import Ctl.Internal.Plutus.Types.Address (class PlutusAddress, getAddress)
+import Cardano.Plutus.Types.Address (class PlutusAddress, getAddress)
 import Effect.Aff (Error)
 import Run (Run, interpret, on, send)
 import Run as Run

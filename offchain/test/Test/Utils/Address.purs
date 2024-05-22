@@ -9,7 +9,7 @@ import Contract.Address
   )
 import Contract.CborBytes (hexToCborBytesUnsafe)
 import Contract.Credential (Credential(..))
-import Ctl.Internal.Deserialization.FromBytes (fromBytes)
+import Cardano.Serialization.Lib (fromBytes)
 import Data.Const (Const)
 import Mote.Monad (Mote)
 import Mote.Monad as Mote.Monad

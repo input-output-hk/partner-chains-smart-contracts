@@ -12,7 +12,7 @@ import Contract.Prelude
 
 import Aeson as Aeson
 import Contract.Address (PubKeyHash)
-import Contract.AssocMap as Plutus.Map
+import Cardano.Plutus.Types.Map as Plutus.Map
 import Contract.Prim.ByteArray
   ( ByteArray
   , byteArrayToHex
@@ -24,7 +24,7 @@ import Contract.Transaction
   , TransactionInput(TransactionInput)
   )
 import Contract.Value (TokenName)
-import Ctl.Internal.Serialization.Hash
+import Cardano.Serialization.Lib
   ( ed25519KeyHashFromBytes
   , ed25519KeyHashToBytes
   )

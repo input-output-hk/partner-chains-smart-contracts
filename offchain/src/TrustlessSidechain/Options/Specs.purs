@@ -18,7 +18,7 @@ import Contract.Wallet
   )
 import Control.Alternative ((<|>))
 import Ctl.Internal.Helpers (logWithLevel)
-import Ctl.Internal.Serialization.Hash (ed25519KeyHashFromBytes)
+import Cardano.Serialization.Lib (ed25519KeyHashFromBytes)
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.List (List)

@@ -56,9 +56,9 @@ import Contract.Transaction
   )
 import Contract.Value (TokenName)
 import Contract.Value as Value
-import Ctl.Internal.Plutus.Conversion.Address as Conversion.Address
-import Ctl.Internal.Serialization.Address as Serialization.Address
-import Ctl.Internal.Serialization.Hash
+import Cardano.Plutus.Types.Address as Conversion.Address
+import Cardano.Types.Address as Serialization.Address
+import Cardano.Serialization.Lib
   ( ed25519KeyHashFromBytes
   , scriptHashFromBytes
   )

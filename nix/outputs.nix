@@ -11,17 +11,7 @@ in [
   (
     project.flake
   )
-  rec {
-    pkgs-ctl = import inputs.nixpkgs-ctl {
-      inherit system;
-      overlays = [
-        (import "${inputs.iohk-nix}/overlays/crypto")
-        inputs.haskell-nix.overlay
-        inputs.cardano-transaction-lib.overlays.runtime
-        inputs.cardano-transaction-lib.overlays.purescript
-        inputs.cardano-transaction-lib.overlays.spago
-      ];
-    };
+  {
     apps = rec {
       default = sidechain-main-cli;
       sidechain-main-cli = {
@@ -59,7 +49,7 @@ in [
       in
         pkgs.mkShell {
           inputsFrom = [shell];
-          packages = [pkgs-ctl.nodejs pkgs.git];
+          packages = [pkgs.nodejs pkgs.git];
           shellHook = ''
             PROJ_ROOT=$(git rev-parse --show-toplevel)
             if [ ! -e "$PROJ_ROOT/offchain/src/TrustlessSidechain/CLIVersion.purs" ]; then

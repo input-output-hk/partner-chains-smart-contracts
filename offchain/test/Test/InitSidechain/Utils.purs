@@ -6,11 +6,11 @@ module Test.InitSidechain.Utils
 
 import Prelude
 
-import Contract.AssocMap as Plutus.Map
+import Cardano.Plutus.Types.Map as Plutus.Map
 import Contract.Prelude (Tuple, foldr, (/\))
 import Contract.Scripts (MintingPolicy, Validator)
 import Contract.Value (TokenName)
-import Ctl.Internal.Types.TokenName as Value
+import Cardano.Types.AssetName as Value
 import Data.Array as Array
 import Data.BigInt (fromInt)
 import Data.BigInt as BigInt

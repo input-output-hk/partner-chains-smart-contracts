@@ -5,11 +5,9 @@
   lib,
   system,
   ...
-}: let
-  pkgs-ctl = inputs.self.pkgs-ctl;
-in {
+}: {
   formatCheck =
-    pkgs-ctl.runCommand "format-check"
+    pkgs.runCommand "format-check"
     {
       nativeBuildInputs =
         inputs.self.devShells.hs.nativeBuildInputs
@@ -40,7 +38,7 @@ in {
   upToDatePlutusScriptCheck = let
     hsProject = repoRoot.nix.project.flake;
   in
-    pkgs-ctl.runCommand "up-to-date-plutus-scripts-check"
+    pkgs.runCommand "up-to-date-plutus-scripts-check"
     {
       nativeBuildInputs =
         inputs.self.devShells.hs.nativeBuildInputs
@@ -85,7 +83,7 @@ in {
     # Unfortunately the original did not accept a modified project
     runPursTest = {
       project,
-      pkgs ? pkgs-ctl,
+      pkgs ? pkgs,
       testMain ? "Test.Main",
       name ? "trustless-sidechain-ctl-check",
       nodeModules ? project.nodeModules,
@@ -93,7 +91,7 @@ in {
       buildInputs ? [],
       ...
     }:
-      pkgs-ctl.runCommand "${name}"
+      pkgs.runCommand "${name}"
       (
         {
           buildInputs = [project.compiled nodeModules] ++ buildInputs;
@@ -103,14 +101,14 @@ in {
       )
       ''
         cd ${project.compiled}
-        ${pkgs-ctl.nodejs}/bin/node --enable-source-maps -e 'require("./output/${testMain}").main()'
+        ${pkgs.nodejs}/bin/node --enable-source-maps -e 'require("./output/${testMain}").main()'
         touch $out
       '';
     runPlutipTest = args:
       runPursTest (
         args
         // {
-          buildInputs = with pkgs-ctl;
+          buildInputs = with pkgs;
             [
               ogmios
               plutip-server

@@ -8,7 +8,7 @@ module TrustlessSidechain.InitSidechain.Init
 
 import Contract.Prelude
 
-import Contract.AssocMap as Plutus.Map
+import Cardano.Plutus.Types.Map as Plutus.Map
 import Contract.Scripts (MintingPolicy, Validator)
 import Contract.Transaction (TransactionHash)
 import Contract.Value (CurrencySymbol, TokenName, Value)

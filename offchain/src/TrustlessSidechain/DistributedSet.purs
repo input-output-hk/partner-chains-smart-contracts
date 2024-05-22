@@ -30,7 +30,7 @@ module TrustlessSidechain.DistributedSet
 import Contract.Prelude
 
 import Contract.Address (Address)
-import Contract.AssocMap as AssocMap
+import Cardano.Plutus.Types.Map as AssocMap
 import Contract.PlutusData
   ( class FromData
   , class ToData

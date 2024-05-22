@@ -37,7 +37,7 @@ import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Contract.Wallet (getWalletUtxos)
 import Control.Monad.Error.Class as MonadError
-import Ctl.Internal.Serialization.Hash as Hash
+import Cardano.Serialization.Lib as Hash
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Const (Const)

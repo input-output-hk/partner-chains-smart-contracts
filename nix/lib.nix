@@ -5,24 +5,22 @@
   lib,
   system,
   ...
-}: let
-  pkgs-ctl = inputs.self.pkgs-ctl;
-in {
+}: {
   mkPurescriptProject = let
-    project = pkgs-ctl.purescriptProject {
+    project = pkgs.purescriptProject {
       projectName = "sidechain-main-cli";
       src = builtins.path {
         path = ../offchain;
         name = "sidechain-main-cli-src";
         # TODO: Add more filters
-        filter = path: ftype: !(pkgs-ctl.lib.hasSuffix ".md" path);
+        filter = path: ftype: !(pkgs.lib.hasSuffix ".md" path);
       };
 
       packageJson = ../offchain/package.json;
       packageLock = ../offchain/package-lock.json;
       spagoPackages = ../offchain/spago-packages.nix;
       withRuntime = true;
-      shell.packages = with pkgs-ctl; [
+      shell.packages = with pkgs; [
         # Shell Utils
         bashInteractive
         git
@@ -44,13 +42,12 @@ in {
           then inputs.self.rev
           else inputs.self.dirtyRev;
       in ''
-        srcDir=$(echo "$src" | sed 's|/nix/store/||')
-        chmod -R +w $srcDir/
-        substituteInPlace $srcDir/set_version.sh \
-          --replace 'jq' '${pkgs-ctl.jq}/bin/jq'
-        sed -i 's/gitHash=".*"/gitHash="${rev}"/' $srcDir/set_version.sh
-        pushd $srcDir
-        ${pkgs-ctl.bash}/bin/bash set_version.sh
+        chmod -R +w src
+        substituteInPlace src/set_version.sh \
+          --replace 'jq' '${pkgs.jq}/bin/jq'
+        sed -i 's/gitHash=".*"/gitHash="${rev}"/' src/set_version.sh
+        pushd src
+        ${pkgs.bash}/bin/bash set_version.sh
         popd
       '';
     });
