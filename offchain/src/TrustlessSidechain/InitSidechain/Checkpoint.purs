@@ -23,6 +23,7 @@ import TrustlessSidechain.Checkpoint.Types as Checkpoint.Types
 import TrustlessSidechain.Checkpoint.Utils as Checkpoint
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
 import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Log (logDebug', logInfo')
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.InitSidechain.Init (init, insertScriptsIdempotent)
@@ -45,26 +46,23 @@ initCheckpoint ∷
         { initTransactionIds ∷ Array TransactionHash
         }
     )
-initCheckpoint
-  sidechainParams
-  initGenesisHash
-  initATMSKind
-  version = do
-  let
-    run = init
-      ( \op → balanceSignAndSubmit op
-          <=< initCheckpointLookupsAndConstraints initGenesisHash
-      )
-      "Checkpoint init"
-      Checkpoint.checkpointInitTokenName
+initCheckpoint sidechainParams initGenesisHash initATMSKind version = do
 
+  logDebug' "Attempting to initialize Checkpoint versioning scripts"
   scriptsInitTxId ← insertScriptsIdempotent getCheckpointPoliciesAndValidators
     sidechainParams
     initATMSKind
     version
 
   if not $ null scriptsInitTxId then do
-    checkpointInitTxId ← run sidechainParams
+    logInfo' "Attempting to mint Checkpoint NFT from the init token"
+    checkpointInitTxId ← init
+      ( \op → balanceSignAndSubmit op
+          <=< initCheckpointLookupsAndConstraints initGenesisHash
+      )
+      "Checkpoint init"
+      Checkpoint.checkpointInitTokenName
+      sidechainParams
     pure
       ( Just
           { initTransactionIds: checkpointInitTxId : scriptsInitTxId

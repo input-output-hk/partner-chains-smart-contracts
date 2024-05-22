@@ -15,6 +15,7 @@ import TrustlessSidechain.CandidatePermissionToken
   )
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Log (logInfo')
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.InitSidechain.Init (init)
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -33,29 +34,26 @@ initCandidatePermissionToken ∷
 initCandidatePermissionToken
   sidechainParams
   initCandidatePermissionTokenMintInfo = do
-  let
-    run = init
+
+  -- Note: normally we would need to insert versioned scripts first - c.f. other
+  -- initialization routines in the InitSidechain directory - but the candidate
+  -- permission token mechanism does not version any validators or minting
+  -- policies.
+
+  logInfo' "Attempting to mint candidate permission tokens from the init token"
+  candidatePermissionTokenInitTxId ← init
       ( \op → balanceSignAndSubmit op
           <=< initCandidatePermissionTokenLookupsAndConstraints
             initCandidatePermissionTokenMintInfo
       )
       "Candidate permission token init"
-      candidatePermissionInitTokenName
+      candidatePermissionInitTokenName sidechainParams
 
-  -- Note: normally we would need to insert versioned scripts in this place -
-  -- c.f. other initialization routines in the InitSidechain directory - but the
-  -- candidate permission token mechanism does not version any validators or
-  -- minting policies.
-
-  -- JSTOLAREK: a temporary solution until #772 is properly fixed
-  -- if not $ null scriptsInitTxId then do
-  candidatePermissionTokenInitTxId ← run sidechainParams
   pure
     ( Just
         { initTransactionIds: [ candidatePermissionTokenInitTxId ]
         }
     )
-  --  else pure Nothing
 
 -- | `initCandidatePermissionTokenLookupsAndConstraints` creates the lookups and
 -- | constraints required when initalizing the candidiate permission tokens (this does NOT

@@ -86,24 +86,8 @@ initFuel ∷
         { initTransactionIds ∷ Array TransactionHash
         }
     )
-initFuel
-  sidechainParams
-  initSidechainEpoch
-  initAggregatedCommittee
-  initATMSKind
-  version = do
-  let
-    msg = "Initialize FUEL, Distributed Set, and committee selection"
-    run = init
-      ( \op sp → do
-          fuel ← initFuelAndDsLookupsAndConstraints sp version
-          committee ← initCommitteeHashLookupsAndConstraints
-            initSidechainEpoch
-            initAggregatedCommittee
-            sp
-          balanceSignAndSubmit op (fuel <> committee)
-      )
-      msg
+initFuel sidechainParams initSidechainEpoch initAggregatedCommittee
+  initATMSKind version = do
 
   logDebug' "Attempting to initialize FUEL versioning scripts"
   scriptsInitTxIdFuel ← insertScriptsIdempotent getFuelPoliciesAndValidators
@@ -140,8 +124,19 @@ initFuel
     -- by checking whether the DistributedSet.dsInitTokenName
     -- exists. There is no such init token for FUELMintingPolicy,
     -- FUELProxyPolicy etc.
-    logInfo' msg
-    fuelInitTxId ← run DistributedSet.dsInitTokenName sidechainParams
+    logInfo' "Attempting to mint DS and Committee NFTs from the init tokens"
+    fuelInitTxId ← init
+      ( \op sp → do
+          fuel ← initFuelAndDsLookupsAndConstraints sp version
+          committee ← initCommitteeHashLookupsAndConstraints
+            initSidechainEpoch
+            initAggregatedCommittee
+            sp
+          balanceSignAndSubmit op (fuel <> committee)
+      )
+      "Initialize FUEL, Distributed Set, and committee selection"
+      DistributedSet.dsInitTokenName
+      sidechainParams
 
     pure
       ( Just
