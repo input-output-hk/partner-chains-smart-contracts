@@ -93,10 +93,9 @@ data EndpointResp
       , sidechainAddresses ∷ SidechainAddresses
       }
   | InitFuelResp
-      ( Maybe
-          { initTransactionIds ∷ Array ByteArray
-          }
-      )
+      { scriptsInitTxIds ∷ Array ByteArray
+      , tokensInitTxId ∷ Maybe ByteArray
+      }
   | InitResp
       { transactionId ∷ ByteArray
       , initTransactionIds ∷ Array ByteArray
@@ -104,15 +103,11 @@ data EndpointResp
       , sidechainAddresses ∷ SidechainAddresses
       }
   | InitCheckpointResp
-      ( Maybe
-          { initTransactionIds ∷ Array ByteArray
-          }
-      )
+      { scriptsInitTxIds ∷ Array ByteArray
+      , tokensInitTxId ∷ Maybe ByteArray
+      }
   | InitCandidatePermissionTokenResp
-      ( Maybe
-          { initTransactionIds ∷ Array ByteArray
-          }
-      )
+      { initTransactionId ∷ Maybe ByteArray }
   | SaveCheckpointResp { transactionId ∷ ByteArray }
   | InsertVersionResp { versioningTransactionIds ∷ Array ByteArray }
   | UpdateVersionResp { versioningTransactionIds ∷ Array ByteArray }
@@ -312,29 +307,31 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
           ]
 
     InitCheckpointResp
-      resp →
-      let
-        encodeInitCheckpointResp
-          { initTransactionIds
-          } =
-          J.fromObject $
-            Object.fromFoldable
-              [ "endpoint" /\ J.fromString "InitCheckpoint"
-              , "initTransactionIds" /\ J.fromArray
-                  (map (J.fromString <<< byteArrayToHex) initTransactionIds)
-              ]
-      in
-        CA.encode (CAC.maybe CA.json) (map encodeInitCheckpointResp resp)
+      { scriptsInitTxIds
+      , tokensInitTxId
+      } →
+      J.fromObject $
+        Object.fromFoldable
+          [ "endpoint" /\ J.fromString "InitCheckpoint"
+          , "scriptsInitTxIds" /\ J.fromArray
+              (map (J.fromString <<< byteArrayToHex) scriptsInitTxIds)
+          , "tokensInitTxId" /\ CA.encode
+              (CAC.maybe CA.string)
+              (map byteArrayToHex tokensInitTxId)
+          ]
 
-    InitFuelResp res →
-      case res of
-        Nothing → J.jsonNull
-        Just
-          { initTransactionIds
-          } → J.fromObject $ Object.fromFoldable
+    InitFuelResp
+      { scriptsInitTxIds
+      , tokensInitTxId
+      } →
+      J.fromObject $
+        Object.fromFoldable
           [ "endpoint" /\ J.fromString "InitFuel"
-          , "initTransactionIds" /\ J.fromArray
-              (map (J.fromString <<< byteArrayToHex) initTransactionIds)
+          , "scriptsInitTxIds" /\ J.fromArray
+              (map (J.fromString <<< byteArrayToHex) scriptsInitTxIds)
+          , "tokensInitTxId" /\ CA.encode
+              (CAC.maybe CA.string)
+              (map byteArrayToHex tokensInitTxId)
           ]
 
     InitResp
@@ -369,19 +366,14 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
                   )
               )
           ]
-    InitCandidatePermissionTokenResp resp →
-      let
-        encodeInitCommitteeSelectionResp
-          { initTransactionIds
-          } =
-          J.fromObject $
-            Object.fromFoldable
-              [ "endpoint" /\ J.fromString "InitCandidatePermissionToken"
-              , "initTransactionIds" /\ J.fromArray
-                  (map (J.fromString <<< byteArrayToHex) initTransactionIds)
-              ]
-      in
-        CA.encode (CAC.maybe CA.json) (map encodeInitCommitteeSelectionResp resp)
+    InitCandidatePermissionTokenResp { initTransactionId } →
+      J.fromObject $
+        Object.fromFoldable
+          [ "endpoint" /\ J.fromString "InitCandidatePermissionToken"
+          , "initTransactionId" /\ CA.encode
+              (CAC.maybe CA.string) -- Nothing encoded to null
+              (map (byteArrayToHex) initTransactionId)
+          ]
     SaveCheckpointResp { transactionId } →
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "SaveCheckpoint"

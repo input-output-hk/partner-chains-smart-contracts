@@ -9,13 +9,13 @@ import Contract.Prelude
   , Void
   , bind
   , discard
-  , not
   , null
   , one
   , pure
   , show
   , unwrap
   , ($)
+  , (&&)
   , (<>)
   , (>>=)
   , (>>>)
@@ -31,7 +31,6 @@ import Contract.TxConstraints
   )
 import Contract.TxConstraints as Constraints
 import Contract.Value as Value
-import Data.Array ((:))
 import Data.BigInt (BigInt)
 import Run (Run)
 import Run.Except (EXCEPT, note, throw)
@@ -52,7 +51,11 @@ import TrustlessSidechain.Error
   )
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import TrustlessSidechain.FUELMintingPolicy.V2 as FUELMintingPolicy.V2
-import TrustlessSidechain.InitSidechain.Init (init, insertScriptsIdempotent)
+import TrustlessSidechain.InitSidechain.Init
+  ( getScriptsToInsert
+  , init
+  , insertScriptsIdempotent
+  )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
@@ -82,13 +85,17 @@ initFuel ∷
   ATMSKinds →
   Int → -- version
   Run (APP + r)
-    ( Maybe
-        { initTransactionIds ∷ Array TransactionHash
-        }
-    )
-initFuel sidechainParams initSidechainEpoch initAggregatedCommittee
-  initATMSKind version = do
+    { scriptsInitTxIds ∷ Array TransactionHash
+    , tokensInitTxId ∷ Maybe TransactionHash
+    }
+initFuel
+  sidechainParams
+  initSidechainEpoch
+  initAggregatedCommittee
+  initATMSKind
+  version = do
 
+  -- Attempt to insert scripts into the versioning system
   logDebug' "Attempting to initialize FUEL versioning scripts"
   scriptsInitTxIdFuel ← insertScriptsIdempotent getFuelPoliciesAndValidators
     sidechainParams
@@ -115,17 +122,35 @@ initFuel sidechainParams initSidechainEpoch initAggregatedCommittee
     version
 
   let
-    scriptsInitTxId =
+    scriptsInitTxIds =
       scriptsInitTxIdFuel <> scriptsInitTxIdDs <> scriptsInitTxIdMT <>
         scriptsInitTxIdCommittee
 
-  if not $ null scriptsInitTxId then do
+  -- Before proceeding with minting tokens we need to make sure that all the
+  -- required scripts have been succesfully versioned.  We begin by acquiring
+  -- the scripts that are actually in the versioning system.
+  fuelScripts ← getFuelPoliciesAndValidators sidechainParams version
+  dsScripts ← getDsPoliciesAndValidators sidechainParams version
+  merkleRootScripts ←
+    getMerkleRootPoliciesAndValidators sidechainParams version
+  committeeScripts ← getCommitteeSelectionPoliciesAndValidators initATMSKind
+    sidechainParams
+    version
+
+  { versionedPolicies, versionedValidators } ←
+    getScriptsToInsert sidechainParams initATMSKind
+      (fuelScripts <> dsScripts <> merkleRootScripts <> committeeScripts)
+      version
+
+  -- If all versioned scripts have been inserted we can proceed with minting the
+  -- NFTs and other tokens.
+  if null versionedPolicies && null versionedValidators then do
     -- NOTE: We check whether init-fuel is allowed
     -- by checking whether the DistributedSet.dsInitTokenName
     -- exists. There is no such init token for FUELMintingPolicy,
     -- FUELProxyPolicy etc.
     logInfo' "Attempting to mint DS and Committee NFTs from the init tokens"
-    fuelInitTxId ← init
+    tokensInitTxId ← init
       ( \op sp → do
           fuel ← initFuelAndDsLookupsAndConstraints sp version
           committee ← initCommitteeHashLookupsAndConstraints
@@ -138,14 +163,10 @@ initFuel sidechainParams initSidechainEpoch initAggregatedCommittee
       DistributedSet.dsInitTokenName
       sidechainParams
 
-    pure
-      ( Just
-          { initTransactionIds: fuelInitTxId : scriptsInitTxId
-          }
-      )
-  else do
-    logInfo' "Versioning scripts for FUEL and Ds have already been initialized"
-    pure Nothing
+    pure { scriptsInitTxIds, tokensInitTxId }
+
+  else
+    pure { scriptsInitTxIds, tokensInitTxId: Nothing }
 
 -- | `initFuelAndDsLookupsAndConstraints` creates the lookups and
 -- | constraints required when initalizing the distributed set used

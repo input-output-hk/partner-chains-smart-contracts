@@ -406,13 +406,15 @@ runTxEndpoint sidechainEndpointParams endpoint =
             , initGovernanceAuthority: sc.governanceAuthority
             }
 
-        resp ← initCheckpoint (toSidechainParams isc)
+        resp ← initCheckpoint
+          (toSidechainParams isc)
           isc.initGenesisHash
           isc.initATMSKind
           version
-        pure $ InitCheckpointResp $ map
-          (\r → r { initTransactionIds = map unwrap r.initTransactionIds })
-          resp
+        pure $ InitCheckpointResp
+          { scriptsInitTxIds: map unwrap resp.scriptsInitTxIds
+          , tokensInitTxId: map unwrap resp.tokensInitTxId
+          }
       Init
         { committeePubKeysInput
         , initSidechainEpoch
@@ -476,14 +478,11 @@ runTxEndpoint sidechainEndpointParams endpoint =
         } → do
         resp ← initCandidatePermissionToken scParams
           initCandidatePermissionTokenMintInfo
-        pure $ InitCandidatePermissionTokenResp $ map
-          (\r → r { initTransactionIds = map unwrap r.initTransactionIds })
-          resp
+        pure $ InitCandidatePermissionTokenResp
+          { initTransactionId: map unwrap resp
+          }
 
       InitFuel { initSidechainEpoch, committeePubKeysInput, version } → do
-        let
-          toResp r = r { initTransactionIds = map unwrap r.initTransactionIds }
-
         rawCommitteePubKeys ← ConfigFile.getCommittee
           committeePubKeysInput
 
@@ -492,12 +491,17 @@ runTxEndpoint sidechainEndpointParams endpoint =
           , committeePubKeys: NonEmpty.toUnfoldable rawCommitteePubKeys
           }
 
-        map (InitFuelResp <<< map toResp) $
+        resp ←
           initFuel scParams
             initSidechainEpoch
             committeePubKeys
             atmsKind
             version
+
+        pure $ InitFuelResp
+          { scriptsInitTxIds: map unwrap resp.scriptsInitTxIds
+          , tokensInitTxId: map unwrap resp.tokensInitTxId
+          }
 
       CommitteeHandover
         { merkleRoot

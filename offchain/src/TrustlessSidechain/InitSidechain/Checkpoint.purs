@@ -14,7 +14,6 @@ import Contract.Transaction (TransactionHash)
 import Contract.TxConstraints (DatumPresence(..), TxConstraints)
 import Contract.TxConstraints as Constraints
 import Contract.Value as Value
-import Data.Array ((:))
 import Data.BigInt as BigInt
 import Run (Run)
 import Run.Except (EXCEPT)
@@ -26,7 +25,11 @@ import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Log (logDebug', logInfo')
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
-import TrustlessSidechain.InitSidechain.Init (init, insertScriptsIdempotent)
+import TrustlessSidechain.InitSidechain.Init
+  ( getScriptsToInsert
+  , init
+  , insertScriptsIdempotent
+  )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning (getCheckpointPoliciesAndValidators)
@@ -42,33 +45,41 @@ initCheckpoint ∷
   ATMSKinds →
   Int →
   Run (APP + r)
-    ( Maybe
-        { initTransactionIds ∷ Array TransactionHash
-        }
-    )
+    { scriptsInitTxIds ∷ Array TransactionHash
+    , tokensInitTxId ∷ Maybe TransactionHash
+    }
 initCheckpoint sidechainParams initGenesisHash initATMSKind version = do
 
+  -- Attempt to insert scripts into the versioning system
   logDebug' "Attempting to initialize Checkpoint versioning scripts"
-  scriptsInitTxId ← insertScriptsIdempotent getCheckpointPoliciesAndValidators
+  scriptsInitTxIds ← insertScriptsIdempotent getCheckpointPoliciesAndValidators
     sidechainParams
     initATMSKind
     version
 
-  if not $ null scriptsInitTxId then do
+  -- Before proceeding with minting tokens we need to make sure that all the
+  -- required scripts have been succesfully versioned.  We begin by acquiring
+  -- the scripts that are actually in the versioning system.
+  checkpointScripts ← getCheckpointPoliciesAndValidators sidechainParams version
+
+  { versionedPolicies, versionedValidators } ←
+    getScriptsToInsert sidechainParams initATMSKind checkpointScripts version
+
+  -- If all versioned scripts have been inserted we can proceed with minting the
+  -- NFTs and other tokens.
+  if null versionedPolicies && null versionedValidators then do
     logInfo' "Attempting to mint Checkpoint NFT from the init token"
-    checkpointInitTxId ← init
+    tokensInitTxId ← init
       ( \op → balanceSignAndSubmit op
           <=< initCheckpointLookupsAndConstraints initGenesisHash
       )
       "Checkpoint init"
       Checkpoint.checkpointInitTokenName
       sidechainParams
-    pure
-      ( Just
-          { initTransactionIds: checkpointInitTxId : scriptsInitTxId
-          }
-      )
-  else pure Nothing
+    pure { scriptsInitTxIds, tokensInitTxId }
+
+  else
+    pure { scriptsInitTxIds, tokensInitTxId: Nothing }
 
 -- | `initCheckpointLookupsAndConstraints` creates lookups and constraints to
 -- | mint and pay the NFT which uniquely identifies the utxo that holds the

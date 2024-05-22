@@ -12,7 +12,6 @@ import Contract.Prelude
 import Contract.PlutusData (PlutusData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Transaction (TransactionHash, TransactionInput)
-import Data.Array (concat)
 import Data.BigInt (BigInt)
 import Data.Maybe (isJust)
 import Run (Run)
@@ -155,11 +154,12 @@ initSidechain (InitSidechainParams isp) version = do
         }
   pure
     { transactionId: txId
-    , initTransactionIds: concat
-        $ (_.initTransactionIds <$> maybeToArray fuelInitTx)
-        <> (_.initTransactionIds <$> maybeToArray permissionTokensInitTx)
-        <>
-          (_.initTransactionIds <$> maybeToArray checkpointInitTx)
+    , initTransactionIds:
+        fuelInitTx.scriptsInitTxIds
+          <> maybeToArray fuelInitTx.tokensInitTxId
+          <> maybeToArray permissionTokensInitTx
+          <> checkpointInitTx.scriptsInitTxIds
+          <> maybeToArray checkpointInitTx.tokensInitTxId
     , sidechainParams
     , sidechainAddresses
     }

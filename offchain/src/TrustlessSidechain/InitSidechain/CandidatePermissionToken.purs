@@ -26,11 +26,7 @@ initCandidatePermissionToken ∷
   ∀ r.
   SidechainParams →
   Maybe BigInt →
-  Run (APP + r)
-    ( Maybe
-        { initTransactionIds ∷ Array TransactionHash
-        }
-    )
+  Run (APP + r) (Maybe TransactionHash)
 initCandidatePermissionToken
   sidechainParams
   initCandidatePermissionTokenMintInfo = do
@@ -38,22 +34,17 @@ initCandidatePermissionToken
   -- Note: normally we would need to insert versioned scripts first - c.f. other
   -- initialization routines in the InitSidechain directory - but the candidate
   -- permission token mechanism does not version any validators or minting
-  -- policies.
-
+  -- policies.  We can this proceed directly to token minting, without the need
+  -- for any extra checks.
   logInfo' "Attempting to mint candidate permission tokens from the init token"
-  candidatePermissionTokenInitTxId ← init
-      ( \op → balanceSignAndSubmit op
-          <=< initCandidatePermissionTokenLookupsAndConstraints
-            initCandidatePermissionTokenMintInfo
-      )
-      "Candidate permission token init"
-      candidatePermissionInitTokenName sidechainParams
-
-  pure
-    ( Just
-        { initTransactionIds: [ candidatePermissionTokenInitTxId ]
-        }
+  init
+    ( \op → balanceSignAndSubmit op
+        <=< initCandidatePermissionTokenLookupsAndConstraints
+          initCandidatePermissionTokenMintInfo
     )
+    "Candidate permission token init"
+    candidatePermissionInitTokenName
+    sidechainParams
 
 -- | `initCandidatePermissionTokenLookupsAndConstraints` creates the lookups and
 -- | constraints required when initalizing the candidiate permission tokens (this does NOT

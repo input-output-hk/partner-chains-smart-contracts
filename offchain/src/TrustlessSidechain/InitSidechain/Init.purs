@@ -17,12 +17,12 @@ import Data.BigInt (BigInt)
 import Data.List (List, filter)
 import Data.List as List
 import Run (Run)
-import Run.Except (EXCEPT, throw)
+import Run.Except (EXCEPT)
 import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSKinds)
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
-import TrustlessSidechain.Error (OffchainError(..))
+import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.InitSidechain.Utils (initTokenCurrencyInfo)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
@@ -106,27 +106,18 @@ getScriptsToInsert
     }
 
 -- | Perform a token initialization action, if the corresponding
--- | init token exists. If it doesn't, throw an `InvalidInitState`
--- | error.
+-- | init token exists. If it doesn't, return Nothing.
 init ∷
   ∀ r.
   (String → SidechainParams → Run (APP + r) TransactionHash) →
   String →
   TokenName →
   SidechainParams →
-  Run (APP + r) TransactionHash
+  Run (APP + r) (Maybe TransactionHash)
 init f op nm sp = do
   tokenExists ← map (Plutus.Map.member nm <<< _.initTokenStatusData)
     (getInitTokenStatus sp)
-
-  unless tokenExists
-    ( throw
-        $ InvalidInitState
-        $ "Init token does not exist when attempting to run "
-        <> op
-    )
-
-  f op sp
+  if tokenExists then Just <$> f op sp else pure Nothing
 
 -- | Get the init token data for the own wallet. Used in InitTokenStatus
 -- | endpoint.

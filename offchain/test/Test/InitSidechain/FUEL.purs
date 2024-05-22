@@ -104,11 +104,12 @@ initFuelSucceeds =
           -- First create init tokens
           void $ InitMint.initTokensMint sidechainParams initATMSKind version
 
-          fuelRes ← InitFuel.initFuel sidechainParams
-            initSidechainEpoch
-            initAggregatedCommittee
-            initATMSKind
-            version
+          { scriptsInitTxIds, tokensInitTxId } ←
+            InitFuel.initFuel sidechainParams
+              initSidechainEpoch
+              initAggregatedCommittee
+              initATMSKind
+              version
 
           -- Which tokens are on the wallet?  Were the DS init tokens burned?
           { initTokenStatusData: tokenStatus } ← Init.getInitTokenStatus
@@ -165,7 +166,8 @@ initFuelSucceeds =
           Effect.fromMaybeThrow (GenericInternalError "Unreachable")
             $ map Just
             $ liftAff
-            $ assert "FUEL init not attempted" (isJust fuelRes)
+            $ assert "FUEL init not finalized"
+                (length scriptsInitTxIds == 9 && not (isNothing tokensInitTxId))
             <* assert "DS init token not spent" dsSpent
             <* assert
               ( "Incorrect tokens.  " <>
@@ -238,14 +240,15 @@ initFuelIdempotent =
             version
 
           -- Second call should do nothing.
-          fuelRes ← InitFuel.initFuel sidechainParams
-            initSidechainEpoch
-            initAggregatedCommittee
-            initATMSKind
-            version
+          { scriptsInitTxIds, tokensInitTxId } ←
+            InitFuel.initFuel sidechainParams
+              initSidechainEpoch
+              initAggregatedCommittee
+              initATMSKind
+              version
 
           Effect.fromMaybeThrow (GenericInternalError "Unreachable")
             $ map Just
             $ liftAff
             $ assert "Second call to initFuel submitted at least one transaction"
-                (isNothing fuelRes)
+                (null scriptsInitTxIds && isNothing tokensInitTxId)

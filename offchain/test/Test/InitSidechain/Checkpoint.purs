@@ -212,10 +212,11 @@ testInitCheckpointIdempotent =
               version
 
             -- Then do it again
-            res ← InitCheckpoint.initCheckpoint sidechainParams
-              initGenesisHash
-              initATMSKind
-              version
+            { scriptsInitTxIds, tokensInitTxId } ←
+              InitCheckpoint.initCheckpoint sidechainParams
+                initGenesisHash
+                initATMSKind
+                version
 
             -- For computing the number of versionOracle init tokens
             { versionedPolicies, versionedValidators } ←
@@ -254,7 +255,11 @@ testInitCheckpointIdempotent =
               $
                 assert (failMsg expectedTokens resTokens)
                   (unorderedEq expectedTokens resTokens)
-              <* assert (failMsg "Nothing" res) (isNothing res)
+              <* assert
+                ( failMsg "{ scriptsInitTxIds: [], tokensInitTxId: Nothing }"
+                    { scriptsInitTxIds, tokensInitTxId }
+                )
+                (null scriptsInitTxIds && isNothing tokensInitTxId)
               <* assert
                 ( failMsg expectedExistingValidator
                     actualExistingValidator
