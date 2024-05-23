@@ -49,7 +49,7 @@ In general tokens of different kinds can be stored in the reserve. Let's assume 
 
 The reserve validator will be parametrized by `VersionOracleConfig`.
 
-The datum for reserve utxos will be of the type `Datum` which must can be inline datum:
+The datum for reserve utxos will be of the type `Datum` which can be inline datum:
 ```
 
 data ImmutableSettings = ImmutableSettings
