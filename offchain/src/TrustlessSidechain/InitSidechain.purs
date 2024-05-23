@@ -89,7 +89,7 @@ toSidechainParams isp = SidechainParams
 --   1. Burning genesis UTxO and using it to mint multiple initialization
 --      tokens.  See SIP-06 for a detailed explanation.
 --
---   2. Running all individual initialization commands, currently consistint of:
+--   2. Running all individual initialization commands, currently consisting of:
 --
 --      a) Fuel initialization.  This includes initializing the distributed set,
 --         committee selection and the merkle tree machinery.

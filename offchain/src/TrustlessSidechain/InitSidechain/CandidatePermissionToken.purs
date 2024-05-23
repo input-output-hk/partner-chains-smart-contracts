@@ -34,7 +34,7 @@ initCandidatePermissionToken
   -- Note: normally we would need to insert versioned scripts first - c.f. other
   -- initialization routines in the InitSidechain directory - but the candidate
   -- permission token mechanism does not version any validators or minting
-  -- policies.  We can this proceed directly to token minting, without the need
+  -- policies.  We can thus proceed directly to token minting, without the need
   -- for any extra checks.
   logInfo' "Attempting to mint candidate permission tokens from the init token"
   init
