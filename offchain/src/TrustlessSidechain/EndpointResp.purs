@@ -10,7 +10,7 @@ import Aeson
   ( encodeAeson
   , toStringifiedNumbersJson
   )
-import Contract.AssocMap as Plutus
+import Cardano.Plutus.Types.Map as Plutus
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.PlutusData
   ( class ToData

@@ -54,20 +54,20 @@ import Control.Monad.Rec.Class
   ( Step(Loop, Done)
   , tailRecM
   )
-import Ctl.Internal.Hashing (plutusScriptHash)
-import Ctl.Internal.Plutus.Types.Address (Address, pubKeyHashAddress)
-import Ctl.Internal.Plutus.Types.Credential
+import Contract.Hashing (plutusScriptHash)
+import Cardano.Plutus.Types.Address (Address, pubKeyHashAddress)
+import Cardano.Plutus.Types.Credential
   ( Credential
       ( PubKeyCredential
       , ScriptCredential
       )
   )
-import Ctl.Internal.Serialization.Hash
+import Cardano.Serialization.Lib
   ( ed25519KeyHashFromBytes
   , ed25519KeyHashToBytes
   , scriptHashToBytes
   )
-import Ctl.Internal.Types.ByteArray
+import Data.ByteArray
   ( byteArrayFromIntArrayUnsafe
   , byteArrayToIntArray
   )

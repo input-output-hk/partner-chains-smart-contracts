@@ -38,8 +38,8 @@ import Contract.Scripts
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Control.Alternative ((<|>))
-import Ctl.Internal.Plutus.Conversion (fromPlutusAddress, toPlutusAddress)
-import Ctl.Internal.Serialization.Address
+import Cardano.Types.Address (fromPlutusAddress, toPlutusAddress)
+import Cardano.Types.Address
   ( baseAddressBytes
   , baseAddressFromAddress
   , baseAddressFromBytes
@@ -58,7 +58,7 @@ import Ctl.Internal.Serialization.Address
   , rewardAddressFromBytes
   , rewardAddressToAddress
   )
-import Ctl.Internal.Serialization.Hash (scriptHashToBytes)
+import Cardano.Serialization.Lib (scriptHashToBytes)
 import Data.Array as Array
 import Run (Run)
 import Run.Except (EXCEPT, note)

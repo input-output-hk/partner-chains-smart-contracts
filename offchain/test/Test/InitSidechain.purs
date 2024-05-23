@@ -4,7 +4,7 @@ module Test.InitSidechain
 
 import Contract.Prelude
 
-import Contract.AssocMap as Plutus.Map
+import Cardano.Plutus.Types.Map as Plutus.Map
 import Contract.Log as Log
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray as ByteArray

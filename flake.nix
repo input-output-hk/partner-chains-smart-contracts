@@ -15,12 +15,10 @@
     };
 
     cardano-transaction-lib = {
-      url = "github:Plutonomicon/cardano-transaction-lib/b7e8d396711f95e7a7b755a2a7e7089df712aaf5";
+      url = "github:Plutonomicon/cardano-transaction-lib/v8.0.0";
     };
     plutip.follows = "cardano-transaction-lib/plutip";
     iohk-nix.follows = "cardano-transaction-lib/plutip/iohk-nix";
-    nixpkgs-ctl.follows = "cardano-transaction-lib/nixpkgs";
-    haskell-nix-ctl.url = "github:input-output-hk/haskell.nix/9af167fb4343539ca99465057262f289b44f55da";
 
     nixpkgs.follows = "haskell-nix/nixpkgs";
 
@@ -44,15 +42,22 @@
 
     mithril.url = "github:input-output-hk/mithril";
   };
-
   outputs = inputs:
     inputs.iogx.lib.mkFlake {
       inherit inputs;
       repoRoot = ./.;
-      systems = ["x86_64-linux" "x86_64-darwin" "aarch64-darwin"];
+      systems = [ "x86_64-linux" "x86_64-darwin" "aarch64-darwin" ];
       outputs = import ./nix/outputs.nix;
+      nixpkgsArgs = {
+        overlays = [
+          inputs.iohk-nix.overlays.crypto
+          inputs.haskell-nix.overlay
+          inputs.cardano-transaction-lib.overlays.runtime
+          inputs.cardano-transaction-lib.overlays.purescript
+          inputs.cardano-transaction-lib.overlays.spago
+        ];
+      };
     };
-
   nixConfig = {
     extra-substituters = [
       "https://cache.iog.io"
