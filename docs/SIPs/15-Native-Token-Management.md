@@ -29,11 +29,13 @@ Transfers should be allowed only when the transferred amount is exactly equal to
 
 `V(t)` by definition is equal to the number of `V(t)` tokens minted in the transfer transaction. `V(t)`'s currency symbol will be obtained from datum.
 
-### Time handling and transfer throttling
+### Time handling
+
+The responsibility of releasing desired amount of tokens periodically is delegated to `V(t)` function and to a partner chain developer. Nevertheless here guidelines for time handling in `V(t)` implementation are presented.
 
 Feature requirements say that tokens are to be moved from reserve to circulating supply “no earlier than” the required time. The time requirement is tricky because a script is not provided with an exact time onchain. The only time related information at our disposal is `txInfoValidRange` from `TxInfo` type. That field describes a time range in which the transaction may be accepted by the node. In principle the transaction can be created in a way that `txInfoValidRange` is sufficiently narrow for an onchain script to determine the approximate time.
 
-Assuming that `lastTransfer` is the timestamp of last transfer and that `minTransferInterval` is the minimum time required between consecutive transfers then following check is needed: $\text{txInfoValidRange} \subseteq [\text{lastTransfer} + \text{minTransferInterval}, \infty]$. That's sufficient to ensure that transfers are throttled. As follows from the constraint the right bound of `txInfoValidRange` is not relevant. It may be relevant for more sophisticated `V(t)` implementation though.
+Assuming that `interval` is an interval between to consecutive `V(t)` token releases it's crucial to determine which which token release cycle is ongoing. If there exists $n$ such that the following condition is satisfied $\text{txInfoValidRange} \subseteq [t_0 + n \cdot \text{interval}, t_0 + (n + 1) \cdot \text{interval}]$ then the $n$th cycle is ongoing. If `txInfoValidRange` is not fully contained in an interval of the above form then the ongoing release cycle cannot be determined and the `V(t)` should fail.
 
 Note on throttling. If `V(t)` was implemented in the way that it accures rewards continously with time then, without throttling, transfers could be performaned with arbitrary frequency potentially causing malicious contention.
 
@@ -59,12 +61,10 @@ data ImmutableSettings = ImmutableSettings
 
 data MutableSettings = MutableSettings
   { vFunctionTotalAccrued :: CurrencySymbol
-  , minTransferInterval :: Milliseconds
   }
 
 data Stats = Stats
   { tokenTotalAmountTransferred :: Integer
-  , lastTransfer :: POSIXTime
   }
 
 data Datum =
@@ -83,10 +83,8 @@ Description of reserve state in `Bootstraping` phase follows:
 	- `tokenKind` is the currency symbol of tokens that a reserve is allowed to store
 - `MutableSettings` represents settings that can be changed using governance referred by`VersionOracleConfig`
 	- `vFunctionTotalAccrued` is a currency symbol of tokens minted in a transfer transaction. The number of tokens minted is equal to the totality of `tokenKind` tokens accrued from `t_0` till now. In other words the number of `vFunctionTotalAccrued` tokens minted in a transfer transaction is equal to `V(t)` 
-	- `minTransferInterval` is the minimum time required between two consecutive transfers
 - `Stats` provides data that is supposed to by used by `V(t)` computation
 	- `tokenTotalAmountTransferred` is the total amount of tokens that has been transferred from `t0` to now
-	- `lastTransfer` is a approximate timestamp of the most recent transfer
 
 The redeemer for reserve utxos will be of the type `Redeemer`:
 ```
@@ -112,14 +110,11 @@ Following checks are performed on reserve utxos consumed with `Deposit` redeemer
 ---
 Following checks are performed on reserve utxos consumed with `TransferToIlliquidCirculationSupply` redeemer:
 - reserve utxo is propagated
-- `V(t) := vFunctionTotalAccrued` tokens are minted (must be positive)
+- `V(t) := vFunctionTotalAccrued` tokens are minted and must be strictly positive
 - no other tokens are minted or burnt
-- $\text{txInfoValidRange} \subseteq [\text{lastTransfer} + \text{minTransferInterval}, \infty]$ where `lastTransfer` is taken from input datum
-- `txInfoValidRange` is narrow
 - propagated assets can change only by a negative amount of `tokenKind` that must be equal to `tokenTotalAmountTransferred - V(t)` 
 - propagated datum must change only by `Stats` in the following way:
 	- `tokenTotalAmountTransferred = V(t)`
-	- $\text{lastTransfer} \in \text{txInfoValidRange}$
 - output utxos that contains `tokenKind` tokens must be on illiquid circulation supply validator's address (besides propagated utxo)
 ---
 Following checks are performed on reserve utxos consumed with `Update` redeemer:
@@ -153,8 +148,6 @@ Following checks are performed in the reserve authentication token minting polic
 - additionally that utxo carries ADA and tokens of `tokenKind` kind only
 - that utxo carries datum of type `Datum` and
 - that datum satisfies
-	- `minTransferInterval > 0`
-	- `lastTransfer = t0 - minTransferInterval`
 	- 	`tokenTotalAmountTransferred == 0`
 	- `tokenKind` and `vFunctionTotalAccrued` are valid currency symbols
 	- optionally some relation of `t0`  and `txInfoValidRange` may be examined
@@ -213,4 +206,3 @@ flowchart BT
     supply -.-> reserve
     supply_withdrawal -.-> supply
 ```
-
