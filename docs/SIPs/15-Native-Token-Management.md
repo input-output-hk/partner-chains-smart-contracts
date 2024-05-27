@@ -1,5 +1,14 @@
+# Native Token Reserve Management
+
+This SIP was written to address the requirements for managing a Native Token
+Reserve.  The primary goal is to be able to store tokens in the reserve and be
+able to release them into circulation, first by moving it to illiquid supply,
+and eventually releasing the tokens to users.
+
+# Introduction
+
 Conceptually there are two relevant entities in the feature requirements:
-reserve and illiquid circulation supply. Those two concepts translate directly
+reserve and illiquid circulation supply.  Those two concepts translate directly
 into validators and can be described rather independently.
 
 Following scripts will be defined by us:
@@ -9,7 +18,7 @@ Following scripts will be defined by us:
   - *illiquid circulation supply validator* that is used for illiquid
     circulation supply utxos
 
-All three scripts will be kept under the versioning system. Having them under
+All three scripts will be kept under the versioning system.  Having them under
 the versioning system makes mutual dependencies possible because compile time
 dependencies are lifted into runtime dependencies which then can be even
 circular.
@@ -18,12 +27,12 @@ Two scripts will be defined by a parter chain developer:
   - *illiquid circulation supply withdrawal minting policy*
   - *V(t) minting policy* that provides `V(t)` function
 
-Moreover in scope of this feature a generic governance mechanism for trusless
-sidechain will be implemented. The governance minting policy will be stored
+Moreover in scope of this feature a generic governance mechanism for trustless
+sidechain will be implemented.  The governance minting policy will be stored
 under versioning system and all the aforementioned scripts will access the
-governance currency symbol using the versioning system. It is assumed that the
+governance currency symbol using the versioning system.  It is assumed that the
 process of governance approval verification boils down to checking that exactly
-one governance token is minted in the transaction. That token can be then
+one governance token is minted in the transaction.  That token can be then
 discarded by sending it to an arbitrary address. The design for governance is
 not subject of this document.
 
@@ -41,30 +50,30 @@ time `t` (now).
 
 ### Transfers
 
-Transfers should be allowed only when the transferred amount is exactly equal to
-`V(t)` or, if reserve is too small to cover `V(t)`, the whole reserve.
+Transfers should be allowed only when the transferred amount plus the total
+token amount already withdrawn from the reserve is exactly equal to `V(t)` or,
+if reserve is too small to cover `V(t)`, the whole reserve.
 
-`V(t)` by definition is equal to the number of `V(t)` tokens minted in the
-transfer transaction. `V(t)`'s currency symbol will be obtained from datum.
+`V(t)`'s currency symbol will be obtained from datum.
 
 ### Time handling
 
 The responsibility of releasing desired amount of tokens periodically is
-delegated to `V(t)` function and to a partner chain developer. Nevertheless here
-guidelines for time handling in `V(t)` implementation are presented.
+delegated to the `V(t)` function and to a partner chain developer.  Below we
+present guidelines that the `V(t)` function should follow.
 
 Feature requirements say that tokens are to be moved from reserve to circulating
-supply “no earlier than” the required time. The time requirement is tricky
+supply “no earlier than” the required time.  The time requirement is tricky
 because a script is not provided with an exact time onchain. The only time
-related information at our disposal is `txInfoValidRange` from `TxInfo`
-type. That field describes a time range in which the transaction may be accepted
-by the node. In principle the transaction can be created in a way that
+related information at our disposal is `txInfoValidRange` from `TxInfo` type.
+That field describes a time range in which the transaction may be accepted by
+the node.  In principle the transaction can be created in a way that
 `txInfoValidRange` is sufficiently narrow for an onchain script to determine the
 approximate time.
 
 Assuming that `interval` is an interval between to consecutive `V(t)` token
-releases it's crucial to determine which which token release cycle is
-ongoing. If there exists $n$ such that the following condition is satisfied
+releases it's crucial to determine which token release cycle is ongoing. If
+there exists $n$ such that the following condition is satisfied
 $\text{txInfoValidRange} \subseteq [t_0 + n \cdot \text{interval}, t_0 + (n + 1)
 \cdot \text{interval}]$ then the $n$th cycle is ongoing. If `txInfoValidRange`
 is not fully contained in an interval of the above form then the ongoing release
@@ -256,8 +265,8 @@ Following checks are performed on reserve utxos consumed with
   - only one output utxo at own address is produced and carries `()` datum
   - assets of the propagated utxo increase
 
-`DepositMoreToExistingUtxo` is used to deposit more assets to an existing
-utxos. That are no restrictions on who can do it and what can be deposited.
+`DepositMoreToExistingUtxo` is used to deposit more assets to an existing utxos.
+That are no restrictions on who can do it and what can be deposited.
 
 Following checks are performed on reserve utxos consumed with `Withdraw`
 redeemer:
