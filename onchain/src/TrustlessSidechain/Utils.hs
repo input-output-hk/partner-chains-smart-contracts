@@ -17,16 +17,6 @@ import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 
 import Cardano.Api (PlutusScriptV2)
 import Cardano.Api.Shelley (PlutusScript (PlutusScriptSerialised))
-
-{-
---- TODO pending plutonomy upgrade
-
-import Codec.Serialise (serialise)
-import Data.ByteString.Lazy (toStrict)
-import Data.ByteString.Short (toShort)
-import Plutonomy.UPLC qualified
----
--}
 import Data.Kind (Type)
 import PlutusLedgerApi.Common (SerialisedScript)
 import PlutusLedgerApi.V1.Value (valueOf)
@@ -107,11 +97,3 @@ mkUntypedMintingPolicy f r p =
 scriptToPlutusScript :: SerialisedScript -> PlutusScript PlutusScriptV2
 scriptToPlutusScript =
   PlutusScriptSerialised @PlutusScriptV2
-
-{- TODO
-  -- I am punting on resolving the plutonomy ghc9.x upgrade for now. But we may have to revisit this
-   . toShort
-   . toStrict
-   . serialise
-   . Plutonomy.UPLC.optimizeUPLC
--}

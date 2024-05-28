@@ -121,7 +121,6 @@ library
     , deepseq
     , either
     , lens
-    -- , plutonomy
     , plutus-core
     , plutus-ledger-api
     , plutus-shim-prelude
@@ -161,7 +160,6 @@ library onchain-poc
     , deepseq
     , either
     , lens
-    -- , plutonomy
     , plutus-core
     , plutus-ledger-api
     , plutus-shim-prelude
@@ -173,7 +171,6 @@ library onchain-poc
     , trustless-sidechain
     , trustless-sidechain-prelude
 
-   -- , plutonomy
   hs-source-dirs:  poc
 
 library trustless-sidechain-prelude
@@ -254,7 +251,6 @@ executable trustless-sidechain-serialise
     , cardano-api
     , filepath
     , onchain-poc
-    -- , plutonomy
     , plutus-ledger-api
     , text
     , plutus-tx
