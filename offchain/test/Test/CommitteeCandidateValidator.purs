@@ -28,6 +28,7 @@ import Run.Except (note) as Run
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, dummySidechainParams, fails, plutipGroup)
+import Contract.Numeric.BigNum as BigNum
 import TrustlessSidechain.CommitteeCandidateValidator
   ( DeregisterParams(DeregisterParams)
   , RegisterParams(RegisterParams)
@@ -158,7 +159,7 @@ runDeregister scParams =
 testScenarioSuccess1 ∷ PlutipTest
 testScenarioSuccess1 = Mote.Monad.test "Register followed by deregister"
   $ Test.PlutipTest.mkPlutipConfigTest
-      [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ]
+      [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ]
   $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       void $ runRegister dummySidechainParams
       runDeregister dummySidechainParams
@@ -168,10 +169,10 @@ testScenarioSuccess2 ∷ PlutipTest
 testScenarioSuccess2 =
   Mote.Monad.test "10 registrations followed by 1 deregister"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 5_000_000
-        , BigInt.fromInt 5_000_000
-        , BigInt.fromInt 5_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 5_000_000
+        , BigNum.fromInt 5_000_000
+        , BigNum.fromInt 5_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         sequence_ $ replicate 10 $ runRegister dummySidechainParams
@@ -181,7 +182,7 @@ testScenarioSuccess2 =
 testScenarioFailure1 ∷ PlutipTest
 testScenarioFailure1 = Mote.Monad.test "Deregister in isolation (should fail)"
   $ Test.PlutipTest.mkPlutipConfigTest
-      [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ]
+      [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ]
   $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       runDeregister dummySidechainParams # withUnliftApp fails
 
@@ -191,8 +192,8 @@ testScenarioFailure2 =
   Mote.Monad.test
     "Register followed by a deregister from a distinct wallet (should fail)"
     $ Test.PlutipTest.mkPlutipConfigTest
-        ( [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ] /\
-            [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ]
+        ( [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ] /\
+            [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ]
         )
     $ \(alice /\ bob) →
         do
@@ -208,7 +209,7 @@ testScenarioFailure3 =
   Mote.Monad.test
     "Register followed by a register with the same set of keys (should fail)"
     $ Test.PlutipTest.mkPlutipConfigTest
-        ( [ BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000 ]
+        ( [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ]
         )
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) $ do
         void $ runRegisterWithFixedKeys dummySidechainParams

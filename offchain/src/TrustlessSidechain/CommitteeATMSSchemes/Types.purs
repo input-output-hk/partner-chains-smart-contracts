@@ -20,9 +20,10 @@ module TrustlessSidechain.CommitteeATMSSchemes.Types
 import Contract.Prelude
 
 import Contract.PlutusData (class FromData, class ToData)
-import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
-import Contract.Value (TokenName)
-import Data.BigInt (BigInt)
+import Cardano.Types.TransactionInput (TransactionInput)
+import Cardano.Types.TransactionOutput (TransactionOutput)
+import Cardano.Types.AssetName (AssetName)
+import JS.BigInt (BigInt)
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PubKey
   , EcdsaSecp256k1Signature
@@ -77,7 +78,7 @@ newtype CommitteeATMSParams aggregateSignature = CommitteeATMSParams
     -- `CommitteeCertificateMint.committeeOraclePolicy`).
     currentCommitteeUtxo ∷
       { index ∷ TransactionInput
-      , value ∷ TransactionOutputWithRefScript
+      , value ∷ TransactionOutput
       }
   , -- parameter for the onchain code
     committeeCertificateMint ∷ CommitteeCertificateMint
@@ -87,7 +88,7 @@ newtype CommitteeATMSParams aggregateSignature = CommitteeATMSParams
     -- the message that should be signed (note: this *must* be a token name
     -- so we have the usual size restrictions of a token name i.e., you
     -- probably want this to be the hash of the message you wish to sign)
-    message ∷ TokenName
+    message ∷ AssetName
   }
 
 derive instance Newtype (CommitteeATMSParams aggregateSignature) _

@@ -8,11 +8,13 @@ module TrustlessSidechain.CommitteeOraclePolicy
 
 import Contract.Prelude
 
-import Contract.PlutusData (toData)
+import Cardano.Types.AssetName (AssetName)
+import TrustlessSidechain.Utils.Asset (unsafeMkAssetName, emptyAssetName)
+import Cardano.ToData (toData)
 import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.TxConstraints (TxConstraints)
-import Contract.Value as Value
+import Cardano.Types.Value as Value
 import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT)
@@ -46,19 +48,15 @@ committeeOracleCurrencyInfo sp = do
       }
   getCurrencyInfo CommitteeOraclePolicy [ toData itac ]
 
-committeeOracleInitTokenName ∷ Value.TokenName
-committeeOracleInitTokenName =
-  unsafePartial $ fromJust $ Value.mkTokenName
-    =<< byteArrayFromAscii "Committee oracle InitToken"
+committeeOracleInitTokenName ∷ AssetName
+committeeOracleInitTokenName = unsafeMkAssetName "Committee oracle InitToken"
 
 -- | `committeeOracleTn` is the token name of the NFT which identifies
 -- | the utxo which contains the committee hash. We use an empty bytestring for
 -- | this because the name really doesn't matter, so we mighaswell save a few
 -- | bytes by giving it the empty name.
-committeeOracleTn ∷ Value.TokenName
-committeeOracleTn =
-  unsafePartial $ fromJust $ Value.mkTokenName
-    =<< byteArrayFromAscii ""
+committeeOracleTn ∷ AssetName
+committeeOracleTn = emptyAssetName
 
 -- | Build lookups and constraints to mint committee oracle initialization
 -- | token.
@@ -66,8 +64,8 @@ mintOneCommitteeOracleInitToken ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 mintOneCommitteeOracleInitToken sp =
   mintOneInitToken sp committeeOracleInitTokenName
@@ -78,8 +76,8 @@ burnOneCommitteeOracleInitToken ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 burnOneCommitteeOracleInitToken sp =
   burnOneInitToken sp committeeOracleInitTokenName

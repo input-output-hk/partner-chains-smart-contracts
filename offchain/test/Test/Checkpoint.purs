@@ -10,14 +10,16 @@ module Test.Checkpoint
 
 import Contract.Prelude
 
+import Partial.Unsafe (unsafePartial)
 import Contract.Log (logInfo')
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
 import Data.Array (mapWithIndex)
 import Data.Array as Array
-import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
+import Cardano.Types.BigNum as BigNum
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Run (liftEffect) as Run
 import Run.Except (note) as Run
@@ -103,10 +105,10 @@ saveCheckpointTest =
   Mote.Monad.test
     "Save checkpoint should succeed if enough signatures are provided"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 40_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 40_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         liftContract $ logInfo' "Checkpoint 'saveCheckpointTest'"
@@ -124,15 +126,14 @@ saveCheckpointTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
+            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map unwrap
                 initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
-                pkh
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
             }
 
         { sidechainParams } ← initSidechain initScParams 1
@@ -174,10 +175,10 @@ notEnoughSignaturesTest =
   Mote.Monad.test
     "Save checkpoint should fail if there are not enough signatures"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 40_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 40_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         liftContract $ logInfo' "Checkpoint 'notEnoughSignaturesTest'"
@@ -195,15 +196,14 @@ notEnoughSignaturesTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
+            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map unwrap
                 initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
-                pkh
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
             }
 
         { sidechainParams } ← initSidechain initScParams 1
@@ -254,10 +254,10 @@ outOfOrderCheckpointTest =
   Mote.Monad.test
     "Save checkpoint should fail if the checkpoint block number is not strictly increasing"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 40_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 40_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         liftContract $ logInfo' "Checkpoint 'outOfOrderCheckpointTest'"
@@ -275,15 +275,14 @@ outOfOrderCheckpointTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
+            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map unwrap
                 initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
-                pkh
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
             }
 
         { sidechainParams } ← initSidechain initScParams 1
@@ -327,10 +326,10 @@ invalidCheckpointBlockHashTest =
   Mote.Monad.test
     "Save checkpoint should fail if the checkpoint block hash is invalid"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 40_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 40_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         liftContract $ logInfo' "Checkpoint 'invalidCheckpointBlockHashTest'"
@@ -348,15 +347,14 @@ invalidCheckpointBlockHashTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
+            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map unwrap
                 initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
-                pkh
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
             }
 
         { sidechainParams } ← initSidechain initScParams 1
@@ -402,10 +400,10 @@ signedByUnknownCommitteeTest =
   Mote.Monad.test
     "Save checkpoint should fail if the checkpoint is signed by an unknown committee"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 40_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 40_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         liftContract $ logInfo' "Checkpoint 'signedByUnknownCommitteeTest'"
@@ -424,15 +422,14 @@ signedByUnknownCommitteeTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
+            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map unwrap
                 initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
-                pkh
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
             }
 
         { sidechainParams } ← initSidechain initScParams 1
@@ -481,10 +478,10 @@ committeeChangeCheckpointTest =
   Mote.Monad.test
     "Save checkpoint should succeed if the checkpoint is signed by the new committee"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 40_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 40_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         liftContract $ logInfo' "Checkpoint 'committeeChangeCheckpointTest'"
@@ -502,15 +499,14 @@ committeeChangeCheckpointTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
+            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map unwrap
                 initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
-                pkh
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
             }
 
         { sidechainParams } ← initSidechain initScParams 1

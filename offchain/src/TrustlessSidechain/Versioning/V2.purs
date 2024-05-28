@@ -10,7 +10,7 @@ module TrustlessSidechain.Versioning.V2
 
 import Contract.Prelude
 
-import Contract.Scripts (MintingPolicy, Validator)
+import Cardano.Types.PlutusScript (PlutusScript)
 import Data.List (List)
 import Data.List as List
 import Run (Run)
@@ -22,13 +22,37 @@ import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Versioning.Types as Types
 import Type.Row (type (+))
 
+-- | Validators to store in the versioning system.
+getVersionedValidators ∷
+  SidechainParams →
+  List (Tuple Types.ScriptId PlutusScript)
+getVersionedValidators _sp = do
+  -- Getting validators to version
+  -----------------------------------
+  List.fromFoldable []
+
+-- | Minting policies to store in the versioning system.
+getVersionedPolicies ∷
+  ∀ r.
+  SidechainParams →
+  Run (EXCEPT OffchainError + r) (List (Tuple Types.ScriptId PlutusScript))
+getVersionedPolicies sp = do
+  -- Getting policies to version
+  -----------------------------------
+  { fuelMintingPolicy } ← FUELMintingPolicy.V2.getFuelMintingPolicy sp
+  { fuelBurningPolicy } ← FUELBurningPolicy.V2.getFuelBurningPolicy sp
+  pure $ List.fromFoldable
+    [ Types.FUELMintingPolicy /\ fuelMintingPolicy
+    , Types.FUELBurningPolicy /\ fuelBurningPolicy
+    ]
+
 -- | Validators and policies to store in the versioning system.
 getVersionedPoliciesAndValidators ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + r)
-    { versionedPolicies ∷ (List (Tuple Types.ScriptId MintingPolicy))
-    , versionedValidators ∷ (List (Tuple Types.ScriptId Validator))
+    { versionedPolicies ∷ (List (Tuple Types.ScriptId PlutusScript))
+    , versionedValidators ∷ (List (Tuple Types.ScriptId PlutusScript))
     }
 getVersionedPoliciesAndValidators sp = do
   committeeScripts ← getCommitteeSelectionPoliciesAndValidators sp
@@ -44,8 +68,8 @@ getCommitteeSelectionPoliciesAndValidators ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + r)
-    { versionedPolicies ∷ (List (Tuple Types.ScriptId MintingPolicy))
-    , versionedValidators ∷ (List (Tuple Types.ScriptId Validator))
+    { versionedPolicies ∷ (List (Tuple Types.ScriptId PlutusScript))
+    , versionedValidators ∷ (List (Tuple Types.ScriptId PlutusScript))
     }
 getCommitteeSelectionPoliciesAndValidators _ =
   let
@@ -59,8 +83,8 @@ getFuelPoliciesAndValidators ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + r)
-    { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+    { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }
 getFuelPoliciesAndValidators sp = do
   { fuelMintingPolicy } ← FUELMintingPolicy.V2.getFuelMintingPolicy sp
@@ -79,8 +103,8 @@ getDsPoliciesAndValidators ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + r)
-    { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+    { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }
 getDsPoliciesAndValidators _ =
   let
@@ -93,8 +117,8 @@ getCheckpointPoliciesAndValidators ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + r)
-    { versionedPolicies ∷ (List (Tuple Types.ScriptId MintingPolicy))
-    , versionedValidators ∷ (List (Tuple Types.ScriptId Validator))
+    { versionedPolicies ∷ (List (Tuple Types.ScriptId PlutusScript))
+    , versionedValidators ∷ (List (Tuple Types.ScriptId PlutusScript))
     }
 getCheckpointPoliciesAndValidators _ =
   let
@@ -123,8 +147,8 @@ getMerkleRootPoliciesAndValidators ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + r)
-    { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+    { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }
 getMerkleRootPoliciesAndValidators _ =
   let

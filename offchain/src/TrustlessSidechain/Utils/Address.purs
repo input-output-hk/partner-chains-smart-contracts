@@ -1,64 +1,51 @@
 -- | `Utils.Address` provides some utility functions for handling addresses.
 module TrustlessSidechain.Utils.Address
-  ( Bech32Bytes
-  , getBech32BytesByteArray
-  , bech32BytesFromAddress
-  , addressFromBech32Bytes
-  , byteArrayToBech32BytesUnsafe
-  , getOwnPaymentPubKeyHash
+  ( getOwnPaymentPubKeyHash
   , getOwnWalletAddress
-  , toValidatorHash
+  , toScriptHash
   , toAddress
-  , toCurrencySymbol
   , getCurrencyInfo
-  , getCurrencySymbol
-  , getCurrencySymbolHex
-  , getValidatorHashHex
-  , getValidatorHash
-  , currencySymbolToHex
+  , getScriptHashHex
+  , getPlutusScriptHex
+  , fromPaymentPubKeyHash
+  , addressFromBech32Bytes
   ) where
 
-import Contract.Prelude hiding (note)
 
-import Contract.Address
-  ( Address
-  , PaymentPubKeyHash
-  , validatorHashEnterpriseAddress
+import Cardano.AsCbor (decodeCbor)
+import Data.BigInt as BigInt
+import Data.Unfoldable (unfoldr)
+import Data.String.CodeUnits (singleton)
+import Data.Maybe (fromMaybe)
+import Data.Foldable (fold)
+import Data.String.CodePoints (drop, take, length) as String
+
+
+import Cardano.Types.PaymentCredential (PaymentCredential(PaymentCredential))
+import Cardano.Types.NetworkId (NetworkId(MainnetId, TestnetId))
+import Cardano.Serialization.Lib as Csl
+import Contract.Prelude hiding (note)
+import Cardano.Serialization.Lib
+  ( fromBytes
+  , toBytes
   )
+import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash(PaymentPubKeyHash))
+import Cardano.Types.Credential (Credential(PubKeyHashCredential, ScriptHashCredential))
 import Contract.Address as Address
+import Cardano.Types.Address (toBech32, fromBech32) as Address
 import Contract.PlutusData (class FromData, class ToData, PlutusData)
 import Contract.Prim.ByteArray (ByteArray, CborBytes(CborBytes))
 import Contract.Prim.ByteArray as ByteArray
-import Contract.Scripts
-  ( MintingPolicy
-  , Validator
-  , ValidatorHash(ValidatorHash)
-  , validatorHash
-  )
+import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.ScriptHash (fromBech32, toBech32Unsafe) as ScriptHash
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Control.Alternative ((<|>))
-import Cardano.Types.Address (fromPlutusAddress, toPlutusAddress)
-import Cardano.Types.Address
-  ( baseAddressBytes
-  , baseAddressFromAddress
-  , baseAddressFromBytes
-  , baseAddressToAddress
-  , enterpriseAddressBytes
-  , enterpriseAddressFromAddress
-  , enterpriseAddressFromBytes
-  , enterpriseAddressToAddress
-  , intToNetworkId
-  , pointerAddressBytes
-  , pointerAddressFromAddress
-  , pointerAddressFromBytes
-  , pointerAddressToAddress
-  , rewardAddressBytes
-  , rewardAddressFromAddress
-  , rewardAddressFromBytes
-  , rewardAddressToAddress
-  )
-import Cardano.Serialization.Lib (scriptHashToBytes)
+import Cardano.Types.Address (Address)
+import Cardano.Types.Address as Address
+import Partial.Unsafe (unsafePartial)
 import Data.Array as Array
 import Run (Run)
 import Run.Except (EXCEPT, note)
@@ -85,67 +72,6 @@ import TrustlessSidechain.Utils.Scripts
 import TrustlessSidechain.Versioning.Types (ScriptId)
 import Type.Row (type (+))
 
--- | `Bech32Bytes` is a newtype wrapper for bech32 encoded bytestrings. In
--- | particular, this is used in the `recipient` field of `MerkleTreeEntry`
--- | which should be a decoded bech32 cardano address.
--- | See [here](https://cips.cardano.org/cips/cip19/) for details.
-newtype Bech32Bytes = Bech32Bytes ByteArray
-
--- | `getBech32BytesByteArray` gets the underlying `ByteArray` of `Bech32Bytes`
-getBech32BytesByteArray ∷ Bech32Bytes → ByteArray
-getBech32BytesByteArray (Bech32Bytes byteArray) = byteArray
-
-derive newtype instance ordBech32Bytes ∷ Ord Bech32Bytes
-derive newtype instance eqBech32Bytes ∷ Eq Bech32Bytes
-derive newtype instance toDataBech32Bytes ∷ ToData Bech32Bytes
-derive newtype instance fromDataBech32Bytes ∷ FromData Bech32Bytes
-
-instance Show Bech32Bytes where
-  show (Bech32Bytes byteArray) = "(byteArrayToBech32BytesUnsafe "
-    <> show byteArray
-    <> ")"
-
--- | `byteArrayToBech32BytesUnsafe` converts a `ByteArray` to `Bech32Bytes`
--- | without checking the data format.
-byteArrayToBech32BytesUnsafe ∷ ByteArray → Bech32Bytes
-byteArrayToBech32BytesUnsafe = Bech32Bytes
-
--- | `bech32BytesFromAddress` serialises an `Address` to `Bech32Bytes` using
--- | the network id in the `Contract`
-bech32BytesFromAddress ∷ Address → Maybe Bech32Bytes
-bech32BytesFromAddress address = do
-  netId ← intToNetworkId 0
-  -- ^ Network ID is not going to be encoded into the byte representation,
-  -- so this has no effect
-  let cslAddr = fromPlutusAddress netId address
-
-  bytes ←
-    (baseAddressBytes <$> baseAddressFromAddress cslAddr)
-      <|> (enterpriseAddressBytes <$> enterpriseAddressFromAddress cslAddr)
-      <|> (pointerAddressBytes <$> pointerAddressFromAddress cslAddr)
-      <|> (rewardAddressBytes <$> rewardAddressFromAddress cslAddr)
-
-  pure $ Bech32Bytes $ unwrap bytes
-
--- | `addressFromBech32Bytes` is a convenient wrapper to convert cbor bytes
--- | into an `Address.`
--- | It is useful to use this with `Contract.CborBytes.cborBytesFromByteArray`
--- | to create an address from a `ByteArray` i.e.,
--- | ```
--- | addressFromBech32Bytes <<< Contract.CborBytes.cborBytesFromByteArray
--- | ```
--- | Then, you can use `bech32BytesFromAddress` to get the `recipient`.
-addressFromBech32Bytes ∷ Bech32Bytes → Maybe Address
-addressFromBech32Bytes bechBytes = do
-  let cborBytes = CborBytes $ getBech32BytesByteArray bechBytes
-  enterpriseAddr ←
-    (baseAddressToAddress <$> baseAddressFromBytes cborBytes)
-      <|> (enterpriseAddressToAddress <$> enterpriseAddressFromBytes cborBytes)
-      <|> (pointerAddressToAddress <$> pointerAddressFromBytes cborBytes)
-      <|> (rewardAddressToAddress <$> rewardAddressFromBytes cborBytes)
-
-  toPlutusAddress enterpriseAddr
-
 -- | Return a single own payment pub key hash without generating warnings.
 getOwnPaymentPubKeyHash ∷
   ∀ r.
@@ -164,22 +90,23 @@ getOwnWalletAddress = do
 
 -- | Convert Address to ValidatorHash, raising an error if an address does not
 -- | represent a script.
-toValidatorHash ∷ ∀ r. Address → Run (EXCEPT OffchainError + r) ValidatorHash
-toValidatorHash addr =
-  note
-    (InvalidAddress "Cannot convert Address to ValidatorHash" addr)
-    (Address.toValidatorHash addr)
+toScriptHash ∷ ∀ r. Address → Run (EXCEPT OffchainError + r) ScriptHash
+toScriptHash addr = do
+  PaymentCredential c <- note
+    (InvalidAddress "Cannot convert Address to ScriptHash" addr)
+    $ Address.getPaymentCredential addr
+
+  case c of
+    ScriptHashCredential sh -> pure sh
+    _ -> Run.throw $ InvalidAddress "Address does not represent a script" addr
 
 -- | Convert ValidatorHash to Address in the current network, raising an error
 -- | if the hash is not valid.
-toAddress ∷ ∀ r. ValidatorHash → Run (EXCEPT OffchainError + WALLET + r) Address
-toAddress vh = do
+toAddress ∷ ∀ r. ScriptHash → Run (EXCEPT OffchainError + WALLET + r) Address
+toAddress sh = do
   netId ← getNetworkId
-  Run.note
-    ( ConversionError $ "Cannot convert validator hash " <> show vh
-        <> " to an enterprise address"
-    )
-    (validatorHashEnterpriseAddress netId vh)
+  pure $
+    Address.mkPaymentAddress netId (wrap $ ScriptHashCredential sh) Nothing
 
 -- | `getCurrencyInfo` returns minting policy and currency symbol of a given
 -- | script.  Requires providing parameters of that script.
@@ -189,49 +116,49 @@ getCurrencyInfo ∷
   Array PlutusData →
   Run (EXCEPT OffchainError + r) CurrencyInfo
 getCurrencyInfo scriptId params = do
-  mintingPolicy ← mkMintingPolicyWithParams scriptId params
-  currencySymbol ← getCurrencySymbol scriptId mintingPolicy
-  pure $ { mintingPolicy, currencySymbol }
+  plutusScript ← mkMintingPolicyWithParams scriptId params
 
--- | `getCurrencySymbol` converts a minting policy with known script ID to its
--- | currency symbol
-getCurrencySymbol ∷
-  ∀ r.
-  ScriptId →
-  MintingPolicy →
-  Run (EXCEPT OffchainError + r) CurrencySymbol
-getCurrencySymbol scriptId mp = do
-  note (InvalidCurrencySymbol scriptId mp) $
-    Value.scriptCurrencySymbol mp
+  pure $ { mintingPolicy: plutusScript
+         , currencySymbol: PlutusScript.hash plutusScript
+         }
 
--- | `toCurrencySymbol` converts a minting policy with unknown script ID to its
--- | currency symbol
-toCurrencySymbol ∷
-  ∀ r. MintingPolicy → Run (EXCEPT OffchainError + r) CurrencySymbol
-toCurrencySymbol mp = do
-  note (InvalidScript (show mp)) $
-    Value.scriptCurrencySymbol mp
+getPlutusScriptHex :: Partial => PlutusScript -> String
+getPlutusScriptHex = ByteArray.byteArrayToHex <<< toBytes <<< PlutusScript.toCsl
 
--- | `getCurrencySymbolHex` converts a minting policy to its hex encoded
--- | currency symbol
-getCurrencySymbolHex ∷
-  ∀ r.
-  ScriptId →
-  MintingPolicy →
-  Run (EXCEPT OffchainError + r) String
-getCurrencySymbolHex name mp =
-  currencySymbolToHex <$> getCurrencySymbol name mp
+getScriptHashHex :: ScriptHash -> String
+getScriptHashHex = ByteArray.byteArrayToHex <<< toBytes <<< unwrap
 
--- | `getValidatorHashHex` converts a validator hash to a hex encoded string
-getValidatorHashHex ∷ ValidatorHash → String
-getValidatorHashHex (ValidatorHash sh) =
-  ByteArray.byteArrayToHex $ unwrap $ scriptHashToBytes sh
+fromPaymentPubKeyHash :: NetworkId -> PaymentPubKeyHash -> Address
+fromPaymentPubKeyHash networkId pkh = Address.mkPaymentAddress networkId (wrap $ PubKeyHashCredential $ unwrap pkh) Nothing
 
--- | `getValidatorHash` converts a validator to a hex encoded string
-getValidatorHash ∷ Validator → String
-getValidatorHash = getValidatorHashHex <<< validatorHash
 
--- | Convert a currency symbol to hex encoded string
-currencySymbolToHex ∷ CurrencySymbol → String
-currencySymbolToHex =
-  ByteArray.byteArrayToHex <<< Value.getCurrencySymbol
+
+
+
+hexToAsciiString :: String -> String
+hexToAsciiString hexStr =
+  let
+    hexPairs :: Array String
+    hexPairs = unfoldr nextPair hexStr
+
+    nextPair :: String -> Maybe (String /\ String)
+    nextPair str =
+      if String.length str < 2 then Nothing
+      else Just (String.take 2 str /\ String.drop 2 str)
+
+    bytes :: Array BigInt.BigInt
+    bytes = map (fromMaybe (BigInt.fromInt 0) <<< BigInt.fromBase 2) hexPairs
+
+    charArray :: Array String
+    charArray = map (singleton <<< toChar) bytes
+  in
+    fold charArray
+  where
+    toChar :: BigInt.BigInt -> Char
+    toChar x = unsafePartial $ fromJust (toEnum =<< BigInt.toInt x)
+
+
+addressFromBech32Bytes :: ByteArray -> Maybe Address
+addressFromBech32Bytes = decodeCbor <<< wrap
+
+

@@ -21,9 +21,11 @@ import Contract.Transaction
   )
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as TxConstraints
-import Contract.Value (CurrencySymbol, TokenName)
+import Cardano.Types.AssetName (AssetName)
+import TrustlessSidechain.Utils.Asset (emptyAssetName, unsafeMkAssetName)
+import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.Value as Value
-import Data.BigInt (BigInt)
+import JS.BigInt (BigInt)
 import Data.Maybe as Maybe
 import Partial.Unsafe (unsafePartial)
 import Run (Run)
@@ -47,22 +49,21 @@ import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(CandidatePermissionPolicy)
   )
 import Type.Row (type (+))
+import Cardano.Types.Int as Int
+import Partial.Unsafe (unsafePartial)
+import Cardano.Types.Mint as Mint
 
 --------------------------------
 -- Working with the onchain code
 --------------------------------
 -- | A name for the candidate permission initialization token.  Must be unique
 -- | among initialization tokens.
-candidatePermissionInitTokenName ∷ TokenName
-candidatePermissionInitTokenName =
-  unsafePartial $ Maybe.fromJust $ Value.mkTokenName
-    =<< byteArrayFromAscii "CandidatePermission InitToken"
+candidatePermissionInitTokenName ∷ AssetName
+candidatePermissionInitTokenName = unsafeMkAssetName "CandidatePermission InitToken"
 
 -- | A name for the candidate permission token.
-candidatePermissionTokenName ∷ TokenName
-candidatePermissionTokenName =
-  unsafePartial $ Maybe.fromJust $ Value.mkTokenName
-    =<< byteArrayFromAscii ""
+candidatePermissionTokenName ∷ AssetName
+candidatePermissionTokenName = emptyAssetName
 
 -- | `candidatePermissionCurrencyInfo` grabs both the minting policy /
 -- | currency symbol for the candidate permission minting policy.
@@ -85,8 +86,8 @@ mintOneCandidatePermissionInitToken ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 mintOneCandidatePermissionInitToken sp =
   mintOneInitToken sp candidatePermissionInitTokenName
@@ -97,8 +98,8 @@ burnOneCandidatePermissionInitToken ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 burnOneCandidatePermissionInitToken sp =
   burnOneInitToken sp candidatePermissionInitTokenName
@@ -114,8 +115,8 @@ candidatePermissionTokenLookupsAndConstraints ∷
   SidechainParams →
   BigInt →
   Run (EXCEPT OffchainError + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 candidatePermissionTokenLookupsAndConstraints sidechainParams amount = do
   { mintingPolicy, currencySymbol } ←
@@ -125,20 +126,20 @@ candidatePermissionTokenLookupsAndConstraints sidechainParams amount = do
   burnInitToken ← burnOneCandidatePermissionInitToken sidechainParams
 
   let
-    value = Value.singleton
+    mintValue = Mint.singleton
       currencySymbol
       candidatePermissionTokenName
-      amount
+      (unsafePartial $ fromJust $ Int.fromBigInt amount)
 
-    lookups ∷ ScriptLookups Void
+    lookups ∷ ScriptLookups
     lookups =
-      Lookups.mintingPolicy mintingPolicy
+      Lookups.plutusMintingPolicy mintingPolicy
 
-    constraints ∷ TxConstraints Void Void
+    constraints ∷ TxConstraints
     constraints =
       TxConstraints.mustMintValueWithRedeemer
         unitRedeemer
-        value
+        mintValue
   pure (burnInitToken <> { lookups, constraints })
 
 -- | `runCandidatePermissionToken` is the endpoint for minting candidate
@@ -149,7 +150,7 @@ runCandidatePermissionToken ∷
   BigInt →
   Run (EXCEPT OffchainError + TRANSACTION + LOG + r)
     { transactionId ∷ TransactionHash
-    , candidatePermissionCurrencySymbol ∷ CurrencySymbol
+    , candidatePermissionCurrencySymbol ∷ ScriptHash
     }
 runCandidatePermissionToken sidechainParams amount = do
   { currencySymbol: candidatePermissionCurrencySymbol } ←

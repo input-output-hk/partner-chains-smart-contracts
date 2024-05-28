@@ -10,9 +10,12 @@ module TrustlessSidechain.Utils.Codecs
 
 import Contract.Prelude
 
+import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash)
+import Cardano.Types.CborBytes (CborBytes(CborBytes))
+import Cardano.Plutus.Types.PubKeyHash (PubKeyHash)
 import Aeson as Aeson
-import Contract.Address (PubKeyHash)
-import Cardano.Plutus.Types.Map as Plutus.Map
+import Data.Map as Map
+import Data.Map (Map)
 import Contract.Prim.ByteArray
   ( ByteArray
   , byteArrayToHex
@@ -23,16 +26,16 @@ import Contract.Transaction
   ( TransactionHash(TransactionHash)
   , TransactionInput(TransactionInput)
   )
-import Contract.Value (TokenName)
-import Cardano.Serialization.Lib
-  ( ed25519KeyHashFromBytes
-  , ed25519KeyHashToBytes
-  )
+import Cardano.Types.AssetName (AssetName)
+import Cardano.AsCbor (encodeCbor, decodeCbor)
 import Data.Argonaut (Json)
 import Data.Argonaut.Core as J
 import Data.Array as Array
-import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
+import Cardano.Types.BigNum (BigNum)
+import Cardano.Types.BigNum as BigNum
+
 import Data.Codec.Argonaut as CA
 import Data.Codec.Argonaut.Record as CAR
 import Data.Profunctor (wrapIso)
@@ -55,6 +58,7 @@ import TrustlessSidechain.Governance
   )
 import TrustlessSidechain.Options.Parsers as Parsers
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
+import Cardano.Types.Ed25519KeyHash (Ed25519KeyHash)
 
 -- Note [BigInt values and JSON]
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -84,9 +88,10 @@ transactionInputCodec =
     case split (Pattern "#") txIn of
       [ txId, txIdx ] → ado
         index ← UInt.fromString txIdx
+        transactionId <- (decodeCbor <<< wrap) =<< hexToByteArray txId
         in
           TransactionInput
-            { transactionId: TransactionHash (hexToByteArrayUnsafe txId)
+            { transactionId
             , index
             }
       _ → Nothing
@@ -95,8 +100,7 @@ transactionInputCodec =
   fromF (TransactionInput txIn) = txHashStr <> "#" <> indexStr
     where
     indexStr = UInt.toString txIn.index
-    txHashStr = case txIn.transactionId of
-      TransactionHash txId → byteArrayToHex txId
+    txHashStr = byteArrayToHex $ unwrap $ encodeCbor $ txIn.transactionId
 
 -- | JSON codec for the atms kind. Note that this should match
 -- | `TrustlessSidechain.Options.Parsers.parseATMSKind` (both the parsing and the
@@ -157,11 +161,17 @@ scParamsCodec =
         }
     )
 
--- | JSON codec for PubKeyHash.
-pubKeyHashCodec ∷ CA.JsonCodec PubKeyHash
-pubKeyHashCodec = CA.prismaticCodec "PubKeyHash"
-  (ed25519KeyHashFromBytes >=> wrap >>> pure)
-  (unwrap <<< ed25519KeyHashToBytes <<< unwrap)
+pubKeyHashCodec :: CA.JsonCodec PaymentPubKeyHash
+pubKeyHashCodec = CA.prismaticCodec "PaymentPubKeyHash"
+  (Just <<< wrap)
+  unwrap
+  ed25519KeyHashCodec
+
+-- | JSON codec for ed25519KeyHash.
+ed25519KeyHashCodec ∷ CA.JsonCodec Ed25519KeyHash
+ed25519KeyHashCodec = CA.prismaticCodec "Ed25519KeyHash"
+  (CborBytes >>> decodeCbor)
+  (unwrap <<< encodeCbor)
   byteArrayCodec
 
 -- | Json encoder for InitTokenStatusResp
@@ -169,17 +179,17 @@ pubKeyHashCodec = CA.prismaticCodec "PubKeyHash"
 -- | This function chooses to use unsafeToInt before converting to Number
 -- | since the BigInt values in all reasonable cases should be within the
 -- | range of Int.
--- | TokenName is encoded as the defined in the EncodeAeson instance
+-- | AssetName is encoded as the defined in the EncodeAeson instance
 -- | provided in cardano-transaction-lib.
-encodeInitTokenStatusData ∷ Plutus.Map.Map TokenName BigInt → Json
+encodeInitTokenStatusData ∷ Map AssetName BigNum → Json
 encodeInitTokenStatusData = J.fromObject <<< Object.fromFoldable <<< toKvs
   where
   toKvs m = Array.zipWith
     ( \k v → (Aeson.stringifyAeson $ Aeson.encodeAeson k) /\
-        CA.encode bigIntCodec v
+        CA.encode bigNumCodec v
     )
-    (Plutus.Map.keys m)
-    (Plutus.Map.values m)
+    (Array.fromFoldable $ Map.keys m)
+    (Array.fromFoldable $ Map.values m)
 
 -- | JSON codec for `BigInt`.
 -- | See Note [BigInt values and JSON]
@@ -187,6 +197,14 @@ bigIntCodec ∷ CA.JsonCodec BigInt
 bigIntCodec = CA.prismaticCodec "BigInt"
   (Just <<< BigInt.fromInt)
   unsafeToInt
+  CA.int
+
+-- | JSON codec for `BigInt`.
+-- | See Note [BigInt values and JSON]
+bigNumCodec ∷ CA.JsonCodec BigNum
+bigNumCodec = CA.prismaticCodec "BigInt"
+  (Just <<< BigNum.fromInt)
+  (BigNum.toInt >>> unsafePartial fromJust)
   CA.int
 
 unsafeToInt ∷ BigInt → Int

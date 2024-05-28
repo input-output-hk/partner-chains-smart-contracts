@@ -5,24 +5,19 @@ module TrustlessSidechain.DParameter.Utils
 
 import Contract.Prelude
 
-import Contract.Address
+import Cardano.Types.Address
   ( Address
   )
-import Contract.PlutusData
-  ( toData
-  )
-import Contract.Scripts
-  ( MintingPolicy
-  , Validator
-  , validatorHash
-  )
-import Contract.Value (CurrencySymbol)
+import Cardano.ToData (toData)
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.ScriptHash (ScriptHash)
 import Run (Run)
-import Run.Except (EXCEPT)
+import Run.Except (EXCEPT, note)
 import TrustlessSidechain.Effects.Wallet (WALLET)
-import TrustlessSidechain.Error (OffchainError)
+import TrustlessSidechain.Error (OffchainError(InvalidAddress))
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Address (getCurrencySymbol, toAddress)
+import TrustlessSidechain.Utils.Address (toAddress)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   , mkValidatorWithParams
@@ -34,23 +29,27 @@ import TrustlessSidechain.Versioning.ScriptId
       )
   )
 import Type.Row (type (+))
+import Cardano.Plutus.Types.Address (fromCardano)
 
 -- | Get the PoCMintingPolicy by applying `SidechainParams` to the dummy
 -- | minting policy.
 decodeDParameterMintingPolicy ∷
   ∀ r.
   SidechainParams →
-  Run (EXCEPT OffchainError + WALLET + r) MintingPolicy
+  Run (EXCEPT OffchainError + WALLET + r) PlutusScript
 decodeDParameterMintingPolicy sidechainParams = do
   { dParameterValidatorAddress } ← getDParameterValidatorAndAddress
     sidechainParams
+  plutusAddressData <-
+    note (InvalidAddress "Couldn't map address to PlutusData" dParameterValidatorAddress)
+    $ fromCardano dParameterValidatorAddress
   mkMintingPolicyWithParams DParameterPolicy $
-    [ toData sidechainParams, toData dParameterValidatorAddress ]
+    [ toData sidechainParams, toData plutusAddressData ]
 
 decodeDParameterValidator ∷
   ∀ r.
   SidechainParams →
-  Run (EXCEPT OffchainError + r) Validator
+  Run (EXCEPT OffchainError + r) PlutusScript
 decodeDParameterValidator sidechainParams = do
   mkValidatorWithParams DParameterValidator [ toData sidechainParams ]
 
@@ -58,14 +57,14 @@ getDParameterValidatorAndAddress ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + WALLET + r)
-    { dParameterValidator ∷ Validator
+    { dParameterValidator ∷ PlutusScript
     , dParameterValidatorAddress ∷ Address
     }
 getDParameterValidatorAndAddress sidechainParams = do
   dParameterValidator ← decodeDParameterValidator
     sidechainParams
   dParameterValidatorAddress ←
-    toAddress (validatorHash dParameterValidator)
+    toAddress (PlutusScript.hash dParameterValidator)
 
   pure { dParameterValidator, dParameterValidatorAddress }
 
@@ -73,12 +72,10 @@ getDParameterMintingPolicyAndCurrencySymbol ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + WALLET + r)
-    { dParameterMintingPolicy ∷ MintingPolicy
-    , dParameterCurrencySymbol ∷ CurrencySymbol
+    { dParameterMintingPolicy ∷ PlutusScript
+    , dParameterCurrencySymbol ∷ ScriptHash
     }
 getDParameterMintingPolicyAndCurrencySymbol sidechainParams = do
   dParameterMintingPolicy ← decodeDParameterMintingPolicy sidechainParams
-  dParameterCurrencySymbol ←
-    getCurrencySymbol DParameterPolicy
-      dParameterMintingPolicy
+  let dParameterCurrencySymbol = PlutusScript.hash dParameterMintingPolicy
   pure { dParameterMintingPolicy, dParameterCurrencySymbol }

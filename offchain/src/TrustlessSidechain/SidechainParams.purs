@@ -12,7 +12,7 @@ import Contract.PlutusData
   )
 import Contract.Transaction (TransactionInput)
 import Control.Alternative (guard)
-import Data.BigInt (BigInt)
+import JS.BigInt (BigInt)
 import TrustlessSidechain.Governance as Governance
 
 newtype SidechainParams = SidechainParams

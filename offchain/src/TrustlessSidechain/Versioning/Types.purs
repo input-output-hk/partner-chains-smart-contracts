@@ -19,12 +19,9 @@ import Contract.PlutusData
   , fromData
   , toData
   )
-import Contract.Scripts
-  ( MintingPolicy(PlutusMintingPolicy)
-  , PlutusScript
-  , ScriptHash
-  , Validator
-  )
+import Cardano.Types.PlutusScript (PlutusScript, hash)
+
+import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.Scripts as Scripts
 import Contract.Value (CurrencySymbol)
 import Data.BigInt (BigInt)
@@ -32,6 +29,7 @@ import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import TrustlessSidechain.Utils.Data (productFromData2, productToData2)
 import TrustlessSidechain.Versioning.ScriptId (ScriptId(..)) as ScriptId
+import Cardano.Types.BigNum (BigNum)
 
 -- | Datum attached to 'VersionOraclePolicy' tokens stored on the
 -- | 'VersionOracleValidator' script.
@@ -59,7 +57,7 @@ instance ToData VersionOracleDatum where
 
 -- VersionOracle uniquiely identifies a versioned script.
 newtype VersionOracle = VersionOracle
-  { version ∷ BigInt -- ^ version of the protocol
+  { version ∷ BigNum -- ^ version of the protocol
   , scriptId ∷ ScriptId.ScriptId -- ^ unique identifier of the validator
   }
 
@@ -140,11 +138,6 @@ class Versionable a where
   toPlutusScript ∷ a → Maybe PlutusScript
   toScriptHash ∷ a → ScriptHash
 
-instance Versionable Validator where
-  toPlutusScript = Just <<< unwrap
-  toScriptHash = unwrap <<< Scripts.validatorHash
-
-instance Versionable MintingPolicy where
-  toPlutusScript (PlutusMintingPolicy script) = Just script
-  toPlutusScript _ = Nothing
-  toScriptHash = unwrap <<< Scripts.mintingPolicyHash
+instance Versionable PlutusScript where
+  toPlutusScript = Just
+  toScriptHash = hash

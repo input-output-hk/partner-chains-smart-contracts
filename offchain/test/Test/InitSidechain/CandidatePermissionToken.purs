@@ -4,8 +4,9 @@ import Contract.Prelude
 
 import Contract.Log as Log
 import Contract.Wallet as Wallet
-import Data.BigInt (fromInt)
-import Data.BigInt as BigInt
+import JS.BigInt (fromInt)
+import JS.BigInt as BigInt
+import Cardano.Types.BigNum as BigNum
 import Mote.Monad as Mote.Monad
 import Test.InitSidechain.Utils (failMsg)
 import Test.PlutipTest (PlutipTest)
@@ -41,10 +42,10 @@ testInitCandidatePermissionToken ∷ PlutipTest
 testInitCandidatePermissionToken =
   Mote.Monad.test "Calling `InitCandidatePermissionToken`"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
         ]
     $ \alice → do
         withUnliftApp (Wallet.withKeyWallet alice)
@@ -52,7 +53,7 @@ testInitCandidatePermissionToken =
             liftContract $ Log.logInfo'
               "InitSidechain 'testInitCandidatePermissionToken'"
             genesisUtxo ← Test.Utils.getOwnTransactionInput
-            initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
+            initGovernanceAuthority ← (Governance.mkGovernanceAuthority)
               <$> getOwnPaymentPubKeyHash
             let
               version = 1
@@ -80,10 +81,10 @@ testInitCandidatePermissionTokenIdempotent =
   Mote.Monad.test
     "Calling `InitCandidatePermissionToken` twice, expecting idempotency"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
         ]
     $ \alice → do
         withUnliftApp (Wallet.withKeyWallet alice)
@@ -91,7 +92,7 @@ testInitCandidatePermissionTokenIdempotent =
             liftContract $ Log.logInfo'
               "InitSidechain 'testInitCandidatePermissionTokenIdempotent'"
             genesisUtxo ← Test.Utils.getOwnTransactionInput
-            initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
+            initGovernanceAuthority ← (Governance.mkGovernanceAuthority)
               <$> getOwnPaymentPubKeyHash
             let
               version = 1

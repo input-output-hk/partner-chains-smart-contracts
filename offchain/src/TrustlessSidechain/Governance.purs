@@ -6,12 +6,12 @@ module TrustlessSidechain.Governance
 
 import Contract.Prelude
 
-import Contract.Address (PubKeyHash)
+import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash)
 import Contract.PlutusData (class FromData, class ToData)
 import Contract.ScriptLookups as Lookups
 import Contract.TxConstraints as Constraints
 
-newtype GovernanceAuthority = GovernanceAuthority PubKeyHash
+newtype GovernanceAuthority = GovernanceAuthority PaymentPubKeyHash
 
 derive instance Newtype GovernanceAuthority _
 derive instance Generic GovernanceAuthority _
@@ -23,17 +23,17 @@ instance Show GovernanceAuthority where
 
 derive newtype instance Eq GovernanceAuthority
 
-mkGovernanceAuthority ∷ PubKeyHash → GovernanceAuthority
+mkGovernanceAuthority ∷ PaymentPubKeyHash → GovernanceAuthority
 mkGovernanceAuthority = GovernanceAuthority
 
 governanceAuthorityLookupsAndConstraints ∷
   GovernanceAuthority →
 
-  { lookups ∷ Lookups.ScriptLookups Void
-  , constraints ∷ Constraints.TxConstraints Void Void
+  { lookups ∷ Lookups.ScriptLookups
+  , constraints ∷ Constraints.TxConstraints
   }
 governanceAuthorityLookupsAndConstraints (GovernanceAuthority pkh) = do
   let
-    lookups = Lookups.ownPaymentPubKeyHash (wrap pkh)
-    constraints = Constraints.mustBeSignedBy (wrap pkh)
+    lookups = Lookups.ownPaymentPubKeyHash pkh
+    constraints = Constraints.mustBeSignedBy pkh
   { lookups, constraints }

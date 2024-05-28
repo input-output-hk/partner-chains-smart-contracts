@@ -4,12 +4,16 @@ module Test.InitSidechain.FUEL
 
 import Contract.Prelude
 
-import Cardano.Plutus.Types.Map as Plutus.Map
+import Partial.Unsafe (unsafePartial)
 import Contract.PlutusData (toData)
 import Contract.Wallet as Wallet
 import Data.Array as Array
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Data.List as List
+import Data.Map as Map
+import Contract.Wallet as Wallet
+import JS.BigInt as BigInt
+import Cardano.Types.BigNum as BigNum
 import Mote.Monad as Mote.Monad
 import Run (liftEffect) as Run
 import Test.InitSidechain.Utils (expectedInitTokens, failMsg, unorderedEq)
@@ -65,10 +69,10 @@ initFuelSucceeds ∷ PlutipTest
 initFuelSucceeds =
   Mote.Monad.test "`initFuel` succeeds"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
         ]
     $ \alice →
         withUnliftApp (Wallet.withKeyWallet alice) do
@@ -77,7 +81,7 @@ initFuelSucceeds =
           genesisUtxo ← Test.Utils.getOwnTransactionInput
 
           initGovernanceAuthority ←
-            (Governance.mkGovernanceAuthority <<< unwrap)
+            (Governance.mkGovernanceAuthority)
               <$> getOwnPaymentPubKeyHash
 
           let committeeSize = 25
@@ -90,7 +94,7 @@ initFuelSucceeds =
             initATMSKind = ATMSPlainEcdsaSecp256k1
             initSidechainEpoch = zero
             initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
-            initAggregatedCommittee = toData $ Crypto.aggregateKeys $ map
+            initAggregatedCommittee = toData $ unsafePartial Crypto.aggregateKeys $ map
               unwrap
               initCommittee
             sidechainParams = SidechainParams.SidechainParams
@@ -135,7 +139,7 @@ initFuelSucceeds =
 
           let
             dsSpent = not $
-              Plutus.Map.member
+              Map.member
                 DistributedSet.dsInitTokenName
                 tokenStatus
             expectedTokens = expectedInitTokens
@@ -194,10 +198,10 @@ initFuelIdempotent ∷ PlutipTest
 initFuelIdempotent =
   Mote.Monad.test "`initFuel` called a second time returns Nothing"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
         ]
     $ \alice →
         withUnliftApp (Wallet.withKeyWallet alice) do
@@ -206,7 +210,7 @@ initFuelIdempotent =
           genesisUtxo ← Test.Utils.getOwnTransactionInput
 
           initGovernanceAuthority ←
-            (Governance.mkGovernanceAuthority <<< unwrap)
+            (Governance.mkGovernanceAuthority)
               <$> getOwnPaymentPubKeyHash
 
           let committeeSize = 25
@@ -218,7 +222,7 @@ initFuelIdempotent =
             version = 1
             initSidechainEpoch = zero
             initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
-            initAggregatedCommittee = toData $ Crypto.aggregateKeys $ map
+            initAggregatedCommittee = toData $ unsafePartial Crypto.aggregateKeys $ map
               unwrap
               initCommittee
             initATMSKind = ATMSPlainEcdsaSecp256k1

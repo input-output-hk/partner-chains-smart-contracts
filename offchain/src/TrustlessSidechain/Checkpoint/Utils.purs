@@ -14,19 +14,19 @@ import Contract.Prelude
 
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
-import Contract.PlutusData (serializeData, toData)
+import Contract.PlutusData (toData)
+import Cardano.AsCbor (encodeCbor)
 import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.Scripts
   ( Validator
   )
 import Contract.Scripts as Scripts
-import Contract.Transaction
-  ( TransactionInput
-  , TransactionOutputWithRefScript
-  )
+import Contract.Numeric.BigNum as BigNum
+import Cardano.Types.TransactionInput (TransactionInput)
+import Cardano.Types.TransactionOutput (TransactionOutput)
 import Contract.TxConstraints (TxConstraints)
-import Contract.Value (TokenName)
+import Cardano.Types.AssetName (AssetName, mkAssetName)
 import Contract.Value as Value
 import Data.Maybe as Maybe
 import Partial.Unsafe (unsafePartial)
@@ -36,6 +36,7 @@ import TrustlessSidechain.Checkpoint.Types
   ( CheckpointMessage
   , CheckpointParameter
   )
+import TrustlessSidechain.Utils.Asset (emptyAssetName, unsafeMkAssetName)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
@@ -48,7 +49,9 @@ import TrustlessSidechain.InitSidechain.Utils
   , mintOneInitToken
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Types (AssetClass, CurrencyInfo, assetClass)
+import TrustlessSidechain.Types (CurrencyInfo)
+import Cardano.Types.AssetClass (AssetClass(AssetClass))
+import Cardano.Types.Asset (Asset(Asset))
 import TrustlessSidechain.Utils.Address (getCurrencyInfo, toAddress)
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
@@ -60,21 +63,20 @@ import TrustlessSidechain.Versioning.ScriptId
 import TrustlessSidechain.Versioning.Types (VersionOracleConfig)
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
+import Partial.Unsafe (unsafePartial)
 
 -- | A name for the checkpoint initialization token.  Must be unique among
 -- | initialization tokens.
-checkpointInitTokenName ∷ TokenName
-checkpointInitTokenName =
-  unsafePartial $ Maybe.fromJust $ Value.mkTokenName
-    =<< byteArrayFromAscii "Checkpoint InitToken"
+checkpointInitTokenName ∷ AssetName
+checkpointInitTokenName = unsafeMkAssetName "Checkpoint InitToken"
 
 -- | Build lookups and constraints to mint checkpoint initialization token.
 mintOneCheckpointInitToken ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 mintOneCheckpointInitToken sp =
   mintOneInitToken sp checkpointInitTokenName
@@ -84,8 +86,8 @@ burnOneCheckpointInitToken ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 burnOneCheckpointInitToken sp =
   burnOneInitToken sp checkpointInitTokenName
@@ -110,7 +112,7 @@ checkpointAssetClass ∷
   Run (EXCEPT OffchainError + r) AssetClass
 checkpointAssetClass sp = do
   { currencySymbol } ← checkpointCurrencyInfo sp
-  pure $ assetClass currencySymbol checkpointNftTn
+  pure $ AssetClass currencySymbol checkpointNftTn
 
 checkpointValidator ∷
   ∀ r.
@@ -124,10 +126,8 @@ checkpointValidator cp voc =
 -- | the utxo which contains the checkpoint. We use an empty bytestring for
 -- | this because the name really doesn't matter, so we mighaswell save a few
 -- | bytes by giving it the empty name.
-checkpointNftTn ∷ Value.TokenName
-checkpointNftTn =
-  unsafePartial $ Maybe.fromJust $ Value.mkTokenName
-    =<< byteArrayFromAscii ""
+checkpointNftTn ∷ AssetName
+checkpointNftTn = emptyAssetName
 
 -- | `serialiseCheckpointMessage` is an alias for
 -- | ```
@@ -135,16 +135,19 @@ checkpointNftTn =
 -- | ```
 -- | The result of this function is what is signed by the committee members.
 serialiseCheckpointMessage ∷ CheckpointMessage → Maybe EcdsaSecp256k1Message
-serialiseCheckpointMessage = Utils.Crypto.ecdsaSecp256k1Message
-  <<< Hashing.blake2b256Hash
-  <<< cborBytesToByteArray
-  <<< serializeData
-
+serialiseCheckpointMessage message = unsafePartial
+  ( Utils.Crypto.ecdsaSecp256k1Message
+  $ Utils.Crypto.blake2b256Hash
+  $ unwrap
+  $ encodeCbor
+  $ toData
+  $ message
+  )
 findCheckpointUtxo ∷
   ∀ r.
   CheckpointParameter →
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
+    (Maybe { index ∷ TransactionInput, value ∷ TransactionOutput })
 findCheckpointUtxo checkpointParameter = do
   versionOracleConfig ← Versioning.getVersionOracleConfig $
     (unwrap checkpointParameter).sidechainParams
@@ -152,7 +155,10 @@ findCheckpointUtxo checkpointParameter = do
   validatorAddress ← toAddress (Scripts.validatorHash validator)
 
   Utils.Utxos.findUtxoByValueAt validatorAddress \value →
+    let asset = case (unwrap checkpointParameter).checkpointAssetClass of
+          AssetClass currencySymbol tokenName →
+            Asset currencySymbol tokenName
+
     -- Note: there should either be 0 or 1 tokens of this checkpoint nft.
-    Value.valueOf value (fst (unwrap checkpointParameter).checkpointAssetClass)
-      checkpointNftTn
-      /= zero
+    in Value.valueOf asset value
+      /= (BigNum.fromInt 0)

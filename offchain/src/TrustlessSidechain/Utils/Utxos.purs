@@ -7,22 +7,22 @@ module TrustlessSidechain.Utils.Utxos
 
 import Contract.Prelude
 
-import Contract.Address (Address)
-import Contract.Transaction
-  ( TransactionInput
-  , TransactionOutput(TransactionOutput)
-  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
-  )
+import Cardano.Types.Address (Address)
+import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
+import Cardano.Types.TransactionInput (TransactionInput)
 import Contract.Utxos (UtxoMap)
-import Contract.Value (Value)
+import Cardano.Types.Value (Value)
+import Cardano.Types.Value (sum) as Value
 import Data.FoldableWithIndex as FoldableWithIndex
 import Data.Map as Map
+import Data.Array as Array
 import Run (Run)
 import Run.Except (EXCEPT)
+import Run.Except (note) as Run
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Transaction as Effect
 import TrustlessSidechain.Effects.Wallet (WALLET)
-import TrustlessSidechain.Error (OffchainError)
+import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.Utils.Address
   ( getOwnWalletAddress
   )
@@ -38,21 +38,22 @@ findUtxoByValueAt ∷
   Address →
   (Value → Boolean) →
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
+    (Maybe { index ∷ TransactionInput, value ∷ TransactionOutput })
 findUtxoByValueAt addr p = do
   scriptUtxos ← Effect.utxosAt addr
   let
-    go _txIn txOut = p (unwrap (unwrap txOut).output).amount
+    go _txIn txOut = p (unwrap txOut).amount
   pure $ FoldableWithIndex.findWithIndex go scriptUtxos
 
 getOwnUTxOsTotalValue ∷
   ∀ r. Run (EXCEPT OffchainError + WALLET + TRANSACTION + r) Value
 getOwnUTxOsTotalValue = do
   ownUtxos ← getOwnUTxOs
-  pure
-    $ foldMap
-        ( \( TransactionOutputWithRefScript
-               { output: TransactionOutput { amount } }
+  Run.note (GenericInternalError "Couldn't add up own utxo values.")
+    $ Value.sum
+    $ Array.fromFoldable
+    $ map
+        ( \( TransactionOutput { amount }
            ) → amount
         )
     $ Map.values ownUtxos

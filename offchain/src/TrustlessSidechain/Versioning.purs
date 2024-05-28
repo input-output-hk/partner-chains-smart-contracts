@@ -16,21 +16,26 @@ module TrustlessSidechain.Versioning
 
 import Contract.Prelude
 
-import Contract.PlutusData (Redeemer(Redeemer), toData)
+import Contract.PlutusData (RedeemerDatum(RedeemerDatum), toData)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy, ScriptHash, Validator, validatorHash)
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.Transaction
   ( TransactionHash
-  , TransactionOutput(TransactionOutput)
-  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   )
+import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
+import Cardano.Types.TransactionInput (TransactionInput)
+import Cardano.Types.OutputDatum (outputDatumDatum)
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as Constraints
-import Contract.Value as Value
+import Cardano.Types.ScriptRef (ScriptRef(PlutusScriptRef))
+import Cardano.Types.Value as Value
 import Data.Array (fromFoldable) as Array
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Data.List (List)
+import Contract.Numeric.BigNum as BigNum
 import Data.List as List
 import Data.Map as Map
 import Data.Set as Set
@@ -58,6 +63,8 @@ import TrustlessSidechain.Versioning.Utils as Utils
 import TrustlessSidechain.Versioning.V1 as V1
 import TrustlessSidechain.Versioning.V2 as V2
 import Type.Row (type (+))
+import Cardano.Types.Mint as Mint
+import Cardano.Types.Int as Int
 
 -- | Mint multiple version oracle init tokens.  Exact amount minted depends on
 -- | protocol version.
@@ -68,8 +75,8 @@ mintVersionInitTokens ∷
   } →
   Int →
   Run (EXCEPT OffchainError + WALLET + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 mintVersionInitTokens { sidechainParams, atmsKind } version = do
   { versionedPolicies, versionedValidators } ←
@@ -77,17 +84,17 @@ mintVersionInitTokens { sidechainParams, atmsKind } version = do
       version
 
   let
-    amount = BigInt.fromInt
+    amount = Int.fromInt
       (List.length versionedPolicies + List.length versionedValidators)
 
   { mintingPolicy, currencySymbol } ← initTokenCurrencyInfo sidechainParams
 
   pure
-    { lookups: Lookups.mintingPolicy mintingPolicy
+    { lookups: Lookups.plutusMintingPolicy mintingPolicy
     , constraints:
         Constraints.mustMintValueWithRedeemer
-          (Redeemer $ toData MintInitToken)
-          (Value.singleton currencySymbol versionOracleInitTokenName amount)
+          (RedeemerDatum $ toData MintInitToken)
+          (Mint.singleton currencySymbol versionOracleInitTokenName amount)
     }
 
 initializeVersion ∷
@@ -346,8 +353,8 @@ getExpectedVersionedPoliciesAndValidators ∷
   } →
   Int →
   Run (EXCEPT OffchainError + WALLET + r)
-    { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+    { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }
 getExpectedVersionedPoliciesAndValidators { sidechainParams, atmsKind } version =
   case version of
@@ -361,8 +368,8 @@ getCommitteeSelectionPoliciesAndValidators ∷
   SidechainParams →
   Int →
   Run (EXCEPT OffchainError + WALLET + r)
-    { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+    { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }
 getCommitteeSelectionPoliciesAndValidators atmsKind sidechainParams version = do
   case version of
@@ -375,8 +382,8 @@ getCheckpointPoliciesAndValidators ∷
   SidechainParams →
   Int →
   Run (EXCEPT OffchainError + WALLET + r)
-    { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+    { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }
 getCheckpointPoliciesAndValidators sidechainParams version = do
   case version of
@@ -410,8 +417,8 @@ getActualVersionedPoliciesAndValidators ∷
   } →
   Int →
   Run (EXCEPT OffchainError + TRANSACTION + WALLET + r)
-    { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+    { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }
 
 getActualVersionedPoliciesAndValidators { sidechainParams, atmsKind } version =
@@ -419,7 +426,7 @@ getActualVersionedPoliciesAndValidators { sidechainParams, atmsKind } version =
     vValidator ← versionOracleValidator sidechainParams
 
     -- Get UTxOs located at the version oracle validator script address
-    versionOracleValidatorAddr ← toAddress (validatorHash vValidator)
+    versionOracleValidatorAddr ← toAddress (PlutusScript.hash vValidator)
     scriptUtxos ← Effect.utxosAt versionOracleValidatorAddr
 
     -- Get scripts that should be versioned
@@ -446,11 +453,9 @@ getActualVersionedPoliciesAndValidators { sidechainParams, atmsKind } version =
       (actualVersionedScriptHashes ∷ List ScriptHash) =
         List.catMaybes
           $ map
-              ( \(TransactionOutputWithRefScript { output }) →
-                  case output of
-                    TransactionOutput
-                      { referenceScript
-                      } → referenceScript
+              ( \(TransactionOutput { scriptRef }) → case scriptRef of
+                    Just (PlutusScriptRef plutusScript) -> Just $ PlutusScript.hash plutusScript
+                    _ -> Nothing
               )
           $ Map.values scriptUtxos
 
@@ -480,8 +485,8 @@ getFuelPoliciesAndValidators ∷
   SidechainParams →
   Int →
   Run (EXCEPT OffchainError + WALLET + r)
-    { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+    { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }
 getFuelPoliciesAndValidators sidechainParams version =
   case version of
@@ -496,8 +501,8 @@ getDsPoliciesAndValidators ∷
   SidechainParams →
   Int →
   Run (EXCEPT OffchainError + WALLET + r)
-    { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+    { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }
 getDsPoliciesAndValidators sidechainParams version =
   case version of
@@ -510,8 +515,8 @@ getMerkleRootPoliciesAndValidators ∷
   SidechainParams →
   Int →
   Run (EXCEPT OffchainError + WALLET + r)
-    { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+    { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }
 getMerkleRootPoliciesAndValidators sidechainParams version =
   case version of

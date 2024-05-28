@@ -9,14 +9,14 @@ module TrustlessSidechain.GetSidechainAddresses
 
 import Contract.Prelude
 
-import Contract.Address
-  ( AddressWithNetworkTag(AddressWithNetworkTag)
-  , addressWithNetworkTagToBech32
+import Cardano.Types.Address
+  ( Address
+  , toBech32
   )
-import Contract.Scripts
-  ( Validator
-  , validatorHash
-  )
+import Cardano.AsCbor (encodeCbor)
+import Data.ByteArray (byteArrayToHex)
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
 import Data.Array as Array
 import Data.Functor (map)
 import Data.List as List
@@ -46,10 +46,7 @@ import TrustlessSidechain.InitSidechain.Utils as InitSidechain
 import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address
-  ( currencySymbolToHex
-  , getCurrencySymbolHex
-  , getValidatorHash
-  , toAddress
+  ( toAddress
   )
 import TrustlessSidechain.Versioning as Versioning
 import TrustlessSidechain.Versioning.Types
@@ -142,43 +139,41 @@ getSidechainAddresses
 
   { mintingPolicy: dsConfPolicy } ← DistributedSet.dsConfCurrencyInfo
     sidechainParams
-  dsConfPolicyId ← getCurrencySymbolHex DsConfPolicy dsConfPolicy
+  let dsConfPolicyId = byteArrayToHex $ unwrap $ encodeCbor $ PlutusScript.hash dsConfPolicy
 
   mCandidatePermissionPolicyId ←
     if usePermissionToken then do
       { mintingPolicy: candidatePermissionPolicy } ←
         CandidatePermissionToken.candidatePermissionCurrencyInfo sidechainParams
-      candidatePermissionPolicyId ← getCurrencySymbolHex
-        CandidatePermissionPolicy
-        candidatePermissionPolicy
+      let candidatePermissionPolicyId = byteArrayToHex $ unwrap $ encodeCbor $ PlutusScript.hash candidatePermissionPolicy
       pure $ Just candidatePermissionPolicyId
     else pure Nothing
 
   { currencySymbol: checkpointCurrencySymbol } ← do
     Checkpoint.checkpointCurrencyInfo sidechainParams
-  let checkpointPolicyId = currencySymbolToHex checkpointCurrencySymbol
+  let checkpointPolicyId = byteArrayToHex $ unwrap $ encodeCbor checkpointCurrencySymbol
 
   { versionOracleCurrencySymbol } ← getVersionOraclePolicy sidechainParams
-  let versionOraclePolicyId = currencySymbolToHex versionOracleCurrencySymbol
+  let versionOraclePolicyId = byteArrayToHex $ unwrap $ encodeCbor versionOracleCurrencySymbol
 
   { fuelProxyCurrencySymbol } ← getFuelProxyMintingPolicy sidechainParams
-  let fuelProxyPolicyId = currencySymbolToHex fuelProxyCurrencySymbol
+  let fuelProxyPolicyId = byteArrayToHex $ unwrap $ encodeCbor fuelProxyCurrencySymbol
 
   { permissionedCandidatesCurrencySymbol } ←
     PermissionedCandidates.getPermissionedCandidatesMintingPolicyAndCurrencySymbol
       sidechainParams
   let
     permissionedCandidatesPolicyId =
-      currencySymbolToHex permissionedCandidatesCurrencySymbol
+      byteArrayToHex $ unwrap $ encodeCbor permissionedCandidatesCurrencySymbol
 
   { dParameterCurrencySymbol } ←
     DParameter.getDParameterMintingPolicyAndCurrencySymbol
       sidechainParams
-  let dParameterPolicyId = currencySymbolToHex dParameterCurrencySymbol
+  let dParameterPolicyId = byteArrayToHex $ unwrap $ encodeCbor dParameterCurrencySymbol
 
   { currencySymbol: initTokenCurrencySymbol } ←
     InitSidechain.initTokenCurrencyInfo sidechainParams
-  let initTokenPolicyId = currencySymbolToHex initTokenCurrencySymbol
+  let initTokenPolicyId = byteArrayToHex $ unwrap $ encodeCbor initTokenCurrencySymbol
 
   -- Validators
   committeeCandidateValidator ←
@@ -194,24 +189,23 @@ getSidechainAddresses
     Versioning.getExpectedVersionedPoliciesAndValidators
       { sidechainParams: sidechainParams, atmsKind }
       version
-  versionedCurrencySymbols ← List.toUnfoldable <$> traverse
-    ( \(Tuple scriptId mps) → (Tuple scriptId) <$> getCurrencySymbolHex scriptId
-        mps
-    )
-    versionedPolicies
+  let versionedCurrencySymbols = Array.fromFoldable $ map
+        ( \(Tuple scriptId mps) → (Tuple scriptId (byteArrayToHex $ unwrap $ encodeCbor mps))
+        )
+        versionedPolicies
 
   { currencySymbol: committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
     CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSCurrencyInfo
       { committeeCertificateMint, sidechainParams }
   let
-    committeePlainEcdsaSecp256k1ATMSCurrencyInfoId = currencySymbolToHex
+    committeePlainEcdsaSecp256k1ATMSCurrencyInfoId = byteArrayToHex $ unwrap $ encodeCbor
       committeePlainEcdsaSecp256k1ATMSCurrencySymbol
 
   { currencySymbol: committeePlainSchnorrSecp256k1ATMSCurrencySymbol } ←
     CommitteePlainSchnorrSecp256k1ATMSPolicy.committeePlainSchnorrSecp256k1ATMSCurrencyInfo
       { committeeCertificateMint, sidechainParams }
   let
-    committeePlainSchnorrSecp256k1ATMSCurrencyInfoId = currencySymbolToHex
+    committeePlainSchnorrSecp256k1ATMSCurrencyInfoId = byteArrayToHex $ unwrap $ encodeCbor
       committeePlainSchnorrSecp256k1ATMSCurrencySymbol
 
   { permissionedCandidatesValidator } ←
@@ -222,6 +216,7 @@ getSidechainAddresses
     DParameter.getDParameterValidatorAndAddress sidechainParams
 
   let
+    mintingPolicies :: Array (Tuple ScriptId String)
     mintingPolicies =
       [ DsConfPolicy /\ dsConfPolicyId
       , CheckpointPolicy /\ checkpointPolicyId
@@ -260,7 +255,7 @@ getSidechainAddresses
       ] <> List.toUnfoldable versionedValidators
 
   addresses ← traverse (traverse getAddr) validators
-  let validatorHashes = map (map getValidatorHash) validators
+  let validatorHashes = map (map (byteArrayToHex <<< unwrap <<< encodeCbor <<< PlutusScript.hash)) validators
 
   pure
     { addresses
@@ -269,9 +264,7 @@ getSidechainAddresses
     }
 
 -- | Print the bech32 serialised address of a given validator
-getAddr ∷ ∀ r. Validator → Run (EXCEPT OffchainError + WALLET + r) String
+getAddr ∷ ∀ r. PlutusScript → Run (EXCEPT OffchainError + WALLET + r) String
 getAddr v = do
-  addr ← toAddress (validatorHash v)
-  networkId ← Effect.getNetworkId
-  pure $ addressWithNetworkTagToBech32
-    (AddressWithNetworkTag { address: addr, networkId })
+  addr ← toAddress (PlutusScript.hash v)
+  pure $ toBech32 addr

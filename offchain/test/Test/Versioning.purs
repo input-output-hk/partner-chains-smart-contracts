@@ -5,8 +5,10 @@ import Contract.Prelude
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
+import Partial.Unsafe (unsafePartial)
 import Data.Array as Array
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
+import Cardano.Types.BigNum as BigNum
 import Data.List as List
 import Mote.Monad as Mote.Monad
 import Run (AFF, EFFECT, Run)
@@ -67,12 +69,12 @@ testInsertAndInvalidateSuccessScenario ∷ PlutipTest
 testInsertAndInvalidateSuccessScenario =
   Mote.Monad.test "Inserting new version, then invalidate the old one"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 40_000_000
-        , BigInt.fromInt 40_000_000
-        , BigInt.fromInt 40_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 40_000_000
+        , BigNum.fromInt 40_000_000
+        , BigNum.fromInt 40_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) $ do
         pkh ← getOwnPaymentPubKeyHash
@@ -89,14 +91,13 @@ testInsertAndInvalidateSuccessScenario =
               { initChainId: BigInt.fromInt 1
               , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
               , initUtxo: genesisUtxo
-              , initAggregatedCommittee: toData $ aggregateKeys
+              , initAggregatedCommittee: toData $ unsafePartial aggregateKeys
                   $ map unwrap initCommitteePubKeys
               , initSidechainEpoch: zero
               , initThresholdNumerator: BigInt.fromInt 2
               , initThresholdDenominator: BigInt.fromInt 3
               , initCandidatePermissionTokenMintInfo: Nothing
-              , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
-                  pkh
+              , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
               , initATMSKind
               }
           sidechainParams = toSidechainParams initTokenParams
@@ -142,12 +143,12 @@ testInsertSameScriptTwiceSuccessScenario ∷ PlutipTest
 testInsertSameScriptTwiceSuccessScenario =
   Mote.Monad.test "Insert same script with the same version twice"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 40_000_000
-        , BigInt.fromInt 40_000_000
-        , BigInt.fromInt 40_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 40_000_000
+        , BigNum.fromInt 40_000_000
+        , BigNum.fromInt 40_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         pkh ← getOwnPaymentPubKeyHash
@@ -164,14 +165,13 @@ testInsertSameScriptTwiceSuccessScenario =
               { initChainId: BigInt.fromInt 1
               , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
               , initUtxo: genesisUtxo
-              , initAggregatedCommittee: toData $ aggregateKeys
+              , initAggregatedCommittee: toData $ unsafePartial aggregateKeys
                   $ map unwrap initCommitteePubKeys
               , initSidechainEpoch: zero
               , initThresholdNumerator: BigInt.fromInt 2
               , initThresholdDenominator: BigInt.fromInt 3
               , initCandidatePermissionTokenMintInfo: Nothing
-              , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
-                  pkh
+              , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
               , initATMSKind
               }
           sidechainParams = toSidechainParams initTokenParams
@@ -221,12 +221,12 @@ testInsertUnversionedScriptSuccessScenario ∷ PlutipTest
 testInsertUnversionedScriptSuccessScenario =
   Mote.Monad.test "Insert an unversioned script"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 40_000_000
-        , BigInt.fromInt 40_000_000
-        , BigInt.fromInt 40_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 40_000_000
+        , BigNum.fromInt 40_000_000
+        , BigNum.fromInt 40_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         pkh ← getOwnPaymentPubKeyHash
@@ -243,14 +243,13 @@ testInsertUnversionedScriptSuccessScenario =
               { initChainId: BigInt.fromInt 1
               , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
               , initUtxo: genesisUtxo
-              , initAggregatedCommittee: toData $ aggregateKeys
+              , initAggregatedCommittee: toData $ unsafePartial aggregateKeys
                   $ map unwrap initCommitteePubKeys
               , initSidechainEpoch: zero
               , initThresholdNumerator: BigInt.fromInt 2
               , initThresholdDenominator: BigInt.fromInt 3
               , initCandidatePermissionTokenMintInfo: Nothing
-              , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
-                  pkh
+              , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
               , initATMSKind
               }
           sidechainParams = toSidechainParams initTokenParams
@@ -284,12 +283,12 @@ testRemovingTwiceSameScriptFailScenario ∷ PlutipTest
 testRemovingTwiceSameScriptFailScenario =
   Mote.Monad.test "Removing the same script twice should fail"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 40_000_000
-        , BigInt.fromInt 40_000_000
-        , BigInt.fromInt 40_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 40_000_000
+        , BigNum.fromInt 40_000_000
+        , BigNum.fromInt 40_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         pkh ← getOwnPaymentPubKeyHash
@@ -306,14 +305,13 @@ testRemovingTwiceSameScriptFailScenario =
               { initChainId: BigInt.fromInt 1
               , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
               , initUtxo: genesisUtxo
-              , initAggregatedCommittee: toData $ aggregateKeys
+              , initAggregatedCommittee: toData $ unsafePartial aggregateKeys
                   $ map unwrap initCommitteePubKeys
               , initSidechainEpoch: zero
               , initThresholdNumerator: BigInt.fromInt 2
               , initThresholdDenominator: BigInt.fromInt 3
               , initCandidatePermissionTokenMintInfo: Nothing
-              , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
-                  pkh
+              , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
               , initATMSKind
               }
           sidechainParams = toSidechainParams initTokenParams
@@ -353,12 +351,12 @@ testRemovingScriptInsertedMultipleTimesSuccessScenario ∷ PlutipTest
 testRemovingScriptInsertedMultipleTimesSuccessScenario =
   Mote.Monad.test "Removing the same script twice should fail"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 40_000_000
-        , BigInt.fromInt 40_000_000
-        , BigInt.fromInt 40_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 40_000_000
+        , BigNum.fromInt 40_000_000
+        , BigNum.fromInt 40_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         pkh ← getOwnPaymentPubKeyHash
@@ -375,14 +373,13 @@ testRemovingScriptInsertedMultipleTimesSuccessScenario =
               { initChainId: BigInt.fromInt 1
               , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
               , initUtxo: genesisUtxo
-              , initAggregatedCommittee: toData $ aggregateKeys
+              , initAggregatedCommittee: toData $ unsafePartial aggregateKeys
                   $ map unwrap initCommitteePubKeys
               , initSidechainEpoch: zero
               , initThresholdNumerator: BigInt.fromInt 2
               , initThresholdDenominator: BigInt.fromInt 3
               , initCandidatePermissionTokenMintInfo: Nothing
-              , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
-                  pkh
+              , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
               , initATMSKind
               }
           sidechainParams = toSidechainParams initTokenParams
@@ -436,12 +433,12 @@ testInsertScriptsPresentInPreviousVersion ∷ PlutipTest
 testInsertScriptsPresentInPreviousVersion =
   Mote.Monad.test "Insert new version of a script only if present in version - 1"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 40_000_000
-        , BigInt.fromInt 40_000_000
-        , BigInt.fromInt 40_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 40_000_000
+        , BigNum.fromInt 40_000_000
+        , BigNum.fromInt 40_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) $ do
         pkh ← getOwnPaymentPubKeyHash
@@ -458,14 +455,13 @@ testInsertScriptsPresentInPreviousVersion =
               { initChainId: BigInt.fromInt 1
               , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
               , initUtxo: genesisUtxo
-              , initAggregatedCommittee: toData $ aggregateKeys
+              , initAggregatedCommittee: toData $ unsafePartial aggregateKeys
                   $ map unwrap initCommitteePubKeys
               , initSidechainEpoch: zero
               , initThresholdNumerator: BigInt.fromInt 2
               , initThresholdDenominator: BigInt.fromInt 3
               , initCandidatePermissionTokenMintInfo: Nothing
-              , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
-                  pkh
+              , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
               , initATMSKind
               }
           sidechainParams = toSidechainParams initTokenParams

@@ -9,7 +9,8 @@ import Contract.Prelude
 
 import Contract.Scripts as Scripts
 import Contract.Wallet as Wallet
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
+import Cardano.Types.BigNum as BigNum
 import Mote.Monad as Mote.Monad
 import Run (Run)
 import Run.Except (EXCEPT)
@@ -45,9 +46,9 @@ testScenarioSuccess1 =
   Mote.Monad.test
     "Mint permission token, register (check if register validator has permission token), deregister (check if we get permission token back)"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 5_000_000
-        , BigInt.fromInt 5_000_000
-        , BigInt.fromInt 5_000_000
+        [ BigNum.fromInt 5_000_000
+        , BigNum.fromInt 5_000_000
+        , BigNum.fromInt 5_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
 
@@ -137,9 +138,9 @@ testScenarioFailure1 =
   Mote.Monad.test
     "Register, check if register output doesn't have permission token"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 5_000_000
-        , BigInt.fromInt 5_000_000
-        , BigInt.fromInt 5_000_000
+        [ BigNum.fromInt 5_000_000
+        , BigNum.fromInt 5_000_000
+        , BigNum.fromInt 5_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
 

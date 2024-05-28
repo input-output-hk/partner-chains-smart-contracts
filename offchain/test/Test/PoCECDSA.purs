@@ -1,22 +1,24 @@
-module Test.PoCECDSA (testScenario) where
+module Test.PoCECDSA
+  ( ECDSARed(..)
+  , testScenario
+  )
+  where
 
 import Contract.Prelude
-
-import Contract.Address (getNetworkId, validatorHashEnterpriseAddress)
-import Contract.Log (logInfo')
+import Prelude as Prelude
+import Cardano.Types.Address as Address
+import TrustlessSidechain.Effects.Wallet (getNetworkId) as Effect
+import TrustlessSidechain.Effects.Log (logInfo') as Effect
 import Contract.Monad (Contract, liftContractM, liftedE)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
-  ( class ToData
-  , PlutusData(Constr)
-  , Redeemer(Redeemer)
-  , toData
-  , unitDatum
+  ( RedeemerDatum(RedeemerDatum)
   )
+import Cardano.ToData (class ToData, toData)
+import Cardano.Types.PlutusData (PlutusData(Constr), unit)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (Validator(Validator), validatorHash)
-import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptV2FromEnvelope)
+import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptFromEnvelope)
 import Contract.Transaction
   ( TransactionHash
   , awaitTxConfirmed
@@ -28,7 +30,7 @@ import Contract.TxConstraints as Constraints
 import Contract.Utxos (utxosAt)
 import Contract.Value as Value
 import Contract.Wallet as Wallet
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Data.Map as Map
 import Data.Set as Set
 import Mote.Monad as Mote.Monad
@@ -36,14 +38,23 @@ import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.PoCRawScripts (rawPoCECDSA)
 import TrustlessSidechain.Effects.Contract (liftContract)
-
-getValidator ∷ Contract Validator
-getValidator = do
-  let
-    script = decodeTextEnvelope rawPoCECDSA >>= plutusScriptV2FromEnvelope
-
-  unapplied ← liftContractM "Decoding text envelope failed." script
-  pure $ Validator unapplied
+import Cardano.Types.PlutusScript as PlutusScript
+import Run.Except (note) as Run
+import TrustlessSidechain.Error
+  ( OffchainError(BalanceTxError, BuildTxError, InvalidScript, NotFoundUtxo)
+  )
+import TrustlessSidechain.Utils.Address (toAddress)
+import TrustlessSidechain.Effects.Transaction
+  ( mkUnbalancedTx
+  , signTransaction
+  , submit
+  , balanceTx
+  , awaitTxConfirmed
+  , utxosAt
+  ) as Effect
+import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Util (mapError)
+import Cardano.ToData as ToData
 
 newtype ECDSARed = ECDSARed
   { msg ∷ ByteArray
@@ -59,75 +70,43 @@ instance ToData ECDSARed where
   toData (ECDSARed { msg, sig, pk }) = Constr (BigNum.fromInt 0)
     [ toData msg, toData sig, toData pk ]
 
--- | Prepate the ECDSA test by locking some funds at the validator address
-prepTest ∷ Contract TransactionHash
-prepTest = do
-  validator ← getValidator
-  let
-    valHash = validatorHash validator
-    val = Value.lovelaceValueOf (BigInt.fromInt 1)
-
-    lookups ∷ Lookups.ScriptLookups Void
-    lookups = Lookups.validator validator
-
-    constraints ∷ Constraints.TxConstraints Void Void
-    constraints = Constraints.mustPayToScript valHash unitDatum
-      Constraints.DatumInline
-      val
-  ubTx ← liftedE $ Lookups.mkUnbalancedTx lookups constraints
-  bsTx ← liftedE $ balanceTx ubTx
-  signedTx ← signTransaction bsTx
-  txId ← submit signedTx
-  logInfo' $ ("Submitted ECDSA test prep tx: " <> show txId)
-  awaitTxConfirmed txId
-  logInfo' "Transaction confirmed."
-
-  pure txId
-
--- | Attempt to unlock one utxo using an ECDSA signature
-testVerification ∷ ECDSARed → Contract TransactionHash
-testVerification ecdsaRed = do
-  let red = Redeemer $ toData ecdsaRed
-
-  validator ← getValidator
-  let valHash = validatorHash validator
-
-  netId ← getNetworkId
-  valAddr ← liftContractM "cannot get validator address"
-    (validatorHashEnterpriseAddress netId valHash)
-
-  scriptUtxos ← utxosAt valAddr
-  txIn ← liftContractM "No UTxOs found at validator address"
-    $ Set.findMin
-    $ Map.keys scriptUtxos
-  let
-    lookups ∷ Lookups.ScriptLookups Void
-    lookups = Lookups.validator validator
-      <> Lookups.unspentOutputs scriptUtxos
-
-    constraints ∷ Constraints.TxConstraints Void Void
-    constraints = Constraints.mustSpendScriptOutput txIn red
-  ubTx ← liftedE $ Lookups.mkUnbalancedTx lookups constraints
-  bsTx ← liftedE $ balanceTx ubTx
-  signedTx ← signTransaction bsTx
-  txId ← submit signedTx
-  logInfo' $ ("Submitted ECDSA test verification tx: " <> show txId)
-  awaitTxConfirmed txId
-  logInfo' "Transaction confirmed."
-
-  pure txId
 
 -- | Testing ECDSA verification function on-chain
 testScenario ∷ PlutipTest
 testScenario = Mote.Monad.test "PoCECDSA: testScenario"
   $ Test.PlutipTest.mkPlutipConfigTest
-      [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
-  $ \alice → liftContract $ Wallet.withKeyWallet alice do
-      txId ← prepTest
-      awaitTxConfirmed txId
-      void $ testVerification $
-        -- | TODO: Find the correct format
-        ECDSARed
+      [ BigNum.fromInt 10_000_000, BigNum.fromInt 10_000_000 ]
+  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+      -- Prep test
+    let
+      script = decodeTextEnvelope rawPoCECDSA >>= plutusScriptFromEnvelope
+
+    validator ← Run.note (InvalidScript "Decoding text envelope failed.") script
+
+    let
+      valHash = PlutusScript.hash validator
+      val = Value.lovelaceValueOf (BigNum.fromInt 1)
+
+      lookups ∷ Lookups.ScriptLookups
+      lookups = Lookups.validator validator
+
+      constraints ∷ Constraints.TxConstraints
+      constraints = Constraints.mustPayToScript valHash unit
+        Constraints.DatumInline
+        val
+
+    unbalancedTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups
+      constraints
+    balancedTx ← mapError BalanceTxError $ Effect.balanceTx unbalancedTx
+    signedTx ← Effect.signTransaction balancedTx
+    txId ← Effect.submit signedTx
+    Effect.logInfo' $ "Transaction submitted: " <> show txId
+    Effect.awaitTxConfirmed txId
+    Effect.logInfo' $ "Transaction confirmed: " <> show txId
+    ---
+
+    -- | TODO: Find the correct format
+    let red = RedeemerDatum $ ToData.toData $ ECDSARed
           { msg: hexToByteArrayUnsafe
               "16e0bf1f85594a11e75030981c0b670370b3ad83a43f49ae58a2fd6f6513cde9"
           , sig: hexToByteArrayUnsafe
@@ -135,3 +114,35 @@ testScenario = Mote.Monad.test "PoCECDSA: testScenario"
           , pk: hexToByteArrayUnsafe
               "0392d7b94bc6a11c335a043ee1ff326b6eacee6230d3685861cd62bce350a172e0"
           }
+
+    let
+      script = decodeTextEnvelope rawPoCECDSA >>= plutusScriptFromEnvelope
+
+    validator ← Run.note (InvalidScript "Decoding text envelope failed.") script
+
+    let valHash = PlutusScript.hash validator
+
+    netId ← Effect.getNetworkId
+    valAddr ← toAddress valHash
+
+    scriptUtxos ← Effect.utxosAt valAddr
+    txIn ← Run.note (NotFoundUtxo "No UTxOs found at validator address")
+      $ Set.findMin
+      $ Map.keys scriptUtxos
+    let
+      lookups ∷ Lookups.ScriptLookups
+      lookups = Lookups.validator validator
+        <> Lookups.unspentOutputs scriptUtxos
+
+      constraints ∷ Constraints.TxConstraints
+      constraints = Constraints.mustSpendScriptOutput txIn red
+    unbalancedTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups
+      constraints
+    balancedTx ← mapError BalanceTxError $ Effect.balanceTx unbalancedTx
+    signedTx ← Effect.signTransaction balancedTx
+    txId ← Effect.submit signedTx
+    Effect.logInfo' $ "Transaction submitted: " <> show txId
+    Effect.awaitTxConfirmed txId
+    Effect.logInfo' $ "Transaction confirmed: " <> show txId
+
+    pure Prelude.unit

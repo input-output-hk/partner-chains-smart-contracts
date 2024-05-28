@@ -8,38 +8,36 @@ module TrustlessSidechain.FUELBurningPolicy.V2
 import Contract.Prelude
 
 import Contract.PlutusData
-  ( Redeemer(Redeemer)
-  , toData
+  ( RedeemerDatum(RedeemerDatum)
   )
+import Cardano.FromData (fromData)
+import Cardano.ToData (toData)
 import Contract.PlutusData as PlutusData
+import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.PlutusScript (PlutusScript)
 import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy)
 import Contract.Scripts as Scripts
-import Contract.Transaction (mkTxUnspentOut)
 import Contract.TxConstraints
   ( InputWithScriptRef(RefInput)
   , TxConstraints
   )
 import Contract.TxConstraints as Constraints
-import Contract.Value
-  ( CurrencySymbol
-  , TokenName
-  )
 import Contract.Value as Value
-import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import Run (Run)
 import Run.Except (EXCEPT)
 import Test.PoCRawScripts (rawPoCMintingPolicy)
+import Contract.Numeric.BigNum as BigNum
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams'
   )
@@ -48,13 +46,15 @@ import TrustlessSidechain.Versioning.Types
   , VersionOracle(VersionOracle)
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
+import Cardano.Types.AssetName (AssetName)
+import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
 import Type.Row (type (+))
+import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
+import Cardano.Types.Int as Int
+import Partial.Unsafe (unsafePartial)
 
-dummyTokenName ∷ TokenName
-dummyTokenName =
-  Unsafe.unsafePartial $ Maybe.fromJust
-    $ Value.mkTokenName
-    =<< byteArrayFromAscii "Dummy tokens"
+dummyTokenName ∷ AssetName
+dummyTokenName = unsafeMkAssetName "Dummy tokens"
 
 -- | `FuelBurnParams` is the data needed to mint FUELBurningToken
 data FuelBurnParams = FuelBurnParams
@@ -67,7 +67,7 @@ data FuelBurnParams = FuelBurnParams
 decodeDummyBurningPolicy ∷
   ∀ r.
   SidechainParams →
-  Run (EXCEPT OffchainError + r) MintingPolicy
+  Run (EXCEPT OffchainError + r) PlutusScript
 decodeDummyBurningPolicy sidechainParams =
   mkMintingPolicyWithParams' rawPoCMintingPolicy [ toData sidechainParams ]
 
@@ -75,21 +75,20 @@ getFuelBurningPolicy ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + r)
-    { fuelBurningPolicy ∷ MintingPolicy
-    , fuelBurningCurrencySymbol ∷ CurrencySymbol
+    { fuelBurningPolicy ∷ PlutusScript
+    , fuelBurningCurrencySymbol ∷ ScriptHash
     }
 getFuelBurningPolicy sidechainParams = do
   fuelBurningPolicy ← decodeDummyBurningPolicy sidechainParams
-  fuelBurningCurrencySymbol ←
-    getCurrencySymbol FUELBurningPolicy fuelBurningPolicy
+  let fuelBurningCurrencySymbol = PlutusScript.hash fuelBurningPolicy
   pure { fuelBurningPolicy, fuelBurningCurrencySymbol }
 
 mkBurnFuelLookupAndConstraints ∷
   ∀ r.
   FuelBurnParams →
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 mkBurnFuelLookupAndConstraints (FuelBurnParams { sidechainParams, amount }) = do
   { fuelBurningPolicy } ← getFuelBurningPolicy sidechainParams
@@ -97,20 +96,20 @@ mkBurnFuelLookupAndConstraints (FuelBurnParams { sidechainParams, amount }) = do
   (scriptRefTxInput /\ scriptRefTxOutput) ← Versioning.getVersionedScriptRefUtxo
     sidechainParams
     ( VersionOracle
-        { version: BigInt.fromInt 2, scriptId: FUELBurningPolicy }
+        { version: BigNum.fromInt 2, scriptId: FUELBurningPolicy }
     )
 
   let
-    lookups ∷ ScriptLookups Void
-    lookups = Lookups.mintingPolicy fuelBurningPolicy
+    lookups ∷ ScriptLookups
+    lookups = Lookups.plutusMintingPolicy fuelBurningPolicy
 
-    constraints ∷ TxConstraints Void Void
+    constraints ∷ TxConstraints
     constraints =
       Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
-        (Scripts.mintingPolicyHash fuelBurningPolicy)
-        (Redeemer $ PlutusData.toData unit)
+        (PlutusScript.hash fuelBurningPolicy)
+        (RedeemerDatum $ PlutusData.toData unit)
         dummyTokenName
-        amount
-        (RefInput $ mkTxUnspentOut scriptRefTxInput scriptRefTxOutput)
+        (unsafePartial $ fromJust $ Int.fromBigInt amount)
+        (RefInput $ TransactionUnspentOutput {input: scriptRefTxInput, output: scriptRefTxOutput})
 
   pure { lookups, constraints }

@@ -2,7 +2,9 @@ module TrustlessSidechain.InitSidechain.FUEL
   ( initFuel
   ) where
 
-import Contract.PlutusData (Datum(Datum), PlutusData)
+
+import Cardano.Types.PlutusData (PlutusData)
+import Cardano.Types.Mint (Mint)
 import Contract.PlutusData as PlutusData
 import Contract.Prelude
   ( Maybe(..)
@@ -20,6 +22,10 @@ import Contract.Prelude
   , (>>=)
   , (>>>)
   )
+import Cardano.Types.Int as Int
+import Cardano.Types.BigNum as BigNum
+import Cardano.Types.AssetName as AssetName
+import Cardano.Types.Mint as Mint
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts (validatorHash)
@@ -31,7 +37,8 @@ import Contract.TxConstraints
   )
 import Contract.TxConstraints as Constraints
 import Contract.Value as Value
-import Data.BigInt (BigInt)
+import Data.Array ((:))
+import JS.BigInt (BigInt)
 import Run (Run)
 import Run.Except (EXCEPT, note, throw)
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
@@ -61,7 +68,7 @@ import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
-import TrustlessSidechain.Utils.Address (getCurrencySymbol)
+import Cardano.Types.PlutusScript as PlutusScript
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning
   ( getCommitteeSelectionPoliciesAndValidators
@@ -190,8 +197,8 @@ initFuelAndDsLookupsAndConstraints ∷
   SidechainParams →
   Int →
   Run (EXCEPT OffchainError + WALLET + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 initFuelAndDsLookupsAndConstraints sidechainParams version = do
   -- Build lookups and constraints to burn distributed set init token
@@ -216,21 +223,23 @@ initFuelAndDsLookupsAndConstraints sidechainParams version = do
       }
 
   dsKeyPolicy ← DistributedSet.dsKeyPolicy dskm
-  dsKeyCurrencySymbol ← getCurrencySymbol DsKeyPolicy dsKeyPolicy
+  let dsKeyCurrencySymbol = PlutusScript.hash dsKeyPolicy
   dsKeyPolicyTokenName ←
     note
       ( ConversionError
           "Failed to convert 'DistributedSet.rootNode.nKey' into a TokenName"
       )
-      $ Value.mkTokenName
+      $ AssetName.mkAssetName
       $ (unwrap DistributedSet.rootNode).nKey
 
   let
     insertValidatorValue = Value.singleton dsKeyCurrencySymbol
       dsKeyPolicyTokenName
-      one
-    insertValidatorDatum = Datum
-      $ PlutusData.toData
+      (BigNum.fromInt 1)
+    mintValidatorValue = Mint.singleton dsKeyCurrencySymbol
+      dsKeyPolicyTokenName
+      (Int.fromInt 1)
+    insertValidatorDatum = PlutusData.toData
       $ DsDatum
           (unwrap DistributedSet.rootNode).nNext
 
@@ -239,10 +248,10 @@ initFuelAndDsLookupsAndConstraints sidechainParams version = do
     case version of
       1 → FUELMintingPolicy.V1.getFuelMintingPolicy sidechainParams
         >>= _.fuelMintingPolicy
-        >>> getCurrencySymbol FUELMintingPolicy
+        >>> PlutusScript.hash >>> pure
       2 → FUELMintingPolicy.V2.getFuelMintingPolicy sidechainParams
         >>= _.fuelMintingPolicy
-        >>> getCurrencySymbol FUELMintingPolicy
+        >>> PlutusScript.hash >>> pure
       _ → throw $ GenericInternalError ("Invalid version: " <> show version)
 
   -- Validator for the configuration of the distributed set / the associated
@@ -252,9 +261,11 @@ initFuelAndDsLookupsAndConstraints sidechainParams version = do
     dsConfValidatorHash = Scripts.validatorHash dsConfValidator
     dsConfValue = Value.singleton dsConfCurrencySymbol
       DistributedSet.dsConfTokenName
-      one
-    dsConfValidatorDatum = Datum
-      $ PlutusData.toData
+      (BigNum.fromInt 1)
+    dsConfMint = Mint.singleton dsConfCurrencySymbol
+      DistributedSet.dsConfTokenName
+      (Int.fromInt 1)
+    dsConfValidatorDatum = PlutusData.toData
       $ DsConfDatum
           { dscKeyPolicy: dsKeyCurrencySymbol
           , dscFUELPolicy: fuelMintingPolicyCurrencySymbol
@@ -263,20 +274,20 @@ initFuelAndDsLookupsAndConstraints sidechainParams version = do
   -- Building the transaction
   -----------------------------------
   let
-    lookups ∷ ScriptLookups Void
+    lookups ∷ ScriptLookups
     lookups =
       Lookups.validator insertValidator
-        <> Lookups.mintingPolicy dsConfPolicy
-        <> Lookups.mintingPolicy dsKeyPolicy
+        <> Lookups.plutusMintingPolicy dsConfPolicy
+        <> Lookups.plutusMintingPolicy dsKeyPolicy
 
-    constraints ∷ TxConstraints Void Void
+    constraints ∷ TxConstraints
     constraints =
-      Constraints.mustMintValue insertValidatorValue
+      Constraints.mustMintValue mintValidatorValue
         <> Constraints.mustPayToScript insertValidatorHash
           insertValidatorDatum
           DatumInline
           insertValidatorValue
-        <> Constraints.mustMintValue dsConfValue
+        <> Constraints.mustMintValue dsConfMint
         <> Constraints.mustPayToScript dsConfValidatorHash
           dsConfValidatorDatum
           DatumInline
@@ -293,8 +304,8 @@ initCommitteeHashLookupsAndConstraints ∷
   PlutusData →
   SidechainParams →
   Run (EXCEPT OffchainError + WALLET + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 initCommitteeHashLookupsAndConstraints
   initSidechainEpoch
@@ -316,19 +327,24 @@ initCommitteeHashLookupsAndConstraints
         Value.singleton
           committeeNft.currencySymbol
           CommitteeOraclePolicy.committeeOracleTn
-          one
+          (BigNum.fromInt 1)
+
+      committeeNftMint =
+        Mint.singleton
+          committeeNft.currencySymbol
+          CommitteeOraclePolicy.committeeOracleTn
+          (Int.fromInt 1)
 
       mintCommitteeNft =
-        { lookups: Lookups.mintingPolicy committeeNft.mintingPolicy
-        , constraints: Constraints.mustMintValue committeeNftValue
+        { lookups: Lookups.plutusMintingPolicy committeeNft.mintingPolicy
+        , constraints: Constraints.mustMintValue committeeNftMint
         }
 
     -- Setting up the update committee hash validator
     -----------------------------------
     let
       aggregatedKeys = initAggregatedCommittee
-      committeeHashDatum = Datum
-        $ PlutusData.toData
+      committeeHashDatum = PlutusData.toData
         $ UpdateCommitteeDatum
             { aggregatePubKeys: aggregatedKeys
             , sidechainEpoch: initSidechainEpoch
@@ -346,11 +362,11 @@ initCommitteeHashLookupsAndConstraints
     -- Building the transaction
     -----------------------------------
     let
-      lookups ∷ ScriptLookups Void
+      lookups ∷ ScriptLookups
       lookups =
         Lookups.validator committeeHashValidator
 
-      constraints ∷ TxConstraints Void Void
+      constraints ∷ TxConstraints
       constraints = Constraints.mustPayToScript committeeHashValidatorHash
         committeeHashDatum
         DatumInline

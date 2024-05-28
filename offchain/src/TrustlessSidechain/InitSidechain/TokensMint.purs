@@ -10,8 +10,8 @@ import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction
   ( TransactionHash
-  , TransactionOutputWithRefScript(..)
   )
+import Cardano.Types.TransactionOutput (TransactionOutput)
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as Constraints
 import Data.Map as Map
@@ -121,8 +121,8 @@ initSpendGenesisUtxo ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 initSpendGenesisUtxo sidechainParams = do
   let txIn = (unwrap sidechainParams).genesisUtxo
@@ -145,9 +145,6 @@ initSpendGenesisUtxo sidechainParams = do
   pure
     { constraints: Constraints.mustSpendPubKeyOutput txIn
     , lookups: Lookups.unspentOutputs
-        ( Map.singleton txIn
-            ( TransactionOutputWithRefScript
-                { output: txOut, scriptRef: Nothing }
-            )
+        ( Map.singleton txIn txOut
         )
     }

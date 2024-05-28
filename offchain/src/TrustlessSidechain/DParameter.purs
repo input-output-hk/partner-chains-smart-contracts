@@ -5,36 +5,32 @@ module TrustlessSidechain.DParameter
 
 import Contract.Prelude
 
-import Contract.PlutusData
-  ( Datum(Datum)
-  , fromData
-  , toData
-  , unitRedeemer
-  )
+import Contract.PlutusData (RedeemerDatum(RedeemerDatum))
+import Cardano.Types.OutputDatum (OutputDatum(OutputDatum))
+import Cardano.Types.PlutusData as PlutusData
+import Cardano.FromData (fromData)
+import Cardano.ToData (toData)
 import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Transaction
-  ( OutputDatum(OutputDatum)
-  , TransactionOutput(TransactionOutput)
-  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
-  )
+import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
   , TxConstraints
   )
 import Contract.TxConstraints as Constraints
-import Contract.Value (TokenName, Value)
-import Contract.Value as Value
+import Cardano.Types.AssetName (AssetName)
+import Cardano.Types.Value as Value
 import Data.Array as Array
-import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
 import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import Run (Run)
 import Run.Except (EXCEPT, throw)
 import Run.Except as Run
+import Contract.Numeric.BigNum as BigNum
 import TrustlessSidechain.DParameter.Types
   ( DParameterValidatorDatum(DParameterValidatorDatum)
   )
@@ -47,14 +43,14 @@ import TrustlessSidechain.Error
   )
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Address (toValidatorHash) as Utils
+import Cardano.Types.PlutusScript as PlutusScript
 import Type.Row (type (+))
+import Cardano.Types.Asset (Asset(Asset))
+import TrustlessSidechain.Utils.Asset (emptyAssetName)
+import Cardano.Types.Int as Int
 
-dParameterTokenName ∷ TokenName
-dParameterTokenName =
-  Unsafe.unsafePartial $ Maybe.fromJust
-    $ Value.mkTokenName
-    =<< byteArrayFromAscii ""
+dParameterTokenName ∷ AssetName
+dParameterTokenName = emptyAssetName
 
 mkInsertDParameterLookupsAndConstraints ∷
   ∀ r.
@@ -63,8 +59,8 @@ mkInsertDParameterLookupsAndConstraints ∷
   , registeredCandidatesCount ∷ BigInt
   } →
   Run (EXCEPT OffchainError + WALLET + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 mkInsertDParameterLookupsAndConstraints
   sidechainParams
@@ -73,13 +69,12 @@ mkInsertDParameterLookupsAndConstraints
     DParameter.getDParameterMintingPolicyAndCurrencySymbol sidechainParams
 
   let
-    dParameterMintingPolicyHash =
-      Value.currencyMPSHash dParameterCurrencySymbol
+    dParameterMintingPolicyHash = dParameterCurrencySymbol
 
-  { dParameterValidatorAddress } ←
+  { dParameterValidatorAddress, dParameterValidator } ←
     DParameter.getDParameterValidatorAndAddress sidechainParams
 
-  dParameterValidatorHash ← Utils.toValidatorHash dParameterValidatorAddress
+  let dParameterValidatorHash = PlutusScript.hash dParameterValidator
 
   let
     { lookups: governanceLookups, constraints: governanceConstraints } =
@@ -87,27 +82,27 @@ mkInsertDParameterLookupsAndConstraints
         (unwrap sidechainParams).governanceAuthority
 
   let
-    value ∷ Value
+    value ∷ Value.Value
     value = Value.singleton
       dParameterCurrencySymbol
       dParameterTokenName
-      (BigInt.fromInt 1)
+      (BigNum.fromInt 1)
 
-    dParameterDatum ∷ Datum
-    dParameterDatum = Datum $ toData $ DParameterValidatorDatum
+    dParameterDatum ∷ PlutusData.PlutusData
+    dParameterDatum = toData $ DParameterValidatorDatum
       { permissionedCandidatesCount, registeredCandidatesCount }
 
-    lookups ∷ ScriptLookups Void
-    lookups = Lookups.mintingPolicy dParameterMintingPolicy
+    lookups ∷ ScriptLookups
+    lookups = Lookups.plutusMintingPolicy dParameterMintingPolicy
       <> governanceLookups
 
-    constraints ∷ TxConstraints Void Void
+    constraints ∷ TxConstraints
     constraints =
       Constraints.mustMintCurrencyWithRedeemer
         dParameterMintingPolicyHash
-        unitRedeemer
+        (RedeemerDatum $ PlutusData.unit)
         dParameterTokenName
-        (BigInt.fromInt 1)
+        (Int.fromInt 1)
         <> Constraints.mustPayToScript dParameterValidatorHash dParameterDatum
           DatumInline
           value
@@ -121,8 +116,8 @@ mkUpdateDParameterLookupsAndConstraints ∷
   , registeredCandidatesCount ∷ BigInt
   } →
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 mkUpdateDParameterLookupsAndConstraints
   sidechainParams
@@ -133,7 +128,7 @@ mkUpdateDParameterLookupsAndConstraints
   { dParameterValidatorAddress, dParameterValidator } ←
     DParameter.getDParameterValidatorAndAddress sidechainParams
 
-  dParameterValidatorHash ← Utils.toValidatorHash dParameterValidatorAddress
+  let dParameterValidatorHash = PlutusScript.hash dParameterValidator
 
   -- find one UTxO at DParameterValidator address that contain DParameterToken
 
@@ -141,11 +136,9 @@ mkUpdateDParameterLookupsAndConstraints
     ( Array.head
         <<< Map.toUnfoldable
         <<< Map.filter
-          ( \( TransactionOutputWithRefScript
-                 { output: (TransactionOutput { amount }) }
-             ) → Value.valueOf amount dParameterCurrencySymbol dParameterTokenName
-              >
-                BigInt.fromInt 0
+          ( \( TransactionOutput { amount })
+              → Value.valueOf (Asset dParameterCurrencySymbol dParameterTokenName) amount
+                > BigNum.fromInt 0
           )
     )
       <$> Effect.utxosAt dParameterValidatorAddress
@@ -158,15 +151,13 @@ mkUpdateDParameterLookupsAndConstraints
   -- update
   let
     dParameterTokenAmount = case oldDParameterOutput of
-      TransactionOutputWithRefScript
-        { output: TransactionOutput { amount }
-        } → Value.valueOf amount dParameterCurrencySymbol dParameterTokenName
+      TransactionOutput { amount }
+         → Value.valueOf (Asset dParameterCurrencySymbol dParameterTokenName) amount
 
   -- if the old D Parameter is exactly the same as the new one, throw an error
   case oldDParameterOutput of
-    TransactionOutputWithRefScript
-      { output: TransactionOutput { datum: OutputDatum (Datum d) }
-      } → case fromData d of
+    TransactionOutput { datum: Just (OutputDatum d) }
+       → case fromData d of
       Just (DParameterValidatorDatum dParameter)
         | dParameter.permissionedCandidatesCount == permissionedCandidatesCount
             && dParameter.registeredCandidatesCount
@@ -177,7 +168,7 @@ mkUpdateDParameterLookupsAndConstraints
       _ → pure unit
     _ → pure unit
 
-  when (dParameterTokenAmount <= BigInt.fromInt 0)
+  when (dParameterTokenAmount <= BigNum.fromInt 0)
     $ throw
     $ GenericInternalError
         "No previous DParameter tokens were found. Please insert a new DParameter before trying to update."
@@ -188,28 +179,28 @@ mkUpdateDParameterLookupsAndConstraints
         (unwrap sidechainParams).governanceAuthority
 
   let
-    value ∷ Value
+    value ∷ Value.Value
     value = Value.singleton
       dParameterCurrencySymbol
       dParameterTokenName
       dParameterTokenAmount
 
-    dParameterDatum ∷ Datum
-    dParameterDatum = Datum $ toData $ DParameterValidatorDatum
+    dParameterDatum ∷ PlutusData.PlutusData
+    dParameterDatum = toData $ DParameterValidatorDatum
       { permissionedCandidatesCount, registeredCandidatesCount }
 
-    lookups ∷ ScriptLookups Void
+    lookups ∷ ScriptLookups
     lookups = Lookups.validator dParameterValidator
       <> Lookups.unspentOutputs
         (Map.singleton oldDParameterInput oldDParameterOutput)
       <> governanceLookups
 
-    spendScriptOutputConstraints ∷ TxConstraints Void Void
+    spendScriptOutputConstraints ∷ TxConstraints
     spendScriptOutputConstraints = Constraints.mustSpendScriptOutput
       oldDParameterInput
-      unitRedeemer
+      (RedeemerDatum $ PlutusData.unit)
 
-    constraints ∷ TxConstraints Void Void
+    constraints ∷ TxConstraints
     constraints =
       Constraints.mustPayToScript dParameterValidatorHash dParameterDatum
         DatumInline

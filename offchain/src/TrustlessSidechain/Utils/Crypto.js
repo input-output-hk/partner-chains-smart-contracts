@@ -1,15 +1,16 @@
-let secp = require("secp256k1");
-let crypto = require("crypto");
+import secp from "secp256k1";
+import crypto from "crypto";
+import blake2 from "blake2";
 
-exports.verifyEcdsaSecp256k1Signature =
+export const verifyEcdsaSecp256k1Signature =
   (ecdsa_pub_key) => (data) => (ecdsa_der_sig) =>
     secp.ecdsaVerify(ecdsa_der_sig, data, ecdsa_pub_key);
 
-exports.sign = (data) => (ecdsa_priv_key) =>
+export const sign = (data) => (ecdsa_priv_key) =>
   secp.ecdsaSign(data, ecdsa_priv_key).signature;
 
 // rawSerialiseDSIGN for private keys is just hex decoding them, so we need to do nothing here
-exports.generateRandomPrivateKey = () => {
+export const generateRandomPrivateKey = () => {
   let priv_key;
   do {
     priv_key = crypto.randomBytes(32);
@@ -26,7 +27,7 @@ exports.generateRandomPrivateKey = () => {
 // - https://github.com/input-output-hk/cardano-base/blob/737d0c50d10db63ee55f9a49c66da50573088818/cardano-crypto-class/src/Cardano/Crypto/DSIGN/EcdsaSecp256k1.hs#L225
 // - https://github.com/input-output-hk/cardano-base/blob/737d0c50d10db63ee55f9a49c66da50573088818/cardano-crypto-class/src/Cardano/Crypto/SECP256K1/C.hs#L157-L164
 // - https://github.com/input-output-hk/cardano-base/pull/289
-exports.toPubKeyUnsafe = (ecdsa_priv_key) =>
+export const toPubKeyUnsafe = (ecdsa_priv_key) =>
   secp.publicKeyCreate(ecdsa_priv_key, /*compressed =*/ true);
 
 // This verifies if we have a valid public key (for both compresed [33 byte] or
@@ -37,12 +38,12 @@ exports.toPubKeyUnsafe = (ecdsa_priv_key) =>
 //   - The implementation is here:
 //   https://github.com/bitcoin-core/secp256k1/blob/5c789dcd7318649c43d89361eaaa07c3bd1c9c57/src/secp256k1.c#L248
 //   - And most of the heavy checks happen in this function: https://github.com/bitcoin-core/secp256k1/blob/9a5a87e0f1276e0284446af1172056ea4693737f/src/eckey_impl.h#L17
-exports.pubKeyVerify = (publicKey) =>
+export const pubKeyVerify = (publicKey) =>
   secp.publicKeyVerify(publicKey);
 
 // Quoting the documentation: ``Export an ECDSA signature to DER format.''
 //  - https://github.com/cryptocoinjs/secp256k1-node/blob/HEAD/API.md#signatureexportsignature-output-uint8array--len-number--uint8array--len--new-uint8arraylen-uint8array
-exports.signatureExport = (signature) => {
+export const signatureExport = (signature) => {
   return secp.signatureExport(signature, (len) => { return new Uint8Array(len); });
 };
 
@@ -53,5 +54,11 @@ exports.signatureExport = (signature) => {
 //  https://github.com/cryptocoinjs/secp256k1-node/blob/master/src/secp256k1.cc#L101
 //  - Which calls the well documented C function:
 //  https://github.com/bitcoin-core/secp256k1/blob/e3f84777eba58ea010e61e02b0d3a65787bc4fd7/include/secp256k1.h#L662-L673
-exports.secKeyVerify = (secretKey) =>
+export const secKeyVerify = (secretKey) =>
   secp.privateKeyVerify(secretKey);
+
+export const blake2b256 = (data) => {
+  const hash = blake2.createHash('blake2b', {digestLength: 32});
+  hash.update(Buffer.from(data, 'hex'));
+  return hash.digest('hex');
+}

@@ -3,13 +3,13 @@ module TrustlessSidechain.Error
   ) where
 
 import Contract.Prelude
-
+import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.Address (Address)
 import Contract.ScriptLookups as ScriptLookups
-import Contract.Scripts (ApplyArgsError, MintingPolicy)
+import Contract.Scripts
 import Contract.Transaction as Transaction
 import TrustlessSidechain.Versioning.ScriptId (ScriptId)
-
+import Contract.UnbalancedTx (MkUnbalancedTxError)
 -- | Error raised from the off-chain code of the application
 data OffchainError
   -- | A UTxO that should exist (not given as user input) could not be found
@@ -27,7 +27,7 @@ data OffchainError
   -- | ScriptId not found in rawScriptsMap
   | InvalidScriptId ScriptId
   -- | Cannot apply arguments to a script
-  | InvalidScriptArgs ApplyArgsError
+  | InvalidScriptArgs String
   -- | Invalid policy or validator script, conversion to currency symbol /
   -- | validator hash failed
   | InvalidScript String
@@ -37,7 +37,7 @@ data OffchainError
   -- | InvalidData for those)
   | ConversionError String
   -- | Error while building a transaction from lookups and constraints
-  | BuildTxError ScriptLookups.MkUnbalancedTxError
+  | BuildTxError MkUnbalancedTxError
   -- | Error while attempting to balance a transaction
   | BalanceTxError Transaction.BalanceTxError
   -- | Distributed set insertion error.  TODO: this should ultimately take three
@@ -68,7 +68,7 @@ data OffchainError
 
   -- | Given minting policy cannot be converted to a currency symbol.  This
   -- | should never really happen, but CTL forces us to handle this case
-  | InvalidCurrencySymbol ScriptId MintingPolicy
+  | InvalidCurrencySymbol ScriptId ScriptHash
   -- | Feature that has not yet been implemented
   | NotImplemented String
 

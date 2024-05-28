@@ -12,41 +12,40 @@ module TrustlessSidechain.Versioning.Utils
   , versionOracleInitTokenName
   , versionOracleValidator
   ) where
-
 import Contract.Prelude
 
+import Cardano.Types.Asset (Asset(Asset))
 import Contract.Address (Address)
 import Contract.PlutusData
-  ( Datum(Datum)
-  , OutputDatum(OutputDatum)
-  , Redeemer(Redeemer)
-  , fromData
-  , toData
+  ( RedeemerDatum(RedeemerDatum)
   )
+import Cardano.Types.Int as Int
+import Cardano.ToData (toData)
+import Cardano.FromData (fromData)
+import Cardano.Types.PlutusData (PlutusData)
+import Contract.Numeric.BigNum as BigNum
+import Cardano.Types.OutputDatum (OutputDatum(OutputDatum))
 import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts
-  ( MintingPolicy
-  , Validator
-  , ValidatorHash(ValidatorHash)
-  , mintingPolicyHash
-  , validatorHash
-  )
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
+import Cardano.Types.TransactionInput (TransactionInput(TransactionInput))
 import Contract.Transaction
   ( ScriptRef(PlutusScriptRef)
-  , TransactionInput(TransactionInput)
-  , TransactionOutput(TransactionOutput)
-  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
-  , mkTxUnspentOut
   )
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
   , InputWithScriptRef(RefInput)
   , TxConstraints
   )
+import Cardano.Types.Mint as Mint
 import Contract.TxConstraints as Constraints
-import Contract.Value (CurrencySymbol, TokenName, scriptHashAsCurrencySymbol)
+import Cardano.Types.ScriptRef (ScriptRef(PlutusScriptRef))
+import Cardano.Types.ScriptHash as ScriptHash
+import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.AssetName (AssetName)
 import Contract.Value as Value
 import Data.Array as Array
 import Data.BigInt as BigInt
@@ -61,7 +60,7 @@ import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Transaction (utxosAt) as Effect
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
-  ( OffchainError(NotFoundReferenceScript, NotFoundUtxo)
+  ( OffchainError(NotFoundReferenceScript, NotFoundUtxo, InvalidAddress)
   )
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain.Types
@@ -73,7 +72,9 @@ import TrustlessSidechain.InitSidechain.Utils
   )
 import TrustlessSidechain.ScriptCache as ScriptCache
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
-import TrustlessSidechain.Utils.Address (getCurrencySymbol, toAddress)
+import TrustlessSidechain.Utils.Address (toAddress)
+import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
+import TrustlessSidechain.Utils.Asset (getScriptHash) as Asset
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   , mkValidatorWithParams
@@ -96,29 +97,25 @@ import TrustlessSidechain.Versioning.Types
   , toScriptHash
   )
 import Type.Row (type (+))
+import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
+import Cardano.Plutus.Types.Address as PlutusAddress
 
 -- | Token name for version tokens.  Must match definition in on-chain
 -- | module.
-versionOracleTokenName ∷ TokenName
-versionOracleTokenName =
-  Unsafe.unsafePartial $ Maybe.fromJust
-    $ Value.mkTokenName
-    =<< byteArrayFromAscii "Version oracle"
+versionOracleTokenName ∷ AssetName
+versionOracleTokenName = unsafeMkAssetName "Version oracle"
 
 -- | Token name for version init tokens.
-versionOracleInitTokenName ∷ TokenName
-versionOracleInitTokenName =
-  Unsafe.unsafePartial $ Maybe.fromJust
-    $ Value.mkTokenName
-    =<< byteArrayFromAscii "Version oracle InitToken"
+versionOracleInitTokenName ∷ AssetName
+versionOracleInitTokenName = unsafeMkAssetName "Version oracle InitToken"
 
 -- | Build lookups and constraints to burn version oracle initialization token.
 burnOneVersionInitToken ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 burnOneVersionInitToken sp =
   burnOneInitToken sp versionOracleInitTokenName
@@ -128,7 +125,7 @@ burnOneVersionInitToken sp =
 versionOraclePolicy ∷
   ∀ r.
   SidechainParams →
-  Run (EXCEPT OffchainError + WALLET + r) MintingPolicy
+  Run (EXCEPT OffchainError + WALLET + r) PlutusScript
 versionOraclePolicy sp = do
   { currencySymbol } ← initTokenCurrencyInfo sp
   let
@@ -136,11 +133,15 @@ versionOraclePolicy sp = do
       { initTokenCurrencySymbol: currencySymbol
       , initTokenName: versionOracleInitTokenName
       }
-  validatorAddress ← (toAddress <<< validatorHash) =<< versionOracleValidator sp
+  validatorAddress ← (toAddress <<< PlutusScript.hash) =<< versionOracleValidator sp
+  validatorAddressData <- toData
+    <$> (Run.note (InvalidAddress "Couldn't map address to PlutusData." validatorAddress)
+    $ PlutusAddress.fromCardano validatorAddress)
+
   mkMintingPolicyWithParams VersionOraclePolicy
     [ toData sp
     , toData itac
-    , toData validatorAddress
+    , validatorAddressData
     ]
 
 -- | Deserialize VersionOracleValidator validator script, applying it to all
@@ -148,7 +149,7 @@ versionOraclePolicy sp = do
 versionOracleValidator ∷
   ∀ r.
   SidechainParams →
-  Run (EXCEPT OffchainError + r) Validator
+  Run (EXCEPT OffchainError + r) PlutusScript
 versionOracleValidator sp =
   mkValidatorWithParams VersionOracleValidator [ toData sp ]
 
@@ -156,13 +157,12 @@ getVersionOraclePolicy ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + WALLET + r)
-    { versionOracleMintingPolicy ∷ MintingPolicy
-    , versionOracleCurrencySymbol ∷ CurrencySymbol
+    { versionOracleMintingPolicy ∷ PlutusScript
+    , versionOracleCurrencySymbol ∷ ScriptHash
     }
 getVersionOraclePolicy gscp = do
   versionOracleMintingPolicy ← versionOraclePolicy gscp
-  versionOracleCurrencySymbol ←
-    getCurrencySymbol VersionOraclePolicy versionOracleMintingPolicy
+  let versionOracleCurrencySymbol = PlutusScript.hash versionOracleMintingPolicy
   pure { versionOracleMintingPolicy, versionOracleCurrencySymbol }
 
 -- | Return configuration of the versioning system, i.e. VersionOracleValidator
@@ -187,8 +187,8 @@ initializeVersionLookupsAndConstraints ∷
   Int → -- ^ Script version
   Tuple ScriptId a → -- ^ Script ID and the script itself
   Run (APP + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 initializeVersionLookupsAndConstraints sp ver (Tuple scriptId script) =
   case toPlutusScript script of
@@ -210,42 +210,42 @@ initializeVersionLookupsAndConstraints sp ver (Tuple scriptId script) =
       let
         versionedScriptHash = toScriptHash script
         versionOracle = VersionOracle
-          { version: BigInt.fromInt ver
+          { version: BigNum.fromInt ver
           , scriptId
           }
         versionOracleDatum = VersionOracleDatum
           { versionOracle, versionCurrencySymbol: versionOracleCurrencySymbol }
         oneVersionOracleAsset = Value.singleton versionOracleCurrencySymbol
           versionOracleTokenName
-          one
+          (BigNum.fromInt 1)
 
-      scriptReftxInput /\ scriptReftxOutput ← ScriptCache.getPolicyScriptRefUtxo
+      scriptReftxInput /\ scriptReftxOutput ← ScriptCache.getScriptRefUtxo
         sp
-        versionOracleMintingPolicy
+        (PlutusScriptRef versionOracleMintingPolicy)
 
       let
-        initializeVersioningTokensConstraints ∷ TxConstraints Void Void
+        initializeVersioningTokensConstraints ∷ TxConstraints
         initializeVersioningTokensConstraints =
           Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
-            (mintingPolicyHash versionOracleMintingPolicy)
-            ( Redeemer $ toData $ InitializeVersionOracle versionOracle
+            (PlutusScript.hash versionOracleMintingPolicy)
+            (RedeemerDatum $ toData $ InitializeVersionOracle versionOracle
                 versionedScriptHash
             )
             versionOracleTokenName
-            (BigInt.fromInt 1)
-            (RefInput $ mkTxUnspentOut scriptReftxInput scriptReftxOutput)
+            (Int.fromInt 1)
+            (RefInput $ TransactionUnspentOutput {input: scriptReftxInput, output: scriptReftxOutput})
 
-        lookups ∷ ScriptLookups Void
-        lookups = Lookups.mintingPolicy versionOracleMintingPolicy
+        lookups ∷ ScriptLookups
+        lookups = Lookups.plutusMintingPolicy versionOracleMintingPolicy
           <> Lookups.validator vValidator
 
-        constraints ∷ TxConstraints Void Void
+        constraints ∷ TxConstraints
         constraints =
           -- Pay versioning token to the versioning script with datum
           -- and reference script attached.
           Constraints.mustPayToScriptWithScriptRef
-            (validatorHash vValidator)
-            (Datum $ toData versionOracleDatum)
+            (PlutusScript.hash vValidator)
+            (toData versionOracleDatum)
             DatumInline
             (PlutusScriptRef versionedScript)
             oneVersionOracleAsset
@@ -265,8 +265,8 @@ insertVersionLookupsAndConstraints ∷
   Int → -- ^ Script version
   Tuple ScriptId a → -- ^ Script ID and the script itself
   Run (APP + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 insertVersionLookupsAndConstraints sp ver (Tuple scriptId script) =
   case toPlutusScript script of
@@ -286,14 +286,14 @@ insertVersionLookupsAndConstraints sp ver (Tuple scriptId script) =
       let
         versionedScriptHash = toScriptHash script
         versionOracle = VersionOracle
-          { version: BigInt.fromInt ver
+          { version: BigNum.fromInt ver
           , scriptId
           }
         versionOracleDatum = VersionOracleDatum
           { versionOracle, versionCurrencySymbol: versionOracleCurrencySymbol }
         oneVersionOracleAsset = Value.singleton versionOracleCurrencySymbol
           versionOracleTokenName
-          one
+          (BigNum.fromInt 1)
         SidechainParams { governanceAuthority } = sp
 
       let
@@ -302,34 +302,34 @@ insertVersionLookupsAndConstraints sp ver (Tuple scriptId script) =
         } = Governance.governanceAuthorityLookupsAndConstraints
           governanceAuthority
 
-      scriptReftxInput /\ scriptReftxOutput ← ScriptCache.getPolicyScriptRefUtxo
+      scriptReftxInput /\ scriptReftxOutput ← ScriptCache.getScriptRefUtxo
         sp
-        versionOracleMintingPolicy
+        (PlutusScriptRef versionOracleMintingPolicy)
 
       let
-        mintVersioningTokensConstraints ∷ TxConstraints Void Void
+        mintVersioningTokensConstraints ∷ TxConstraints
         mintVersioningTokensConstraints =
           Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
-            (mintingPolicyHash versionOracleMintingPolicy)
-            ( Redeemer $ toData $ MintVersionOracle versionOracle
+            (PlutusScript.hash versionOracleMintingPolicy)
+            (RedeemerDatum $ toData $ MintVersionOracle versionOracle
                 versionedScriptHash
             )
             versionOracleTokenName
-            (BigInt.fromInt 1)
-            (RefInput $ mkTxUnspentOut scriptReftxInput scriptReftxOutput)
+            (Int.fromInt 1)
+            (RefInput $ TransactionUnspentOutput {input: scriptReftxInput, output: scriptReftxOutput})
 
-        lookups ∷ ScriptLookups Void
-        lookups = Lookups.mintingPolicy versionOracleMintingPolicy
+        lookups ∷ ScriptLookups
+        lookups = Lookups.plutusMintingPolicy versionOracleMintingPolicy
           <> Lookups.validator vValidator
           <> governanceAuthorityLookups
 
-        constraints ∷ TxConstraints Void Void
+        constraints ∷ TxConstraints
         constraints =
           -- Pay versioning token to the versioning script with datum
           -- and reference script attached.
           Constraints.mustPayToScriptWithScriptRef
-            (validatorHash vValidator)
-            (Datum $ toData versionOracleDatum)
+            (PlutusScript.hash vValidator)
+            (toData versionOracleDatum)
             DatumInline
             (PlutusScriptRef versionedScript)
             oneVersionOracleAsset
@@ -352,8 +352,8 @@ invalidateVersionLookupsAndConstraints ∷
         + TRANSACTION
         + r
     )
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 invalidateVersionLookupsAndConstraints sp ver scriptId = do
   -- Prepare versioning scripts and tokens
@@ -364,19 +364,19 @@ invalidateVersionLookupsAndConstraints sp ver scriptId = do
 
   -- Get UTxOs located at the version oracle validator script address
   -----------------------------------
-  versionOracleValidatorAddr ← toAddress (validatorHash vValidator)
+  versionOracleValidatorAddr ← toAddress (PlutusScript.hash vValidator)
   scriptUtxos ← Effect.utxosAt versionOracleValidatorAddr
 
   -- Prepare datum and other boilerplate
   -----------------------------------
   let
     versionOracle = VersionOracle
-      { version: BigInt.fromInt ver
+      { version: BigNum.fromInt ver
       , scriptId
       }
-    oneVersionOracleAsset = Value.singleton versionOracleCurrencySymbol
+    oneVersionOracleMint = Mint.singleton versionOracleCurrencySymbol
       versionOracleTokenName
-      (negate one)
+      (Int.fromInt (-1))
     SidechainParams { governanceAuthority } = sp
 
   -- Find UTxO that stores script to be removed.  UTxO must contain a single
@@ -386,21 +386,19 @@ invalidateVersionLookupsAndConstraints sp ver scriptId = do
   (txInput /\ txOutput) ←
     Run.note (NotFoundUtxo "cannot find versioned utxo")
       ( Array.find
-          ( \(_ /\ TransactionOutputWithRefScript { output }) →
-              case output of
-                TransactionOutput
+          ( \(_ /\ TransactionOutput
                   { amount
-                  , datum: OutputDatum (Datum datum')
-                  } →
+                  , datum
+                  }) →
                   ( Value.valueOf
+                      (Asset versionOracleCurrencySymbol versionOracleTokenName)
                       amount
-                      versionOracleCurrencySymbol
-                      versionOracleTokenName
-                  ) == BigInt.fromInt 1 && case fromData datum' of
-                    Just (VersionOracleDatum { versionOracle: vO })
-                    → vO == versionOracle
-                    _ → false
-                _ → false
+                  ) == BigNum.fromInt 1
+                  && case datum of
+                      Just (OutputDatum datum') -> case fromData datum' of
+                        Just (VersionOracleDatum { versionOracle: v0 }) -> v0 == versionOracle
+                        _ -> false
+                      _ -> false
           )
           $ Map.toUnfoldable scriptUtxos
       )
@@ -410,23 +408,23 @@ invalidateVersionLookupsAndConstraints sp ver scriptId = do
     } = Governance.governanceAuthorityLookupsAndConstraints governanceAuthority
 
   let
-    lookups ∷ ScriptLookups Void
-    lookups = Lookups.mintingPolicy versionOracleMintingPolicy
+    lookups ∷ ScriptLookups
+    lookups = Lookups.plutusMintingPolicy versionOracleMintingPolicy
       <> Lookups.validator vValidator
       <> Lookups.unspentOutputs (Map.singleton txInput txOutput)
       <> governanceAuthorityLookups
 
-    constraints ∷ TxConstraints Void Void
+    constraints ∷ TxConstraints
     constraints =
       -- Burn a single versioning token.
       Constraints.mustMintValueWithRedeemer
-        (Redeemer $ toData (BurnVersionOracle versionOracle))
-        oneVersionOracleAsset
+        (RedeemerDatum $ toData (BurnVersionOracle versionOracle))
+        oneVersionOracleMint
         <> -- Spend from script
 
           Constraints.mustSpendScriptOutput
             txInput
-            (Redeemer $ toData versionOracle)
+            (RedeemerDatum $ toData versionOracle)
         <> governanceAuthorityConstraints
 
   pure { lookups, constraints }
@@ -437,25 +435,23 @@ getVersionedScriptRefUtxo ∷
   SidechainParams →
   VersionOracle →
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    (TransactionInput /\ TransactionOutputWithRefScript)
+    (TransactionInput /\ TransactionOutput)
 getVersionedScriptRefUtxo sp versionOracle = do
   { versionOracleCurrencySymbol } ← getVersionOraclePolicy sp
   versionOracleValidatorHash ←
-    validatorHash <$> versionOracleValidator sp
+    PlutusScript.hash <$> versionOracleValidator sp
   valAddr ← toAddress versionOracleValidatorHash
 
   versionOracleUtxos ← Effect.utxosAt valAddr
 
   let
     correctOutput
-      ( TransactionInput _ /\ TransactionOutputWithRefScript
-          { output: TransactionOutput
-              { datum: (OutputDatum (Datum datum))
-              , amount: value
-              }
+      ( TransactionInput _ /\ TransactionOutput
+          { datum: Just (OutputDatum datum)
+          , amount: value
           }
       ) =
-      Array.elem versionOracleCurrencySymbol (Value.symbols value)
+      Array.elem versionOracleCurrencySymbol (map Asset.getScriptHash $ Value.valueAssetClasses value)
         && case fromData datum of
           Just
             ( VersionOracleDatum
@@ -468,12 +464,8 @@ getVersionedScriptRefUtxo sp versionOracle = do
     correctOutput _ = false
 
     getVersionFromOutput
-      ( _ /\ TransactionOutputWithRefScript
-          { output: TransactionOutput
-              { datum: (OutputDatum (Datum datum))
-              }
-          }
-      ) = fromData datum ∷ Maybe VersionOracleDatum
+      ( _ /\ TransactionOutput { datum: Just (OutputDatum datum') }
+      ) = fromData datum' ∷ Maybe VersionOracleDatum
     getVersionFromOutput _ = Nothing
 
   txInput /\ txOutput ←
@@ -495,21 +487,23 @@ getVersionedCurrencySymbol ∷
   ∀ r.
   SidechainParams →
   VersionOracle →
-  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r) CurrencySymbol
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r) ScriptHash
 getVersionedCurrencySymbol sp versionOracle = do
-  _ /\ TransactionOutputWithRefScript
-    { output: TransactionOutput
-        { referenceScript
-        }
-    } ← getVersionedScriptRefUtxo sp versionOracle
+  _ /\ TransactionOutput { scriptRef }
+    ← getVersionedScriptRefUtxo sp versionOracle
 
-  case referenceScript of
+  case scriptRef of
     Nothing → throw $ NotFoundReferenceScript $
       ( "Script for given version oracle was not found: " <> show
           versionOracle
       )
-    Just scriptHash →
-      pure $ scriptHashAsCurrencySymbol scriptHash
+    Just (PlutusScriptRef plutusScript) →
+      pure $ PlutusScript.hash plutusScript
+    _ -> throw $ NotFoundReferenceScript $
+      ( "Script for given version oracle was not found: " <> show
+          versionOracle
+          <> ". Script reference is not a PlutusScriptRef."
+      )
 
 getVersionedValidatorAddress ∷
   ∀ r.
@@ -517,15 +511,18 @@ getVersionedValidatorAddress ∷
   VersionOracle →
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r) Address
 getVersionedValidatorAddress sp versionOracle = do
-  _ /\ TransactionOutputWithRefScript
-    { output: TransactionOutput
-        { referenceScript
-        }
-    } ← getVersionedScriptRefUtxo sp versionOracle
+  _ /\ TransactionOutput { scriptRef }
+    ← getVersionedScriptRefUtxo sp versionOracle
 
-  case referenceScript of
+  case scriptRef of
     Nothing → throw $ NotFoundReferenceScript $
       ( "Script for given version oracle was not found: " <> show
           versionOracle
       )
-    Just scriptHash → toAddress (ValidatorHash scriptHash)
+    Just (PlutusScriptRef plutusScript) →
+      toAddress $ PlutusScript.hash plutusScript
+    _ -> throw $ NotFoundReferenceScript $
+      ( "Script for given version oracle was not found: " <> show
+          versionOracle
+          <> ". Script reference is not a PlutusScriptRef."
+      )

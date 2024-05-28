@@ -23,27 +23,28 @@ import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
   , class ToData
-  , PlutusData(Constr)
-  , Redeemer(Redeemer)
+  , RedeemerDatum(RedeemerDatum)
   , fromData
   , toData
   )
+import Cardano.Types.PlutusData (PlutusData(Constr))
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
 import Contract.Scripts as Scripts
+import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
+import Cardano.Types.TransactionInput (TransactionInput)
+import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
 import Contract.Transaction
   ( TransactionHash
-  , TransactionInput
-  , TransactionOutput(TransactionOutput)
-  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
-  , mkTxUnspentOut
-  , outputDatumDatum
   )
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.OutputDatum (outputDatumDatum)
 import Contract.TxConstraints (InputWithScriptRef(RefInput), TxConstraints)
 import Contract.TxConstraints as TxConstraints
-import Contract.Value (flattenValue, getTokenName)
+import Cardano.Types.Value (flatten)
+import Cardano.Types.AssetName (unAssetName)
 import Data.Array as Array
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT, throw)
@@ -54,35 +55,44 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   )
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
-import TrustlessSidechain.Effects.Util as Effect
+import TrustlessSidechain.Effects.Transaction (utxosAt) as Effect
+import TrustlessSidechain.Effects.Util (fromMaybeThrow) as Effect
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
-  ( OffchainError(InvalidData, NotFoundUtxo, VerificationError)
+  ( OffchainError(NotFoundUtxo, InvalidData, VerificationError)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (CurrencyInfo)
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   )
+import Cardano.Types.Value as Value
 import TrustlessSidechain.UpdateCommitteeHash.Utils as UpdateCommitteeHash.Utils
-import TrustlessSidechain.Utils.Address (getCurrencyInfo)
-import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.SchnorrSecp256k1
-  ( SchnorrSecp256k1PublicKey
-  , SchnorrSecp256k1Signature
+import TrustlessSidechain.Utils.Address
+  ( getCurrencyInfo
+  , getOwnWalletAddress
   )
-import TrustlessSidechain.Utils.SchnorrSecp256k1 as SchnorrSecp256k1
+import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 import TrustlessSidechain.Utils.Utxos (getOwnUTxOsTotalValue)
-import TrustlessSidechain.Versioning.ScriptId
-  ( ScriptId(CommitteePlainSchnorrSecp256k1ATMSPolicy)
-  )
 import TrustlessSidechain.Versioning.Types
   ( ScriptId(CommitteeOraclePolicy, CommitteeCertificateVerificationPolicy)
   , VersionOracle(VersionOracle)
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
+
+import TrustlessSidechain.Utils.SchnorrSecp256k1
+  ( SchnorrSecp256k1PublicKey
+  , SchnorrSecp256k1Signature
+  )
+import TrustlessSidechain.Utils.SchnorrSecp256k1 as SchnorrSecp256k1
+import TrustlessSidechain.Versioning.ScriptId
+  ( ScriptId(CommitteePlainSchnorrSecp256k1ATMSPolicy)
+  )
+import Cardano.Types.Asset (Asset(Asset))
+import Cardano.Types.Int as Int
+import Partial.Unsafe (unsafePartial)
 
 -- | `ATMSPlainSchnorrSecp256k1Multisignature` corresponds to the onchain type
 newtype ATMSPlainSchnorrSecp256k1Multisignature =
@@ -179,7 +189,7 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy ∷
         (Array (SchnorrSecp256k1PublicKey /\ Maybe SchnorrSecp256k1Signature))
   } →
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
+    { lookups ∷ ScriptLookups, constraints ∷ TxConstraints }
 mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
   { committeeATMSParams:
       ( CommitteeATMSParams
@@ -192,7 +202,7 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
   , sidechainParams
   } = do
   let
-    messageByteArray = getTokenName message
+    messageByteArray = unAssetName message
 
     -- ensure that the signatures provided are sorted, and do an optimization
     -- to only provide the minimum number of signatures for the onchain code to
@@ -205,7 +215,7 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
       (unwrap committeeCertificateMint).thresholdNumerator
       (unwrap committeeCertificateMint).thresholdDenominator
       (curCommitteePubKeys /\ allCurCommitteeSignatures)
-    curCommitteeHash = Utils.Crypto.aggregateKeys $ map unwrap
+    curCommitteeHash = unsafePartial $ Utils.Crypto.aggregateKeys $ map unwrap
       curCommitteePubKeys
 
   -- Grabbing CommitteePlainSchnorrSecp256k1ATMSPolicy
@@ -221,7 +231,7 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
     { index: committeeORef
     , value:
         committeeTxOut@
-          (TransactionOutputWithRefScript { output: TransactionOutput tOut })
+          (TransactionOutput tOut )
     } = currentCommitteeUtxo
 
   comitteeHashDatum ←
@@ -229,12 +239,12 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
       ( InvalidData
           "Update committee UTxO is missing inline datum"
       )
-      $ outputDatumDatum tOut.datum
+      $ tOut.datum >>= outputDatumDatum
   UpdateCommitteeDatum datum ← Run.note
     ( InvalidData
         "Datum at update committee UTxO fromData failed"
     )
-    (fromData $ unwrap comitteeHashDatum)
+    (fromData comitteeHashDatum)
 
   -- quickly verify that the committee hash matches
   when (datum.aggregatePubKeys /= curCommitteeHash)
@@ -255,7 +265,7 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
         "Invalid committee signatures for the sidechain message"
 
   let
-    redeemer = Redeemer $ toData $ ATMSMint $
+    redeemer = RedeemerDatum $ toData $ ATMSMint $
       ATMSPlainSchnorrSecp256k1Multisignature
         { currentCommittee: curCommitteePubKeys
         , currentCommitteeSignatures: curCommitteeSignatures
@@ -268,7 +278,7 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
     Versioning.getVersionedScriptRefUtxo
       sidechainParams
       ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: CommitteeOraclePolicy }
+          { version: BigNum.fromInt 1, scriptId: CommitteeOraclePolicy }
       )
 
   ( committeeCertificateVerificationVersioningInput /\
@@ -277,7 +287,7 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
     Versioning.getVersionedScriptRefUtxo
       sidechainParams
       ( VersionOracle
-          { version: BigInt.fromInt 1
+          { version: BigNum.fromInt 1
           , scriptId: CommitteeCertificateVerificationPolicy
           }
       )
@@ -301,25 +311,32 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
   ownValue ← getOwnUTxOsTotalValue
   let
     burnWasteTokenConstraints = fold $ do
-      (_ /\ tokenName /\ amount) ←
+      (asset /\ amount) ←
         -- Filtering the entire list is probably suboptimal. If possible this
         -- should be optimised.
         Array.find
-          ( \(cs /\ _ /\ _) → cs ==
-              committeePlainSchnorrSecp256k1ATMS.currencySymbol
+          ( \a -> case a of
+              (Asset cs _ /\ _) → cs ==
+                  committeePlainSchnorrSecp256k1ATMS.currencySymbol
+              _ -> false
           )
-          (flattenValue ownValue)
+          (Value.flatten ownValue)
+      tokenName <- case asset of
+        (Asset _ tokenName) -> Just tokenName
+        _ -> Nothing
+      mintAmount <- Int.fromBigInt $ negate $ BigNum.toBigInt amount
       pure $
         TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
-          ( Scripts.mintingPolicyHash
+          ( PlutusScript.hash
               committeePlainSchnorrSecp256k1ATMS.mintingPolicy
           )
           redeemer
           tokenName
-          (negate amount)
-          ( RefInput $ mkTxUnspentOut
-              committeeCertificateVerificationVersioningInput
-              committeeCertificateVerificationVersioningOutput
+          mintAmount
+          ( RefInput $ TransactionUnspentOutput
+              { input: committeeCertificateVerificationVersioningInput
+              , output: committeeCertificateVerificationVersioningOutput
+              }
           )
 
   pure
@@ -329,15 +346,16 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
           <> versioningLookups
     , constraints:
         TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
-          ( Scripts.mintingPolicyHash
+          ( PlutusScript.hash
               committeePlainSchnorrSecp256k1ATMS.mintingPolicy
           )
           redeemer
           message
-          one
-          ( RefInput $ mkTxUnspentOut
-              committeeCertificateVerificationVersioningInput
-              committeeCertificateVerificationVersioningOutput
+          (Int.fromInt 1)
+          ( RefInput $ TransactionUnspentOutput
+              { input: committeeCertificateVerificationVersioningInput
+              , output: committeeCertificateVerificationVersioningOutput
+              }
           )
           <> versioningConstraints
           <> burnWasteTokenConstraints
@@ -395,7 +413,7 @@ findUpdateCommitteeHashUtxoFromSidechainParams ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript }
+    { index ∷ TransactionInput, value ∷ TransactionOutput }
 findUpdateCommitteeHashUtxoFromSidechainParams sidechainParams = do
   -- Finding the current committee
   -------------------------------------------------------------

@@ -15,13 +15,14 @@ module TrustlessSidechain.Effects.Transaction
 
 import Contract.Prelude
 
-import Contract.Address (Address)
+import Cardano.Types.Address (Address)
 import Contract.BalanceTxConstraints (BalanceTxConstraintsBuilder)
-import Contract.ScriptLookups (MkUnbalancedTxError, ScriptLookups, UnbalancedTx)
+import Contract.ScriptLookups (ScriptLookups, UnbalancedTx)
 import Contract.ScriptLookups as ScriptLookups
+import Contract.UnbalancedTx (MkUnbalancedTxError)
+import Contract.UnbalancedTx (mkUnbalancedTx) as UnbalancedTx
 import Contract.Transaction
-  ( BalancedSignedTransaction
-  , FinalizedTransaction
+  ( Transaction
   , TransactionHash
   , TransactionInput
   , TransactionOutput
@@ -36,7 +37,6 @@ import Contract.Transaction as BalanceTxError
 import Contract.TxConstraints (TxConstraints)
 import Contract.Utxos (UtxoMap)
 import Contract.Utxos (getUtxo, utxosAt) as Transaction
-import Cardano.Plutus.Types.Address (class PlutusAddress, getAddress)
 import Effect.Aff (Error)
 import Run (Run, interpret, on, send)
 import Run as Run
@@ -57,13 +57,13 @@ import Type.Row (type (+))
 data TransactionF a
   = UtxosAt Address (UtxoMap → a)
   | GetUtxo TransactionInput (Maybe TransactionOutput → a)
-  | MkUnbalancedTx (ScriptLookups Void) (TxConstraints Void Void)
+  | MkUnbalancedTx ScriptLookups TxConstraints
       (UnbalancedTx → a)
   | BalanceTxWithConstraints UnbalancedTx BalanceTxConstraintsBuilder
-      (FinalizedTransaction → a)
-  | SignTransaction FinalizedTransaction
-      (BalancedSignedTransaction → a)
-  | Submit BalancedSignedTransaction (TransactionHash → a)
+      (Transaction → a)
+  | SignTransaction Transaction
+      (Transaction → a)
+  | Submit Transaction (TransactionHash → a)
   | AwaitTxConfirmed TransactionHash a
 
 derive instance functorTransactionF ∷ Functor TransactionF
@@ -78,9 +78,9 @@ handleTransactionWith ∷
 handleTransactionWith f = interpret (on _transaction f send)
 
 utxosAt ∷
-  ∀ r address. PlutusAddress address ⇒ address → Run (TRANSACTION + r) UtxoMap
+  ∀ r . Address → Run (TRANSACTION + r) UtxoMap
 utxosAt address = Run.lift _transaction
-  (UtxosAt (getAddress address) identity)
+  (UtxosAt address identity)
 
 getUtxo ∷
   ∀ r.
@@ -90,8 +90,8 @@ getUtxo oref = Run.lift _transaction (GetUtxo oref identity)
 
 mkUnbalancedTx ∷
   ∀ r.
-  (ScriptLookups Void) →
-  (TxConstraints Void Void) →
+  ScriptLookups →
+  (TxConstraints) →
   Run (EXCEPT MkUnbalancedTxError + TRANSACTION + r)
     UnbalancedTx
 mkUnbalancedTx lookups constraints = Run.lift
@@ -105,20 +105,20 @@ balanceTxWithConstraints ∷
   UnbalancedTx →
   BalanceTxConstraintsBuilder →
   Run (EXCEPT BalanceTxError.BalanceTxError + TRANSACTION + r)
-    FinalizedTransaction
+    Transaction
 balanceTxWithConstraints unbalancedTx constraints = Run.lift
   _transaction
   (BalanceTxWithConstraints unbalancedTx constraints identity)
 
 signTransaction ∷
   ∀ r.
-  FinalizedTransaction →
-  Run (TRANSACTION + r) BalancedSignedTransaction
+  Transaction →
+  Run (TRANSACTION + r) Transaction
 signTransaction tx = Run.lift _transaction (SignTransaction tx identity)
 
 submit ∷
   ∀ r.
-  BalancedSignedTransaction →
+  Transaction →
   Run (TRANSACTION + r) TransactionHash
 submit tx = Run.lift _transaction (Submit tx identity)
 
@@ -132,7 +132,7 @@ balanceTx ∷
   ∀ r.
   UnbalancedTx →
   Run (EXCEPT BalanceTxError.BalanceTxError + TRANSACTION + r)
-    FinalizedTransaction
+    Transaction
 balanceTx = flip balanceTxWithConstraints mempty
 
 handleTransactionLive ∷
@@ -145,13 +145,11 @@ handleTransactionLive =
     GetUtxo oref f → f <$> withTry (fromError "getUtxo: ")
       (Transaction.getUtxo oref)
     MkUnbalancedTx lookups constraints f →
-      f <$> withTryE
-        fromUnbalanced
+      f <$> withTry
         (fromError "mkUnabalancedTx: ")
-        (ScriptLookups.mkUnbalancedTx lookups constraints)
+        (UnbalancedTx.mkUnbalancedTx lookups constraints)
     BalanceTxWithConstraints unbalancedTx constraints f →
-      f <$> withTryE
-        fromBalanced
+      f <$> withTry
         (fromError "balancedTxWithConstraints: ")
         (Transaction.balanceTxWithConstraints unbalancedTx constraints)
     SignTransaction tx f → f <$> withTry (fromError "signTransaction: ")

@@ -7,7 +7,7 @@ import Contract.Prelude
 import Contract.Log as Log
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Wallet as Wallet
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Data.List (head)
 import Mote.Monad as Mote.Monad
 import Test.InitSidechain.Utils (expectedInitTokens, failMsg, unorderedEq)
@@ -37,6 +37,7 @@ import TrustlessSidechain.Versioning
   , getExpectedVersionedPoliciesAndValidators
   ) as Versioning
 import TrustlessSidechain.Versioning.ScriptId (ScriptId(..))
+import Cardano.Types.BigNum as BigNum
 
 -- | `tests` aggregates all the tests together in one convenient function
 tests ∷ WrappedTests
@@ -51,10 +52,10 @@ testInitCheckpointUninitialised ∷ PlutipTest
 testInitCheckpointUninitialised =
   Mote.Monad.test "Calling `InitCheckpoint` with no init token"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
         ]
     $ \alice → do
         -- | Test succeeds if action fails.
@@ -64,7 +65,7 @@ testInitCheckpointUninitialised =
               "InitSidechain 'testInitCheckpointUninitialised'"
             genesisUtxo ← Test.Utils.getOwnTransactionInput
 
-            initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
+            initGovernanceAuthority ← (Governance.mkGovernanceAuthority)
               <$> getOwnPaymentPubKeyHash
             let
               initGenesisHash = ByteArray.hexToByteArrayUnsafe "abababababa"
@@ -88,10 +89,10 @@ testInitCheckpoint ∷ PlutipTest
 testInitCheckpoint =
   Mote.Monad.test "Calling `InitCheckpoint`"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
         ]
     $ \alice → do
         withUnliftApp (Wallet.withKeyWallet alice)
@@ -100,7 +101,7 @@ testInitCheckpoint =
               "InitSidechain 'testInitCheckpoint'"
             genesisUtxo ← Test.Utils.getOwnTransactionInput
 
-            initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
+            initGovernanceAuthority ← (Governance.mkGovernanceAuthority)
               <$> getOwnPaymentPubKeyHash
             let
               version = 1
@@ -174,10 +175,10 @@ testInitCheckpointIdempotent ∷ PlutipTest
 testInitCheckpointIdempotent =
   Mote.Monad.test "Calling `InitCheckpoint` twice, expecting idempotency"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
         ]
     $ \alice → do
         withUnliftApp (Wallet.withKeyWallet alice)
@@ -186,7 +187,7 @@ testInitCheckpointIdempotent =
               "InitSidechain 'testInitCheckpointIdempotent'"
             genesisUtxo ← Test.Utils.getOwnTransactionInput
 
-            initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
+            initGovernanceAuthority ← (Governance.mkGovernanceAuthority)
               <$> getOwnPaymentPubKeyHash
             let
               version = 1

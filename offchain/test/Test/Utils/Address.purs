@@ -2,13 +2,17 @@ module Test.Utils.Address (tests) where
 
 import Contract.Prelude
 
-import Contract.Address
-  ( PaymentPubKeyHash(..)
-  , PubKeyHash(..)
-  , pubKeyHashAddress
+import Cardano.Plutus.Types.Address
+  ( pubKeyHashAddress
+  , toCardano
   )
+import Cardano.Plutus.Types.PubKeyHash (PubKeyHash(..))
+import Cardano.Plutus.Types.PaymentPubKeyHash (PaymentPubKeyHash(..))
 import Contract.CborBytes (hexToCborBytesUnsafe)
-import Contract.Credential (Credential(..))
+import Cardano.Plutus.Types.Credential
+  ( Credential(PubKeyCredential)
+  )
+import Cardano.AsCbor (decodeCbor)
 import Cardano.Serialization.Lib (fromBytes)
 import Data.Const (Const)
 import Mote.Monad (Mote)
@@ -17,11 +21,8 @@ import Partial.Unsafe (unsafePartial)
 import Test.Unit (Test)
 import Test.Unit.Assert (shouldEqual)
 import Test.Utils (WrappedTests, pureGroup)
-import TrustlessSidechain.Utils.Address
-  ( addressFromBech32Bytes
-  , bech32BytesFromAddress
-  )
-
+import Cardano.Types.Address (toBech32, fromBech32, Address) as Address
+import Cardano.Types.NetworkId (NetworkId(TestnetId))
 type TestCase = Mote (Const Void) Test Unit
 
 tests ∷ WrappedTests
@@ -32,8 +33,8 @@ test1 ∷ TestCase
 test1 =
   Mote.Monad.test
     "Pub key hash address <-> binary roundtrip"
-    $
-      let
+    $ let
+        networkId = TestnetId
         testAddresses =
           [ pubKeyHashAddress
               ( PaymentPubKeyHash
@@ -57,12 +58,14 @@ test1 =
               )
           ]
 
-        roundTrip = bech32BytesFromAddress >=> addressFromBech32Bytes
+        roundTrip addr = do
+          cardanoAddr <- toCardano networkId addr
+          Address.fromBech32 (Address.toBech32 cardanoAddr)
 
-      in
-        traverse_
+
+      in traverse_
           ( \address →
-              roundTrip address `shouldEqual` Just address
+              roundTrip address `shouldEqual` toCardano networkId address
           )
           testAddresses
 
@@ -71,5 +74,5 @@ hexToPubKeyHash hex =
   PubKeyHash
     $ unsafePartial
     $ fromJust
-    $ fromBytes
+    $ decodeCbor
     $ hexToCborBytesUnsafe hex

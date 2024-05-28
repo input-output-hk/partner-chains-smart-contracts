@@ -2,8 +2,12 @@ module Test.GarbageCollector where
 
 import Contract.Prelude
 
-import Contract.Address (pubKeyHashAddress)
+import TrustlessSidechain.Utils.Address (fromPaymentPubKeyHash)
+import Cardano.Types.NetworkId (NetworkId(TestnetId))
 import Contract.Log (logInfo')
+import Cardano.Types.AssetName (mkAssetName)
+import Cardano.AsCbor (encodeCbor)
+import Cardano.ToData (toData)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Prim.ByteArray as ByteArray
@@ -11,7 +15,8 @@ import Contract.Value (TokenName)
 import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Data.Array as Array
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
+import Cardano.Types.BigNum as BigNum
 import Data.Maybe as Maybe
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe (unsafePartial)
@@ -75,7 +80,7 @@ testScenarioSuccess ∷ PlutipTest
 testScenarioSuccess =
   Mote.Monad.test "Mint atms, fuel mint and fuel burn tokens, then burn them all"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 150_000_000, BigInt.fromInt 150_000_000 ]
+        [ BigNum.fromInt 150_000_000, BigNum.fromInt 150_000_000 ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         { sidechainParams, initCommitteePrvKeys } ← initializeSidechain
         atmsTokenName ← mintATMSTokens { sidechainParams, initCommitteePrvKeys }
@@ -136,7 +141,7 @@ initializeSidechain = do
       { initChainId: BigInt.fromInt 1
       , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
       , initUtxo: genesisUtxo
-      , initAggregatedCommittee: PlutusData.toData $ aggregateKeys
+      , initAggregatedCommittee: PlutusData.toData $ unsafePartial aggregateKeys
           $ map unwrap
               initCommitteePubKeys
       , initSidechainEpoch: zero
@@ -144,7 +149,7 @@ initializeSidechain = do
       , initThresholdDenominator: BigInt.fromInt 3
       , initCandidatePermissionTokenMintInfo: Nothing
       , initATMSKind: ATMSPlainEcdsaSecp256k1
-      , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap pkh
+      , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
       }
 
   { sidechainParams } ← initSidechain initScParams 1
@@ -188,8 +193,7 @@ mintATMSTokens { sidechainParams, initCommitteePrvKeys } = do
     sidechainMessage = Utils.Crypto.byteArrayToEcdsaSecp256k1MessageUnsafe
       sidechainMessageByteArray
     sidechainMessageTokenName =
-      Unsafe.unsafePartial $ Maybe.fromJust $
-        Value.mkTokenName sidechainMessageByteArray
+      Unsafe.unsafePartial $ Maybe.fromJust $ mkAssetName sidechainMessageByteArray
 
     allPubKeysAndSignatures = generateSignatures
       { -- the current committee stored on chain
@@ -227,13 +231,10 @@ mintFuelMintingAndFuelBurningTokens ∷
 mintFuelMintingAndFuelBurningTokens { sidechainParams, initCommitteePrvKeys } =
   do
     pkh ← getOwnPaymentPubKeyHash
-    ownRecipient ←
-      Run.note
-        (GenericInternalError "Could not convert pub key hash to bech 32 bytes") $
-        Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
+    let ownRecipient = Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
     let
       amount = BigInt.fromInt 5
-      recipient = pubKeyHashAddress pkh Nothing
+      recipient = fromPaymentPubKeyHash TestnetId pkh
       index = BigInt.fromInt 0
       previousMerkleRoot = Nothing
       ownEntry =
@@ -244,7 +245,7 @@ mintFuelMintingAndFuelBurningTokens { sidechainParams, initCommitteePrvKeys } =
           , recipient: ownRecipient
           }
 
-      ownEntryBytes = unwrap $ PlutusData.serializeData ownEntry
+      ownEntryBytes = unwrap $ encodeCbor $ toData ownEntry
       merkleTree =
         unsafePartial $ fromJust $ hush $ MerkleTree.fromArray
           [ ownEntryBytes ]

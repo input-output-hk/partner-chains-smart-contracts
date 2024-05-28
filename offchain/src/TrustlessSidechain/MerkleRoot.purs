@@ -11,20 +11,22 @@ import Contract.PlutusData
   ( toData
   , unitDatum
   )
+import Contract.Numeric.BigNum as BigNum
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionHash
-  , mkTxUnspentOut
   )
+import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
 import Contract.TxConstraints
   ( InputWithScriptRef(RefInput)
   , TxConstraints
   )
+import Cardano.Types.AssetName (mkAssetName)
 import Contract.TxConstraints as TxConstraints
-import Contract.Value as Value
-import Data.BigInt as BigInt
+import Cardano.Types.Value as Value
+import JS.BigInt as BigInt
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT)
@@ -62,6 +64,7 @@ import TrustlessSidechain.MerkleRoot.Utils
   , merkleRootTokenValidator
   , serialiseMrimHash
   )
+import Cardano.Types.PlutusScript as PlutusScript
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -78,6 +81,7 @@ import TrustlessSidechain.Versioning.Types
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
+import Cardano.Types.Int as Int
 
 -- | `saveRoot` is the endpoint.
 saveRoot ∷
@@ -138,7 +142,7 @@ saveRoot
           { currentCommitteeUtxo
           , committeeCertificateMint
           , aggregateSignature
-          , message: Utils.Crypto.ecdsaSecp256k1MessageToTokenName scMsg
+          , message: Utils.Crypto.ecdsaSecp256k1MessageToAssetName scMsg
           }
 
   -- Building the transaction / submitting it
@@ -170,8 +174,8 @@ saveRootLookupsAndConstraints ∷
   } →
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     { lookupsAndConstraints ∷
-        { constraints ∷ TxConstraints Void Void
-        , lookups ∷ ScriptLookups Void
+        { constraints ∷ TxConstraints
+        , lookups ∷ ScriptLookups
         }
     , merkleRootInsertionMessage ∷ MerkleRootInsertionMessage
     }
@@ -193,7 +197,7 @@ saveRootLookupsAndConstraints
           "Invalid Merkle root TokenName for merkleRootTokenMintingPolicy"
 
       )
-      $ Value.mkTokenName
+      $ mkAssetName
       $ MerkleTree.unRootHash merkleRoot
 
   -- Grab the transaction holding the last merkle root
@@ -210,7 +214,7 @@ saveRootLookupsAndConstraints
   ) ← Versioning.getVersionedScriptRefUtxo
     sidechainParams
     ( VersionOracle
-        { version: BigInt.fromInt 1
+        { version: BigNum.fromInt 1
         , scriptId: CommitteeCertificateVerificationPolicy
         }
     )
@@ -219,18 +223,18 @@ saveRootLookupsAndConstraints
     Versioning.getVersionedScriptRefUtxo
       sidechainParams
       ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: MerkleRootTokenValidator }
+          { version: BigNum.fromInt 1, scriptId: MerkleRootTokenValidator }
       )
 
   (merkleRootPolicyVersioningInput /\ merkleRootPolicyVersioningOutput) ←
     Versioning.getVersionedScriptRefUtxo
       sidechainParams
       ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: MerkleRootTokenPolicy }
+          { version: BigNum.fromInt 1, scriptId: MerkleRootTokenPolicy }
       )
 
   let
-    value = Value.singleton rootTokenCS merkleRootTokenName one
+    value = Value.singleton rootTokenCS merkleRootTokenName (BigNum.fromInt 1)
 
     msg = MerkleRootInsertionMessage
       { sidechainParams
@@ -242,15 +246,17 @@ saveRootLookupsAndConstraints
       { previousMerkleRoot
       }
 
-    constraints ∷ TxConstraints Void Void
+    constraints ∷ TxConstraints
     constraints =
       TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
-        (Scripts.mintingPolicyHash rootTokenMP)
+        (PlutusScript.hash rootTokenMP)
         (wrap (toData redeemer))
         merkleRootTokenName
-        one
-        ( RefInput $ mkTxUnspentOut merkleRootPolicyVersioningInput
-            merkleRootPolicyVersioningOutput
+        (Int.fromInt 1)
+        ( RefInput $ TransactionUnspentOutput
+              { input: merkleRootPolicyVersioningInput
+              , output: merkleRootPolicyVersioningOutput
+              }
         )
         <> TxConstraints.mustPayToScript (Scripts.validatorHash rootTokenVal)
           unitDatum
@@ -263,7 +269,7 @@ saveRootLookupsAndConstraints
           Nothing → mempty
           Just { index: oref } → TxConstraints.mustReferenceOutput oref
 
-    lookups ∷ Lookups.ScriptLookups Void
+    lookups ∷ Lookups.ScriptLookups
     lookups =
       Lookups.unspentOutputs
         ( Map.singleton merkleRootValidatorVersioningInput

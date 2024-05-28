@@ -12,7 +12,6 @@ module TrustlessSidechain.PermissionedCandidates.Types
   ) where
 
 import Contract.Prelude
-
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -21,7 +20,7 @@ import Contract.PlutusData
   , toData
   )
 import Contract.Prim.ByteArray (ByteArray)
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import TrustlessSidechain.Utils.Data
   ( productFromData3
   , productToData3

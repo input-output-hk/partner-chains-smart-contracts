@@ -5,15 +5,20 @@ module Test.Data
 
 import Contract.Prelude
 
-import Contract.Address (PaymentPubKeyHash(PaymentPubKeyHash))
+import Cardano.Plutus.Types.PaymentPubKeyHash (PaymentPubKeyHash(PaymentPubKeyHash))
+import Cardano.Plutus.Types.PubKeyHash (PubKeyHash(PubKeyHash))
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromIntArrayUnsafe)
-import Contract.Scripts (ValidatorHash(ValidatorHash))
+import Cardano.Types.ScriptHash (ScriptHash)
 import Control.Alt ((<|>))
 import Ctl.Internal.Types.Interval (POSIXTime(..))
 import Data.Array.NonEmpty as NE
-import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
+import Data.BigInt as RegularBigInt
+import Partial.Unsafe (unsafePartial)
 import Data.String.CodeUnits (fromCharArray)
+import Cardano.AsCbor (decodeCbor)
+import Cardano.Types.Address (toBech32)
 import Mote.Monad (test)
 import Test.QuickCheck.Arbitrary (arbitrary)
 import Test.QuickCheck.Gen (Gen, arrayOf, chooseInt, elements, vectorOf)
@@ -21,15 +26,14 @@ import Test.QuickCheck.Gen as QGen
 import Test.Utils (WrappedTests, pureGroup)
 import Test.Utils.Laws (toDataLaws)
 import Test.Utils.QuickCheck
-  ( ArbitraryAssetClass(ArbitraryAssetClass)
+  ( ArbitraryAsset(ArbitraryAsset)
   , ArbitraryBigInt(ArbitraryBigInt)
-  , ArbitraryCurrencySymbol(ArbitraryCurrencySymbol)
+  , ArbitraryScriptHash(ArbitraryScriptHash)
   , ArbitraryPaymentPubKeyHash(ArbitraryPaymentPubKeyHash)
   , ArbitraryPubKey(ArbitraryPubKey)
   , ArbitrarySignature(ArbitrarySignature)
-  , ArbitraryTokenName(ArbitraryTokenName)
+  , ArbitraryAssetName(ArbitraryAssetName)
   , ArbitraryTransactionInput(ArbitraryTransactionInput)
-  , ArbitraryValidatorHash(ArbitraryValidatorHash)
   , DA
   , NonNegative(NonNegative)
   , Positive(Positive)
@@ -93,6 +97,7 @@ import TrustlessSidechain.NativeTokenManagement.Types
   , ReserveRedeemer(..)
   , ReserveStats(..)
   )
+import Contract.Numeric.BigNum as BigNum
 import TrustlessSidechain.PermissionedCandidates.Types
   ( PermissionedCandidateKeys(PermissionedCandidateKeys)
   , PermissionedCandidatesPolicyRedeemer
@@ -111,7 +116,6 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   , UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   , UpdateCommitteeHashRedeemer(UpdateCommitteeHashRedeemer)
   )
-import TrustlessSidechain.Utils.Address (byteArrayToBech32BytesUnsafe)
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PubKey
   , ecdsaSecp256k1PubKey
@@ -156,7 +160,8 @@ import TrustlessSidechain.Versioning.Types
       , BurnVersionOracle
       )
   )
-
+import Cardano.Serialization.Lib
+  ( address_fromBech32 )
 tests ∷ WrappedTests
 tests = pureGroup "Data roundtrip tests" $ do
   test "SidechainParams" $ liftEffect $ toDataLaws testCount genSP
@@ -264,7 +269,7 @@ genCheckpointDatum = do
 genCheckpointParameter ∷ Gen CheckpointParameter
 genCheckpointParameter = do
   sidechainParams ← genSP
-  ArbitraryAssetClass checkpointAssetClass ← arbitrary
+  checkpointAssetClass ← arbitrary
 
   pure $ CheckpointParameter
     { sidechainParams
@@ -273,8 +278,8 @@ genCheckpointParameter = do
 
 genInitTokenAssetClass ∷ Gen InitTokenAssetClass
 genInitTokenAssetClass = do
-  ArbitraryCurrencySymbol initTokenCurrencySymbol ← arbitrary
-  ArbitraryTokenName initTokenName ← arbitrary
+  ArbitraryScriptHash initTokenCurrencySymbol ← arbitrary
+  ArbitraryAssetName initTokenName ← arbitrary
   pure $ InitTokenAssetClass { initTokenCurrencySymbol, initTokenName }
 
 genCheckpointMessage ∷ Gen CheckpointMessage
@@ -366,7 +371,7 @@ genScriptId = QGen.oneOf $ NE.cons' (pure FUELMintingPolicy) $ pure <$>
 
 genVersionOracle ∷ Gen VersionOracle
 genVersionOracle = do
-  version ← BigInt.fromInt <$> arbitrary
+  version ← BigNum.fromInt <$> arbitrary
   scriptId ← genScriptId
   pure $ VersionOracle
     { version
@@ -375,7 +380,7 @@ genVersionOracle = do
 
 genVersionOracleConfig ∷ Gen VersionOracleConfig
 genVersionOracleConfig = do
-  ArbitraryCurrencySymbol versionOracleCurrencySymbol ← arbitrary
+  ArbitraryScriptHash versionOracleCurrencySymbol ← arbitrary
   pure $ VersionOracleConfig
     { versionOracleCurrencySymbol
     }
@@ -384,12 +389,12 @@ genVersionOraclePolicyRedeemer ∷ Gen VersionOraclePolicyRedeemer
 genVersionOraclePolicyRedeemer = QGen.oneOf $ NE.cons'
   ( do
       versionOracle ← genVersionOracle
-      ArbitraryValidatorHash (ValidatorHash scriptHash) ← arbitrary
+      ArbitraryScriptHash scriptHash ← arbitrary
       pure $ InitializeVersionOracle versionOracle scriptHash
   )
   [ do
       versionOracle ← genVersionOracle
-      ArbitraryValidatorHash (ValidatorHash scriptHash) ← arbitrary
+      ArbitraryScriptHash scriptHash ← arbitrary
       pure $ MintVersionOracle versionOracle scriptHash
   , BurnVersionOracle <$> genVersionOracle
   ]
@@ -415,7 +420,7 @@ genATMSRedeemerSchnorr = QGen.oneOf $ NE.cons'
 genReserveDatum ∷ Gen ReserveDatum
 genReserveDatum = do
   ArbitraryBigInt pt ← arbitrary
-  ArbitraryCurrencySymbol cs ← arbitrary
+  ArbitraryScriptHash cs ← arbitrary
   ArbitraryBigInt c ← arbitrary
   ArbitraryAssetClass ac ← arbitrary
   ArbitraryBigInt i ← arbitrary
@@ -447,8 +452,8 @@ genIlliquidCirculationSupplyRedeemer = QGen.oneOf $ NE.cons'
 
 genDsKeyMint ∷ Gen DsKeyMint
 genDsKeyMint = do
-  ArbitraryValidatorHash dskmValidatorHash ← arbitrary
-  ArbitraryCurrencySymbol dskmConfCurrencySymbol ← arbitrary
+  ArbitraryScriptHash dskmValidatorHash ← arbitrary
+  ArbitraryScriptHash dskmConfCurrencySymbol ← arbitrary
   pure $ DsKeyMint
     { dskmValidatorHash
     , dskmConfCurrencySymbol
@@ -456,8 +461,8 @@ genDsKeyMint = do
 
 genDsConfDatum ∷ Gen DsConfDatum
 genDsConfDatum = do
-  ArbitraryCurrencySymbol dscKeyPolicy ← arbitrary
-  ArbitraryCurrencySymbol dscFUELPolicy ← arbitrary
+  ArbitraryScriptHash dscKeyPolicy ← arbitrary
+  ArbitraryScriptHash dscFUELPolicy ← arbitrary
   pure $ DsConfDatum
     { dscKeyPolicy
     , dscFUELPolicy
@@ -468,13 +473,13 @@ genDsDatum = DsDatum <$> genGH
 
 genDs ∷ Gen Ds
 genDs = Ds <$> do
-  ArbitraryCurrencySymbol cs ← arbitrary
+  ArbitraryScriptHash cs ← arbitrary
   pure cs
 
 genCP ∷ Gen CheckpointParameter
 genCP = do
   sidechainParams ← genSP
-  ArbitraryAssetClass checkpointAssetClass ← arbitrary
+  checkpointAssetClass ← arbitrary
   pure $ CheckpointParameter
     { sidechainParams
     , checkpointAssetClass
@@ -500,7 +505,7 @@ genUCHM = do
   newAggregatePubKeys ← arbitrary
   previousMerkleRoot ← liftArbitrary genRH
   Positive (ArbitraryBigInt sidechainEpoch) ← arbitrary
-  ArbitraryValidatorHash validatorHash ← arbitrary
+  ArbitraryScriptHash validatorHash ← arbitrary
   pure $ UpdateCommitteeHashMessage
     { sidechainParams
     , newAggregatePubKeys
@@ -560,13 +565,13 @@ genMRIM = do
 genGA ∷ Gen GovernanceAuthority
 genGA = do
   ArbitraryPaymentPubKeyHash (PaymentPubKeyHash pkh) ← arbitrary
-  pure $ GovernanceAuthority pkh
+  pure $ GovernanceAuthority (wrap $ unwrap pkh)
 
 genMTE ∷ Gen MerkleTreeEntry
 genMTE = do
   index ← genBigIntBits 32
   amount ← genBigIntBits 256
-  recipient ← byteArrayToBech32BytesUnsafe <$> genGH
+  recipient ← genGH
   previousMerkleRoot ← liftArbitrary genRH
   pure $ MerkleTreeEntry
     { index
@@ -593,13 +598,13 @@ genBPR = do
   sidechainSignature ← genGH
   spoTokenInfo ← genByteArrayLen 10
   ArbitraryTransactionInput inputUtxo ← arbitrary
-  ArbitraryPaymentPubKeyHash ownPkh ← arbitrary
+  ArbitraryPaymentPubKeyHash (PaymentPubKeyHash ownPkh) ← arbitrary
   pure $ BlockProducerRegistration
     { stakeOwnership
     , sidechainPubKey
     , sidechainSignature
     , inputUtxo
-    , ownPkh
+    , ownPkh: (wrap $ unwrap ownPkh)
     , auraKey
     , grandpaKey
     , spoTokenInfo
@@ -640,7 +645,7 @@ genByteArrayLen len =
 -- Instead, we generate a binary string of required size, then convert it.
 genBigIntBits ∷ Int → Gen BigInt
 genBigIntBits bitSize = suchThatMap mkChars
-  (fromCharArray >>> BigInt.fromBase 2)
+  (((BigInt.fromString <<< RegularBigInt.toString) <=< (RegularBigInt.fromBase 2 <<< fromCharArray)))
   where
   mkChars ∷ Gen (Array Char)
   mkChars = vectorOf bitSize (elements (NE.cons' '0' [ '1' ]))

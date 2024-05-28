@@ -16,6 +16,7 @@ module Test.PoCSchnorrSecp256k1 (tests) where
 
 import Contract.Prelude
 
+import Cardano.Types.Mint as Mint
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData (class ToData, PlutusData(Constr))
 import Contract.PlutusData as PlutusData
@@ -23,13 +24,12 @@ import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
-import Contract.Scripts (MintingPolicy)
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value (CurrencySymbol)
 import Contract.Value as Value
 import Contract.Wallet as Wallet
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Data.Semiring as Semiring
 import Data.String as String
 import Mote.Monad as Mote.Monad
@@ -47,6 +47,11 @@ import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
 import TrustlessSidechain.Utils.Scripts as Utils.Scripts
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 import Type.Row (type (+))
+import TrustlessSidechain.Utils.Asset as Utils.Asset
+import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.Int as Int
 
 -- | `SchnorrSecp256k1Redeemer` corresponds to the onchain type.
 newtype SchnorrSecp256k1Redeemer = SchnorrSecp256k1Redeemer
@@ -68,14 +73,12 @@ instance ToData SchnorrSecp256k1Redeemer where
 getPoCSchnorrSecp256k1MintingPolicy ∷
   ∀ r.
   Run (EXCEPT OffchainError + r)
-    { currencySymbol ∷ CurrencySymbol, mintingPolicy ∷ MintingPolicy }
+    { currencySymbol ∷ ScriptHash, mintingPolicy ∷ PlutusScript }
 getPoCSchnorrSecp256k1MintingPolicy = do
   mintingPolicy ← Utils.Scripts.mkMintingPolicyWithParams'
     RawScripts.rawPoCSchnorr
     (mempty ∷ Array PlutusData)
-  currencySymbol ←
-    Run.note (GenericInternalError "minting policy to currency symbol failed")
-      $ Value.scriptCurrencySymbol mintingPolicy
+  let currencySymbol = PlutusScript.hash mintingPolicy
   pure { mintingPolicy, currencySymbol }
 
 -- | `mustMintPocSchnorrSecp256k1` provides the lookups + constraints for minting the
@@ -84,21 +87,21 @@ mustMintPocSchnorrSecp256k1 ∷
   ∀ r.
   SchnorrSecp256k1Redeemer →
   Run (EXCEPT OffchainError + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 mustMintPocSchnorrSecp256k1 schnorrRedeemer = do
   { currencySymbol, mintingPolicy } ← getPoCSchnorrSecp256k1MintingPolicy
   let
     redeemer = wrap $ PlutusData.toData schnorrRedeemer
-    value = Value.singleton
+    value = Mint.singleton
       currencySymbol
-      Value.adaToken
+      Utils.Asset.emptyAssetName
       -- the token name doesn't matter for this test, so we just set
-      -- it to be the empty token name i.e., ada's token name
-      Semiring.one
+      -- it to be the empty token name
+      Int.one
 
-    lookups = ScriptLookups.mintingPolicy mintingPolicy
+    lookups = ScriptLookups.plutusMintingPolicy mintingPolicy
     constraints =
       TxConstraints.mustMintValueWithRedeemer
         redeemer
@@ -115,7 +118,7 @@ tests = Mote.Monad.group "PoCSchnorrSecp256k1 tests" do
 testScenario1 ∷ PlutipTest
 testScenario1 = Mote.Monad.test "PoCSchnorrSecp256k1: valid test scenario"
   $ Test.PlutipTest.mkPlutipConfigTest
-      [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+      [ BigNum.fromInt 10_000_000, BigNum.fromInt 10_000_000 ]
   $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       privateKey ← Run.liftEffect $
         Utils.SchnorrSecp256k1.generateRandomPrivateKey
@@ -138,7 +141,7 @@ testScenario1 = Mote.Monad.test "PoCSchnorrSecp256k1: valid test scenario"
 testScenario2 ∷ PlutipTest
 testScenario2 = Mote.Monad.test "PoCSchnorrSecp256k1: invalid test scenario"
   $ Test.PlutipTest.mkPlutipConfigTest
-      [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+      [ BigNum.fromInt 10_000_000, BigNum.fromInt 10_000_000 ]
   $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       privateKey ← Run.liftEffect $
         Utils.SchnorrSecp256k1.generateRandomPrivateKey
@@ -168,7 +171,7 @@ testScenario3 =
   Mote.Monad.test
     "PoCSchnorrSecp256k1: valid test scenario which includes parsing / serialization of keys"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
+        [ BigNum.fromInt 10_000_000, BigNum.fromInt 10_000_000 ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         privateKey ← Run.liftEffect $
           Utils.SchnorrSecp256k1.generateRandomPrivateKey

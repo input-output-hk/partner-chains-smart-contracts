@@ -8,7 +8,10 @@ module TrustlessSidechain.ConfigFile
 
 import Contract.Prelude
 
+import Cardano.Serialization.Lib (fromBytes, toBytes)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
+import Partial.Unsafe (unsafePartial)
+import Cardano.AsCbor (decodeCbor)
 import Contract.Transaction
   ( TransactionHash(TransactionHash)
   , TransactionInput(TransactionInput)
@@ -40,8 +43,8 @@ optExample =
   { sidechainParameters: Just
       { chainId: Just 1
       , genesisUtxo: Just $ TransactionInput
-          { transactionId: TransactionHash
-              (hexToByteArrayUnsafe "123456789abcdef0")
+          { transactionId: (wrap $ unsafePartial $ fromJust $ fromBytes
+              (hexToByteArrayUnsafe "ea092fb8d592f7533021598178182ba9db2ef5f8c233db802ca1728994df1193"))
           , index: UInt.fromInt 2
           }
       , threshold: Just

@@ -17,8 +17,10 @@ import Contract.PlutusData (PlutusData, toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
 import Data.Array as Array
-import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
+import Cardano.Types.BigNum as BigNum
+import Partial.Unsafe (unsafePartial)
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe as Unsafe
 import Test.PlutipTest (PlutipTest)
@@ -88,7 +90,7 @@ generateUchmSignatures
         $ Array.sortWith fst
         $ map (\prvKey → toPubKeyUnsafe prvKey /\ prvKey) currentCommitteePrvKeys
 
-    newAggregatePubKeys = aggregateKeys $ map unwrap $ Array.sort $ map
+    newAggregatePubKeys = unsafePartial aggregateKeys $ map unwrap $ Array.sort $ map
       toPubKeyUnsafe
       newCommitteePrvKeys
 
@@ -161,7 +163,7 @@ updateCommitteeHashWith params f = void do
   committeeSignatures ← generateUchmSignatures params
 
   let
-    newAggregatePubKeys = aggregateKeys $ map unwrap $ Array.sort
+    newAggregatePubKeys = unsafePartial aggregateKeys $ map unwrap $ Array.sort
       $ map toPubKeyUnsafe
       $
         params.newCommitteePrvKeys
@@ -195,11 +197,11 @@ tests = plutipGroup "Committee handover (committe hash update)" $ do
 testScenario1 ∷ PlutipTest
 testScenario1 = Mote.Monad.test "Simple update committee hash"
   $ Test.PlutipTest.mkPlutipConfigTest
-      [ BigInt.fromInt 50_000_000
-      , BigInt.fromInt 50_000_000
-      , BigInt.fromInt 50_000_000
-      , BigInt.fromInt 40_000_000
-      , BigInt.fromInt 40_000_000
+      [ BigNum.fromInt 50_000_000
+      , BigNum.fromInt 50_000_000
+      , BigNum.fromInt 50_000_000
+      , BigNum.fromInt 40_000_000
+      , BigNum.fromInt 40_000_000
       ]
   $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       liftContract $ logInfo' "UpdateCommitteeHash 'testScenario1'"
@@ -216,14 +218,14 @@ testScenario1 = Mote.Monad.test "Simple update committee hash"
           { initChainId: BigInt.fromInt 1
           , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
-          , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
+          , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map unwrap
               initCommitteePubKeys
           , initSidechainEpoch: zero
           , initThresholdNumerator: BigInt.fromInt 2
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
           , initATMSKind: ATMSPlainEcdsaSecp256k1
-          , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap pkh
+          , initGovernanceAuthority: Governance.mkGovernanceAuthority  pkh
           }
 
       { sidechainParams } ← initSidechain initScParams 1
@@ -249,10 +251,10 @@ testScenario2 ∷ PlutipTest
 testScenario2 =
   Mote.Monad.test "Update committee hash without honest majority (should fail)"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 40_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 40_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) $ do
         liftContract $ logInfo' "UpdateCommitteeHash 'testScenario2'"
@@ -272,7 +274,7 @@ testScenario2 =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys $
+            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $
                 map unwrap
                   initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 1
@@ -280,7 +282,7 @@ testScenario2 =
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority
                 pkh
             }
 
@@ -320,10 +322,10 @@ testScenario3 ∷ PlutipTest
 testScenario3 =
   Mote.Monad.test "Update committee hash with out of order committee"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 40_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 40_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         liftContract $ logInfo' "UpdateCommitteeHash 'testScenario3'"
@@ -341,7 +343,7 @@ testScenario3 =
             { initChainId: BigInt.fromInt 6
             , initGenesisHash: hexToByteArrayUnsafe "aabbccdd"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys
+            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys
                 $ map unwrap
                 $
                   case Array.uncons initCommitteePubKeys of
@@ -355,7 +357,7 @@ testScenario3 =
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority
                 pkh
             }
 
@@ -410,12 +412,12 @@ testScenario4 ∷ PlutipTest
 testScenario4 =
   Mote.Monad.test "Unsorted committee members (issue #277)"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 40_000_000
-        , BigInt.fromInt 40_000_000
-        , BigInt.fromInt 40_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 40_000_000
+        , BigNum.fromInt 40_000_000
+        , BigNum.fromInt 40_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) $ do
         liftContract $ logInfo' "UpdateCommitteeHash 'testScenario3'"
@@ -447,7 +449,7 @@ testScenario4 =
             , initGenesisHash: hexToByteArrayUnsafe
                 "d8063cc6e907f497360ca50238af5c2e2a95a8869a2ce74ab3e75fe6c9dcabd0"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys
+            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys
                 $ map unwrap
                 $
                   [ byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
@@ -462,7 +464,7 @@ testScenario4 =
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority
                 pkh
             }
 
@@ -477,7 +479,7 @@ testScenario4 =
           }
           \uchp →
             pure $ wrap $ (unwrap uchp)
-              { newAggregatePubKeys = toData $ aggregateKeys
+              { newAggregatePubKeys = toData $ unsafePartial aggregateKeys
                   $ map unwrap
                   $
                     [ byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
@@ -503,10 +505,10 @@ testScenario5 =
   Mote.Monad.test
     "Update committee hash with the exact amount of signatures needed"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 40_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 40_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) $ do
         liftContract $ logInfo' "UpdateCommitteeHash 'testScenario2'"
@@ -525,14 +527,14 @@ testScenario5 =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
+            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map unwrap
                 initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 1
             , initThresholdDenominator: BigInt.fromInt 2
             , initSidechainEpoch: BigInt.fromInt 0
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap $
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority
                 ownPkh
             }
 

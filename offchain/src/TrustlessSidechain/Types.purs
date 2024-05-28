@@ -4,20 +4,17 @@ module TrustlessSidechain.Types
   ( PubKey
   , Signature
   , Ed25519Signature
-  , AssetClass
   , CurrencyInfo
-  , assetClass
-  , assetClassValueOf
-  , assetClassValue
   ) where
 
 import Contract.Prelude
 
+import Cardano.Types.PlutusScript (PlutusScript, hash)
+
+import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.Prim.ByteArray (ByteArray)
-import Contract.Scripts
-  ( MintingPolicy
-  )
-import Contract.Value (CurrencySymbol, TokenName, Value, valueOf)
+import Cardano.Types.AssetName (AssetName)
+import Contract.Value (CurrencySymbol, Value, valueOf)
 import Contract.Value as Value
 import Data.BigInt (BigInt)
 
@@ -28,23 +25,9 @@ type Signature = Ed25519Signature
 
 type Ed25519Signature = ByteArray
 
--- * Utility types and functions for working with `CurrencySymbol`s and `TokenName`s
-type AssetClass = CurrencySymbol /\ TokenName
-
 -- | Commonly used currency information packed paired together
 type CurrencyInfo =
-  { mintingPolicy ∷ MintingPolicy
-  , currencySymbol ∷ CurrencySymbol
+  { mintingPolicy ∷ PlutusScript
+  , currencySymbol ∷ ScriptHash
   }
 
-assetClass ∷ CurrencySymbol → TokenName → AssetClass
-assetClass currencySymbol tokenName =
-  currencySymbol /\ tokenName
-
-assetClassValueOf ∷ Value → AssetClass → BigInt
-assetClassValueOf val (currencySymbol /\ tokenName) =
-  valueOf val currencySymbol tokenName
-
-assetClassValue ∷ AssetClass → BigInt → Value
-assetClassValue (currencySymbol /\ tokenName) amount =
-  Value.singleton currencySymbol tokenName amount

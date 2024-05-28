@@ -10,7 +10,8 @@ module TrustlessSidechain.Versioning.V1
 
 import Contract.Prelude
 
-import Contract.Scripts (MintingPolicy, Validator)
+
+import Cardano.Types.PlutusScript (PlutusScript)
 import Data.List (List)
 import Data.List as List
 import Run (Run)
@@ -55,8 +56,8 @@ getVersionedPoliciesAndValidators ∷
   , atmsKind ∷ ATMSKinds
   } →
   Run (EXCEPT OffchainError + WALLET + r)
-    { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple ScriptId Validator)
+    { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
     }
 getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   committeeScripts ← getCommitteeSelectionPoliciesAndValidators atmsKind sp
@@ -77,8 +78,8 @@ getMerkleRootPoliciesAndValidators ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + WALLET + r)
-    { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple ScriptId Validator)
+    { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
     }
 getMerkleRootPoliciesAndValidators sp = do
   { mintingPolicy: merkleRootTokenMintingPolicy } ←
@@ -99,8 +100,8 @@ getCommitteeSelectionPoliciesAndValidators ∷
   ATMSKinds →
   SidechainParams →
   Run (EXCEPT OffchainError + WALLET + r)
-    { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple ScriptId Validator)
+    { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
     }
 getCommitteeSelectionPoliciesAndValidators atmsKind sp =
   do
@@ -149,8 +150,8 @@ getCheckpointPoliciesAndValidators ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + WALLET + r)
-    { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple ScriptId Validator)
+    { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
     }
 getCheckpointPoliciesAndValidators sp = do
   checkpointAssetClass ← Checkpoint.checkpointAssetClass sp
@@ -202,8 +203,8 @@ getFuelPoliciesAndValidators ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + WALLET + r)
-    { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple ScriptId Validator)
+    { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
     }
 getFuelPoliciesAndValidators sp = do
   { fuelMintingPolicy } ← FUELMintingPolicy.V1.getFuelMintingPolicy sp
@@ -224,8 +225,8 @@ getDsPoliciesAndValidators ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + r)
-    { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple ScriptId Validator)
+    { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
     }
 getDsPoliciesAndValidators sp = do
   ds ← DistributedSet.getDs sp

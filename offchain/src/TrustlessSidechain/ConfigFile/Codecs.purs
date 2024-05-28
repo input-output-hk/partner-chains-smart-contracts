@@ -8,7 +8,7 @@ module TrustlessSidechain.ConfigFile.Codecs
 
 import Contract.Prelude
 
-import Contract.Address (NetworkId(MainnetId, TestnetId))
+import Cardano.Types.NetworkId (NetworkId(MainnetId, TestnetId))
 import Contract.Config (ServerConfig)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Transaction (TransactionInput)

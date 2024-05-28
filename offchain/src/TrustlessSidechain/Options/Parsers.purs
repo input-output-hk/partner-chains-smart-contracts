@@ -19,7 +19,7 @@ module TrustlessSidechain.Options.Parsers
   , parseATMSKind
   , parsePubKeyAndSignature
   , parsePubKeyBytesAndSignatureBytes
-  , parseTokenName
+  , parseAssetName
   , registrationSidechainKeys
   , registrationSpoDatum
   , permissionedCandidateKeys
@@ -32,7 +32,7 @@ module TrustlessSidechain.Options.Parsers
   , schnorrSecp256k1PrivateKey
   , sidechainAddress
   , sidechainSignature
-  , tokenName
+  , assetName
   , transactionInput
   , uint
   , validatorHashParser
@@ -40,30 +40,38 @@ module TrustlessSidechain.Options.Parsers
 
 import Contract.Prelude
 
-import Contract.Address (Address, PubKeyHash(PubKeyHash))
+import Cardano.Serialization.Lib (fromBytes, toBytes)
+import Cardano.FromData (fromData, class FromData)
+import Cardano.ToData (class ToData)
+import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash(PaymentPubKeyHash))
+import Cardano.Types.Address (Address, fromBech32, toBech32, fromCsl, toCsl)
 import Contract.CborBytes (CborBytes, cborBytesFromByteArray, hexToCborBytes)
-import Contract.Credential
-  ( Credential(ScriptCredential)
+import Cardano.Plutus.Types.Credential (Credential(ScriptCredential))
+import Cardano.Plutus.Types.Address (fromCardano)
+import Cardano.Types.Credential
+  ( Credential(ScriptHashCredential)
   )
 import Contract.PlutusData (class FromData)
 import Contract.PlutusData as PlutusData
-import Contract.Prim.ByteArray (ByteArray)
-import Contract.Prim.ByteArray as ByteArray
-import Contract.Scripts (ValidatorHash(ValidatorHash))
+import Data.ByteArray (ByteArray)
+import Data.ByteArray as ByteArray
+import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.TransactionInput (TransactionInput(TransactionInput))
 import Contract.Transaction
   ( TransactionHash(TransactionHash)
-  , TransactionInput(TransactionInput)
   )
-import Contract.Value (TokenName)
+import Cardano.Types.AssetName as AssetName
+import Contract.Value (AssetName)
+import Cardano.Types.AssetName (AssetName)
 import Contract.Value as Value
 import Cardano.Plutus.Types.Address as Conversion.Address
 import Cardano.Types.Address as Serialization.Address
-import Cardano.Serialization.Lib
-  ( ed25519KeyHashFromBytes
-  , scriptHashFromBytes
+import Cardano.AsCbor
+  ( class AsCbor
+  , decodeCbor
   )
-import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
 import Data.Either as Either
 import Data.String (Pattern(Pattern), split, stripPrefix)
 import Data.UInt (UInt)
@@ -82,11 +90,6 @@ import TrustlessSidechain.FUELMintingPolicy.V1 (CombinedMerkleProof)
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
-import TrustlessSidechain.Utils.Address
-  ( Bech32Bytes
-  , addressFromBech32Bytes
-  , bech32BytesFromAddress
-  )
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PrivateKey
   , EcdsaSecp256k1PubKey
@@ -97,6 +100,7 @@ import TrustlessSidechain.Utils.SchnorrSecp256k1
   ( SchnorrSecp256k1PrivateKey
   )
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
+import Cardano.Types.Bech32String (Bech32String)
 
 hexToByteArray ∷ String → Maybe ByteArray
 hexToByteArray s = ByteArray.hexToByteArray $ fromMaybe s $ stripPrefix
@@ -124,7 +128,7 @@ parseATMSKind str = case str of
 parsePlutusData ∷ ∀ a. FromData a ⇒ String → Either String a
 parsePlutusData str = case hexToCborBytes str of
   Nothing → Left "invalid hex string"
-  Just cborBytes → case PlutusData.deserializeData cborBytes of
+  Just cborBytes → case fromData =<< decodeCbor cborBytes of
     Nothing → Left "invalid cbor"
     Just x → Right x
 
@@ -138,7 +142,7 @@ transactionInput = maybeReader \txIn →
   case split (Pattern "#") txIn of
     [ txId, txIdx ] → ado
       index ← UInt.fromString txIdx
-      transactionId ← TransactionHash <$> hexToByteArray txId
+      transactionId ← (decodeCbor <<< wrap) =<< hexToByteArray txId
       in
         TransactionInput
           { transactionId
@@ -147,18 +151,18 @@ transactionInput = maybeReader \txIn →
     _ → Nothing
 
 cborEncodedAddressParser ∷ ReadM Address
-cborEncodedAddressParser = cbor >>= PlutusData.deserializeData >>>
+cborEncodedAddressParser = cbor >>= decodeCbor >>>
   maybe (readerError "Error while parsing supplied CBOR as Address.")
     pure
 
-validatorHashParser ∷ ReadM ValidatorHash
+validatorHashParser ∷ ReadM ScriptHash
 validatorHashParser = do
   ba ← byteArray
-  vh ← case scriptHashFromBytes ba of
+  sh ← case decodeCbor $ wrap ba of
     Just vh' → pure vh'
     Nothing → readerError "script hash deserialization failed."
 
-  pure $ ValidatorHash vh
+  pure $ sh
 
 -- | `bech32AddressParser` parses a human readable bech32 address into an
 -- | address
@@ -166,55 +170,49 @@ validatorHashParser = do
 -- network that CTL is running on.
 parseHumanReadableBech32ToAddress ∷ String → Either String Address
 parseHumanReadableBech32ToAddress str = do
-  addr ← case (Serialization.Address.addressFromBech32 str) of
+  addr ← case (fromBech32 str) of
     Just x → Right x
     Nothing → Left "bech32 address deserialization failed."
 
-  addr' ← case Conversion.Address.toPlutusAddress addr of
-    Just x → Right x
-    Nothing → Left "bech32 address conversion to plutus address failed"
-
-  pure addr'
+  pure addr
 
 -- | `parseHumanReadableBech32ToValidatorHash` parses a human readable bech32
 -- address into validator hash
-parseHumanReadableBech32ToValidatorHash ∷ String → Either String ValidatorHash
+parseHumanReadableBech32ToValidatorHash ∷ String → Either String ScriptHash
 parseHumanReadableBech32ToValidatorHash str = do
-  addr ← case (Serialization.Address.addressFromBech32 str) of
+  addr ← case (fromBech32 str) of
     Just x → Right x
     Nothing → Left "bech32 address deserialization failed."
 
-  addr' ← case Conversion.Address.toPlutusAddress addr of
+  addr' ← case fromCardano addr of
     Just x → Right x
     Nothing → Left "bech32 address conversion to plutus address failed"
 
   vh ← case (unwrap addr').addressCredential of
     ScriptCredential vh' → Right vh'
     _ → Left "provided address is not a script address"
-  pure vh
+  pure $ unwrap vh
 
 -- | parses a human readable bech32 address to the bech32 bytes.
-parseHumanReadableBech32ToBech32Bytes ∷ String → Either String Bech32Bytes
+parseHumanReadableBech32ToBech32Bytes ∷ String → Either String ByteArray
 parseHumanReadableBech32ToBech32Bytes str = do
   addr ← parseHumanReadableBech32ToAddress str
-  case bech32BytesFromAddress addr of
-    Nothing → Left "failed to get bech32 bytes from address"
-    Just x → pure x
+  pure $ toBytes $ toCsl addr
 
 -- | Wraps `parseHumanReadableBech32ToAddress`
 bech32AddressParser ∷ ReadM Address
 bech32AddressParser = eitherReader parseHumanReadableBech32ToAddress
 
 -- | Wraps `parseHumanReadableBech32ToValidatorHash`
-bech32ValidatorHashParser ∷ ReadM ValidatorHash
+bech32ValidatorHashParser ∷ ReadM ScriptHash
 bech32ValidatorHashParser = eitherReader parseHumanReadableBech32ToValidatorHash
 
 -- | Wraps `parseHumanReadableBech32ToBech32Bytes  `
-bech32BytesParser ∷ ReadM Bech32Bytes
+bech32BytesParser ∷ ReadM ByteArray
 bech32BytesParser = eitherReader parseHumanReadableBech32ToBech32Bytes
 
 combinedMerkleProofParser ∷ ReadM CombinedMerkleProof
-combinedMerkleProofParser = cbor >>= PlutusData.deserializeData >>>
+combinedMerkleProofParser = cbor >>= (fromData <=< decodeCbor) >>>
   maybe (readerError "Error while parsing supplied CBOR as CombinedMerkleProof.")
     pure
 
@@ -227,7 +225,7 @@ combinedMerkleProofParserWithPkh = do
   -- an address
   let
     recipient = (unwrap (unwrap cmp).transaction).recipient
-    maybeAddr = addressFromBech32Bytes recipient
+    maybeAddr = fromCsl <$> fromBytes recipient
   case maybeAddr of
     Just addr → pure (cmp /\ addr)
     Nothing → readerError "Couldn't convert recipient bech32 to Plutus address"
@@ -263,11 +261,11 @@ sidechainSignature = maybeReader
   <=< hexToByteArray
 
 -- | Parses a PubKeyHash from hexadecimal representation.
-pubKeyHash ∷ ReadM PubKeyHash
+pubKeyHash ∷ ReadM PaymentPubKeyHash
 pubKeyHash = maybeReader
   $ hexToByteArray
-  >=> ed25519KeyHashFromBytes
-  >=> PubKeyHash
+  >=> (wrap >>> decodeCbor)
+  >=> PaymentPubKeyHash
   >>> pure
 
 -- | Parses a GovernanceAuthority from hexadecimal representation.
@@ -485,13 +483,13 @@ parsePermissionedCandidateKeys str =
     _ → Left
       "permissioned-candidate-keys must be 3 hex strings concatenated with colons, for example: aa:bb:cc"
 
--- | `parseTokenName` is a thin wrapper around `Contract.Value.mkTokenName` for
+-- | `parseAssetName` is a thin wrapper around `Cardano.Types.AssetName.mkAssetName` for
 -- | converting hex encoded strings to token names
-parseTokenName ∷ String → Maybe (TokenName)
-parseTokenName hexStr = do
+parseAssetName ∷ String → Maybe (AssetName)
+parseAssetName hexStr = do
   ba ← hexToByteArray hexStr
-  Value.mkTokenName ba
+  AssetName.mkAssetName ba
 
--- | `tokenName` wraps `parseTokenName`.
-tokenName ∷ ReadM TokenName
-tokenName = maybeReader parseTokenName
+-- | `assetName` wraps `parseAssetName`.
+assetName ∷ ReadM AssetName
+assetName = maybeReader parseAssetName

@@ -10,56 +10,50 @@ module TrustlessSidechain.FUELMintingPolicy.V1
   ) where
 
 import Contract.Prelude
-
+import Cardano.Types.AssetName as AssetName
+import Cardano.Types.Address (getPaymentCredential, getStakeCredential)
+import Cardano.Types.Credential (asPubKeyHash)
 import Contract.Address
   ( Address
   , PaymentPubKeyHash(PaymentPubKeyHash)
   , StakePubKeyHash(StakePubKeyHash)
-  , toPubKeyHash
-  , toStakingCredential
   )
-import Contract.Credential
-  ( Credential(PubKeyCredential)
-  , StakingCredential(StakingHash)
+import Cardano.Types.Credential
+  ( Credential(PubKeyHashCredential)
   )
-import Contract.Hashing (blake2b256Hash)
+import Cardano.Types.StakeCredential (StakeCredential(StakeCredential))
+import TrustlessSidechain.Utils.Crypto (blake2b256Hash)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
   , class ToData
-  , Datum(Datum)
-  , PlutusData(Constr)
   , fromData
   , toData
-  , unitRedeemer
   )
-import Contract.PlutusData as PlutusData
+import Cardano.Types.PlutusData (PlutusData(Constr))
+import Cardano.Types.PlutusData as PlutusData
 import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy)
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
 import Contract.Scripts as Scripts
-import Contract.Transaction
-  ( TransactionInput
-  , TransactionOutputWithRefScript
-  , mkTxUnspentOut
-  )
+import Cardano.Types.TransactionInput (TransactionInput)
+import Cardano.Types.TransactionOutput (TransactionOutput)
+import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
   , InputWithScriptRef(RefInput)
   , TxConstraints
   )
+import Cardano.AsCbor (encodeCbor)
 import Contract.TxConstraints as Constraints
-import Contract.Value
-  ( CurrencySymbol
-  , TokenName
-  , Value
-  , getTokenName
-  , mkTokenName
-  )
-import Contract.Value as Value
-import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
+import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.AssetName (AssetName, unAssetName, mkAssetName)
+import Cardano.Types.Value (Value)
+import Cardano.Types.Value as Value
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
 import Data.Map as Map
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
@@ -90,12 +84,10 @@ import TrustlessSidechain.MerkleTree
   , unRootHash
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import Cardano.Types.Address (fromBech32, toBech32)
 import TrustlessSidechain.Utils.Address
-  ( Bech32Bytes
+  ( getOwnPaymentPubKeyHash
   , addressFromBech32Bytes
-  , bech32BytesFromAddress
-  , getCurrencySymbol
-  , getOwnPaymentPubKeyHash
   )
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
@@ -110,12 +102,15 @@ import TrustlessSidechain.Versioning.Types
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
+import Cardano.Types.Int as Int
+import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
+import Cardano.Types.Bech32String (Bech32String)
+import Partial.Unsafe (unsafePartial)
+import Data.ByteArray (ByteArray)
+import Contract.Prim.ByteArray (hexToRawBytes, rawBytesToHex)
 
-fuelTokenName ∷ TokenName
-fuelTokenName =
-  Unsafe.unsafePartial $ Maybe.fromJust
-    $ Value.mkTokenName
-    =<< byteArrayFromAscii "FUEL"
+fuelTokenName ∷ AssetName
+fuelTokenName = unsafeMkAssetName "FUEL"
 
 -- | `MerkleTreeEntry` (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
 -- | for the MerkleRootToken. It contains:
@@ -131,7 +126,7 @@ fuelTokenName =
 newtype MerkleTreeEntry = MerkleTreeEntry
   { index ∷ BigInt
   , amount ∷ BigInt
-  , recipient ∷ Bech32Bytes
+  , recipient ∷ ByteArray
   , previousMerkleRoot ∷ Maybe RootHash
   }
 
@@ -254,7 +249,7 @@ instance FromData FUELMintingRedeemer where
 decodeFuelMintingPolicy ∷
   ∀ r.
   SidechainParams →
-  Run (EXCEPT OffchainError + WALLET + r) MintingPolicy
+  Run (EXCEPT OffchainError + WALLET + r) PlutusScript
 decodeFuelMintingPolicy sidechainParams = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
   mkMintingPolicyWithParams FUELMintingPolicy
@@ -268,13 +263,12 @@ getFuelMintingPolicy ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + WALLET + r)
-    { fuelMintingPolicy ∷ MintingPolicy
-    , fuelMintingCurrencySymbol ∷ CurrencySymbol
+    { fuelMintingPolicy ∷ PlutusScript
+    , fuelMintingCurrencySymbol ∷ ScriptHash
     }
 getFuelMintingPolicy sidechainParams = do
   fuelMintingPolicy ← decodeFuelMintingPolicy sidechainParams
-  fuelMintingCurrencySymbol ← getCurrencySymbol FUELMintingPolicy
-    fuelMintingPolicy
+  let fuelMintingCurrencySymbol = PlutusScript.hash fuelMintingPolicy
   pure { fuelMintingPolicy, fuelMintingCurrencySymbol }
 
 -- | `FuelMintParams` is the data for the FUEL mint endpoint.
@@ -295,7 +289,7 @@ mkMintFuelLookupAndConstraints ∷
   SidechainParams →
   FuelMintParams →
   Run (APP + r)
-    { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
+    { lookups ∷ ScriptLookups, constraints ∷ TxConstraints }
 mkMintFuelLookupAndConstraints
   sp
   ( FuelMintParams
@@ -315,12 +309,7 @@ mkMintFuelLookupAndConstraints
 
     ds ← DistributedSet.getDs sidechainParams
 
-    bech32BytesRecipient ←
-      Run.note
-        ( InvalidAddress "Cannot convert address to bech 32 bytes"
-            recipient
-        )
-        $ bech32BytesFromAddress recipient
+    let bech32BytesRecipient = unwrap $ encodeCbor recipient
     let
       merkleTreeEntry =
         MerkleTreeEntry
@@ -331,14 +320,14 @@ mkMintFuelLookupAndConstraints
           }
 
     let
-      entryBytes = unwrap $ PlutusData.serializeData merkleTreeEntry
-      cborMteHashed = blake2b256Hash entryBytes
+      entryBytes = unwrap $ encodeCbor $ toData merkleTreeEntry
+      cborMteHashed = unsafePartial $ blake2b256Hash entryBytes
       rootHash = rootMp entryBytes merkleProof
 
     cborMteHashedTn ←
       Run.note
         (InvalidData "Token name exceeds size limit")
-        $ mkTokenName
+        $ mkAssetName
         $ cborMteHashed
 
     { index: mptUtxo, value: mptTxOut } ←
@@ -375,8 +364,7 @@ mkMintFuelLookupAndConstraints
         ( InvalidAddress "Couldn't convert recipient to public key hash: "
             recipient
         )
-        $ PaymentPubKeyHash
-        <$> toPubKeyHash recipient
+        $ toPaymentPubKeyHash recipient
 
     let recipientSt = toStakePubKeyHash recipient
 
@@ -384,29 +372,30 @@ mkMintFuelLookupAndConstraints
       Effect.logWarn' "Recipient address does not contain staking key."
 
     let
-      node = DistributedSet.mkNode (getTokenName tnNode) datNode
-      value = Value.singleton fuelMintingCurrencySymbol fuelTokenName amount
+      node = DistributedSet.mkNode (unAssetName tnNode) datNode
+      amount' = unsafePartial $ fromJust $ BigNum.fromString $ BigInt.toString amount
+      value = Value.singleton fuelMintingCurrencySymbol fuelTokenName amount'
       redeemer = wrap (toData (FUELMintingRedeemer merkleTreeEntry merkleProof))
 
     (scriptRefTxInput /\ scriptRefTxOutput) ←
       Versioning.getVersionedScriptRefUtxo
         sidechainParams
         ( VersionOracle
-            { version: BigInt.fromInt 1, scriptId: FUELMintingPolicy }
+            { version: BigNum.fromInt 1, scriptId: FUELMintingPolicy }
         )
 
     (merkleRootVersioningInput /\ merkleRootVersioningOutput) ←
       Versioning.getVersionedScriptRefUtxo
         sidechainParams
         ( VersionOracle
-            { version: BigInt.fromInt 1, scriptId: MerkleRootTokenPolicy }
+            { version: BigNum.fromInt 1, scriptId: MerkleRootTokenPolicy }
         )
 
     (dsKeyVersioningInput /\ dsKeyVersioningOutput) ←
       Versioning.getVersionedScriptRefUtxo
         sidechainParams
         ( VersionOracle
-            { version: BigInt.fromInt 1, scriptId: DsKeyPolicy }
+            { version: BigNum.fromInt 1, scriptId: DsKeyPolicy }
         )
 
     let
@@ -417,37 +406,39 @@ mkMintFuelLookupAndConstraints
                 <> "name.  The key is "
                 <> show (unwrap n).nKey
             )
-            $ mkTokenName
+            $ mkAssetName
             $ (unwrap n).nKey
 
-        let val = Value.singleton currencySymbol nTn (BigInt.fromInt 1)
-        if getTokenName nTn == (unwrap node).nKey then
+        let val = Value.singleton currencySymbol nTn (BigNum.fromInt 1)
+        if unAssetName nTn == (unwrap node).nKey then
           pure $ Constraints.mustPayToScript
             insertValidatorHash
-            (Datum (toData (DistributedSet.nodeToDatum n)))
+            (toData (DistributedSet.nodeToDatum n))
             DatumInline
             val
         else
           pure
             $ Constraints.mustPayToScript
                 insertValidatorHash
-                (Datum (toData (DistributedSet.nodeToDatum n)))
+                (toData (DistributedSet.nodeToDatum n))
                 DatumInline
                 val
             <> Constraints.mustMintCurrencyUsingScriptRef
-              (Scripts.mintingPolicyHash mintingPolicy)
+              (PlutusScript.hash mintingPolicy)
               nTn
-              (BigInt.fromInt 1)
-              ( RefInput $ mkTxUnspentOut dsKeyVersioningInput
-                  dsKeyVersioningOutput
+              (Int.fromInt 1)
+              ( RefInput $ TransactionUnspentOutput
+                  { input: dsKeyVersioningInput
+                  , output: dsKeyVersioningOutput
+                  }
               )
 
     mustAddDSNodeA ← mkNodeConstraints nodeA
     mustAddDSNodeB ← mkNodeConstraints nodeB
-
+    let mintAmount = unsafePartial $ fromJust $ Int.fromString $ BigInt.toString amount
     pure
       { lookups:
-          Lookups.mintingPolicy mintingPolicy
+          Lookups.plutusMintingPolicy mintingPolicy
             <> Lookups.validator insertValidator
             <> Lookups.unspentOutputs (Map.singleton mptUtxo mptTxOut)
             <> Lookups.unspentOutputs (Map.singleton confRef confO)
@@ -459,11 +450,15 @@ mkMintFuelLookupAndConstraints
       , constraints:
           -- Minting the FUEL tokens
           Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
-            (Scripts.mintingPolicyHash fuelMintingPolicy)
+            (PlutusScript.hash fuelMintingPolicy)
             redeemer
             fuelTokenName
-            amount
-            (RefInput $ mkTxUnspentOut scriptRefTxInput scriptRefTxOutput)
+            mintAmount
+            (RefInput $ TransactionUnspentOutput
+                { input: scriptRefTxInput
+                , output: scriptRefTxOutput
+                }
+            )
             <> mustPayToPubKeyAddress' recipientPkh recipientSt value
             <> Constraints.mustBeSignedBy ownPkh
 
@@ -472,7 +467,7 @@ mkMintFuelLookupAndConstraints
 
             -- Updating the distributed set
             <> Constraints.mustReferenceOutput confRef
-            <> Constraints.mustSpendScriptOutput nodeRef unitRedeemer
+            <> Constraints.mustSpendScriptOutput nodeRef (wrap $ PlutusData.unit)
             <> mustAddDSNodeA
             <> mustAddDSNodeB
 
@@ -489,27 +484,28 @@ findMerkleRootTokenUtxoByRootHash ∷
   SidechainParams →
   RootHash →
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
+    (Maybe { index ∷ TransactionInput, value ∷ TransactionOutput })
 findMerkleRootTokenUtxoByRootHash sidechainParams rootHash = do
   merkleRootTokenName ←
     Run.note
       ( InvalidData
           "Invalid Merkle root TokenName for MerkleRootTokenMintingPolicy"
       )
-      $ Value.mkTokenName
+      $ mkAssetName
       $ unRootHash rootHash
   findMerkleRootTokenUtxo merkleRootTokenName sidechainParams
 
+-- | Derive the public key hash from a public key address
+toPaymentPubKeyHash ∷ Address → Maybe PaymentPubKeyHash
+toPaymentPubKeyHash addr = wrap <$> ((asPubKeyHash <<< unwrap) =<< getPaymentCredential addr)
+
 -- | Derive the stake key hash from a public key address
 toStakePubKeyHash ∷ Address → Maybe StakePubKeyHash
-toStakePubKeyHash addr =
-  case toStakingCredential addr of
-    Just (StakingHash (PubKeyCredential pkh)) → Just (StakePubKeyHash pkh)
-    _ → Nothing
+toStakePubKeyHash addr = wrap <$> ((asPubKeyHash <<< unwrap) =<< getStakeCredential addr)
 
 -- | Pay values to a public key address (with optional staking key)
 mustPayToPubKeyAddress' ∷
-  PaymentPubKeyHash → Maybe StakePubKeyHash → Value → TxConstraints Void Void
+  PaymentPubKeyHash → Maybe StakePubKeyHash → Value → TxConstraints
 mustPayToPubKeyAddress' pkh = case _ of
   Just skh → Constraints.mustPayToPubKeyAddress pkh skh
   Nothing → Constraints.mustPayToPubKey pkh

@@ -16,9 +16,9 @@ import Contract.PlutusData
   , fromData
   , toData
   )
-import Contract.Value (CurrencySymbol)
+import Cardano.Types.ScriptHash (ScriptHash)
 import Ctl.Internal.Types.Interval (POSIXTime)
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import TrustlessSidechain.Types (AssetClass)
 import TrustlessSidechain.Utils.Data
   ( productFromData2

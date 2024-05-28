@@ -10,7 +10,9 @@ import Aeson
   ( encodeAeson
   , toStringifiedNumbersJson
   )
-import Cardano.Plutus.Types.Map as Plutus
+import Cardano.ToData (toData)
+import Data.Map (Map)
+import Cardano.Types.BigNum (BigNum)
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.PlutusData
   ( class ToData
@@ -21,19 +23,13 @@ import Contract.Prim.ByteArray
   ( ByteArray
   , byteArrayToHex
   )
-import Contract.Scripts
-  ( MintingPolicy
-  , ScriptHash
-  , Validator
-  )
-import Contract.Value
-  ( CurrencySymbol
-  , TokenName
-  )
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.AssetName (AssetName)
 import Data.Argonaut (Json)
 import Data.Argonaut.Core as J
 import Data.Bifunctor (rmap)
-import Data.BigInt (BigInt)
+import JS.BigInt (BigInt)
 import Data.Codec.Argonaut as CA
 import Data.Codec.Argonaut.Compat as CAC
 import Data.List (List)
@@ -48,7 +44,7 @@ import TrustlessSidechain.MerkleTree
   , unRootHash
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Address (currencySymbolToHex)
+import Cardano.AsCbor (encodeCbor)
 import TrustlessSidechain.Utils.Codecs
   ( encodeInitTokenStatusData
   , scParamsCodec
@@ -77,7 +73,7 @@ data EndpointResp
   | CommitteeCandidateRegResp { transactionId ∷ ByteArray }
   | CandidatePermissionTokenResp
       { transactionId ∷ ByteArray
-      , candidatePermissionCurrencySymbol ∷ CurrencySymbol
+      , candidatePermissionCurrencySymbol ∷ ScriptHash
       }
   | CommitteeCandidateDeregResp { transactionId ∷ ByteArray }
   | GetAddrsResp { sidechainAddresses ∷ SidechainAddresses }
@@ -161,17 +157,17 @@ data EndpointResp
   | BurnNFTsResp
       { transactionId ∷ ByteArray }
   | InitTokenStatusResp
-      { initTokenStatusData ∷ Plutus.Map TokenName BigInt }
+      { initTokenStatusData ∷ Map AssetName BigNum }
   | ListVersionedScriptsResp
-      { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
-      , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+      { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
+      , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
       }
 
 -- | `serialisePlutusDataToHex` serialises plutus data to CBOR, and shows the
 -- | hex encoded CBOR.
 serialisePlutusDataToHex ∷ ∀ a. ToData a ⇒ a → String
 serialisePlutusDataToHex = byteArrayToHex <<< cborBytesToByteArray <<<
-  PlutusData.serializeData
+  encodeCbor <<< toData
 
 -- Note [BigInt values and JSON]
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -230,7 +226,7 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
         , "candidatePermissionCurrencySymbol"
             /\ J.fromString
-              ( currencySymbolToHex candidatePermissionCurrencySymbol
+              ( byteArrayToHex $ unwrap $ encodeCbor candidatePermissionCurrencySymbol
               )
         ]
     GetAddrsResp { sidechainAddresses } →

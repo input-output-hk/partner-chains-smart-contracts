@@ -8,49 +8,52 @@ import Contract.Prelude
 import Contract.PlutusData
   ( Redeemer
   )
+import Contract.PlutusData (RedeemerDatum(RedeemerDatum))
+import Cardano.Types.AssetName (AssetName)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as Constraints
 import Contract.Value (TokenName)
 import Contract.Value as Value
-import Data.BigInt (BigInt)
 import TrustlessSidechain.Types (CurrencyInfo)
+import Cardano.Types.Mint as Mint
+import Cardano.Types.Int as Int
 
 -- | Build lookups and constraints to mint one token of a given name for a
 -- | provided currency.
 mintOneToken ∷
-  TokenName →
-  Redeemer →
+  AssetName →
+  RedeemerDatum →
   CurrencyInfo →
-  { lookups ∷ ScriptLookups Void
-  , constraints ∷ TxConstraints Void Void
+  { lookups ∷ ScriptLookups
+  , constraints ∷ TxConstraints
   }
-mintOneToken = oneTokenHelper one
+mintOneToken = oneTokenHelper Int.one
 
 -- | Build lookups and constraints to burn one token of a given name for a
 -- | provided currency.
 burnOneToken ∷
-  TokenName →
-  Redeemer →
+  AssetName →
+  RedeemerDatum →
   CurrencyInfo →
-  { lookups ∷ ScriptLookups Void
-  , constraints ∷ TxConstraints Void Void
+  { lookups ∷ ScriptLookups
+  , constraints ∷ TxConstraints
   }
-burnOneToken = oneTokenHelper (negate one)
+burnOneToken = oneTokenHelper (Int.negate Int.one)
 
 -- | Worker for `mintOneToken` and `burnOneToken`.
 oneTokenHelper ∷
-  BigInt →
-  TokenName →
-  Redeemer →
+  Int.Int →
+  AssetName →
+  RedeemerDatum →
   CurrencyInfo →
-  { lookups ∷ ScriptLookups Void
-  , constraints ∷ TxConstraints Void Void
+  { lookups ∷ ScriptLookups
+  , constraints ∷ TxConstraints
   }
 oneTokenHelper amount tn redeemer { currencySymbol, mintingPolicy } =
-  { lookups: Lookups.mintingPolicy mintingPolicy
+  { lookups: Lookups.plutusMintingPolicy mintingPolicy
   , constraints: Constraints.mustMintValueWithRedeemer
       redeemer
-      (Value.singleton currencySymbol tn amount)
+      (Mint.singleton currencySymbol tn amount)
   }

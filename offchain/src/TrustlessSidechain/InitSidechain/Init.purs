@@ -2,18 +2,23 @@ module TrustlessSidechain.InitSidechain.Init
   ( getInitTokenStatus
   , getScriptsToInsert
   , init
-  , initTokenStatus
   , insertScriptsIdempotent
-  ) where
+  )
+  where
 
 import Contract.Prelude
 
-import Cardano.Plutus.Types.Map as Plutus.Map
-import Contract.Scripts (MintingPolicy, Validator)
+
+import Data.Map as Map
+import Data.Map (Map)
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
 import Contract.Transaction (TransactionHash)
-import Contract.Value (CurrencySymbol, TokenName, Value)
-import Contract.Value as Value
-import Data.BigInt (BigInt)
+import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.AssetName (AssetName)
+import Cardano.Types.Value (Value)
+import Cardano.Types.Value as Value
+import JS.BigInt (BigInt)
 import Data.List (List, filter)
 import Data.List as List
 import Run (Run)
@@ -31,6 +36,8 @@ import TrustlessSidechain.Versioning (getActualVersionedPoliciesAndValidators)
 import TrustlessSidechain.Versioning.ScriptId as Types
 import TrustlessSidechain.Versioning.Types (ScriptId)
 import TrustlessSidechain.Versioning.Utils as Utils
+import Cardano.Types.BigNum as BigNum
+import Cardano.Types.BigNum (BigNum)
 import Type.Row (type (+))
 
 insertScriptsIdempotent ∷
@@ -38,8 +45,8 @@ insertScriptsIdempotent ∷
   ( SidechainParams →
     Int → -- Version number
     Run (APP + r)
-      { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
-      , versionedValidators ∷ List (Tuple ScriptId Validator)
+      { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
+      , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
       }
   ) →
   SidechainParams →
@@ -51,8 +58,8 @@ insertScriptsIdempotent f sidechainParams initATMSKind version = do
   scripts ← f sidechainParams version
 
   toInsert ∷
-    { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple ScriptId Validator)
+    { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
     } ← getScriptsToInsert sidechainParams initATMSKind scripts version
 
   validatorsTxIds ←
@@ -75,13 +82,13 @@ getScriptsToInsert ∷
   ∀ r.
   SidechainParams →
   ATMSKinds →
-  { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
-  , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+  { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
+  , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
   } →
   Int →
   Run (APP + r)
-    { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+    { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }
 getScriptsToInsert
   sidechainParams
@@ -111,11 +118,11 @@ init ∷
   ∀ r.
   (String → SidechainParams → Run (APP + r) TransactionHash) →
   String →
-  TokenName →
+  AssetName →
   SidechainParams →
   Run (APP + r) (Maybe TransactionHash)
 init f op nm sp = do
-  tokenExists ← map (Plutus.Map.member nm <<< _.initTokenStatusData)
+  tokenExists ← map (Map.member nm <<< _.initTokenStatusData)
     (getInitTokenStatus sp)
   if tokenExists then Just <$> f op sp else pure Nothing
 
@@ -125,7 +132,7 @@ getInitTokenStatus ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    { initTokenStatusData ∷ Plutus.Map.Map TokenName BigInt }
+    { initTokenStatusData ∷ Map AssetName BigNum }
 getInitTokenStatus scParams = do
   { currencySymbol } ← initTokenCurrencyInfo scParams
 
@@ -137,11 +144,12 @@ getInitTokenStatus scParams = do
 -- | Get the init token data for the given `CurrencySymbol` from a given
 -- | `Value`. Used in the InitTokenStatus endpoint.
 initTokenStatus ∷
-  CurrencySymbol →
+  ScriptHash →
   Value →
-  { initTokenStatusData ∷ Plutus.Map.Map TokenName BigInt }
+  { initTokenStatusData ∷ Map AssetName BigNum }
 initTokenStatus sym =
-  Value.getValue
-    >>> Plutus.Map.lookup sym
-    >>> fromMaybe Plutus.Map.empty
+  Value.getMultiAsset
+    >>> unwrap
+    >>> Map.lookup sym
+    >>> fromMaybe Map.empty
     >>> { initTokenStatusData: _ }

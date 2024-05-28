@@ -2,7 +2,7 @@ module TrustlessSidechain.Options.Specs (options) where
 
 import Contract.Prelude
 
-import Contract.Address (PubKeyHash(PubKeyHash))
+import Cardano.Plutus.Types.PubKeyHash (PubKeyHash(PubKeyHash))
 import Contract.Config
   ( PrivateStakeKeySource(PrivateStakeKeyFile)
   , ServerConfig
@@ -18,9 +18,9 @@ import Contract.Wallet
   )
 import Control.Alternative ((<|>))
 import Ctl.Internal.Helpers (logWithLevel)
-import Cardano.Serialization.Lib (ed25519KeyHashFromBytes)
-import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
+import Cardano.AsCbor (decodeCbor)
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
 import Data.List (List)
 import Data.List.Types (NonEmptyList)
 import Data.UInt (UInt)
@@ -504,7 +504,7 @@ sidechainParamsSpec maybeConfig = ado
     , maybe mempty value
         ( maybeConfig >>= _.sidechainParameters >>= _.governanceAuthority >>=
             -- parse ByteArray stored in Config into a PubKeyHash
-            ( ed25519KeyHashFromBytes >=> PubKeyHash
+            ( wrap >>> decodeCbor >=> wrap
                 >>> Governance.mkGovernanceAuthority
                 >>> pure
             )

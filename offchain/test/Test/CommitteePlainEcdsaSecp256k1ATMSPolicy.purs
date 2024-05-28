@@ -7,11 +7,14 @@ import Contract.Prelude
 
 import Contract.Log (logInfo')
 import Contract.PlutusData (toData)
+import Partial.Unsafe (unsafePartial)
+import Cardano.Types.AssetName (mkAssetName)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Data.Array as Array
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
+import Cardano.Types.BigNum as BigNum
 import Data.Maybe as Maybe
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe as Unsafe
@@ -82,12 +85,12 @@ testScenario1 =
   Mote.Monad.test
     "Various tests for the CommitteePlainEcdsaSecp256k1ATMSPolicy token"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 40_000_000
-        , BigInt.fromInt 40_000_000
-        , BigInt.fromInt 40_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 40_000_000
+        , BigNum.fromInt 40_000_000
+        , BigNum.fromInt 40_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         pkh ← getOwnPaymentPubKeyHash
@@ -104,15 +107,14 @@ testScenario1 =
             { initChainId: BigInt.fromInt 1
             , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ Utils.Crypto.aggregateKeys
+            , initAggregatedCommittee: toData $ unsafePartial Utils.Crypto.aggregateKeys
                 $ map unwrap initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
-                pkh
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
             }
 
         { sidechainParams } ← initSidechain initScParams 1
@@ -143,7 +145,7 @@ testScenario1 =
             sidechainMessage = Utils.Crypto.byteArrayToEcdsaSecp256k1MessageUnsafe
               sidechainMessageByteArray
             sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
-              Value.mkTokenName sidechainMessageByteArray
+              mkAssetName sidechainMessageByteArray
 
             allPubKeysAndSignatures = generateSignatures
               { -- the current committee stored on chain
@@ -190,7 +192,7 @@ testScenario1 =
             sidechainMessage = Utils.Crypto.byteArrayToEcdsaSecp256k1MessageUnsafe
               sidechainMessageByteArray
             sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
-              Value.mkTokenName sidechainMessageByteArray
+              mkAssetName sidechainMessageByteArray
 
             allPubKeysAndSignatures = generateSignatures
               { currentCommitteePrvKeys: initCommitteePrvKeys
@@ -239,7 +241,7 @@ testScenario1 =
             sidechainMessage = Utils.Crypto.byteArrayToEcdsaSecp256k1MessageUnsafe
               sidechainMessageByteArray
             sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
-              Value.mkTokenName sidechainMessageByteArray
+              mkAssetName sidechainMessageByteArray
 
             allPubKeysAndSignatures = generateSignatures
               { currentCommitteePrvKeys: initCommitteePrvKeys
@@ -284,7 +286,7 @@ testScenario1 =
               sidechainMessageByteArray
 
             sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust
-              $ Value.mkTokenName
+              $ mkAssetName
               $ ByteArray.byteArrayFromIntArrayUnsafe
               $ Array.replicate 32 4
 
@@ -326,7 +328,7 @@ testScenario1 =
               sidechainMessageByteArray
 
             sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust
-              $ Value.mkTokenName
+              $ mkAssetName
               $ sidechainMessageByteArray
 
             allPubKeysAndSignatures = generateSignatures

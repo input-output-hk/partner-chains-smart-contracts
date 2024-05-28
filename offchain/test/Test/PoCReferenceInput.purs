@@ -6,19 +6,18 @@ import Contract.Prelude
 import Contract.Address as Address
 import Contract.Log as Log
 import Contract.Monad as Monad
-import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer))
-import Contract.PlutusData as PlutusData
+import Contract.PlutusData (RedeemerDatum(RedeemerDatum))
+import Cardano.Types.OutputDatum (OutputDatum(OutputDatum))
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
-import Contract.Scripts (Validator(Validator))
 import Contract.Scripts as Scripts
-import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptV2FromEnvelope)
+import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptFromEnvelope)
 import Contract.Transaction as Transaction
 import Contract.TxConstraints (DatumPresence(DatumWitness), TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
 import Contract.Wallet as Wallet
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Data.Map as Map
 import Mote.Monad as Mote.Monad
 import Test.PlutipTest (PlutipTest)
@@ -26,7 +25,33 @@ import Test.PlutipTest as Test.PlutipTest
 import Test.PoCRawScripts as RawScripts
 import Test.Utils as Test.Utils
 import TrustlessSidechain.Effects.Contract (liftContract)
-
+import TrustlessSidechain.Effects.Util (lmapThrow)
+import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Transaction
+  ( mkUnbalancedTx
+  , signTransaction
+  , submit
+  , balanceTx
+  , awaitTxConfirmed
+  ) as Effect
+import TrustlessSidechain.Effects.Log (logInfo') as Effect
+import Contract.PlutusData (RedeemerDatum(RedeemerDatum))
+import TrustlessSidechain.Effects.Util (mapError)
+import TrustlessSidechain.Error
+  ( OffchainError(BalanceTxError, BuildTxError, InvalidScriptArgs, InvalidAddress)
+  )
+import TrustlessSidechain.Effects.Util (fromMaybeThrow)
+import Run.Except (note) as Run
+import TrustlessSidechain.Error (OffchainError(InvalidScript))
+import TrustlessSidechain.Effects.Contract (liftContract)
+import Cardano.AsCbor (encodeCbor)
+import TrustlessSidechain.Utils.Address (toAddress)
+--import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer))
+import Cardano.Types.PlutusData as PlutusData
+import Cardano.Types.PlutusScript as PlutusScript
+import Contract.Numeric.BigNum as BigNum
+import Cardano.ToData as ToData
+import Cardano.Plutus.Types.Address as PlutusAddress
 -- | `tests` aggregates all the PoCReferenceInput together conveniently
 tests ∷ PlutipTest
 tests = Mote.Monad.group "PoCReferenceInput tests" do
@@ -47,102 +72,100 @@ tests = Mote.Monad.group "PoCReferenceInput tests" do
 testScenario1 ∷ PlutipTest
 testScenario1 = Mote.Monad.test "PoCReferenceInput: testScenario1"
   $ Test.PlutipTest.mkPlutipConfigTest
-      [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
-  $ \alice → liftContract $ Wallet.withKeyWallet alice do
+      [ BigNum.fromInt 10_000_000, BigNum.fromInt 10_000_000 ]
+  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       -- 1.
       let
         toReferenceScript = decodeTextEnvelope RawScripts.rawPoCToReferenceInput
-          >>= plutusScriptV2FromEnvelope
+          >>= plutusScriptFromEnvelope
 
-      toReferenceUnapplied ← Monad.liftContractM "Decoding text envelope failed."
+      toReferenceValidator ← Run.note (InvalidScript "Decoding text envelope failed.")
         toReferenceScript
       let
-        toReferenceValidator = Validator toReferenceUnapplied
-        toReferenceValidatorHash = Scripts.validatorHash toReferenceValidator
-        toReferenceValidatorDat = Datum $ PlutusData.toData $ BigInt.fromInt 69
-        toReferenceValidatorAddress = Address.scriptHashAddress
-          toReferenceValidatorHash
-          Nothing
+        toReferenceScriptHash = PlutusScript.hash toReferenceValidator
+        toReferenceValidatorDat = ToData.toData $ BigInt.fromInt 69
+      toReferenceValidatorAddress <- toAddress toReferenceScriptHash
+      toReferenceValidatorAddressData <- ToData.toData
+        <$> (Run.note (InvalidAddress "Couldn't map address to PlutusData." toReferenceValidatorAddress)
+        $ PlutusAddress.fromCardano toReferenceValidatorAddress)
+
 
       let
         referenceScript = decodeTextEnvelope RawScripts.rawPoCReferenceInput
-          >>= plutusScriptV2FromEnvelope
+          >>= plutusScriptFromEnvelope
 
-      referenceUnapplied ← Monad.liftContractM "Decoding text envelope failed."
+      referenceUnappliedValidator ← Run.note (InvalidScript "Decoding text envelope failed.")
         referenceScript
-      referenceApplied ← Monad.liftContractE $ Scripts.applyArgs
-        referenceUnapplied
-        [ PlutusData.toData toReferenceValidatorAddress ]
+      referenceValidator ← lmapThrow InvalidScriptArgs $ Scripts.applyArgs
+        referenceUnappliedValidator
+        [ toReferenceValidatorAddressData ]
       let
-        referenceValidator = Validator referenceApplied
-        referenceValidatorHash = Scripts.validatorHash referenceValidator
-        referenceValidatorDat = Datum $ PlutusData.toData $ unit
-        referenceValidatorAddress = Address.scriptHashAddress
-          referenceValidatorHash
-          Nothing
+        referenceScriptHash = PlutusScript.hash referenceValidator
+        referenceValidatorDat = ToData.toData $ unit
+      referenceValidatorAddress <- toAddress referenceScriptHash
 
       -- 2.
       void do
         let
-          constraints ∷ TxConstraints Void Void
+          constraints ∷ TxConstraints
           constraints =
             TxConstraints.mustPayToScript
-              toReferenceValidatorHash
+              toReferenceScriptHash
               toReferenceValidatorDat
               DatumWitness
-              (Value.lovelaceValueOf one)
+              (Value.lovelaceValueOf BigNum.one)
               <> TxConstraints.mustPayToScript
-                referenceValidatorHash
+                referenceScriptHash
                 referenceValidatorDat
                 DatumWitness
-                (Value.lovelaceValueOf one)
+                (Value.lovelaceValueOf BigNum.one)
 
-          lookups ∷ ScriptLookups Void
+          lookups ∷ ScriptLookups
           lookups = mempty
 
-        unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
+        unbalancedTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups
           constraints
-        bsTx ← Monad.liftedE $ Transaction.balanceTx unbalancedTx
-        signedTx ← Transaction.signTransaction bsTx
-        txId ← Transaction.submit signedTx
-        Log.logInfo' $ "Transaction submitted: " <> show txId
-        Transaction.awaitTxConfirmed txId
-        Log.logInfo' $ "Transaction confirmed: " <> show txId
+        balancedTx ← mapError BalanceTxError $ Effect.balanceTx unbalancedTx
+        signedTx ← Effect.signTransaction balancedTx
+        txId ← Effect.submit signedTx
+        Effect.logInfo' $ "Transaction submitted: " <> show txId
+        Effect.awaitTxConfirmed txId
+        Effect.logInfo' $ "Transaction confirmed: " <> show txId
 
       -- 3.
       void do
-        toReferenceIn /\ toReferenceOut ← Test.Utils.getUniqueUtxoAt
+        toReferenceIn /\ toReferenceOut ← liftContract $ Test.Utils.getUniqueUtxoAt
           toReferenceValidatorAddress
-        referenceIn /\ referenceOut ← Test.Utils.getUniqueUtxoAt
+        referenceIn /\ referenceOut ← liftContract $ Test.Utils.getUniqueUtxoAt
           referenceValidatorAddress
 
         let
-          referenceValidatorRedeemer = Redeemer $ PlutusData.toData $
+          referenceValidatorRedeemer = RedeemerDatum $ ToData.toData $
             BigInt.fromInt
               69
 
-          constraints ∷ TxConstraints Void Void
+          constraints ∷ TxConstraints
           constraints =
             TxConstraints.mustReferenceOutput toReferenceIn
               <> TxConstraints.mustSpendScriptOutput referenceIn
                 referenceValidatorRedeemer
               <> TxConstraints.mustIncludeDatum toReferenceValidatorDat
 
-          lookups ∷ ScriptLookups Void
+          lookups ∷ ScriptLookups
           lookups =
             ScriptLookups.unspentOutputs (Map.singleton referenceIn referenceOut)
               <> ScriptLookups.unspentOutputs
                 (Map.singleton toReferenceIn toReferenceOut)
               <> ScriptLookups.validator referenceValidator
 
-        unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
+        unbalancedTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups
           constraints
-        bsTx ← Monad.liftedE $ Transaction.balanceTx unbalancedTx
-        signedTx ← Transaction.signTransaction bsTx
-        txId ← Transaction.submit signedTx
-        Log.logInfo' $ "Transaction submitted: " <> show txId
-        Transaction.awaitTxConfirmed txId
-        Log.logInfo' $ "Transaction confirmed: " <> show txId
+        balancedTx ← mapError BalanceTxError $ Effect.balanceTx unbalancedTx
+        signedTx ← Effect.signTransaction balancedTx
+        txId ← Effect.submit signedTx
+        Effect.logInfo' $ "Transaction submitted: " <> show txId
+        Effect.awaitTxConfirmed txId
+        Effect.logInfo' $ "Transaction confirmed: " <> show txId
 
       pure unit
 
@@ -160,86 +183,80 @@ testScenario1 = Mote.Monad.test "PoCReferenceInput: testScenario1"
 testScenario2 ∷ PlutipTest
 testScenario2 = Mote.Monad.test "PoCReferenceInput: testScenario2"
   $ Test.PlutipTest.mkPlutipConfigTest
-      [ BigInt.fromInt 10_000_000, BigInt.fromInt 10_000_000 ]
-  $ \alice → liftContract $ Wallet.withKeyWallet alice do
+      [ BigNum.fromInt 10_000_000, BigNum.fromInt 10_000_000 ]
+  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       -- START of duplicated code from `testScenario1`.
       -- 1.
       let
         toReferenceScript = decodeTextEnvelope RawScripts.rawPoCToReferenceInput
-          >>= plutusScriptV2FromEnvelope
+          >>= plutusScriptFromEnvelope
 
-      toReferenceUnapplied ← Monad.liftContractM "Decoding text envelope failed."
+      toReferenceValidator ← Run.note (InvalidScript "Decoding text envelope failed.")
         toReferenceScript
       let
-        toReferenceValidator = Validator toReferenceUnapplied
-        toReferenceValidatorHash = Scripts.validatorHash toReferenceValidator
-        toReferenceValidatorDat = Datum $ PlutusData.toData $ BigInt.fromInt 69
-        toReferenceValidatorAddress = Address.scriptHashAddress
-          toReferenceValidatorHash
-          Nothing
-
+        toReferenceScriptHash = PlutusScript.hash toReferenceValidator
+        toReferenceValidatorDat = ToData.toData $ BigInt.fromInt 69
+      toReferenceValidatorAddress <- toAddress toReferenceScriptHash
+      toReferenceValidatorAddressData <- ToData.toData
+        <$> (Run.note (InvalidAddress "Couldn't map address to PlutusData." toReferenceValidatorAddress)
+        $ PlutusAddress.fromCardano toReferenceValidatorAddress)
       let
         referenceScript = decodeTextEnvelope RawScripts.rawPoCReferenceInput
-          >>= plutusScriptV2FromEnvelope
+          >>= plutusScriptFromEnvelope
 
-      referenceUnapplied ← Monad.liftContractM "Decoding text envelope failed."
+      referenceUnappliedValidator ← Run.note (InvalidScript "Decoding text envelope failed.")
         referenceScript
-      referenceApplied ← Monad.liftContractE $ Scripts.applyArgs
-        referenceUnapplied
-        [ PlutusData.toData toReferenceValidatorAddress ]
+      referenceValidator ← lmapThrow InvalidScriptArgs $ Scripts.applyArgs
+        referenceUnappliedValidator [ toReferenceValidatorAddressData ]
       let
-        referenceValidator = Validator referenceApplied
-      let
-        referenceValidatorHash = Scripts.validatorHash referenceValidator
-        referenceValidatorDat = Datum $ PlutusData.toData $ unit
-        referenceValidatorAddress = Address.scriptHashAddress
-          referenceValidatorHash
-          Nothing
+        referenceScriptHash = PlutusScript.hash referenceValidator
+        referenceValidatorDat = ToData.toData $ unit
+      referenceValidatorAddress <- toAddress referenceScriptHash
 
       -- 2.
       void do
         let
-          constraints ∷ TxConstraints Void Void
+          constraints ∷ TxConstraints
           constraints =
             TxConstraints.mustPayToScript
-              toReferenceValidatorHash
+              toReferenceScriptHash
               toReferenceValidatorDat
               DatumWitness
-              (Value.lovelaceValueOf one)
+              (Value.lovelaceValueOf BigNum.one)
               <> TxConstraints.mustPayToScript
-                referenceValidatorHash
+                referenceScriptHash
                 referenceValidatorDat
                 DatumWitness
-                (Value.lovelaceValueOf one)
+                (Value.lovelaceValueOf BigNum.one)
 
-          lookups ∷ ScriptLookups Void
+          lookups ∷ ScriptLookups
           lookups = mempty
 
-        unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
+        unbalancedTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups
           constraints
-        bsTx ← Monad.liftedE $ Transaction.balanceTx unbalancedTx
-        signedTx ← Transaction.signTransaction bsTx
-        txId ← Transaction.submit signedTx
-        Log.logInfo' $ "Transaction submitted: " <> show txId
-        Transaction.awaitTxConfirmed txId
-        Log.logInfo' $ "Transaction confirmed: " <> show txId
+        balancedTx ← mapError BalanceTxError $ Effect.balanceTx unbalancedTx
+        signedTx ← Effect.signTransaction balancedTx
+        txId ← Effect.submit signedTx
+        Effect.logInfo' $ "Transaction submitted: " <> show txId
+        Effect.awaitTxConfirmed txId
+        Effect.logInfo' $ "Transaction confirmed: " <> show txId
 
       -- END of duplicated code from `testScenario1`.
 
       -- 3.
-      Test.Utils.fails do
-        toReferenceIn /\ toReferenceOut ← Test.Utils.getUniqueUtxoAt
+      withUnliftApp (Test.Utils.fails) do
+        toReferenceIn /\ toReferenceOut ← liftContract $ Test.Utils.getUniqueUtxoAt
           toReferenceValidatorAddress
-        referenceIn /\ referenceOut ← Test.Utils.getUniqueUtxoAt
+        referenceIn /\ referenceOut ← liftContract $ Test.Utils.getUniqueUtxoAt
           referenceValidatorAddress
 
         let
-          toReferenceValidatorRedeemer = Redeemer $ PlutusData.toData unit
-          referenceValidatorRedeemer = Redeemer $ PlutusData.toData $
+          toReferenceValidatorRedeemer = RedeemerDatum $ ToData.toData unit
+          referenceValidatorRedeemer = RedeemerDatum $ ToData.toData $
             BigInt.fromInt
               69
 
-          constraints ∷ TxConstraints Void Void
+          constraints ∷ TxConstraints
           constraints =
             TxConstraints.mustSpendScriptOutput toReferenceIn
               toReferenceValidatorRedeemer
@@ -247,7 +264,7 @@ testScenario2 = Mote.Monad.test "PoCReferenceInput: testScenario2"
                 referenceValidatorRedeemer
               <> TxConstraints.mustIncludeDatum toReferenceValidatorDat
 
-          lookups ∷ ScriptLookups Void
+          lookups ∷ ScriptLookups
           lookups =
             ScriptLookups.unspentOutputs (Map.singleton referenceIn referenceOut)
               <> ScriptLookups.unspentOutputs
@@ -255,13 +272,13 @@ testScenario2 = Mote.Monad.test "PoCReferenceInput: testScenario2"
               <> ScriptLookups.validator referenceValidator
               <> ScriptLookups.validator toReferenceValidator
 
-        unbalancedTx ← Monad.liftedE $ ScriptLookups.mkUnbalancedTx lookups
+        unbalancedTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups
           constraints
-        balancedTx ← Monad.liftedE $ Transaction.balanceTx unbalancedTx
-        signedTx ← Transaction.signTransaction balancedTx
-        txId ← Transaction.submit signedTx
-        Log.logInfo' $ "Transaction submitted: " <> show txId
-        Transaction.awaitTxConfirmed txId
-        Log.logInfo' $ "Transaction confirmed: " <> show txId
+        balancedTx ← mapError BalanceTxError $ Effect.balanceTx unbalancedTx
+        signedTx ← Effect.signTransaction balancedTx
+        txId ← Effect.submit signedTx
+        Effect.logInfo' $ "Transaction submitted: " <> show txId
+        Effect.awaitTxConfirmed txId
+        Effect.logInfo' $ "Transaction confirmed: " <> show txId
 
       pure unit

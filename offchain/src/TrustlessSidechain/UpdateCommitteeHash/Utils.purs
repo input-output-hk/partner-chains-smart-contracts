@@ -18,13 +18,14 @@ module TrustlessSidechain.UpdateCommitteeHash.Utils
   ) where
 
 import Contract.Prelude
-
+import Cardano.Types.Asset (Asset(Asset))
+import Cardano.AsCbor (encodeCbor)
+import Partial.Unsafe (unsafePartial)
 import Contract.Address (Address)
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
 import Contract.PlutusData
   ( class ToData
-  , serializeData
   , toData
   )
 import Contract.Scripts
@@ -34,10 +35,12 @@ import Contract.Scripts
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionInput
-  , TransactionOutputWithRefScript
   )
-import Contract.Value as Value
-import Data.BigInt as BigInt
+import Cardano.Types.TransactionInput (TransactionInput)
+import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
+import Cardano.Types.Value as Value
+import JS.BigInt as BigInt
+import Contract.Numeric.BigNum as BigNum
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
@@ -102,10 +105,13 @@ serialiseUchmHash ∷
   ToData aggregatePubKeys ⇒
   UpdateCommitteeHashMessage aggregatePubKeys →
   Maybe EcdsaSecp256k1Message
-serialiseUchmHash = Utils.Crypto.ecdsaSecp256k1Message
-  <<< Hashing.blake2b256Hash
-  <<< cborBytesToByteArray
-  <<< serializeData
+serialiseUchmHash keys = unsafePartial
+  ( Utils.Crypto.ecdsaSecp256k1Message
+  $ Utils.Crypto.blake2b256Hash
+  $ unwrap
+  $ encodeCbor
+  $ toData keys
+  )
 
 -- | `findUpdateCommitteeHashUtxo` returns the (unique) utxo which hold the token which
 -- | identifies the committee hash.
@@ -116,7 +122,7 @@ findUpdateCommitteeHashUtxo ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
+    (Maybe { index ∷ TransactionInput, value ∷ TransactionOutput })
 findUpdateCommitteeHashUtxo sp = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sp
   validator ← updateCommitteeHashValidator sp versionOracleConfig
@@ -126,11 +132,10 @@ findUpdateCommitteeHashUtxo sp = do
     Versioning.getVersionedCurrencySymbol
       sp
       ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: CommitteeOraclePolicy }
+          { version: BigNum.fromInt 1, scriptId: CommitteeOraclePolicy }
       )
 
   Utils.Utxos.findUtxoByValueAt validatorAddress \value →
     -- Note: there should either be 0 or 1 tokens of this committee hash nft.
-    Value.valueOf value committeeOracleCurrencySymbol
-      CommitteeOraclePolicy.committeeOracleTn
-      /= zero
+    Value.valueOf (Asset committeeOracleCurrencySymbol CommitteeOraclePolicy.committeeOracleTn) value
+      /= BigNum.fromInt 0

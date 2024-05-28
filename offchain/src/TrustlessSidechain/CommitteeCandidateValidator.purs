@@ -18,7 +18,6 @@ import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
   , class ToData
-  , Datum(Datum)
   , PlutusData(Constr)
   , fromData
   , toData
@@ -29,17 +28,18 @@ import Contract.ScriptLookups as Lookups
 import Contract.Scripts (Validator, validatorHash)
 import Contract.Transaction
   ( TransactionHash
-  , TransactionInput
-  , TransactionOutput(TransactionOutput)
-  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
-  , outputDatumDatum
   )
+
+import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
+import Cardano.Types.TransactionInput (TransactionInput)
+import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
+import Cardano.Types.OutputDatum (outputDatumDatum)
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (UtxoMap)
-import Contract.Value as Value
+import Cardano.Types.Value as Value
 import Control.Alternative (guard)
 import Data.Array (catMaybes)
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT, throw)
@@ -64,6 +64,7 @@ import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(CommitteeCandidateValidator)
   )
 import Type.Row (type (+))
+import Partial.Unsafe (unsafePartial)
 
 newtype RegisterParams = RegisterParams
   { sidechainParams ∷ SidechainParams
@@ -294,28 +295,28 @@ register
   } ← CandidatePermissionToken.candidatePermissionCurrencyInfo sidechainParams
 
   let
-    val = Value.lovelaceValueOf (BigInt.fromInt 1)
-      <>
+    val = Value.lovelaceValueOf (BigNum.fromInt 1)
+      `Value.add`
         if usePermissionToken then Value.singleton candidateCurrencySymbol
           CandidatePermissionToken.candidatePermissionTokenName
-          one
-        else mempty
+          (BigNum.fromInt 1)
+        else unsafePartial mempty
 
-    lookups ∷ Lookups.ScriptLookups Void
+    lookups ∷ Lookups.ScriptLookups
     lookups = Lookups.unspentOutputs ownUtxos
       <> Lookups.validator validator
       <> Lookups.unspentOutputs valUtxos
       <>
-        if usePermissionToken then Lookups.mintingPolicy candidateMintingPolicy
+        if usePermissionToken then Lookups.plutusMintingPolicy candidateMintingPolicy
         else mempty
 
-    constraints ∷ Constraints.TxConstraints Void Void
+    constraints ∷ Constraints.TxConstraints
     constraints =
       -- Sending new registration to validator address
       Constraints.mustSpendPubKeyOutput inputUtxo
-        <> Constraints.mustPayToScript valHash (Datum (toData datum))
+        <> Constraints.mustPayToScript valHash (toData datum)
           Constraints.DatumInline
-          val
+          (unsafePartial $ fromJust val)
 
         -- Consuming old registration UTxOs
         <> Constraints.mustBeSignedBy ownPkh
@@ -345,12 +346,12 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
         (NotFoundInputUtxo "Couldn't find registration UTxO")
 
   let
-    lookups ∷ Lookups.ScriptLookups Void
+    lookups ∷ Lookups.ScriptLookups
     lookups = Lookups.validator validator
       <> Lookups.unspentOutputs ownUtxos
       <> Lookups.unspentOutputs valUtxos
 
-    constraints ∷ Constraints.TxConstraints Void Void
+    constraints ∷ Constraints.TxConstraints
     constraints = Constraints.mustBeSignedBy ownPkh
       <> mconcat
         ( flip Constraints.mustSpendScriptOutput unitRedeemer <$>
@@ -373,9 +374,9 @@ findOwnRegistrations ∷
 findOwnRegistrations ownPkh spoPubKey validatorUtxos = do
   mayTxInsAndBlockProducerRegistrations ← Map.toUnfoldable validatorUtxos #
     traverse
-      \(input /\ TransactionOutputWithRefScript { output: TransactionOutput out }) →
+      \(input /\ TransactionOutput out) →
         pure do
-          Datum d ← outputDatumDatum out.datum
+          d ← outputDatumDatum =<< out.datum
           BlockProducerRegistration r ← fromData d
           guard
             ( (getSPOPubKey r.stakeOwnership == spoPubKey) &&

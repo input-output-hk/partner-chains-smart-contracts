@@ -1,22 +1,29 @@
 module Test.MerkleRoot
-  ( testScenario1
+  ( saveRoot
+  , testScenario1
   , testScenario2
-  , saveRoot
-  , paymentPubKeyHashToBech32Bytes
   , tests
-  ) where
+  , paymentPubKeyHashToBech32Bytes
+  )
+  where
 
+import Cardano.Serialization.Lib (toBytes)
 import Contract.Prelude
-
-import Contract.Address (PaymentPubKeyHash)
-import Contract.Address as Address
+import Cardano.Types.Credential (Credential(PubKeyHashCredential))
+import Cardano.ToData (toData)
+import Cardano.AsCbor (encodeCbor)
+import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash(PaymentPubKeyHash))
+import Cardano.Types.NetworkId (NetworkId(TestnetId))
+import Cardano.Types.Address as Address
+import Partial.Unsafe (unsafePartial)
 import Contract.Log as Log
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.Bifunctor (lmap)
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
+import Cardano.Types.BigNum as BigNum
 import Mote.Monad as Mote.Monad
 import Run (Run)
 import Run (liftEffect) as Run
@@ -25,6 +32,7 @@ import Run.Except (note, rethrow) as Run
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
+import Data.ByteArray (ByteArray, byteArrayFromAscii)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSAggregateSignatures(PlainEcdsaSecp256k1)
@@ -50,10 +58,10 @@ import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.MerkleTree (MerkleTree, RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import Cardano.Types.Bech32String (Bech32String)
+import Cardano.Types.Address (toBech32)
 import TrustlessSidechain.Utils.Address
-  ( Bech32Bytes
-  , bech32BytesFromAddress
-  , getOwnPaymentPubKeyHash
+  ( getOwnPaymentPubKeyHash
   )
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1PrivateKey)
 import TrustlessSidechain.Utils.Crypto as Crypto
@@ -70,9 +78,9 @@ tests = plutipGroup "Merkle root insertion" $ do
 -- | to the `Bech32Bytes` required for the `recipient` field of
 -- | `FUELMintingPolicy.MerkleTreeEntry`.
 -- | Note this assumes no staking public key hash to simplify writing tests.
-paymentPubKeyHashToBech32Bytes ∷ PaymentPubKeyHash → Maybe Bech32Bytes
-paymentPubKeyHashToBech32Bytes pubKeyHash =
-  bech32BytesFromAddress $ Address.pubKeyHashAddress pubKeyHash Nothing
+paymentPubKeyHashToBech32Bytes ∷ PaymentPubKeyHash → ByteArray
+paymentPubKeyHashToBech32Bytes (PaymentPubKeyHash pubKeyHash) =
+  unwrap $ encodeCbor $ Address.mkPaymentAddress TestnetId (wrap $ PubKeyHashCredential pubKeyHash) Nothing
 
 -- | `saveRoot` is a wrapper around `MerkleRoot.saveRoot` to make writing test
 -- | cases a bit more terse (note that it makes all committee members sign the new root).
@@ -103,7 +111,7 @@ saveRoot
   , previousMerkleRoot
   } = do
   let
-    serialisedEntries = map (PlutusData.serializeData >>> unwrap)
+    serialisedEntries = map (toData >>> encodeCbor >>> unwrap)
       merkleTreeEntries
   merkleTree ← Run.rethrow <<< lmap GenericInternalError $ MerkleTree.fromArray
     serialisedEntries
@@ -119,7 +127,7 @@ saveRoot
       )
       $ flip traverse merkleTreeEntries
       $ \entry → do
-          let serialisedEntry = unwrap $ PlutusData.serializeData entry
+          let serialisedEntry = unwrap $ encodeCbor $ toData entry
           merkleProof ← MerkleTree.lookupMp serialisedEntry merkleTree
           pure $ CombinedMerkleProof
             { transaction: entry
@@ -166,10 +174,10 @@ saveRoot
 testScenario1 ∷ PlutipTest
 testScenario1 = Mote.Monad.test "Saving a Merkle root"
   $ Test.PlutipTest.mkPlutipConfigTest
-      [ BigInt.fromInt 50_000_000
-      , BigInt.fromInt 50_000_000
-      , BigInt.fromInt 50_000_000
-      , BigInt.fromInt 40_000_000
+      [ BigNum.fromInt 50_000_000
+      , BigNum.fromInt 50_000_000
+      , BigNum.fromInt 50_000_000
+      , BigNum.fromInt 40_000_000
       ]
   $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       liftContract $ Log.logInfo' "MerkleRoot testScenario1"
@@ -190,7 +198,7 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
           { initChainId: BigInt.fromInt 69
           , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
-          , initAggregatedCommittee: PlutusData.toData $ Crypto.aggregateKeys
+          , initAggregatedCommittee: PlutusData.toData $ unsafePartial Crypto.aggregateKeys
               $ map unwrap
                   initCommitteePubKeys
           , initSidechainEpoch: zero
@@ -198,20 +206,16 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
           , initATMSKind: ATMSPlainEcdsaSecp256k1
-          , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap $
-              ownPaymentPubKeyHash
+          , initGovernanceAuthority: Governance.mkGovernanceAuthority ownPaymentPubKeyHash
           }
 
       { sidechainParams } ← InitSidechain.initSidechain initSidechainParams 1
 
       -- Building / saving the root that pays lots of FUEL to this wallet :)
       ----------------------------------------------------------------------
-      ownRecipient ←
-        Run.note
-          (GenericInternalError "Could not convert address to bech 32 bytes") $
-          paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
+      let ownRecipient = paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
       let
-        serialisedEntries = map (PlutusData.serializeData >>> unwrap) $
+        serialisedEntries = map (toData >>> encodeCbor >>> unwrap) $
           [ MerkleTreeEntry
               { index: BigInt.fromInt 0
               , amount: BigInt.fromInt 69
@@ -278,10 +282,10 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
 testScenario2 ∷ PlutipTest
 testScenario2 = Mote.Monad.test "Saving two merkle roots"
   $ Test.PlutipTest.mkPlutipConfigTest
-      [ BigInt.fromInt 50_000_000
-      , BigInt.fromInt 50_000_000
-      , BigInt.fromInt 50_000_000
-      , BigInt.fromInt 40_000_000
+      [ BigNum.fromInt 50_000_000
+      , BigNum.fromInt 50_000_000
+      , BigNum.fromInt 50_000_000
+      , BigNum.fromInt 40_000_000
       ]
   $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       liftContract $ Log.logInfo' "MerkleRoot testScenario2"
@@ -306,7 +310,7 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
           { initChainId: BigInt.fromInt 69
           , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
-          , initAggregatedCommittee: PlutusData.toData $ Crypto.aggregateKeys
+          , initAggregatedCommittee: PlutusData.toData $ unsafePartial Crypto.aggregateKeys
               $ map unwrap
                   initCommitteePubKeys
           , initSidechainEpoch: zero
@@ -314,18 +318,14 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
           , initATMSKind: ATMSPlainEcdsaSecp256k1
-          , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap $
-              ownPaymentPubKeyHash
+          , initGovernanceAuthority: Governance.mkGovernanceAuthority ownPaymentPubKeyHash
           }
 
       { sidechainParams } ← InitSidechain.initSidechain initSidechainParams 1
 
       -- Building / saving the root that pays lots of FUEL to this wallet :)
       ----------------------------------------------------------------------
-      ownRecipient ←
-        Run.note
-          (GenericInternalError "Could not convert address to bech 32 bytes") $
-          paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
+      let ownRecipient = paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
 
       { merkleRoot: merkleRoot1 } ←
         saveRoot
@@ -373,10 +373,10 @@ testScenario3 ∷ PlutipTest
 testScenario3 =
   Mote.Monad.test "Saving a merkle root with a largely duplicated committee"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         liftContract $ Log.logInfo' "MerkleRoot testScenario2"
@@ -404,7 +404,7 @@ testScenario3 =
             { initChainId: BigInt.fromInt 69
             , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: PlutusData.toData $ Crypto.aggregateKeys
+            , initAggregatedCommittee: PlutusData.toData $ unsafePartial Crypto.aggregateKeys
                 $ map unwrap
                     initCommitteePubKeys
             , initSidechainEpoch: zero
@@ -412,8 +412,7 @@ testScenario3 =
             , initThresholdDenominator: BigInt.fromInt 100000
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
-                pkh
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
             }
 
         { sidechainParams } ← InitSidechain.initSidechain initSidechainParams 1
@@ -421,10 +420,7 @@ testScenario3 =
         -- Building / saving the root that pays lots of FUEL to this wallet :)
         ----------------------------------------------------------------------
 
-        ownRecipient ←
-          Run.note
-            (GenericInternalError "Could not convert address to bech 32 bytes")
-            $ paymentPubKeyHashToBech32Bytes pkh
+        let ownRecipient = paymentPubKeyHashToBech32Bytes pkh
 
         { merkleRoot: merkleRoot1 } ←
           saveRoot

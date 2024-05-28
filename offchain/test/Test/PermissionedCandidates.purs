@@ -6,7 +6,8 @@ import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
 import Data.Array as Array
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
+import Cardano.Types.BigNum as BigNum
 import Mote.Monad as Mote.Monad
 import Run as Run
 import Test.PlutipTest (PlutipTest)
@@ -24,6 +25,7 @@ import TrustlessSidechain.InitSidechain
   )
 import TrustlessSidechain.PermissionedCandidates as PermissionedCandidates
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
+import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.Utils.Crypto
   ( aggregateKeys
   , generatePrivKey
@@ -45,10 +47,10 @@ testScenarioSuccess ∷ PlutipTest
 testScenarioSuccess =
   Mote.Monad.test "Minting, updating and removing a PermissionedCandidates Token"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 1_000_000
-        , BigInt.fromInt 5_000_000
-        , BigInt.fromInt 150_000_000
-        , BigInt.fromInt 150_000_000
+        [ BigNum.fromInt 1_000_000
+        , BigNum.fromInt 5_000_000
+        , BigNum.fromInt 150_000_000
+        , BigNum.fromInt 150_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
 
@@ -65,13 +67,13 @@ testScenarioSuccess =
             { initChainId: BigInt.fromInt 1
             , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys
+            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys
                 $ map unwrap initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority
                 pkh
             , initATMSKind: ATMSPlainEcdsaSecp256k1
             }
@@ -144,10 +146,10 @@ testScenarioFailure =
   Mote.Monad.test
     "Minting PermissionedCandidates, and then updating with the same values (should fail)"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 1_000_000
-        , BigInt.fromInt 5_000_000
-        , BigInt.fromInt 150_000_000
-        , BigInt.fromInt 150_000_000
+        [ BigNum.fromInt 1_000_000
+        , BigNum.fromInt 5_000_000
+        , BigNum.fromInt 150_000_000
+        , BigNum.fromInt 150_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
 
@@ -164,13 +166,13 @@ testScenarioFailure =
             { initChainId: BigInt.fromInt 1
             , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys
+            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys
                 $ map unwrap initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority
                 pkh
             , initATMSKind: ATMSPlainEcdsaSecp256k1
             }

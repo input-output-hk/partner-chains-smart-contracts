@@ -4,7 +4,8 @@ module Test.InitSidechain
 
 import Contract.Prelude
 
-import Cardano.Plutus.Types.Map as Plutus.Map
+import Cardano.Types.AssetName (AssetName)
+import Data.Map as Map
 import Contract.Log as Log
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray as ByteArray
@@ -12,7 +13,9 @@ import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Control.Monad.Error.Class as MonadError
 import Data.Array as Array
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
+import Cardano.Types.BigNum as BigNum
+import Partial.Unsafe (unsafePartial)
 import Data.Map as Map
 import Data.Set as Set
 import Mote.Monad as Mote.Monad
@@ -68,10 +71,10 @@ tests = plutipGroup "Initialising the sidechain" $ do
 testScenario1 ∷ PlutipTest
 testScenario1 = Mote.Monad.test "Calling `initSidechain`"
   $ Test.PlutipTest.mkPlutipConfigTest
-      [ BigInt.fromInt 50_000_000
-      , BigInt.fromInt 50_000_000
-      , BigInt.fromInt 50_000_000
-      , BigInt.fromInt 50_000_000
+      [ BigNum.fromInt 50_000_000
+      , BigNum.fromInt 50_000_000
+      , BigNum.fromInt 50_000_000
+      , BigNum.fromInt 50_000_000
       ]
   $ \alice →
       withUnliftApp (Wallet.withKeyWallet alice) do
@@ -83,15 +86,30 @@ testScenario1 = Mote.Monad.test "Calling `initSidechain`"
           committeeSize
           Crypto.generatePrivKey
 
-        initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
+        initGovernanceAuthority ← (Governance.mkGovernanceAuthority)
           <$> getOwnPaymentPubKeyHash
+        let
+           initScParams = InitSidechain.InitSidechainParams
+            { initChainId: BigInt.fromInt 69
+            , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
+            , initUtxo: genesisUtxo
+            , initAggregatedCommittee: toData $ unsafePartial Crypto.aggregateKeys $ map unwrap
+                (map Crypto.toPubKeyUnsafe committeePrvKeys)
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
+            , initSidechainEpoch: zero
+            , initThresholdNumerator: BigInt.fromInt 2
+            , initThresholdDenominator: BigInt.fromInt 3
+            , initCandidatePermissionTokenMintInfo: Nothing
+            , initGovernanceAuthority
+            }
+        liftContract $ Log.logInfo' "WIKSA"
         let
           initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
           initScParams = InitSidechain.InitSidechainParams
             { initChainId: BigInt.fromInt 69
             , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ Crypto.aggregateKeys $ map unwrap
+            , initAggregatedCommittee: toData $ unsafePartial Crypto.aggregateKeys $ map unwrap
                 initCommittee
             , initATMSKind: ATMSPlainEcdsaSecp256k1
             , initSidechainEpoch: zero
@@ -112,14 +130,14 @@ testScenario1 = Mote.Monad.test "Calling `initSidechain`"
 testScenario2 ∷ PlutipTest
 testScenario2 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
   $ Test.PlutipTest.mkPlutipConfigTest
-      ( [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 10_000_000
+      ( [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 10_000_000
         ] /\
-          [ BigInt.fromInt 50_000_000
-          , BigInt.fromInt 50_000_000
-          , BigInt.fromInt 50_000_000
+          [ BigNum.fromInt 50_000_000
+          , BigNum.fromInt 50_000_000
+          , BigNum.fromInt 50_000_000
           ]
       )
   $ \(alice /\ bob) → do
@@ -139,7 +157,7 @@ testScenario2 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
         committeePrvKeys ← liftEffect $ sequence $ Array.replicate
           committeeSize
           Crypto.generatePrivKey
-        initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
+        initGovernanceAuthority ← (Governance.mkGovernanceAuthority)
           <$> getOwnPaymentPubKeyHash
         let
           initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
@@ -147,7 +165,7 @@ testScenario2 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
             { initChainId: BigInt.fromInt 69
             , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ Crypto.aggregateKeys $ map unwrap
+            , initAggregatedCommittee: toData $ unsafePartial Crypto.aggregateKeys $ map unwrap
                 initCommittee
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
@@ -171,15 +189,15 @@ testScenario3 ∷ PlutipTest
 testScenario3 =
   Mote.Monad.test "Calling `initSidechain` with candidate permission tokens"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 40_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 40_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
         ]
     $ \alice →
         withUnliftApp (Wallet.withKeyWallet alice) do
@@ -190,7 +208,7 @@ testScenario3 =
           committeePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
             committeeSize
             Crypto.generatePrivKey
-          initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
+          initGovernanceAuthority ← (Governance.mkGovernanceAuthority)
             <$> getOwnPaymentPubKeyHash
           let
             initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
@@ -198,7 +216,7 @@ testScenario3 =
               { initChainId: BigInt.fromInt 69
               , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
               , initUtxo: genesisUtxo
-              , initAggregatedCommittee: toData $ Crypto.aggregateKeys
+              , initAggregatedCommittee: toData $ unsafePartial Crypto.aggregateKeys
                   $ map unwrap initCommittee
               , initSidechainEpoch: zero
               , initThresholdNumerator: BigInt.fromInt 2
@@ -228,7 +246,7 @@ initSimpleSidechain amt = do
   committeePrvKeys ← liftEffect $ sequence $ Array.replicate committeeSize
     Crypto.generatePrivKey
 
-  initGovernanceAuthority ← (Governance.mkGovernanceAuthority <<< unwrap)
+  initGovernanceAuthority ← (Governance.mkGovernanceAuthority)
     <$> getOwnPaymentPubKeyHash
   let
     initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
@@ -236,7 +254,7 @@ initSimpleSidechain amt = do
       { initChainId: BigInt.fromInt 69
       , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
       , initUtxo: genesisUtxo
-      , initAggregatedCommittee: toData $ Crypto.aggregateKeys $ map unwrap
+      , initAggregatedCommittee: toData $ unsafePartial Crypto.aggregateKeys $ map unwrap
           initCommittee
       , initATMSKind: ATMSPlainEcdsaSecp256k1
       , initSidechainEpoch: zero
@@ -257,7 +275,7 @@ initSimpleSidechain amt = do
 mintSeveralInitTokens ∷
   ∀ r.
   SidechainParams →
-  Run (APP + r) (Plutus.Map.Map Value.TokenName BigInt.BigInt)
+  Run (APP + r) (Map.Map AssetName BigNum.BigNum)
 mintSeveralInitTokens sidechainParams = do
   _ ←
     foldM
@@ -272,8 +290,8 @@ mintSeveralInitTokens sidechainParams = do
       >>= balanceSignAndSubmit "mintSeveralInitTokens"
 
   pure
-    $ foldr (\(k /\ v) → Plutus.Map.insert k v) Plutus.Map.empty
-    $ map (_ /\ one)
+    $ foldr (\(k /\ v) → Map.insert k v) Map.empty
+    $ map (_ /\ BigNum.fromInt 1)
         [ Checkpoint.checkpointInitTokenName
         , DistributedSet.dsInitTokenName
         , CandidatePermissionToken.candidatePermissionInitTokenName
@@ -287,14 +305,14 @@ testInitTokenStatusEmpty ∷ PlutipTest
 testInitTokenStatusEmpty =
   Mote.Monad.test "getInitTokenStatus returns empty if no init tokens"
     $ Test.PlutipTest.mkPlutipConfigTest
-        ( [ BigInt.fromInt 50_000_000
-          , BigInt.fromInt 50_000_000
-          , BigInt.fromInt 50_000_000
-          , BigInt.fromInt 50_000_000
+        ( [ BigNum.fromInt 50_000_000
+          , BigNum.fromInt 50_000_000
+          , BigNum.fromInt 50_000_000
+          , BigNum.fromInt 50_000_000
           ] /\
-            [ BigInt.fromInt 50_000_000
-            , BigInt.fromInt 50_000_000
-            , BigInt.fromInt 50_000_000
+            [ BigNum.fromInt 50_000_000
+            , BigNum.fromInt 50_000_000
+            , BigNum.fromInt 50_000_000
             ]
         )
     $ \(alice /\ bob) → do
@@ -314,7 +332,7 @@ testInitTokenStatusEmpty =
           Effect.fromMaybeThrow (GenericInternalError "Unreachable")
             $ map Just
             $ liftAff
-            $ assert (failMsg "" res) (Plutus.Map.null res)
+            $ assert (failMsg "" res) (Map.isEmpty res)
 
 -- | Run `initSidechain` without creating "CandidatePermission" tokens,
 -- | and therefore leaving one "CandidatePermission InitToken" unspent.
@@ -323,15 +341,15 @@ testInitTokenStatusOneToken =
   Mote.Monad.test
     "getInitTokenStatus returns single init token"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 40_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 40_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
         ]
     $ \alice → do
         withUnliftApp (Wallet.withKeyWallet alice) do
@@ -343,8 +361,8 @@ testInitTokenStatusOneToken =
           -- The CandidatePermission InitToken is the only one unspent
           -- since we did not use it to create any CandidatePermission tokens.
           let
-            expected = foldr (\(k /\ v) → Plutus.Map.insert k v) Plutus.Map.empty
-              [ CandidatePermissionToken.candidatePermissionInitTokenName /\ one ]
+            expected = foldr (\(k /\ v) → Map.insert k v) Map.empty
+              [ CandidatePermissionToken.candidatePermissionInitTokenName /\ BigNum.fromInt 1 ]
 
           { initTokenStatusData: res } ← Init.getInitTokenStatus
             sidechainParams
@@ -362,15 +380,15 @@ testInitTokenStatusMultiTokens =
   Mote.Monad.test
     "getInitTokenStatus returns expected tokens"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 40_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 40_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
         ]
     $ \alice → do
         withUnliftApp (Wallet.withKeyWallet alice) do

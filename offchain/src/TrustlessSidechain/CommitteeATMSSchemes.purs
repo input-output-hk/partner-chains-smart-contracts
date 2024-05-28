@@ -11,7 +11,6 @@ module TrustlessSidechain.CommitteeATMSSchemes
   , atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind
   , toATMSAggregateSignatures
   , aggregateATMSPublicKeys
-
   , module ExportCommitteeATMSSchemesTypes
   ) where
 
@@ -74,6 +73,8 @@ import TrustlessSidechain.Types (CurrencyInfo)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as SchnorrSecp256k1
 import Type.Row (type (+))
+import Partial.Unsafe (unsafePartial)
+import TrustlessSidechain.Effects.Log (LOG)
 
 -- | `atmsSchemeLookupsAndConstraints` returns the lookups and constraints
 -- | corresponding to the given `ATMSSchemeParams`
@@ -81,9 +82,9 @@ atmsSchemeLookupsAndConstraints ∷
   ∀ r.
   SidechainParams →
   CommitteeATMSParams ATMSAggregateSignatures →
-  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    { constraints ∷ TxConstraints Void Void
-    , lookups ∷ ScriptLookups Void
+  Run (EXCEPT OffchainError + LOG + WALLET + TRANSACTION + r)
+    { constraints ∷ TxConstraints
+    , lookups ∷ ScriptLookups
     }
 atmsSchemeLookupsAndConstraints sidechainParams atmsParams = do
   case (unwrap atmsParams).aggregateSignature of
@@ -229,7 +230,7 @@ aggregateATMSPublicKeys ∷
 aggregateATMSPublicKeys { atmsKind, committeePubKeys } =
   case atmsKind of
     ATMSPlainEcdsaSecp256k1 →
-      map (PlutusData.toData <<< Utils.Crypto.aggregateKeys <<< map unwrap)
+      map (PlutusData.toData <<< (unsafePartial Utils.Crypto.aggregateKeys) <<< map unwrap)
         $ flip traverse committeePubKeys
         $
           \pk → do
@@ -242,7 +243,7 @@ aggregateATMSPublicKeys { atmsKind, committeePubKeys } =
               Just pk' → pure pk'
             pure $ pk'
     ATMSPlainSchnorrSecp256k1 →
-      map (PlutusData.toData <<< Utils.Crypto.aggregateKeys <<< map unwrap)
+      map (PlutusData.toData <<< (unsafePartial Utils.Crypto.aggregateKeys) <<< map unwrap)
         $ flip traverse committeePubKeys
         $
           \pk → do

@@ -1,10 +1,13 @@
 module TrustlessSidechain.Utils.Transaction
   ( balanceSignAndSubmit
   , balanceSignAndSubmitWithoutSpendingUtxo
+  , txHashToByteArray
   ) where
 
 import Contract.Prelude
 
+import Data.ByteArray
+import Cardano.AsCbor (encodeCbor)
 import Contract.BalanceTxConstraints (mustNotSpendUtxoWithOutRef)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.Transaction (TransactionHash, TransactionInput)
@@ -34,8 +37,8 @@ import Type.Row (type (+))
 balanceSignAndSubmit ∷
   ∀ r.
   String →
-  { lookups ∷ ScriptLookups Void
-  , constraints ∷ TxConstraints Void Void
+  { lookups ∷ ScriptLookups
+  , constraints ∷ TxConstraints
   } →
   Run (EXCEPT OffchainError + TRANSACTION + LOG + r) TransactionHash
 balanceSignAndSubmit txName { lookups, constraints } = do
@@ -53,8 +56,8 @@ balanceSignAndSubmitWithoutSpendingUtxo ∷
   ∀ r.
   TransactionInput →
   String →
-  { lookups ∷ ScriptLookups Void
-  , constraints ∷ TxConstraints Void Void
+  { lookups ∷ ScriptLookups
+  , constraints ∷ TxConstraints
   } →
   Run (EXCEPT OffchainError + TRANSACTION + LOG + r) TransactionHash
 balanceSignAndSubmitWithoutSpendingUtxo
@@ -73,3 +76,7 @@ balanceSignAndSubmitWithoutSpendingUtxo
   Effect.logInfo' $ txName <> " Tx confirmed!"
 
   pure txId
+
+
+txHashToByteArray :: TransactionHash -> ByteArray
+txHashToByteArray txHash = unwrap $ encodeCbor txHash

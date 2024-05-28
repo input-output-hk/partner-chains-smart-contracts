@@ -2,7 +2,9 @@ module Test.ConfigFile (tests) where
 
 import Contract.Prelude
 
-import Contract.Address (NetworkId(TestnetId))
+import Cardano.Types.NetworkId (NetworkId(TestnetId))
+import Partial.Unsafe (unsafePartial)
+import Cardano.AsCbor (decodeCbor)
 import Contract.Prim.ByteArray (hexToByteArray, hexToByteArrayUnsafe)
 import Contract.Transaction
   ( TransactionHash(TransactionHash)
@@ -56,7 +58,7 @@ test1 =
                               ( TransactionInput
                                   { index: UInt.fromInt 1
                                   , transactionId:
-                                      ( TransactionHash
+                                      ( unsafePartial $ fromJust $ decodeCbor $ wrap
                                           ( hexToByteArrayUnsafe
                                               "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60"
                                           )

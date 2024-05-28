@@ -9,28 +9,28 @@ import Contract.Prelude
 
 import Contract.PlutusData
   ( class ToData
-  , Datum(Datum)
-  , PlutusData
-  , Redeemer(Redeemer)
+  , RedeemerDatum(RedeemerDatum)
   , toData
   )
+import Cardano.Types.PlutusData (PlutusData)
+import Cardano.Types.OutputDatum (OutputDatum(OutputDatum))
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (ValidatorHash)
 import Contract.Transaction
   ( TransactionHash
-  , TransactionInput
-  , TransactionOutputWithRefScript
   )
+import Cardano.Types.TransactionInput (TransactionInput)
+import Cardano.Types.TransactionOutput (TransactionOutput)
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
   , TxConstraints
   )
 import Contract.TxConstraints as TxConstraints
-import Contract.Value (CurrencySymbol)
-import Contract.Value as Value
-import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
+import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.Value as Value
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
+import Contract.Numeric.BigNum as BigNum
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT)
@@ -82,6 +82,7 @@ import TrustlessSidechain.Versioning.Types
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
+import Cardano.Types.Int as Int
 
 -- | `UpdateCommitteeHashParams` is the offchain parameter for the update
 -- | committee hash endpoint.
@@ -92,7 +93,7 @@ newtype UpdateCommitteeHashParams newAggregatePubKeys =
     , aggregateSignature ∷ ATMSAggregateSignatures
     , previousMerkleRoot ∷ Maybe RootHash
     , sidechainEpoch ∷ BigInt -- sidechain epoch of the new committee
-    , mNewCommitteeValidatorHash ∷ Maybe ValidatorHash
+    , mNewCommitteeValidatorHash ∷ Maybe ScriptHash
     -- the address of the new committee (if it isn't provided, it will
     -- reuse the current committee address)
     }
@@ -162,7 +163,7 @@ updateCommitteeHash
         { currentCommitteeUtxo
         , committeeCertificateMint
         , aggregateSignature
-        , message: Utils.Crypto.ecdsaSecp256k1MessageToTokenName scMsg
+        , message: Utils.Crypto.ecdsaSecp256k1MessageToAssetName scMsg
         }
 
   balanceSignAndSubmit "Update CommiteeHash"
@@ -189,17 +190,17 @@ updateCommitteeHashLookupsAndConstraints ∷
   , previousMerkleRoot ∷ Maybe RootHash
   , sidechainEpoch ∷ BigInt
   , newAggregatePubKeys ∷ newAggregatePubKeys
-  , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
-  , mNewCommitteeValidatorHash ∷ Maybe ValidatorHash
+  , committeeCertificateVerificationCurrencySymbol ∷ ScriptHash
+  , mNewCommitteeValidatorHash ∷ Maybe ScriptHash
   } →
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     { lookupsAndConstraints ∷
-        { constraints ∷ TxConstraints Void Void
-        , lookups ∷ ScriptLookups Void
+        { constraints ∷ TxConstraints
+        , lookups ∷ ScriptLookups
         }
     , currentCommitteeUtxo ∷
         { index ∷ TransactionInput
-        , value ∷ TransactionOutputWithRefScript
+        , value ∷ TransactionOutput
         }
     , updateCommitteeHashMessage ∷ UpdateCommitteeHashMessage PlutusData
     }
@@ -242,20 +243,20 @@ updateCommitteeHashLookupsAndConstraints
     Versioning.getVersionedCurrencySymbol
       sidechainParams
       ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: CommitteeOraclePolicy }
+          { version: BigNum.fromInt 1, scriptId: CommitteeOraclePolicy }
       )
 
   (mrtPolicyRefTxInput /\ mrtPolicyRefTxOutput) ←
     Versioning.getVersionedScriptRefUtxo
       sidechainParams
       ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: MerkleRootTokenPolicy }
+          { version: BigNum.fromInt 1, scriptId: MerkleRootTokenPolicy }
       )
 
   -- Building the transaction.
   -------------------------------------------------------------
   let
-    newDatum = Datum $ toData
+    newDatum = toData
       ( UpdateCommitteeDatum
           { aggregatePubKeys: toData newAggregatePubKeys, sidechainEpoch }
       )
@@ -263,7 +264,7 @@ updateCommitteeHashLookupsAndConstraints
       Value.singleton
         committeeOracleCurrencySymbol
         CommitteeOraclePolicy.committeeOracleTn
-        one
+        (BigNum.fromInt 1)
     uchm = UpdateCommitteeHashMessage
       { sidechainParams
       , newAggregatePubKeys: toData newAggregatePubKeys
@@ -272,10 +273,10 @@ updateCommitteeHashLookupsAndConstraints
       , validatorHash: newValidatorHash
       }
 
-    redeemer = Redeemer $ toData $ UpdateCommitteeHashRedeemer
+    redeemer = RedeemerDatum $ toData $ UpdateCommitteeHashRedeemer
       { previousMerkleRoot }
 
-    lookups ∷ Lookups.ScriptLookups Void
+    lookups ∷ Lookups.ScriptLookups
     lookups =
       Lookups.unspentOutputs (Map.singleton oref committeeOracleTxOut)
         <> Lookups.validator updateValidator

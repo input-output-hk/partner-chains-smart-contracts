@@ -18,6 +18,8 @@ module TrustlessSidechain.MerkleTree
 
 import Contract.Prelude
 
+import Cardano.Types.DataHash as DataHash
+import Cardano.AsCbor (encodeCbor, decodeCbor)
 import Contract.Hashing as Hashing
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
@@ -27,12 +29,15 @@ import Contract.PlutusData
   , fromData
   , toData
   )
+import Partial.Unsafe (unsafePartial)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
 import Data.Function as Function
 import Data.List (List(Cons, Nil), (:))
 import Data.String.Common as String
 import Data.Unfoldable as Unfoldable
+import TrustlessSidechain.Utils.Crypto as Crypto
+
 
 -- * Merkle tree data types
 -- Each of these types should correspond the the on chain types.
@@ -182,7 +187,7 @@ hashLeaf = hash <<< (ByteArray.byteArrayFromIntArrayUnsafe [ 0 ] <> _)
 
 --  | Wrapper around the internal hashing function (this uses blake2b256Hash)
 hash ∷ ByteArray → RootHash
-hash = RootHash <<< Hashing.blake2b256Hash
+hash = RootHash <<< unsafePartial Crypto.blake2b256Hash
 
 -- | `listToArray` converts a `List` to an `Array`
 listToArray ∷ ∀ (a ∷ Type). List a → Array a

@@ -5,19 +5,17 @@ module TrustlessSidechain.PermissionedCandidates
 import Contract.Prelude
 
 import Contract.PlutusData
-  ( Datum(Datum)
-  , Redeemer(Redeemer)
-  , fromData
-  , toData
+  ( RedeemerDatum(RedeemerDatum)
   )
+import Contract.Numeric.BigNum as BigNum
+import Cardano.Types.Asset (Asset(Asset))
+import Cardano.Types.OutputDatum (OutputDatum(OutputDatum))
+import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
+import Cardano.FromData (fromData)
+import Cardano.ToData (toData)
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Transaction
-  ( OutputDatum(OutputDatum)
-  , TransactionOutput(TransactionOutput)
-  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
-  )
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
   , TxConstraints
@@ -52,15 +50,15 @@ import TrustlessSidechain.PermissionedCandidates.Types
       )
   )
 import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
+import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Address (toValidatorHash) as Utils
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.PlutusData (PlutusData)
 import Type.Row (type (+))
+import Cardano.Types.Int as Int
 
 permissionedCandidatesTokenName ∷ TokenName
-permissionedCandidatesTokenName =
-  Unsafe.unsafePartial $ Maybe.fromJust
-    $ Value.mkTokenName
-    =<< byteArrayFromAscii ""
+permissionedCandidatesTokenName = unsafeMkAssetName ""
 
 mkUpdatePermissionedCandidatesLookupsAndConstraints ∷
   ∀ r.
@@ -81,8 +79,8 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints ∷
         )
   } →
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 mkUpdatePermissionedCandidatesLookupsAndConstraints
   sidechainParams
@@ -91,30 +89,32 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
     PermissionedCandidates.getPermissionedCandidatesMintingPolicyAndCurrencySymbol
       sidechainParams
   let
-    permissionedCandidatesMintingPolicyHash =
-      Value.currencyMPSHash permissionedCandidatesCurrencySymbol
+    permissionedCandidatesMintingPolicyHash = permissionedCandidatesCurrencySymbol
 
   { permissionedCandidatesValidatorAddress, permissionedCandidatesValidator } ←
     PermissionedCandidates.getPermissionedCandidatesValidatorAndAddress
       sidechainParams
 
-  permissionedCandidatesValidatorHash ←
-    Utils.toValidatorHash permissionedCandidatesValidatorAddress
+  let permissionedCandidatesValidatorHash = PlutusScript.hash permissionedCandidatesValidator
 
   -- find the permissioned candidates UTxO
   maybePermissionedCandidatesUTxO ←
     ( Array.find
-        ( \( _ /\ TransactionOutputWithRefScript
-               { output: (TransactionOutput { amount, datum: outputDatum }) }
-           ) → fromMaybe false $ do
-            d ← case outputDatum of
-              OutputDatum (Datum d) → pure d
-              _ → Nothing
-            _ ← (fromData d ∷ Maybe PermissionedCandidatesValidatorDatum)
-            pure
-              ( Value.valueOf amount permissionedCandidatesCurrencySymbol
-                  permissionedCandidatesTokenName > BigInt.fromInt 0
-              )
+        ( \( _ /\ TransactionOutput { amount, datum: outputDatum })
+           → fromMaybe false $ do
+              d ← case outputDatum of
+                Just (OutputDatum d) → pure d
+                _ → Nothing
+              _ ← (fromData d ∷ Maybe PermissionedCandidatesValidatorDatum)
+              pure
+                ( Value.valueOf
+                    ( Asset
+                        permissionedCandidatesCurrencySymbol
+                        permissionedCandidatesTokenName
+                    )
+                    amount
+                     > BigNum.fromInt 0
+                )
         )
         <<< Map.toUnfoldable
     ) <$> Effect.utxosAt permissionedCandidatesValidatorAddress
@@ -127,8 +127,7 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
   oldCandidates ← case maybePermissionedCandidatesUTxO of
     Nothing → pure []
     Just
-      ( _ /\ TransactionOutputWithRefScript
-          { output: TransactionOutput { datum: outputDatum } }
+      ( _ /\ TransactionOutput { datum: outputDatum }
       ) →
       Run.note
         ( InvalidData
@@ -136,7 +135,7 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
         )
         $ do
             d ← case outputDatum of
-              OutputDatum (Datum d) → pure d
+              Just (OutputDatum d) → pure d
               _ → Nothing
             PermissionedCandidatesValidatorDatum { candidates } ← fromData d
             pure candidates
@@ -165,41 +164,41 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
     value = Value.singleton
       permissionedCandidatesCurrencySymbol
       permissionedCandidatesTokenName
-      one
+      (BigNum.fromInt 1)
 
-    permissionedCandidatesDatum ∷ Datum
-    permissionedCandidatesDatum = Datum $ toData $
+    permissionedCandidatesDatum ∷ PlutusData
+    permissionedCandidatesDatum = toData $
       PermissionedCandidatesValidatorDatum
         { candidates: newCandidates }
 
-    oldUtxoLookups ∷ ScriptLookups Void
+    oldUtxoLookups ∷ ScriptLookups
     oldUtxoLookups = case maybePermissionedCandidatesUTxO of
       Nothing → mempty
       Just (txInput /\ txOutput) →
         Lookups.unspentOutputs $ Map.singleton txInput txOutput
 
-    lookups ∷ ScriptLookups Void
+    lookups ∷ ScriptLookups
     lookups = Lookups.validator permissionedCandidatesValidator
-      <> Lookups.mintingPolicy permissionedCandidatesMintingPolicy
+      <> Lookups.plutusMintingPolicy permissionedCandidatesMintingPolicy
       <> oldUtxoLookups
       <> governanceLookups
 
-    spendScriptOutputConstraints ∷ TxConstraints Void Void
+    spendScriptOutputConstraints ∷ TxConstraints
     spendScriptOutputConstraints = case maybePermissionedCandidatesUTxO of
       Nothing → mempty
       Just (txInput /\ _) → Constraints.mustSpendScriptOutput
         txInput
-        (Redeemer $ toData UpdatePermissionedCandidates)
+        (RedeemerDatum $ toData UpdatePermissionedCandidates)
 
     mintTokenConstraint = case maybePermissionedCandidatesUTxO of
       Just _ → mempty
       Nothing → Constraints.mustMintCurrencyWithRedeemer
         permissionedCandidatesMintingPolicyHash
-        (Redeemer $ toData PermissionedCandidatesMint)
+        (RedeemerDatum $ toData PermissionedCandidatesMint)
         permissionedCandidatesTokenName
-        (BigInt.fromInt 1)
+        (Int.fromInt 1)
 
-    constraints ∷ TxConstraints Void Void
+    constraints ∷ TxConstraints
     constraints =
       Constraints.mustPayToScript permissionedCandidatesValidatorHash
         permissionedCandidatesDatum

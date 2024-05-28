@@ -2,14 +2,19 @@ module Test.FUELMintingPolicy.V1 where
 
 import Contract.Prelude
 
-import Contract.Address (pubKeyHashAddress)
-import Contract.Hashing (blake2b256Hash)
+import TrustlessSidechain.Utils.Address (fromPaymentPubKeyHash)
+import Cardano.Types.NetworkId (NetworkId(TestnetId))
+import Cardano.ToData (toData)
+import TrustlessSidechain.Utils.Crypto (blake2b256Hash)
+import Cardano.AsCbor (encodeCbor)
+import Cardano.Types.AssetName as AssetName
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Data.Array as Array
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
+import Cardano.Types.BigNum as BigNum
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe (unsafePartial)
 import Run (liftEffect) as Run
@@ -71,20 +76,16 @@ tests = plutipGroup "Minting FUEL tokens using MerkleTree-based minting policy"
 testScenarioSuccess ∷ PlutipTest
 testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
   $ Test.PlutipTest.mkPlutipConfigTest
-      [ BigInt.fromInt 100_000_000
-      , BigInt.fromInt 100_000_000
-      , BigInt.fromInt 100_000_000
-      , BigInt.fromInt 100_000_000
-      , BigInt.fromInt 100_000_000
+      [ BigNum.fromInt 100_000_000
+      , BigNum.fromInt 100_000_000
+      , BigNum.fromInt 100_000_000
+      , BigNum.fromInt 100_000_000
+      , BigNum.fromInt 100_000_000
       ]
   $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
 
       pkh ← getOwnPaymentPubKeyHash
-      ownRecipient ←
-        Run.note
-          (GenericInternalError "Could not convert pub key hash to bech 32 bytes")
-          $
-            Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
+      let ownRecipient = Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
       genesisUtxo ← getOwnTransactionInput
       let
         keyCount = 25
@@ -96,7 +97,7 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
           { initChainId: BigInt.fromInt 1
           , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
-          , initAggregatedCommittee: PlutusData.toData $ aggregateKeys
+          , initAggregatedCommittee: PlutusData.toData $ unsafePartial aggregateKeys
               $ map unwrap
                   initCommitteePubKeys
           , initSidechainEpoch: zero
@@ -104,13 +105,13 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
           , initATMSKind: ATMSPlainEcdsaSecp256k1
-          , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap pkh
+          , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
           }
 
       { sidechainParams } ← initSidechain initScParams 1
       let
         amount = BigInt.fromInt 5
-        recipient = pubKeyHashAddress pkh Nothing
+        recipient = fromPaymentPubKeyHash TestnetId pkh
         index = BigInt.fromInt 0
         previousMerkleRoot = Nothing
         ownEntry =
@@ -121,7 +122,7 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
             , recipient: ownRecipient
             }
 
-        ownEntryBytes = unwrap $ PlutusData.serializeData ownEntry
+        ownEntryBytes = unwrap $ encodeCbor $ toData ownEntry
         merkleTree =
           unsafePartial $ fromJust $ hush $ MerkleTree.fromArray
             [ ownEntryBytes ]
@@ -156,20 +157,15 @@ testScenarioSuccess2 ∷ PlutipTest
 testScenarioSuccess2 =
   Mote.Monad.test "Claiming FUEL tokens with fast distributed set lookup"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 40_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 40_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
 
         pkh ← getOwnPaymentPubKeyHash
-        ownRecipient ←
-          Run.note
-            ( GenericInternalError
-                "Could not convert pub key hash to bech 32 bytes"
-            ) $
-            Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
+        let ownRecipient = Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
         genesisUtxo ← getOwnTransactionInput
         let
           keyCount = 25
@@ -182,21 +178,20 @@ testScenarioSuccess2 =
             { initChainId: BigInt.fromInt 1
             , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: PlutusData.toData $ aggregateKeys
+            , initAggregatedCommittee: PlutusData.toData $ unsafePartial aggregateKeys
                 $ map unwrap initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
-                pkh
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
             }
 
         { sidechainParams } ← initSidechain initScParams 1
         let
           amount = BigInt.fromInt 5
-          recipient = pubKeyHashAddress pkh Nothing
+          recipient = fromPaymentPubKeyHash TestnetId pkh
           index = BigInt.fromInt 0
           previousMerkleRoot = Nothing
           ownEntry =
@@ -207,10 +202,10 @@ testScenarioSuccess2 =
               , recipient: ownRecipient
               }
 
-          ownEntryBytes = unwrap $ PlutusData.serializeData ownEntry
-          ownEntryHash = blake2b256Hash ownEntryBytes
+          ownEntryBytes = unwrap $ encodeCbor $ toData ownEntry
+          ownEntryHash = unsafePartial blake2b256Hash $ ownEntryBytes
 
-          ownEntryHashTn = unsafePartial $ fromJust $ Value.mkTokenName
+          ownEntryHashTn = unsafePartial $ fromJust $ AssetName.mkAssetName
             ownEntryHash
           merkleTree =
             unsafePartial $ fromJust $ hush $ MerkleTree.fromArray
@@ -257,20 +252,20 @@ testScenarioFailure ∷ PlutipTest
 testScenarioFailure =
   Mote.Monad.test "Attempt to claim with invalid merkle proof (should fail)"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 40_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 40_000_000
         ]
     $ \alice →
         withUnliftApp (Wallet.withKeyWallet alice) do
 
           pkh ← getOwnPaymentPubKeyHash
           let
-            recipient = pubKeyHashAddress pkh Nothing
+            recipient = fromPaymentPubKeyHash TestnetId pkh
 
           -- This is not how you create a working merkleproof that passes onchain validator.
-          let mp' = unwrap $ PlutusData.serializeData (MerkleProof [])
+          let mp' = unwrap $ encodeCbor $ toData (MerkleProof [])
           mt ← mapError GenericInternalError $ Effect.fromEitherThrow $ pure
             (fromList (pure mp'))
           mp ←
@@ -298,22 +293,17 @@ testScenarioFailure =
 testScenarioFailure2 ∷ PlutipTest
 testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
   $ Test.PlutipTest.mkPlutipConfigTest
-      [ BigInt.fromInt 50_000_000
-      , BigInt.fromInt 50_000_000
-      , BigInt.fromInt 50_000_000
-      , BigInt.fromInt 40_000_000
+      [ BigNum.fromInt 50_000_000
+      , BigNum.fromInt 50_000_000
+      , BigNum.fromInt 50_000_000
+      , BigNum.fromInt 40_000_000
       ]
   $ \alice →
       withUnliftApp (Wallet.withKeyWallet alice) do
         -- start of mostly duplicated code from `testScenarioSuccess2`
 
         pkh ← getOwnPaymentPubKeyHash
-        ownRecipient ←
-          Run.note
-            ( GenericInternalError
-                "Could not convert pub key hash to bech 32 bytes"
-            ) $
-            Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
+        let ownRecipient = Test.MerkleRoot.paymentPubKeyHashToBech32Bytes pkh
         genesisUtxo ← getOwnTransactionInput
         let
           keyCount = 25
@@ -325,15 +315,14 @@ testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
             { initChainId: BigInt.fromInt 1
             , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: PlutusData.toData $ aggregateKeys
+            , initAggregatedCommittee: PlutusData.toData $ unsafePartial aggregateKeys
                 $ map unwrap initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
-                pkh
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
             }
 
         { sidechainParams } ← initSidechain initScParams 1

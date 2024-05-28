@@ -6,16 +6,17 @@ module TrustlessSidechain.Checkpoint
 
 import Contract.Prelude
 
-import Contract.PlutusData (Datum(Datum), toData, unitRedeemer)
+import Contract.PlutusData (toData, unitRedeemer)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
+import Cardano.Types.BigNum as BigNum
 import Contract.ScriptLookups as Lookups
 import Contract.Scripts as Scripts
 import Contract.Transaction (TransactionHash)
 import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
 import Contract.TxConstraints as TxConstraints
-import Contract.Value (CurrencySymbol)
-import Data.BigInt (BigInt)
+import Cardano.Types.ScriptHash (ScriptHash)
+import JS.BigInt (BigInt)
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT)
@@ -59,12 +60,12 @@ import TrustlessSidechain.Error
   ( OffchainError(NotFoundUtxo, ConversionError)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Types (assetClassValue)
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
+import Cardano.Types.Value as Value
 
 saveCheckpoint ∷
   ∀ r.
@@ -126,7 +127,7 @@ saveCheckpoint
           { currentCommitteeUtxo
           , committeeCertificateMint
           , aggregateSignature
-          , message: Utils.Crypto.ecdsaSecp256k1MessageToTokenName scMsg
+          , message: Utils.Crypto.ecdsaSecp256k1MessageToAssetName scMsg
           }
 
   -- Build / submit the transaction
@@ -153,12 +154,12 @@ saveCheckpointLookupsAndConstraints ∷
   , newCheckpointBlockHash ∷ ByteArray
   , newCheckpointBlockNumber ∷ BigInt
   , sidechainEpoch ∷ BigInt
-  , committeeCertificateVerificationCurrencySymbol ∷ CurrencySymbol
+  , committeeCertificateVerificationCurrencySymbol ∷ ScriptHash
   } →
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     { lookupsAndConstraints ∷
-        { constraints ∷ TxConstraints Void Void
-        , lookups ∷ ScriptLookups Void
+        { constraints ∷ TxConstraints
+        , lookups ∷ ScriptLookups
         }
     , checkpointMessage ∷ CheckpointMessage
     }
@@ -204,15 +205,15 @@ saveCheckpointLookupsAndConstraints
 
   -- Building / submitting the transaction.
   let
-    newCheckpointDatum = Datum $ toData
+    newCheckpointDatum = toData
       ( CheckpointDatum
           { blockHash: newCheckpointBlockHash
           , blockNumber: newCheckpointBlockNumber
           }
       )
-    value = assetClassValue (unwrap checkpointParam).checkpointAssetClass one
+    value = Value.assetToValue (unwrap checkpointParam).checkpointAssetClass (BigNum.fromInt 1)
 
-    lookups ∷ Lookups.ScriptLookups Void
+    lookups ∷ Lookups.ScriptLookups
     lookups =
       Lookups.unspentOutputs (Map.singleton checkpointOref checkpointTxOut)
         <> Lookups.validator validator

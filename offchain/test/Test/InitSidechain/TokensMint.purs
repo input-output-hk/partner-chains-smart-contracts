@@ -5,7 +5,8 @@ module Test.InitSidechain.TokensMint
 import Contract.Prelude
 
 import Contract.Wallet as Wallet
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
+import Cardano.Types.BigNum as BigNum
 import Mote.Monad as Mote.Monad
 import Test.InitSidechain.Utils (expectedInitTokens, failMsg, unorderedEq)
 import Test.PlutipTest (PlutipTest)
@@ -45,10 +46,10 @@ initTokensMintScenario1 ∷ PlutipTest
 initTokensMintScenario1 =
   Mote.Monad.test "`initTokensMint` returns expected token names and quantities"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
         ]
     $ \alice →
         withUnliftApp (Wallet.withKeyWallet alice) do
@@ -57,7 +58,7 @@ initTokensMintScenario1 =
           genesisUtxo ← Test.Utils.getOwnTransactionInput
 
           initGovernanceAuthority ←
-            (Governance.mkGovernanceAuthority <<< unwrap)
+            (Governance.mkGovernanceAuthority)
               <$> getOwnPaymentPubKeyHash
 
           let
@@ -108,10 +109,10 @@ initTokensMintIdempotent ∷ PlutipTest
 initTokensMintIdempotent =
   Mote.Monad.test "`initTokensMint` gives expected results when called twice"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
-        , BigInt.fromInt 50_000_000
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
         ]
     $ \alice →
         withUnliftApp (Wallet.withKeyWallet alice) do
@@ -120,7 +121,7 @@ initTokensMintIdempotent =
           genesisUtxo ← Test.Utils.getOwnTransactionInput
 
           initGovernanceAuthority ←
-            (Governance.mkGovernanceAuthority <<< unwrap)
+            (Governance.mkGovernanceAuthority)
               <$> getOwnPaymentPubKeyHash
 
           let

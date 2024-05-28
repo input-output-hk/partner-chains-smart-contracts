@@ -9,12 +9,16 @@ import Contract.Prelude
 
 import Contract.Log (logInfo')
 import Contract.PlutusData (toData)
+
+import Partial.Unsafe (unsafePartial)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Value as Value
+import Cardano.Types.AssetName (mkAssetName)
 import Contract.Wallet as Wallet
 import Data.Array as Array
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
+import Cardano.Types.BigNum as BigNum
 import Data.Maybe as Maybe
 import Effect.Class as Effect.Class
 import Mote.Monad as Mote.Monad
@@ -88,10 +92,10 @@ testScenario1 =
   Mote.Monad.test
     "Various tests for the CommitteePlainSchnorrSecp256k1ATMSPolicy token"
     $ Test.PlutipTest.mkPlutipConfigTest
-        [ BigInt.fromInt 100_000_000
-        , BigInt.fromInt 100_000_000
-        , BigInt.fromInt 100_000_000
-        , BigInt.fromInt 100_000_000
+        [ BigNum.fromInt 100_000_000
+        , BigNum.fromInt 100_000_000
+        , BigNum.fromInt 100_000_000
+        , BigNum.fromInt 100_000_000
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         ownPaymentPubKeyHash ← getOwnPaymentPubKeyHash
@@ -108,15 +112,14 @@ testScenario1 =
             { initChainId: BigInt.fromInt 1
             , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ Utils.Crypto.aggregateKeys
+            , initAggregatedCommittee: toData $ unsafePartial Utils.Crypto.aggregateKeys
                 $ map unwrap initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainSchnorrSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap
-                ownPaymentPubKeyHash
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority ownPaymentPubKeyHash
             }
 
         { sidechainParams } ← initSidechain initScParams 1
@@ -146,7 +149,7 @@ testScenario1 =
 
             sidechainMessage = sidechainMessageByteArray
             sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
-              Value.mkTokenName sidechainMessageByteArray
+              mkAssetName sidechainMessageByteArray
 
             allPubKeysAndSignatures = generateSignatures
               { -- the current committee stored on chain
@@ -196,7 +199,7 @@ testScenario1 =
             sidechainMessage =
               sidechainMessageByteArray
             sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
-              Value.mkTokenName sidechainMessageByteArray
+              mkAssetName sidechainMessageByteArray
 
             allPubKeysAndSignatures = generateSignatures
               { currentCommitteePrvKeys: initCommitteePrvKeys
@@ -248,7 +251,7 @@ testScenario1 =
             sidechainMessage =
               sidechainMessageByteArray
             sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
-              Value.mkTokenName sidechainMessageByteArray
+              mkAssetName sidechainMessageByteArray
 
             allPubKeysAndSignatures = generateSignatures
               { currentCommitteePrvKeys: initCommitteePrvKeys
@@ -296,7 +299,7 @@ testScenario1 =
               sidechainMessageByteArray
 
             sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust
-              $ Value.mkTokenName
+              $ mkAssetName
               $ ByteArray.byteArrayFromIntArrayUnsafe
               $ Array.replicate 32 4
 
@@ -343,7 +346,7 @@ testScenario1 =
             sidechainMessage = sidechainMessageByteArray
 
             sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust
-              $ Value.mkTokenName
+              $ mkAssetName
               $ sidechainMessageByteArray
 
             allPubKeysAndSignatures = generateSignatures

@@ -14,7 +14,12 @@ import Contract.Transaction (TransactionHash)
 import Contract.TxConstraints (DatumPresence(..), TxConstraints)
 import Contract.TxConstraints as Constraints
 import Contract.Value as Value
-import Data.BigInt as BigInt
+import Data.Array ((:))
+import JS.BigInt as BigInt
+import Cardano.Types.BigNum as BigNum
+import Cardano.Types.Int as Int
+import Cardano.Types.Mint as Mint
+import Data.Maybe (isJust)
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.Checkpoint (CheckpointDatum(..), checkpointNftTn)
@@ -89,8 +94,8 @@ initCheckpointLookupsAndConstraints ∷
   ByteArray →
   SidechainParams →
   Run (EXCEPT OffchainError + WALLET + r')
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 initCheckpointLookupsAndConstraints initGenesisHash sidechainParams = do
 
@@ -105,11 +110,13 @@ initCheckpointLookupsAndConstraints initGenesisHash sidechainParams = do
 
   let
     checkpointNftValue =
-      Value.singleton checkpointNft.currencySymbol checkpointNftTn one
+      Value.singleton checkpointNft.currencySymbol checkpointNftTn (BigNum.fromInt 1)
+    checkpointNftMint =
+      Mint.singleton checkpointNft.currencySymbol checkpointNftTn (Int.fromInt 1)
 
     mintCheckpointNft =
-      { lookups: Lookups.mintingPolicy checkpointNft.mintingPolicy
-      , constraints: Constraints.mustMintValue checkpointNftValue
+      { lookups: Lookups.plutusMintingPolicy checkpointNft.mintingPolicy
+      , constraints: Constraints.mustMintValue checkpointNftMint
       }
 
   -- Construct initial checkpoint datum and pay it together with checkpoint NFT
@@ -121,8 +128,7 @@ initCheckpointLookupsAndConstraints initGenesisHash sidechainParams = do
       { sidechainParams
       , checkpointAssetClass
       }
-    checkpointDatum = Datum
-      $ PlutusData.toData
+    checkpointDatum = PlutusData.toData
       $ CheckpointDatum
           { blockHash: initGenesisHash
           , blockNumber: BigInt.fromInt 0

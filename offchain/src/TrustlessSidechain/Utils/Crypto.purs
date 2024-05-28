@@ -2,7 +2,7 @@ module TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1Message(EcdsaSecp256k1Message)
   , ecdsaSecp256k1Message
   , byteArrayToEcdsaSecp256k1MessageUnsafe
-  , ecdsaSecp256k1MessageToTokenName
+  , ecdsaSecp256k1MessageToAssetName
   , EcdsaSecp256k1PrivateKey
   , byteArrayToEcdsaSecp256k1PubKeyUnsafe
   , EcdsaSecp256k1PubKey(EcdsaSecp256k1PubKey)
@@ -32,19 +32,24 @@ module TrustlessSidechain.Utils.Crypto
   , serialiseEcdsaSecp256k1PrivateKey
   , serialiseEcdsaSecp256k1SignatureToDer
   , serialiseEcdsaSecp256k1Signature
+  , blake2b256Hash
   ) where
 
+import Partial.Unsafe (unsafePartial)
 import Contract.Prelude
-
-import Contract.Hashing as Hashing
+import Cardano.AsCbor (encodeCbor, decodeCbor)
+import Cardano.Types.DataHash as DataHash
 import Contract.PlutusData (class FromData, class ToData, fromData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
-import Contract.Value (TokenName)
+import Contract.Value (AssetName)
 import Contract.Value as Value
+import Cardano.Types.AssetName (AssetName, mkAssetName)
 import Data.Array as Array
-import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
+import Data.BigInt as RegularBigInt
+import Data.ByteArray (hexToByteArrayUnsafe, byteArrayToHex)
 import Data.Function (on)
 import Data.Maybe as Maybe
 import Data.Ord as Ord
@@ -174,14 +179,14 @@ ecdsaSecp256k1Message byteArray
 byteArrayToEcdsaSecp256k1MessageUnsafe ∷ ByteArray → EcdsaSecp256k1Message
 byteArrayToEcdsaSecp256k1MessageUnsafe = EcdsaSecp256k1Message
 
--- | `ecdsaSecp256k1MessageToTokenName` converts a sidechain message to a token name
-ecdsaSecp256k1MessageToTokenName ∷ EcdsaSecp256k1Message → TokenName
-ecdsaSecp256k1MessageToTokenName (EcdsaSecp256k1Message byteArray) =
+-- | `ecdsaSecp256k1MessageToAssetName` converts a sidechain message to a token name
+ecdsaSecp256k1MessageToAssetName ∷ EcdsaSecp256k1Message → AssetName
+ecdsaSecp256k1MessageToAssetName (EcdsaSecp256k1Message byteArray) =
   -- should be safe as they have the same length requirements
   -- i.e., token names should be less than or equal to 32 bytes long
   -- See:
-  -- https://github.com/Plutonomicon/cardano-transaction-lib/blob/fde2e42b2e57ea978b3517913a1917ebf8836ab6/src/Internal/Types/TokenName.purs#L104-L109
-  Unsafe.unsafePartial $ Maybe.fromJust $ Value.mkTokenName byteArray
+  -- https://github.com/Plutonomicon/cardano-transaction-lib/blob/fde2e42b2e57ea978b3517913a1917ebf8836ab6/src/Internal/Types/AssetName.purs#L104-L109
+  Unsafe.unsafePartial $ Maybe.fromJust $ mkAssetName byteArray
 
 -- | Get the underlying `ByteArray` from an `EcdsaSecp256k1Message`.
 getEcdsaSecp256k1MessageByteArray ∷ EcdsaSecp256k1Message → ByteArray
@@ -367,9 +372,14 @@ verifyMultiSignature
     go signed pubs sigs =
       let
         ok = signed >
-          ( BigInt.quot
-              (thresholdNumerator * BigInt.fromInt (Array.length pubKeys))
-              thresholdDenominator
+          ( unsafePartial
+          $ fromJust
+          $ BigInt.fromString
+          $ RegularBigInt.toString
+          ( RegularBigInt.quot
+              ((unsafePartial $ fromJust $ RegularBigInt.fromString (BigInt.toString thresholdNumerator)) * RegularBigInt.fromInt (Array.length pubKeys))
+              ((unsafePartial $ fromJust $ RegularBigInt.fromString (BigInt.toString thresholdDenominator)))
+          )
           )
       in
         case Array.uncons pubs of
@@ -399,11 +409,21 @@ isSorted xss = case Array.tail xss of
   Just xs → and (Array.zipWith (<=) xss xs)
   Nothing → false
 
+
+
+
+
+foreign import blake2b256 :: String -> String
+blake2b256Hash :: Partial => ByteArray -> ByteArray
+blake2b256Hash d = hexToByteArrayUnsafe $ blake2b256 $ byteArrayToHex d
+
+
+
 -- | `aggregateKeys` aggregates a list of keys s.t. the resulting `ByteArray`
 -- | may be stored in the `UpdateCommitteeDatum` in an onchain compatible way.
 -- | Note: this sorts the input array
-aggregateKeys ∷ Array ByteArray → ByteArray
-aggregateKeys =
-  Hashing.blake2b256Hash
-    <<< mconcat
-    <<< Array.sort
+aggregateKeys ∷ Partial => Array ByteArray → ByteArray
+aggregateKeys keys = blake2b256Hash $ mconcat $ Array.sort keys
+
+
+

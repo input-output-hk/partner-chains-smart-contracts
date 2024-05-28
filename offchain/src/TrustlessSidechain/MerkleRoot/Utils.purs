@@ -9,29 +9,33 @@
 -- | cyclic dependencies between `MerkleRoot` and `UpdateCommitteeHash` without
 -- | this.
 module TrustlessSidechain.MerkleRoot.Utils
-  ( merkleRootCurrencyInfo
+  ( findPreviousMerkleRootTokenUtxo
+  , merkleRootCurrencyInfo
   , merkleRootTokenValidator
   , findMerkleRootTokenUtxo
-  , findPreviousMerkleRootTokenUtxo
   , serialiseMrimHash
-  ) where
+  )
+  where
 
 import Contract.Prelude
-
+import Partial.Unsafe (unsafePartial)
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Hashing as Hashing
-import Contract.PlutusData (serializeData, toData)
+import Contract.PlutusData (toData)
+import Cardano.AsCbor (encodeCbor)
 import Contract.Scripts (Validator)
 import Contract.Scripts as Scripts
-import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
-import Contract.Value (TokenName)
-import Contract.Value as Value
+import Cardano.Types.TransactionInput (TransactionInput)
+import Cardano.Types.TransactionOutput (TransactionOutput)
+import Cardano.Types.AssetName (AssetName, mkAssetName)
+import Cardano.Types.Value as Value
 import Run (Run)
 import Run.Except (EXCEPT)
 import Run.Except as Run
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError(InvalidData))
+import Contract.Numeric.BigNum as BigNum
 import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage
   )
@@ -54,6 +58,9 @@ import TrustlessSidechain.Versioning.ScriptId
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.Asset (Asset(Asset))
 
 -- | `merkleRootCurrencyInfo` gets the minting policy and currency symbol
 -- | corresponding to `MerkleRootTokenPolicy`
@@ -71,7 +78,7 @@ merkleRootCurrencyInfo sidechainParams = do
 merkleRootTokenValidator ∷
   ∀ r.
   SidechainParams →
-  Run (EXCEPT OffchainError + WALLET + r) Validator
+  Run (EXCEPT OffchainError + WALLET + r) PlutusScript
 merkleRootTokenValidator sidechainParams = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
   mkValidatorWithParams MerkleRootTokenValidator
@@ -89,10 +96,10 @@ merkleRootTokenValidator sidechainParams = do
 -- | such utxo it finds that satisifies the aforementioned properties.
 findMerkleRootTokenUtxo ∷
   ∀ r.
-  TokenName →
+  AssetName →
   SidechainParams →
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
+    (Maybe { index ∷ TransactionInput, value ∷ TransactionOutput })
 findMerkleRootTokenUtxo merkleRoot sp = do
   validator ← merkleRootTokenValidator sp
   validatorAddress ← toAddress (Scripts.validatorHash validator)
@@ -101,7 +108,7 @@ findMerkleRootTokenUtxo merkleRoot sp = do
   Utils.Utxos.findUtxoByValueAt validatorAddress \value →
     -- Note: we just need the existence of the token i.e., there is a nonzero
     -- amount
-    Value.valueOf value currencySymbol merkleRoot /= zero
+    Value.valueOf (Asset currencySymbol merkleRoot) value /= BigNum.fromInt 0
 
 -- | `findPreviousMerkleRootTokenUtxo maybeLastMerkleRoot smrm` returns `Nothing` in
 -- | the case that `maybeLastMerkleRoot` is `Nothing`, and `Just` the result of
@@ -115,14 +122,14 @@ findPreviousMerkleRootTokenUtxo ∷
   Maybe RootHash →
   SidechainParams →
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    (Maybe { index ∷ TransactionInput, value ∷ TransactionOutputWithRefScript })
+    (Maybe { index ∷ TransactionInput, value ∷ TransactionOutput })
 findPreviousMerkleRootTokenUtxo maybeLastMerkleRoot sp =
   case maybeLastMerkleRoot of
     Nothing → pure Nothing
     Just lastMerkleRoot' → do
       lastMerkleRootTokenName ← Run.note
         (InvalidData "Invalid lastMerkleRoot token name")
-        (Value.mkTokenName $ MerkleTree.unRootHash lastMerkleRoot')
+        (mkAssetName $ MerkleTree.unRootHash lastMerkleRoot')
       lkup ← findMerkleRootTokenUtxo lastMerkleRootTokenName sp
       lkup' ←
         Run.note
@@ -135,8 +142,10 @@ findPreviousMerkleRootTokenUtxo maybeLastMerkleRoot sp =
 -- | Contract.Hashing.blake2b256Hash <<< PlutusData.serializeData
 -- | ```
 serialiseMrimHash ∷ MerkleRootInsertionMessage → Maybe EcdsaSecp256k1Message
-serialiseMrimHash =
-  Utils.Crypto.ecdsaSecp256k1Message
-    <<< Hashing.blake2b256Hash
-    <<< cborBytesToByteArray
-    <<< serializeData
+serialiseMrimHash message = unsafePartial
+  ( Utils.Crypto.ecdsaSecp256k1Message
+  $ Utils.Crypto.blake2b256Hash
+  $ unwrap
+  $ encodeCbor
+  $ toData message
+  )

@@ -30,7 +30,8 @@ module TrustlessSidechain.DistributedSet
 import Contract.Prelude
 
 import Contract.Address (Address)
-import Cardano.Plutus.Types.Map as AssocMap
+import Data.Map as Map
+
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -40,16 +41,12 @@ import Contract.PlutusData
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.ScriptLookups (ScriptLookups)
-import Contract.Scripts (MintingPolicy, Validator, ValidatorHash)
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
+import Cardano.Types.TransactionInput (TransactionInput)
 import Contract.Scripts as Scripts
-import Contract.Transaction
-  ( TransactionInput
-  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
-  , outputDatumDatum
-  )
 import Contract.TxConstraints (TxConstraints)
-import Contract.Value (CurrencySymbol, TokenName, getTokenName, getValue)
-import Contract.Value as Value
+import Cardano.Types.Value as Value
 import Control.Monad.Maybe.Trans (MaybeT(MaybeT), runMaybeT)
 import Data.Array as Array
 import Data.Map as Map
@@ -81,11 +78,11 @@ import TrustlessSidechain.InitSidechain.Utils
   , initTokenCurrencyInfo
   , mintOneInitToken
   )
+import Cardano.Types.AssetName (AssetName)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (CurrencyInfo)
 import TrustlessSidechain.Utils.Address
   ( getCurrencyInfo
-  , getCurrencySymbol
   , toAddress
   )
 import TrustlessSidechain.Utils.Data
@@ -105,13 +102,19 @@ import TrustlessSidechain.Versioning.ScriptId
       )
   )
 import Type.Row (type (+))
+import Cardano.Types.Value (getMultiAsset)
+import Cardano.Types.AssetName (unAssetName)
+import Cardano.Types.PlutusScript as PlutusScript
+import TrustlessSidechain.Utils.Asset (emptyAssetName, unsafeMkAssetName)
+import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.OutputDatum (outputDatumDatum)
 
 -- * Types
 -- For more information, see the on-chain Haskell file.
 
 -- | `Ds` is the type which parameterizes the validator script for insertion in
 -- | the distributed set.
-newtype Ds = Ds CurrencySymbol
+newtype Ds = Ds ScriptHash
 
 derive instance Generic Ds _
 
@@ -127,7 +130,7 @@ instance Show Ds where
   show = genericShow
 
 -- | `dsConf` accesses the underlying `ByteArray` of `Ds`
-dsConf ∷ Ds → CurrencySymbol
+dsConf ∷ Ds → ScriptHash
 dsConf (Ds currencySymbol) = currencySymbol
 
 -- | `DsDatum` is the datum for the validator script for insertion in the
@@ -155,8 +158,8 @@ dsNext (DsDatum byteArray) = byteArray
 -- | configuration of the distributed set on chain i.e., this datum holds the
 -- | necessary `CurrencySymbol`s for the functionality of the distributed set.
 newtype DsConfDatum = DsConfDatum
-  { dscKeyPolicy ∷ CurrencySymbol
-  , dscFUELPolicy ∷ CurrencySymbol
+  { dscKeyPolicy ∷ ScriptHash
+  , dscFUELPolicy ∷ ScriptHash
   }
 
 derive instance Generic DsConfDatum _
@@ -183,8 +186,8 @@ instance ToData DsConfDatum where
 -- | `DsKeyMint` is the type which paramterizes the minting policy of the
 -- | tokens which are keys in the distributed set.
 newtype DsKeyMint = DsKeyMint
-  { dskmValidatorHash ∷ ValidatorHash
-  , dskmConfCurrencySymbol ∷ CurrencySymbol
+  { dskmValidatorHash ∷ ScriptHash
+  , dskmConfCurrencySymbol ∷ ScriptHash
   }
 
 derive instance Generic DsKeyMint _
@@ -285,34 +288,30 @@ rootNode = Node
 
 -- | A name for the distributed set initialization token.  Must be unique among
 -- | initialization tokens.
-dsInitTokenName ∷ TokenName
-dsInitTokenName =
-  Unsafe.unsafePartial $ Maybe.fromJust
-    $ Value.mkTokenName
-    =<< byteArrayFromAscii "DistributedSet InitToken"
+dsInitTokenName ∷ AssetName
+dsInitTokenName = unsafeMkAssetName "DistributedSet InitToken"
 
 -- | `dsConfTokenName` is the `TokenName` for the token of the configuration.
 -- | This doesn't matter, so we set it to be the empty string.
 -- | Note: this corresponds to the Haskell function.
-dsConfTokenName ∷ TokenName
-dsConfTokenName = Unsafe.unsafePartial $ Maybe.fromJust $ Value.mkTokenName
-  mempty
+dsConfTokenName ∷ AssetName
+dsConfTokenName = emptyAssetName
 
 -- Note: this really *should* be safe to use the partial function here since the
--- empty TokenName is clearly a valid token. Clearly!
+-- empty AssetName is clearly a valid token. Clearly!
 
 -- * Validator / minting policies
 
 -- | `insertValidator` gets corresponding `insertValidator` from the serialized
 -- | on chain code.
-insertValidator ∷ ∀ r. Ds → Run (EXCEPT OffchainError + r) Validator
+insertValidator ∷ ∀ r. Ds → Run (EXCEPT OffchainError + r) PlutusScript
 insertValidator ds = mkValidatorWithParams DsInsertValidator $ map
   toData
   [ ds ]
 
 -- | `dsConfValidator` gets corresponding `dsConfValidator` from the serialized
 -- | on chain code.
-dsConfValidator ∷ ∀ r. Ds → Run (EXCEPT OffchainError + r) Validator
+dsConfValidator ∷ ∀ r. Ds → Run (EXCEPT OffchainError + r) PlutusScript
 dsConfValidator ds = mkValidatorWithParams DsConfValidator $ map
   toData
   [ ds ]
@@ -334,7 +333,7 @@ dsConfCurrencyInfo sp = do
 
 -- | `dsKeyPolicy` gets corresponding `dsKeyPolicy` from the serialized
 -- | on chain code.
-dsKeyPolicy ∷ ∀ r. DsKeyMint → Run (EXCEPT OffchainError + r) MintingPolicy
+dsKeyPolicy ∷ ∀ r. DsKeyMint → Run (EXCEPT OffchainError + r) PlutusScript
 dsKeyPolicy dskm = mkMintingPolicyWithParams DsKeyPolicy [ toData dskm ]
 
 -- | The address for the insert validator of the distributed set.
@@ -404,7 +403,7 @@ getDsKeyPolicy ds = do
       }
   mintingPolicy ← dsKeyPolicy dskm
 
-  currencySymbol ← getCurrencySymbol DsKeyPolicy mintingPolicy
+  let currencySymbol = PlutusScript.hash mintingPolicy
 
   pure { mintingPolicy, currencySymbol }
 
@@ -413,8 +412,8 @@ mintOneDsInitToken ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 mintOneDsInitToken sp =
   mintOneInitToken sp dsInitTokenName
@@ -424,8 +423,8 @@ burnOneDsInitToken ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 burnOneDsInitToken sp =
   burnOneInitToken sp dsInitTokenName
@@ -437,7 +436,7 @@ findDsConfOutput ∷
   Ds →
   Run (EXCEPT OffchainError + TRANSACTION + WALLET + r)
     { confRef ∷ TransactionInput
-    , confO ∷ TransactionOutputWithRefScript
+    , confO ∷ TransactionOutput
     , confDat ∷ DsConfDatum
     }
 findDsConfOutput ds = do
@@ -452,10 +451,10 @@ findDsConfOutput ds = do
         )
       )
       $ Array.find
-          ( \(_ /\ TransactionOutputWithRefScript o) → not $ null
-              $ AssocMap.lookup (dsConf ds)
-              $ getValue
-                  (unwrap o.output).amount
+          ( \(_ /\ TransactionOutput {amount}) → not $ null
+              $ Map.lookup (dsConf ds)
+              $ unwrap
+              $ Value.getMultiAsset amount
           )
       $ Map.toUnfoldable utxos
 
@@ -463,8 +462,8 @@ findDsConfOutput ds = do
     Run.note
       ( NotFoundUtxo "Distributed Set config utxo does not contain datum"
       )
-      $ outputDatumDatum (unwrap (unwrap (snd out)).output).datum
-      >>= (fromData <<< unwrap)
+      $ (unwrap (snd out)).datum >>= outputDatumDatum >>= fromData
+
   pure
     { confRef: fst out
     , confO: snd out
@@ -486,14 +485,14 @@ findDsConfOutput ds = do
 findDsOutput ∷
   ∀ r.
   Ds →
-  TokenName →
+  AssetName →
   TransactionInput →
   Run (APP + r)
     { inUtxo ∷
         { nodeRef ∷ TransactionInput
-        , oNode ∷ TransactionOutputWithRefScript
+        , oNode ∷ TransactionOutput
         , datNode ∷ DsDatum
-        , tnNode ∷ TokenName
+        , tnNode ∷ AssetName
         }
     , nodes ∷ Ib Node
     }
@@ -509,8 +508,7 @@ findDsOutput ds tn txInput = do
   dat ←
     Run.note
       (ConversionError "datum not a distributed set node")
-      $ outputDatumDatum (unwrap txOut).datum
-      >>= (fromData <<< unwrap)
+      $ (unwrap txOut).datum >>= outputDatumDatum >>= fromData
 
   --  Validate that this is a distributed set node / grab the necessary
   -- information about it
@@ -533,9 +531,9 @@ findDsOutput ds tn txInput = do
       ( InvalidData "missing token name in distributed set node"
       )
       do
-        tns ← AssocMap.lookup dsKeyPolicyCurrencySymbol $ getValue
+        tns ← Map.lookup dsKeyPolicyCurrencySymbol $ unwrap $ getMultiAsset
           (unwrap txOut).amount
-        Array.head $ AssocMap.keys tns
+        Array.head $ Array.fromFoldable $ Map.keys tns
 
     pure keyNodeTn
 
@@ -545,26 +543,21 @@ findDsOutput ds tn txInput = do
           ( "invalid distributed set node provided \
             \(the provided node must satisfy `providedNode` < `newNode` < `next`) \
             \but got `providedNode` "
-              <> show (getTokenName tn')
+              <> show (unAssetName tn')
               <> ", `newNode` "
-              <> show (getTokenName tn)
+              <> show (unAssetName tn)
               <> ", and `next` "
               <> show (unwrap dat)
 
           )
-      ) $ insertNode (getTokenName tn) $ mkNode
-      (getTokenName tn')
+      ) $ insertNode (unAssetName tn) $ mkNode
+      (unAssetName tn')
       dat
 
   pure
     { inUtxo:
         { nodeRef: txInput
-        , oNode:
-            TransactionOutputWithRefScript
-              { output: txOut
-              , scriptRef: Nothing
-              -- There shouldn't be a script ref for this...
-              }
+        , oNode: txOut
         , datNode: dat
         , tnNode: tn'
         }
@@ -586,14 +579,14 @@ findDsOutput ds tn txInput = do
 slowFindDsOutput ∷
   ∀ r.
   Ds →
-  TokenName →
+  AssetName →
   Run (APP + r)
     ( Maybe
         { inUtxo ∷
             { nodeRef ∷ TransactionInput
-            , oNode ∷ TransactionOutputWithRefScript
+            , oNode ∷ TransactionOutput
             , datNode ∷ DsDatum
-            , tnNode ∷ TokenName
+            , tnNode ∷ AssetName
             }
         , nodes ∷ Ib Node
         }
@@ -607,7 +600,7 @@ slowFindDsOutput ds tn = do
   dskm ← dsToDsKeyMint ds
   policy ← dsKeyPolicy dskm
 
-  dsKeyCurSym ← getCurrencySymbol DsKeyPolicy policy
+  let dsKeyCurSym = PlutusScript.hash policy
 
   go dsKeyCurSym utxos
 
@@ -616,26 +609,25 @@ slowFindDsOutput ds tn = do
   go dsKeyCurSym utxos' =
     case Array.uncons utxos' of
       Nothing → pure Nothing
-      Just { head: ref /\ TransactionOutputWithRefScript o, tail } →
+      Just { head: ref /\ o, tail } →
         do
           dsKey ← runMaybeT do
-            dat ← hoistMaybe $ outputDatumDatum (unwrap o.output).datum >>=
-              (fromData <<< unwrap)
+            dat ← hoistMaybe $ (unwrap o).datum >>= outputDatumDatum >>= fromData
 
             tns ←
-              hoistMaybe $ AssocMap.lookup dsKeyCurSym
-                $ getValue (unwrap o.output).amount
+              hoistMaybe $ Map.lookup dsKeyCurSym
+                $ unwrap $ getMultiAsset (unwrap o).amount
 
-            tn' ← hoistMaybe $ Array.head $ AssocMap.keys tns
+            tn' ← hoistMaybe $ Array.head $ Array.fromFoldable $ Map.keys tns
 
-            nodes ← hoistMaybe $ insertNode (getTokenName tn) $ mkNode
-              (getTokenName tn')
+            nodes ← hoistMaybe $ insertNode (unAssetName tn) $ mkNode
+              (unAssetName tn')
               dat
 
             pure $
               Just
                 { inUtxo:
-                    { nodeRef: ref, oNode: wrap o, datNode: dat, tnNode: tn' }
+                    { nodeRef: ref, oNode: o, datNode: dat, tnNode: tn' }
                 , nodes
                 }
 

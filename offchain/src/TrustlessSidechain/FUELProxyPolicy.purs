@@ -11,21 +11,24 @@ import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class ToData
   , PlutusData(Constr)
-  , Redeemer(Redeemer)
+  , RedeemerDatum(RedeemerDatum)
   , toData
   )
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy)
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
 import Contract.TxConstraints
   ( TxConstraints
   )
 import Contract.TxConstraints as Constraints
-import Contract.Value (CurrencySymbol, TokenName)
+import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.AssetName (AssetName)
+import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
 import Contract.Value as Value
-import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
 import Data.Maybe as Maybe
 import Partial.Unsafe as Unsafe
 import Run (Run)
@@ -39,7 +42,6 @@ import TrustlessSidechain.FUELBurningPolicy.V2 as Burn.V2
 import TrustlessSidechain.FUELMintingPolicy.V1 as Mint.V1
 import TrustlessSidechain.FUELMintingPolicy.V2 as Mint.V2
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Address (getCurrencySymbol)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   )
@@ -48,15 +50,20 @@ import TrustlessSidechain.Versioning.ScriptId
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
+import Contract.Numeric.BigNum (BigNum)
+import Contract.Numeric.BigNum as BigNum
+import Cardano.Types.Int as Int
+import Partial.Unsafe (unsafePartial)
+import Cardano.Types.Mint as Mint
 
 -- | Redeemer for the proxy FUEL that tells whether fuel should be minted or
 -- | burned, and which version of the fuel script to use.  Burn case also
 -- | contains address of the sidechain recipient.  Recipient information is used
 -- | by the sidechain bridge to add tokens to respective sidechain account.
 data FuelProxyRedeemer
-  = FuelProxyMint { version ∷ BigInt }
+  = FuelProxyMint { version ∷ BigNum }
   | FuelProxyBurn
-      { version ∷ BigInt
+      { version ∷ BigNum
       , recipient ∷ ByteArray -- ^ Recipient's sidechain address
       }
 
@@ -69,17 +76,14 @@ instance ToData FuelProxyRedeemer where
 -- | Proxy fuel token name.  Note that the on-chain code does not define this
 -- | name in any way and the minting policy permits to use an arbitrary token
 -- | name.
-fuelProxyTokenName ∷ TokenName
-fuelProxyTokenName =
-  Unsafe.unsafePartial $ Maybe.fromJust
-    $ Value.mkTokenName
-    =<< byteArrayFromAscii "FUEL"
+fuelProxyTokenName ∷ AssetName
+fuelProxyTokenName = unsafeMkAssetName "FUEL"
 
 -- | Deserialize minting policy script, applying it to all required parameters.
 decodeFuelProxyPolicy ∷
   ∀ r.
   SidechainParams →
-  Run (EXCEPT OffchainError + WALLET + r) MintingPolicy
+  Run (EXCEPT OffchainError + WALLET + r) PlutusScript
 decodeFuelProxyPolicy sp = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sp
   mkMintingPolicyWithParams FUELProxyPolicy
@@ -90,12 +94,12 @@ getFuelProxyMintingPolicy ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + WALLET + r)
-    { fuelProxyPolicy ∷ MintingPolicy
-    , fuelProxyCurrencySymbol ∷ CurrencySymbol
+    { fuelProxyPolicy ∷ PlutusScript
+    , fuelProxyCurrencySymbol ∷ ScriptHash
     }
 getFuelProxyMintingPolicy sp = do
   fuelProxyPolicy ← decodeFuelProxyPolicy sp
-  fuelProxyCurrencySymbol ← getCurrencySymbol FUELProxyPolicy fuelProxyPolicy
+  let fuelProxyCurrencySymbol = PlutusScript.hash fuelProxyPolicy
   pure { fuelProxyPolicy, fuelProxyCurrencySymbol }
 
 data FuelMintParams
@@ -109,7 +113,7 @@ mkFuelProxyMintLookupsAndConstraints ∷
   SidechainParams →
   FuelMintParams →
   Run (APP + r)
-    { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
+    { lookups ∷ ScriptLookups, constraints ∷ TxConstraints }
 mkFuelProxyMintLookupsAndConstraints sidechainParams fmp = do
   -- Delegate building of lookups and constraints to a versioned minting policy.
   -- Note that this is the place that ties version number to concrete scripts.
@@ -123,24 +127,24 @@ mkFuelProxyMintLookupsAndConstraints sidechainParams fmp = do
     (version /\ amount) =
       case fmp of
         FuelMintParamsV1 (Mint.V1.FuelMintParams { amount }) →
-          (BigInt.fromInt 1 /\ amount)
+          (BigNum.fromInt 1 /\ amount)
         FuelMintParamsV2 (Mint.V2.FuelMintParams { amount }) →
-          (BigInt.fromInt 2 /\ amount)
+          (BigNum.fromInt 2 /\ amount)
 
   { fuelProxyPolicy, fuelProxyCurrencySymbol } ←
     getFuelProxyMintingPolicy sidechainParams
   let
-    lookups ∷ ScriptLookups Void
+    lookups ∷ ScriptLookups
     lookups =
       fuelLookups
-        <> Lookups.mintingPolicy fuelProxyPolicy
+        <> Lookups.plutusMintingPolicy fuelProxyPolicy
 
-    constraints ∷ TxConstraints Void Void
+    constraints ∷ TxConstraints
     constraints =
       fuelConstraints
         <> Constraints.mustMintValueWithRedeemer
-          (Redeemer $ toData $ FuelProxyMint { version })
-          (Value.singleton fuelProxyCurrencySymbol fuelProxyTokenName amount)
+          (RedeemerDatum $ toData $ FuelProxyMint { version })
+          (Mint.singleton fuelProxyCurrencySymbol fuelProxyTokenName (unsafePartial $ fromJust $ Int.fromBigInt amount))
   pure { lookups, constraints }
 
 -- | Build lookups and constraints for minting a given amount of proxy fuel.
@@ -150,10 +154,10 @@ mkFuelProxyBurnLookupsAndConstraints ∷
   { sidechainParams ∷ SidechainParams
   , amount ∷ BigInt
   , recipient ∷ ByteArray
-  , version ∷ BigInt
+  , version ∷ BigNum
   } →
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    { lookups ∷ ScriptLookups Void, constraints ∷ TxConstraints Void Void }
+    { lookups ∷ ScriptLookups, constraints ∷ TxConstraints }
 mkFuelProxyBurnLookupsAndConstraints
   { sidechainParams, amount, recipient, version } = do
   -- Delegate building of lookups and constraints to a versioned burning policy.
@@ -161,10 +165,10 @@ mkFuelProxyBurnLookupsAndConstraints
   { lookups: fuelLookups, constraints: fuelConstraints } ←
     let
       result -- BigInt cannot be pattern matched
-        | version == BigInt.fromInt 1 =
+        | version == BigNum.fromInt 1 =
             Burn.V1.mkBurnFuelLookupAndConstraints
               (Burn.V1.FuelBurnParams { sidechainParams, amount })
-        | version == BigInt.fromInt 2 =
+        | version == BigNum.fromInt 2 =
             Burn.V2.mkBurnFuelLookupAndConstraints
               (Burn.V2.FuelBurnParams { sidechainParams, amount })
         | otherwise = pure { lookups: mempty, constraints: mempty }
@@ -174,18 +178,18 @@ mkFuelProxyBurnLookupsAndConstraints
   { fuelProxyPolicy, fuelProxyCurrencySymbol } ←
     getFuelProxyMintingPolicy sidechainParams
   let
-    lookups ∷ ScriptLookups Void
+    lookups ∷ ScriptLookups
     lookups = fuelLookups
-      <> Lookups.mintingPolicy fuelProxyPolicy
+      <> Lookups.plutusMintingPolicy fuelProxyPolicy
 
-    constraints ∷ TxConstraints Void Void
+    constraints ∷ TxConstraints
     constraints =
       fuelConstraints
         <> Constraints.mustMintValueWithRedeemer
-          (Redeemer $ toData $ FuelProxyBurn { version, recipient })
-          ( Value.singleton fuelProxyCurrencySymbol
+          (RedeemerDatum $ toData $ FuelProxyBurn { version, recipient })
+          ( Mint.singleton fuelProxyCurrencySymbol
               fuelProxyTokenName
-              (negate amount)
+              (Int.negate $ unsafePartial $ fromJust $ Int.fromBigInt amount)
           )
 
   pure { lookups, constraints }

@@ -3,29 +3,28 @@
 -- | cache multiple minting policies before we attempt minting initial sidechain
 -- | tokens.
 module TrustlessSidechain.ScriptCache
-  ( getPolicyScriptRefUtxo
-  , getValidatorScriptRefUtxo
-  , ScriptRefUtxo
+  ( getScriptRefUtxo
   ) where
 
 import Contract.Prelude
 
+import Contract.Numeric.BigNum as BigNum
 import Contract.Address
   ( PaymentPubKeyHash(PaymentPubKeyHash)
   )
 import Contract.BalanceTxConstraints as BalanceTxConstraints
 import Contract.PlutusData (toData, unitDatum)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts
-  ( MintingPolicy(PlutusMintingPolicy, NativeMintingPolicy)
-  , Validator(Validator)
-  , validatorHash
-  )
 import Contract.Transaction
   ( ScriptRef(PlutusScriptRef, NativeScriptRef)
   , TransactionInput(TransactionInput)
-  , TransactionOutputWithRefScript(TransactionOutputWithRefScript)
   )
+import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
+import Cardano.Types.TransactionInput (TransactionInput(TransactionInput))
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.ScriptHash as ScriptHash
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
   , TxConstraints
@@ -67,7 +66,7 @@ import Type.Row (type (+))
 getScriptCacheValidator ∷
   ∀ r.
   PaymentPubKeyHash →
-  Run (EXCEPT OffchainError + r) Validator
+  Run (EXCEPT OffchainError + r) PlutusScript
 getScriptCacheValidator (PaymentPubKeyHash pkh) =
   mkValidatorWithParams ScriptCache [ toData pkh ]
 
@@ -75,10 +74,10 @@ getScriptRefUtxo ∷
   ∀ r.
   SidechainParams →
   ScriptRef →
-  Run (APP + r) (TransactionInput /\ TransactionOutputWithRefScript)
+  Run (APP + r) (TransactionInput /\ TransactionOutput)
 getScriptRefUtxo (SidechainParams sp) scriptRef = do
   pkh ← getOwnPaymentPubKeyHash
-  scriptCacheValidatorHash ← validatorHash <$> getScriptCacheValidator pkh
+  scriptCacheValidatorHash ← PlutusScript.hash <$> getScriptCacheValidator pkh
 
   valAddr ← toAddress scriptCacheValidatorHash
 
@@ -86,7 +85,7 @@ getScriptRefUtxo (SidechainParams sp) scriptRef = do
 
   let
     correctOutput
-      ( _ /\ TransactionOutputWithRefScript
+      ( _ /\ TransactionOutput
           { scriptRef: Just scriptRef' }
       ) = scriptRef' == scriptRef
     correctOutput _ = false
@@ -99,21 +98,21 @@ createScriptRefUtxo ∷
   ∀ r.
   SidechainParams →
   ScriptRef →
-  Run (APP + r) (TransactionInput /\ TransactionOutputWithRefScript)
+  Run (APP + r) (TransactionInput /\ TransactionOutput)
 createScriptRefUtxo (SidechainParams sp) scriptRef = do
   pkh ← getOwnPaymentPubKeyHash
-  scriptCacheValidatorHash ← validatorHash <$> getScriptCacheValidator pkh
+  scriptCacheValidatorHash ← PlutusScript.hash <$> getScriptCacheValidator pkh
 
   let
-    constraints ∷ TxConstraints Void Void
+    constraints ∷ TxConstraints
     constraints = Constraints.mustPayToScriptWithScriptRef
       scriptCacheValidatorHash
       unitDatum
       DatumInline
       scriptRef
-      (Value.lovelaceValueOf $ BigInt.fromInt 1) -- minimum possible ada
+      (Value.lovelaceValueOf $ BigNum.fromInt 1) -- minimum possible ada
 
-    lookups ∷ Lookups.ScriptLookups Void
+    lookups ∷ Lookups.ScriptLookups
     lookups = mempty
 
     balanceTxConstraints ∷ BalanceTxConstraints.BalanceTxConstraintsBuilder
@@ -135,7 +134,7 @@ createScriptRefUtxo (SidechainParams sp) scriptRef = do
 
   let
     correctOutput
-      ( TransactionInput x /\ TransactionOutputWithRefScript
+      ( TransactionInput x /\ TransactionOutput
           { scriptRef: Just scriptRef' }
       ) =
       x.transactionId == versioningScriptRefUtxoTxId
@@ -152,23 +151,3 @@ createScriptRefUtxo (SidechainParams sp) scriptRef = do
       $ find correctOutput (Map.toUnfoldable scriptCacheUtxos ∷ Array _)
 
   pure (txInput /\ txOutput)
-
-getValidatorScriptRefUtxo ∷
-  ∀ r.
-  SidechainParams →
-  Validator →
-  Run (APP + r) (TransactionInput /\ TransactionOutputWithRefScript)
-getValidatorScriptRefUtxo sp (Validator script) = getScriptRefUtxo sp
-  (PlutusScriptRef script)
-
-getPolicyScriptRefUtxo ∷
-  ∀ r.
-  SidechainParams →
-  MintingPolicy →
-  Run (APP + r) (TransactionInput /\ TransactionOutputWithRefScript)
-getPolicyScriptRefUtxo sp (PlutusMintingPolicy script) = getScriptRefUtxo sp
-  (PlutusScriptRef script)
-getPolicyScriptRefUtxo sp (NativeMintingPolicy script) = getScriptRefUtxo sp
-  (NativeScriptRef script)
-
-type ScriptRefUtxo = TransactionInput /\ TransactionOutputWithRefScript

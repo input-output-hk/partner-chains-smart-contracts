@@ -10,23 +10,26 @@ module TrustlessSidechain.GarbageCollector
 import Contract.Prelude
 
 import Contract.PlutusData
-  ( Redeemer(Redeemer)
+  ( RedeemerDatum(RedeemerDatum)
   , toData
   , unitRedeemer
   )
+import Cardano.Types.PlutusScript as PlutusScript
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.Scripts as Scripts
-import Contract.Transaction
-  ( mkTxUnspentOut
-  )
+import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
 import Contract.TxConstraints
   ( InputWithScriptRef(RefInput)
   , TxConstraints
   )
+import Partial.Unsafe (unsafePartial)
+import Cardano.Types.Int as Int
 import Contract.TxConstraints as TxConstraints
-import Contract.Value (flattenValue)
+import Cardano.Types.Value (getMultiAsset)
+import Cardano.Types.MultiAsset (flatten)
+import Contract.Numeric.BigNum as BigNum
 import Data.Array (filter)
-import Data.BigInt as BigInt
+import JS.BigInt as BigInt
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as EcdsaATMSPolicy
@@ -54,8 +57,8 @@ mkBurnNFTsLookupsAndConstraints ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 mkBurnNFTsLookupsAndConstraints sidechainParams = do
   ownValue ← getOwnUTxOsTotalValue
@@ -88,7 +91,7 @@ mkBurnNFTsLookupsAndConstraints sidechainParams = do
     Versioning.getVersionedScriptRefUtxo
       sidechainParams
       ( VersionOracle
-          { version: BigInt.fromInt 1
+          { version: BigNum.fromInt 1
           , scriptId: CommitteeCertificateVerificationPolicy
           }
       )
@@ -97,14 +100,14 @@ mkBurnNFTsLookupsAndConstraints sidechainParams = do
     Versioning.getVersionedScriptRefUtxo
       sidechainParams
       ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: FUELMintingPolicy }
+          { version: BigNum.fromInt 1, scriptId: FUELMintingPolicy }
       )
 
   (fuelBurningPolicyRefTxInput /\ fuelBurningPolicyRefTxOutput) ←
     Versioning.getVersionedScriptRefUtxo
       sidechainParams
       ( VersionOracle
-          { version: BigInt.fromInt 1, scriptId: FUELBurningPolicy }
+          { version: BigNum.fromInt 1, scriptId: FUELBurningPolicy }
       )
 
   let
@@ -112,56 +115,60 @@ mkBurnNFTsLookupsAndConstraints sidechainParams = do
       [ { currencySymbol: committeePlainEcdsaSecp256k1ATMSCurrencySymbol
         , mkConstraint: \{ tokenName, amount } →
             ( TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
-                ( Scripts.mintingPolicyHash
+                ( PlutusScript.hash
                     committeePlainEcdsaSecp256k1ATMSCurrencyInfo
                 )
-                (Redeemer $ toData EcdsaATMSPolicy.ATMSBurn)
+                (RedeemerDatum $ toData EcdsaATMSPolicy.ATMSBurn)
                 tokenName
-                (-amount)
-                ( RefInput $ mkTxUnspentOut
-                    committeeCertificateVerificationVersioningInput
-                    committeeCertificateVerificationVersioningOutput
+                (Int.negate amount)
+                ( RefInput $ TransactionUnspentOutput
+                    { input: committeeCertificateVerificationVersioningInput
+                    , output: committeeCertificateVerificationVersioningOutput
+                    }
                 )
             )
         }
       , { currencySymbol: committeePlainSchnorrSecp256k1ATMSCurrencySymbol
         , mkConstraint: \{ tokenName, amount } →
             ( TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
-                ( Scripts.mintingPolicyHash
+                ( PlutusScript.hash
                     committeePlainSchnorrSecp256k1ATMSCurrencyInfo
                 )
-                (Redeemer $ toData SchnorrATMSPolicy.ATMSBurn)
+                (RedeemerDatum $ toData SchnorrATMSPolicy.ATMSBurn)
                 tokenName
-                (-amount)
-                ( RefInput $ mkTxUnspentOut
-                    committeeCertificateVerificationVersioningInput
-                    committeeCertificateVerificationVersioningOutput
+                (Int.negate amount)
+                ( RefInput $ TransactionUnspentOutput
+                    { input: committeeCertificateVerificationVersioningInput
+                    , output: committeeCertificateVerificationVersioningOutput
+                    }
                 )
             )
         }
       , { currencySymbol: fuelMintingCurrencySymbol
         , mkConstraint: \{ tokenName, amount } →
             ( TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
-                (Scripts.mintingPolicyHash fuelMintingPolicy)
-                (Redeemer $ toData MintingV1.FUELBurningRedeemer)
+                (PlutusScript.hash fuelMintingPolicy)
+                (RedeemerDatum $ toData MintingV1.FUELBurningRedeemer)
                 tokenName
-                (-amount)
-                ( RefInput $ mkTxUnspentOut
-                    fuelMintingPolicyRefTxInput
-                    fuelMintingPolicyRefTxOutput
+                (Int.negate amount)
+                ( RefInput $ TransactionUnspentOutput
+                    { input: fuelMintingPolicyRefTxInput
+                    , output: fuelMintingPolicyRefTxOutput
+                    }
                 )
             )
         }
       , { currencySymbol: fuelBurningCurrencySymbol
         , mkConstraint: \{ tokenName, amount } →
             ( TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
-                (Scripts.mintingPolicyHash fuelBurningPolicy)
+                (PlutusScript.hash fuelBurningPolicy)
                 unitRedeemer
                 tokenName
-                (-amount)
-                ( RefInput $ mkTxUnspentOut
-                    fuelBurningPolicyRefTxInput
-                    fuelBurningPolicyRefTxOutput
+                (Int.negate amount)
+                ( RefInput $ TransactionUnspentOutput
+                    { input: fuelBurningPolicyRefTxInput
+                    , output: fuelBurningPolicyRefTxOutput
+                    }
                 )
             )
         }
@@ -175,8 +182,8 @@ mkBurnNFTsLookupsAndConstraints sidechainParams = do
         -- suboptimal. If possible this should be optimised.
         filter
           (\(cs /\ _ /\ _) → cs == currencySymbol)
-          (flattenValue ownValue)
-      pure $ mkConstraint { tokenName, amount }
+          (flatten $ getMultiAsset ownValue)
+      pure $ mkConstraint { tokenName, amount: unsafePartial $ fromJust $ Int.fromString $ BigNum.toString amount}
 
   pure
     { constraints

@@ -6,55 +6,53 @@ module Test.Utils.QuickCheck
   , ArbitraryAddress(..)
   , ArbitraryTransactionHash(..)
   , ArbitraryUInt(..)
+  , ArbitraryBigNum(..)
   , ArbitraryBigInt(..)
   , ArbitraryPubKey(..)
   , ArbitrarySignature(..)
   , ArbitraryPubKeyHash(..)
   , ArbitraryPaymentPubKeyHash(..)
-  , ArbitraryCurrencySymbol(..)
-  , ArbitraryValidatorHash(..)
+  , ArbitraryScriptHash(..)
   , ArbitraryCredential(..)
-  , ArbitraryAssetClass(..)
-  , ArbitraryTokenName(..)
+  , ArbitraryAsset(..)
+  , ArbitraryAssetName(..)
   , suchThatMap
   , class Arbitrary1
   , liftArbitrary
   ) where
 
+import Data.Array.NonEmpty (fromNonEmpty) as NonEmptyArray
+import Data.Array as Array
 import Contract.Prelude hiding (oneOf)
-
+import Cardano.Plutus.Types.ValidatorHash (ValidatorHash(ValidatorHash))
 import Aeson (decodeAeson, encodeAeson)
-import Contract.Address
-  ( PaymentPubKeyHash(PaymentPubKeyHash)
-  , PubKeyHash(PubKeyHash)
-  )
+import Cardano.Plutus.Types.PaymentPubKeyHash (PaymentPubKeyHash(PaymentPubKeyHash))
+import Cardano.Plutus.Types.PubKeyHash (PubKeyHash(PubKeyHash))
 import Contract.PlutusData
   ( class FromData
   , class ToData
   , toData
   )
 import Contract.Scripts
-  ( PlutusScript
-  , ValidatorHash(ValidatorHash)
-  , applyArgs
+  ( applyArgs
   )
 import Contract.Transaction
   ( TransactionHash(TransactionHash)
   , TransactionInput(TransactionInput)
   )
+import Cardano.Types.AssetName (AssetName, mkAssetName, unAssetName)
+import Cardano.Types.Asset (Asset(Asset, AdaAsset))
 import Contract.Value
   ( CurrencySymbol
-  , TokenName
-  , getCurrencySymbol
-  , getTokenName
-  , mkTokenName
-  , scriptHashAsCurrencySymbol
   )
+import Cardano.Types.BigNum (BigNum)
+import Cardano.Types.BigNum (toString, fromString, fromInt) as BigNum
 import Control.Monad.Rec.Class
   ( Step(Loop, Done)
   , tailRecM
   )
-import Contract.Hashing (plutusScriptHash)
+import Cardano.Types.PlutusScript (hash) as PlutusScript
+import Cardano.Types.ScriptHash (ScriptHash(ScriptHash))
 import Cardano.Plutus.Types.Address (Address, pubKeyHashAddress)
 import Cardano.Plutus.Types.Credential
   ( Credential
@@ -62,18 +60,14 @@ import Cardano.Plutus.Types.Credential
       , ScriptCredential
       )
   )
-import Cardano.Serialization.Lib
-  ( ed25519KeyHashFromBytes
-  , ed25519KeyHashToBytes
-  , scriptHashToBytes
-  )
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.AsCbor (decodeCbor, encodeCbor)
 import Data.ByteArray
   ( byteArrayFromIntArrayUnsafe
   , byteArrayToIntArray
   )
+import JS.BigInt as BigInt
 import Data.Array.NonEmpty as NEA
-import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
 import Data.List.Types as NE
 import Data.NonEmpty (NonEmpty(NonEmpty))
 import Data.Ord (abs)
@@ -98,52 +92,53 @@ import Test.QuickCheck.Gen
   , suchThat
   , vectorOf
   )
-import TrustlessSidechain.Types (AssetClass, PubKey, Signature)
+import TrustlessSidechain.Types (PubKey, Signature)
 
--- | Generator wrapper for 'TokenName'
-newtype ArbitraryTokenName = ArbitraryTokenName TokenName
+-- | Generator wrapper for 'AssetName'
+newtype ArbitraryAssetName = ArbitraryAssetName AssetName
 
-derive newtype instance Eq ArbitraryTokenName
+derive newtype instance Eq ArbitraryAssetName
 
-derive newtype instance Ord ArbitraryTokenName
+derive newtype instance Ord ArbitraryAssetName
 
-derive instance Generic ArbitraryTokenName _
+derive instance Generic ArbitraryAssetName _
 
-instance Show ArbitraryTokenName where
+instance Show ArbitraryAssetName where
   show = genericShow
 
-instance Arbitrary ArbitraryTokenName where
-  arbitrary = ArbitraryTokenName <$> do
+instance Arbitrary ArbitraryAssetName where
+  arbitrary = ArbitraryAssetName <$> do
     len ← chooseInt 0 32
     suchThatMap (vectorOf len genByteInt)
-      (byteArrayFromIntArrayUnsafe >>> mkTokenName)
+      (byteArrayFromIntArrayUnsafe >>> mkAssetName)
 
-instance Coarbitrary ArbitraryTokenName where
-  coarbitrary (ArbitraryTokenName tn) =
-    (getTokenName >>> byteArrayToIntArray >>> coarbitrary) tn
+instance Coarbitrary ArbitraryAssetName where
+  coarbitrary (ArbitraryAssetName an) =
+    (unAssetName >>> byteArrayToIntArray >>> coarbitrary) an
 
 -- | Generator wrapper for 'AssetClass'
-newtype ArbitraryAssetClass = ArbitraryAssetClass AssetClass
+newtype ArbitraryAsset = ArbitraryAsset Asset
 
-derive newtype instance Eq ArbitraryAssetClass
+derive newtype instance Eq ArbitraryAsset
 
-derive newtype instance Ord ArbitraryAssetClass
+derive newtype instance Ord ArbitraryAsset
 
-derive instance Generic ArbitraryAssetClass _
+derive instance Generic ArbitraryAsset _
 
-instance Show ArbitraryAssetClass where
+instance Show ArbitraryAsset where
   show = genericShow
 
-instance Arbitrary ArbitraryAssetClass where
-  arbitrary = ArbitraryAssetClass <$> do
-    ArbitraryCurrencySymbol cs ← arbitrary
-    ArbitraryTokenName tn ← arbitrary
-    pure $ cs /\ tn
+instance Arbitrary ArbitraryAsset where
+  arbitrary = ArbitraryAsset <$> do
+    ArbitraryScriptHash sh ← arbitrary
+    ArbitraryAssetName an ← arbitrary
+    pure $ Asset sh an
 
-instance Coarbitrary ArbitraryAssetClass where
-  coarbitrary (ArbitraryAssetClass (cs /\ tn)) =
-    coarbitrary (ArbitraryCurrencySymbol cs) >>>
-      coarbitrary (ArbitraryTokenName tn)
+instance Coarbitrary ArbitraryAsset where
+  coarbitrary (ArbitraryAsset (Asset sh an)) =
+    coarbitrary (ArbitraryScriptHash sh) >>>
+      coarbitrary (ArbitraryAssetName an)
+  coarbitrary (ArbitraryAsset AdaAsset) = \x -> x
 
 -- | Generator wrapper for 'Credential'
 newtype ArbitraryCredential = ArbitraryCredential Credential
@@ -169,8 +164,8 @@ instance Arbitrary ArbitraryCredential where
 
     go2 ∷ Gen ValidatorHash
     go2 = do
-      ArbitraryValidatorHash vh ← arbitrary
-      pure vh
+      ArbitraryScriptHash sh ← arbitrary
+      pure $ wrap sh
 
 -- | Generator wrapper for 'Address'
 newtype ArbitraryAddress = ArbitraryAddress Address
@@ -196,7 +191,7 @@ instance Arbitrary ArbitraryAddress where
 -- | A 'fill in' for polymorphic types whose exact details we don't care about.
 -- | Can be used for testing higher-kinded types for stuff requiring Data
 -- | encodings.
-newtype DA = DA BigInt
+newtype DA = DA BigNum
 
 derive newtype instance Eq DA
 
@@ -211,53 +206,32 @@ instance Show DA where
 
 instance Arbitrary DA where
   arbitrary = do
-    ArbitraryBigInt bi ← arbitrary
+    ArbitraryBigNum bi ← arbitrary
     pure $ DA bi
 
 instance Coarbitrary DA where
-  coarbitrary (DA bi) = coarbitrary (ArbitraryBigInt bi)
+  coarbitrary (DA bi) = coarbitrary (ArbitraryBigNum bi)
 
--- | Generator wrapper for CurrencySymbol
-newtype ArbitraryCurrencySymbol = ArbitraryCurrencySymbol CurrencySymbol
+-- | Generator wrapper for ScriptHash
+newtype ArbitraryScriptHash = ArbitraryScriptHash ScriptHash
 
-derive newtype instance Eq ArbitraryCurrencySymbol
+derive newtype instance Eq ArbitraryScriptHash
 
-derive newtype instance Ord ArbitraryCurrencySymbol
+derive newtype instance Ord ArbitraryScriptHash
 
-derive instance Generic ArbitraryCurrencySymbol _
+derive instance Generic ArbitraryScriptHash _
 
-instance Show ArbitraryCurrencySymbol where
+instance Show ArbitraryScriptHash where
   show = genericShow
 
-instance Arbitrary ArbitraryCurrencySymbol where
-  arbitrary = ArbitraryCurrencySymbol <$> do
-    x ← BigInt.fromInt <$> arbitrary
-    pure $ scriptHashAsCurrencySymbol $ plutusScriptHash (noncedAlwaysFail x)
+instance Arbitrary ArbitraryScriptHash where
+  arbitrary = do
+    x ← BigNum.fromInt <$> arbitrary
+    pure $ ArbitraryScriptHash $ PlutusScript.hash (noncedAlwaysFail x)
 
-instance Coarbitrary ArbitraryCurrencySymbol where
-  coarbitrary (ArbitraryCurrencySymbol cs) =
-    (getCurrencySymbol >>> byteArrayToIntArray >>> coarbitrary) cs
-
--- | Generator wrapper for ValidatorHash
-newtype ArbitraryValidatorHash = ArbitraryValidatorHash ValidatorHash
-
-derive newtype instance Eq ArbitraryValidatorHash
-
-derive newtype instance Ord ArbitraryValidatorHash
-
-derive instance Generic ArbitraryValidatorHash _
-
-instance Show ArbitraryValidatorHash where
-  show = genericShow
-
-instance Arbitrary ArbitraryValidatorHash where
-  arbitrary = (ValidatorHash >>> ArbitraryValidatorHash) <$> do
-    x ← BigInt.fromInt <$> arbitrary
-    pure $ plutusScriptHash (noncedAlwaysFail x)
-
-instance Coarbitrary ArbitraryValidatorHash where
-  coarbitrary (ArbitraryValidatorHash (ValidatorHash vh)) =
-    (scriptHashToBytes >>> unwrap >>> byteArrayToIntArray >>> coarbitrary) vh
+instance Coarbitrary ArbitraryScriptHash where
+  coarbitrary (ArbitraryScriptHash sh) =
+    (encodeCbor >>> unwrap >>> byteArrayToIntArray >>> coarbitrary) sh
 
 -- | A 'lifter' for 'Arbitrary' to values of kind 'Type -> Type'.
 class Arbitrary1 (f ∷ Type → Type) where
@@ -265,8 +239,8 @@ class Arbitrary1 (f ∷ Type → Type) where
 
 instance Arbitrary1 Maybe where
   liftArbitrary gen =
-    frequency $ NE.NonEmptyList $ NonEmpty (Tuple 1.0 (pure Nothing)) $
-      pure (Tuple 3.0 (Just <$> gen))
+    frequency $ NonEmptyArray.fromNonEmpty $ NonEmpty (Tuple 1.0 (pure Nothing)) [(Tuple 3.0 (Just <$> gen))]
+
 
 instance Arbitrary1 Array where
   liftArbitrary = arrayOf
@@ -322,11 +296,11 @@ derive instance Generic ArbitraryPubKeyHash _
 instance Arbitrary ArbitraryPubKeyHash where
   arbitrary = (PubKeyHash >>> ArbitraryPubKeyHash) <$>
     suchThatMap (byteArrayFromIntArrayUnsafe <$> vectorOf 28 genByteInt)
-      ed25519KeyHashFromBytes
+      (wrap >>> decodeCbor)
 
 instance Coarbitrary ArbitraryPubKeyHash where
   coarbitrary (ArbitraryPubKeyHash (PubKeyHash x)) =
-    coarbitrary (byteArrayToIntArray $ unwrap $ ed25519KeyHashToBytes x)
+    coarbitrary (byteArrayToIntArray $ unwrap $ encodeCbor x)
 
 -- | Generator wrapper for PaymentPubKeyHash
 newtype ArbitraryPaymentPubKeyHash = ArbitraryPaymentPubKeyHash
@@ -363,16 +337,39 @@ suchThatMap gen arrow = sized $ tailRecM go
       Nothing → Loop (2 * size)
       Just y → Done y
 
--- | Generator wrapper for BigInt
-newtype ArbitraryBigInt = ArbitraryBigInt BigInt
+-- | Generator wrapper for BigNum
+newtype ArbitraryBigNum = ArbitraryBigNum BigNum
+
+derive newtype instance Eq ArbitraryBigNum
+
+derive newtype instance Ord ArbitraryBigNum
+
+-- derive newtype instance Semiring ArbitraryBigNum JANKUN
+
+-- derive newtype instance Ring ArbitraryBigNum
+
+derive instance Generic ArbitraryBigNum _
+
+instance Show ArbitraryBigNum where
+  show = genericShow
+
+instance Arbitrary ArbitraryBigNum where
+  arbitrary = (BigNum.fromInt >>> ArbitraryBigNum) <$> arbitrary
+
+instance Coarbitrary ArbitraryBigNum where
+  coarbitrary (ArbitraryBigNum x) =
+    coarbitrary (BigNum.toString x)
+
+-- | Generator wrapper for BigNum
+newtype ArbitraryBigInt = ArbitraryBigInt BigInt.BigInt
 
 derive newtype instance Eq ArbitraryBigInt
 
 derive newtype instance Ord ArbitraryBigInt
 
-derive newtype instance Semiring ArbitraryBigInt
+-- derive newtype instance Semiring ArbitraryBigInt JANKUN
 
-derive newtype instance Ring ArbitraryBigInt
+-- derive newtype instance Ring ArbitraryBigInt
 
 derive instance Generic ArbitraryBigInt _
 
@@ -385,6 +382,15 @@ instance Arbitrary ArbitraryBigInt where
 instance Coarbitrary ArbitraryBigInt where
   coarbitrary (ArbitraryBigInt x) =
     coarbitrary (BigInt.toString x)
+
+instance Semiring ArbitraryBigInt where
+  add (ArbitraryBigInt x) (ArbitraryBigInt y) = ArbitraryBigInt (x + y)
+  zero = ArbitraryBigInt (BigInt.fromInt 0)
+  mul (ArbitraryBigInt x) (ArbitraryBigInt y) = ArbitraryBigInt (x * y)
+  one = ArbitraryBigInt (BigInt.fromInt 1)
+
+instance Ring ArbitraryBigInt where
+  sub (ArbitraryBigInt x) (ArbitraryBigInt y) = ArbitraryBigInt (x - y)
 
 -- | Generator wrapper for UInt
 newtype ArbitraryUInt = ArbitraryUInt UInt
@@ -417,14 +423,11 @@ instance Show ArbitraryTransactionHash where
   show = genericShow
 
 instance Arbitrary ArbitraryTransactionHash where
-  arbitrary =
-    ( byteArrayFromIntArrayUnsafe >>> TransactionHash >>>
-        ArbitraryTransactionHash
-    ) <$> vectorOf 32 genByteInt
+  arbitrary = ArbitraryTransactionHash <$> arbitrary
 
 instance Coarbitrary ArbitraryTransactionHash where
-  coarbitrary (ArbitraryTransactionHash (TransactionHash x)) =
-    coarbitrary (byteArrayToIntArray x)
+  coarbitrary (ArbitraryTransactionHash x) =
+    coarbitrary x
 
 -- | Generator wrapper for TransactionInput
 newtype ArbitraryTransactionInput = ArbitraryTransactionInput TransactionInput

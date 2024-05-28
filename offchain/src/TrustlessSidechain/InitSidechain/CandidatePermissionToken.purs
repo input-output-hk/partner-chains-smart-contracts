@@ -7,7 +7,7 @@ import Contract.Prelude hiding (note)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.Transaction (TransactionHash)
 import Contract.TxConstraints (TxConstraints)
-import Data.BigInt (BigInt)
+import JS.BigInt (BigInt)
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.CandidatePermissionToken
@@ -58,8 +58,8 @@ initCandidatePermissionTokenLookupsAndConstraints ∷
   Maybe BigInt →
   SidechainParams →
   Run (EXCEPT OffchainError + r)
-    { lookups ∷ ScriptLookups Void
-    , constraints ∷ TxConstraints Void Void
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
     }
 initCandidatePermissionTokenLookupsAndConstraints
   initCandidatePermissionTokenMintInfo

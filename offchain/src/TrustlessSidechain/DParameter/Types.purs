@@ -8,11 +8,13 @@ import Contract.PlutusData
   ( class FromData
   , class ToData
   )
-import Data.BigInt (BigInt)
+import Cardano.Types (BigInt)
 import TrustlessSidechain.Utils.Data
   ( productFromData2
   , productToData2
   )
+
+
 
 data DParameterValidatorDatum = DParameterValidatorDatum
   { permissionedCandidatesCount ∷ BigInt

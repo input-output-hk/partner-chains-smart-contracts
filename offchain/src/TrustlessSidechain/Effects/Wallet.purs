@@ -11,7 +11,11 @@ module TrustlessSidechain.Effects.Wallet
 
 import Contract.Prelude
 
-import Contract.Address (Address, NetworkId, PaymentPubKeyHash)
+import Cardano.Types
+  ( Address
+  , NetworkId
+  )
+import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash)
 import Contract.Address as Address
 import Contract.Utxos (UtxoMap)
 import Contract.Wallet as Wallet

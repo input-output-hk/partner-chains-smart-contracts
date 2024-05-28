@@ -12,7 +12,7 @@ import Contract.Prelude
 import Contract.PlutusData (PlutusData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Transaction (TransactionHash, TransactionInput)
-import Data.BigInt (BigInt)
+import JS.BigInt (BigInt)
 import Data.Maybe (isJust)
 import Run (Run)
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
@@ -33,7 +33,16 @@ import TrustlessSidechain.InitSidechain.NativeTokenManagement
   )
 import TrustlessSidechain.InitSidechain.TokensMint (mintAllTokens)
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
+<<<<<<< HEAD
 import TrustlessSidechain.Utils.Maybe (maybeToArray)
+=======
+import TrustlessSidechain.Utils.Maybe
+  ( maybeToArray
+  )
+import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
+import TrustlessSidechain.Versioning as Versioning
+import TrustlessSidechain.Effects.Log as Effect
+>>>>>>> 4944f84a (fix compile time and test errors, that come with ctl 8.0.0)
 import Type.Row (type (+))
 
 -- | Parameters to initialize a sidechain (purely an offchain type)
