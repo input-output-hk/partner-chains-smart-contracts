@@ -13,19 +13,16 @@ import TrustlessSidechain.PlutusPrelude
 mkFooPolicy ::
   BuiltinData ->
   BuiltinData ->
-  BuiltinData ->
   Bool
-mkFooPolicy _ _ _ = True
+mkFooPolicy _ _ = True
 
 mkFooPolicyUntyped ::
   BuiltinData ->
   BuiltinData ->
-  BuiltinData ->
   ()
-mkFooPolicyUntyped d r scriptContext =
+mkFooPolicyUntyped r scriptContext =
   check
     $ mkFooPolicy
-      d
       r
       scriptContext
 
