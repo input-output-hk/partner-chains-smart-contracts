@@ -206,10 +206,12 @@ Following checks are performed on reserve utxos consumed with `Update` redeemer:
 Following checks are performed on reserve utxos consumed with `Handover`
 redeemer:
   - governance token is minted
-  - reserve utxo is propagated
-  - datum must be set to `Steady`
-  - all `tokenKind` tokens must be sent to outputs on illiquid circulation
-    supply validator's address
+  - exactly one reserve utxo is consumed in a transaction
+  - reserve authentication token is burnt
+  - reserve utxo is NOT propagated,
+i.e. there are not output utxos at reserve address
+  - all `tokenKind` tokens must be sent to outputs
+on illiquid circulation supply validator's address
 
 ----
 
@@ -221,11 +223,8 @@ reserve utxo has been initialized in a correct way.
 Reserve authentication minting policy will be parametrized by
 `VersionOracleConfig`.
 
-Reserve authentication token minting policy will extract following data from the
-versioning system:
-
 Following checks are performed in the reserve authentication token minting
-policy:
+policy when reserve authentication tokens are minted:
   - exactly one governance token is minted
   - exactly one reserve authentication token is minted
   - that token is placed on a utxo that is on the address of reserve validator
@@ -235,6 +234,12 @@ policy:
     * `tokenTotalAmountTransferred == 0`
     * `tokenKind` and `vFunctionTotalAccrued` are valid currency symbols
     * optionally some relation of `t0`  and `txInfoValidRange` may be examined
+
+The minting policy always allows to burn reserve authentication tokens.
+That's safe because reserve authentication tokens can be carried
+only by reserve utxos and burning logic is delegated to the reserve validator.
+Burning of reserve authentication token is permitted only when reserve utxo
+is consumed with a `Handover` redeemer.
 
 # Illiquid circulation supply
 
