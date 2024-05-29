@@ -2,11 +2,19 @@
 -- This should (only) be called when the scripts are modified, to update ctl scripts
 module Main (main) where
 
-import Cardano.Api (File (..), PlutusScriptV2, serialiseToTextEnvelope, writeFileTextEnvelope)
-import Cardano.Api.Shelley (PlutusScript)
+import Cardano.Api (
+  AsType (AsPlutusScriptV2, AsScript),
+  File (..),
+  PlutusScriptV2,
+  Script,
+  SerialiseAsCBOR (deserialiseFromCBOR),
+  serialiseToTextEnvelope,
+  writeFileTextEnvelope,
+ )
 import Data.Aeson qualified as Aeson
 import Data.Bifunctor qualified as Bifunctor
 import Data.ByteString.Lazy.Char8 qualified as ByteString.Lazy.Char8
+import Data.ByteString.Short (fromShort)
 import Data.Foldable qualified as Foldable
 import Data.List qualified as List
 import Data.String qualified as HString
@@ -131,13 +139,14 @@ getOpts =
 -- Note: CTL uses the usual TextEnvelope format now.
 
 serialiseScript :: FilePath -> FilePath -> SerialisedScript -> IO ()
-serialiseScript outputDir name script =
-  let out :: PlutusScript PlutusScriptV2
-      out = scriptToPlutusScript script
-      file = outputDir FilePath.</> name
-   in do
-        IO.putStrLn $ "serialising " <> file
-        writeFileTextEnvelope (File file) Nothing out >>= either print pure
+serialiseScript outputDir name script = do
+  let file = outputDir FilePath.</> name
+  case deserialiseFromCBOR (AsScript AsPlutusScriptV2) $ fromShort script of
+    Left err -> print err
+    Right script' -> do
+      IO.putStrLn $ "serialising " <> file
+      writeFileTextEnvelope @(Script PlutusScriptV2) (File file) Nothing script'
+        >>= either print pure
 
 serialiseScriptsToPurescript ::
   -- | Purescript module name
