@@ -193,7 +193,7 @@ rawPermissionedCandidatesValidator =
 rawFooPolicy ∷ Tuple ScriptId String
 rawFooPolicy =
   ( FooPolicy /\
-      """{"cborHex":"49480100002221200101","description":"","type":"PlutusScriptV2"}"""
+      """{"cborHex":"484701000022120011","description":"","type":"PlutusScriptV2"}"""
   )
 
 rawScripts ∷ Map.Map ScriptId String
