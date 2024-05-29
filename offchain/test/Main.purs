@@ -13,6 +13,7 @@ import Test.DParameter as DParameter
 import Test.Data as Data
 import Test.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import Test.FUELProxyPolicy as FUELProxyPolicy
+import Test.Foo as Foo
 import Test.GarbageCollector as GarbageCollector
 import Test.InitSidechain as InitSidechain
 import Test.InitSidechain.CandidatePermissionToken as InitCandidatePermissionToken
@@ -50,6 +51,9 @@ main ∷ Effect Unit
 main = do
   Test.Unit.Main.runTest
     $ interpretWrappedTest do
+
+        group "Foo" do
+          Foo.tests
 
         group "Unit tests" do
           MerkleTree.tests

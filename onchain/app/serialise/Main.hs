@@ -39,6 +39,7 @@ import TrustlessSidechain.DParameter qualified as DParameter
 import TrustlessSidechain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.FUELProxyPolicy qualified as FUELProxyPolicy
+import TrustlessSidechain.Foo qualified as Foo
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.InitToken qualified as InitToken
 import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTokenMintingPolicy
@@ -368,6 +369,10 @@ main =
           ,
             ( "PermissionedCandidatesValidator"
             , PermissionedCandidates.serialisableValidator
+            )
+          ,
+            ( "FooPolicy"
+            , Foo.serialisableFooPolicy
             )
           ]
         -- Validators for proof of concept tests.
