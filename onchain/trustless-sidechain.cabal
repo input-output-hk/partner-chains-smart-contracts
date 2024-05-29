@@ -90,6 +90,7 @@ library
     TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy
     TrustlessSidechain.DistributedSet
     TrustlessSidechain.DParameter
+    TrustlessSidechain.Foo
     TrustlessSidechain.FUELMintingPolicy
     TrustlessSidechain.FUELProxyPolicy
     TrustlessSidechain.Governance
