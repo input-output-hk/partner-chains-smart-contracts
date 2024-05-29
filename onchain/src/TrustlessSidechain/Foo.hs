@@ -9,12 +9,11 @@ module TrustlessSidechain.Foo (
 import Plutus.V2.Ledger.Api (Script, fromCompiledCode)
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 
 mkFooPolicy ::
   BuiltinData ->
   BuiltinData ->
-  Unsafe.ScriptContext ->
+  BuiltinData ->
   Bool
 mkFooPolicy _ _ _ = True
 
@@ -28,7 +27,7 @@ mkFooPolicyUntyped d r scriptContext =
     $ mkFooPolicy
       d
       r
-      (Unsafe.wrap scriptContext)
+      scriptContext
 
 serialisableFooPolicy :: Script
 serialisableFooPolicy =
