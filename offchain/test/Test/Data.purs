@@ -1,4 +1,7 @@
-module Test.Data (tests) where
+module Test.Data
+  ( genDsKeyMint
+  , tests
+  ) where
 
 import Contract.Prelude
 
@@ -6,6 +9,7 @@ import Contract.Address (PaymentPubKeyHash(PaymentPubKeyHash))
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromIntArrayUnsafe)
 import Contract.Scripts (ValidatorHash(ValidatorHash))
 import Control.Alt ((<|>))
+import Ctl.Internal.Types.Interval (POSIXTime(..))
 import Data.Array.NonEmpty as NE
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
@@ -80,6 +84,14 @@ import TrustlessSidechain.MerkleTree
   , Side(L, R)
   , Up(Up)
   , byteArrayToRootHashUnsafe
+  )
+import TrustlessSidechain.NativeTokenManagement.Types
+  ( IlliquidCirculationSupplyRedeemer(..)
+  , ImmutableReserveSettings(..)
+  , MutableReserveSettings(..)
+  , ReserveDatum(..)
+  , ReserveRedeemer(..)
+  , ReserveStats(..)
   )
 import TrustlessSidechain.PermissionedCandidates.Types
   ( PermissionedCandidateKeys(PermissionedCandidateKeys)
@@ -205,6 +217,12 @@ tests = pureGroup "Data roundtrip tests" $ do
     genATMSPlainSchnorrSecp256k1Multisignature
   test "ATMSRedeemerSchnorr" $ liftEffect $ toDataLaws testCount
     genATMSRedeemerSchnorr
+  test "ReserveDatum" $ liftEffect $ toDataLaws testCount
+    genReserveDatum
+  test "ReserveRedeemer" $ liftEffect $ toDataLaws testCount
+    genReserveRedeemer
+  test "IlliquidCirculationSupplyRedeemer" $ liftEffect $ toDataLaws testCount
+    genIlliquidCirculationSupplyRedeemer
   where
   testCount ∷ Int
   testCount = 10_000
@@ -392,6 +410,37 @@ genATMSRedeemerSchnorr = QGen.oneOf $ NE.cons'
   ( pure Schnorr.ATMSBurn
   )
   [ Schnorr.ATMSMint <$> genATMSPlainSchnorrSecp256k1Multisignature
+  ]
+
+genReserveDatum ∷ Gen ReserveDatum
+genReserveDatum = do
+  ArbitraryBigInt pt ← arbitrary
+  ArbitraryCurrencySymbol cs1 ← arbitrary
+  ArbitraryCurrencySymbol cs2 ← arbitrary
+  ArbitraryBigInt c ← arbitrary
+
+  pure $
+    ReserveDatum
+      { immutableSettings: ImmutableReserveSettings
+          { t0: (POSIXTime pt), tokenKind: cs1 }
+      , mutableSettings: MutableReserveSettings { vFunctionTotalAccrued: cs2 }
+      , stats: ReserveStats { tokenTotalAmountTransferred: c }
+      }
+
+genReserveRedeemer ∷ Gen ReserveRedeemer
+genReserveRedeemer = QGen.oneOf $ NE.cons'
+  ( pure DepositToReserve
+  )
+  [ pure TransferToIlliquidCirculationSupply
+  , pure UpdateReserve
+  , pure Handover
+  ]
+
+genIlliquidCirculationSupplyRedeemer ∷ Gen IlliquidCirculationSupplyRedeemer
+genIlliquidCirculationSupplyRedeemer = QGen.oneOf $ NE.cons'
+  ( pure DepositMoreToSupply
+  )
+  [ pure WithdrawFromSupply
   ]
 
 genDsKeyMint ∷ Gen DsKeyMint
