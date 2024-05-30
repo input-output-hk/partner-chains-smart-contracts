@@ -35,6 +35,12 @@ module TrustlessSidechain.Types (
   UpdateCommitteeDatum (..),
   UpdateCommitteeHashMessage (..),
   UpdateCommitteeHashRedeemer (..),
+  ImmutableReserveSettings (..),
+  MutableReserveSettings (..),
+  ReserveStats (..),
+  ReserveDatum (..),
+  ReserveRedeemer (..),
+  IlliquidCirculationSupplyRedeemer (..),
 ) where
 
 import Plutus.V1.Ledger.Crypto (PubKeyHash)
@@ -43,6 +49,7 @@ import Plutus.V2.Ledger.Api (
   BuiltinData (BuiltinData),
   CurrencySymbol,
   LedgerBytes (LedgerBytes),
+  POSIXTime,
   TokenName,
   TxOutRef,
   ValidatorHash,
@@ -219,7 +226,7 @@ data BlockProducerRegistration = BlockProducerRegistration
   , -- | Signature of the sidechain
     -- | @since v4.0.0
     sidechainSignature :: Signature
-  , -- | A UTxO that must be spent by the transaction
+  , -- | A UTxO that must be spent by th@ext:haskell.haskelltransaction
     -- | @since v4.0.0
     inputUtxo :: TxOutRef
   , -- | Owner public key hash
@@ -928,3 +935,144 @@ instance FromData InitTokenAssetClass where
 instance UnsafeFromData InitTokenAssetClass where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 InitTokenAssetClass
+
+data ImmutableReserveSettings = ImmutableReserveSettings
+  { t0 :: POSIXTime
+  , tokenKind :: CurrencySymbol
+  }
+  deriving stock
+    ( TSPrelude.Eq
+    , TSPrelude.Show
+    )
+
+instance ToData ImmutableReserveSettings where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (ImmutableReserveSettings s a) =
+    productToData2 s a
+
+instance FromData ImmutableReserveSettings where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData2 ImmutableReserveSettings
+
+instance UnsafeFromData ImmutableReserveSettings where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData2 ImmutableReserveSettings
+
+makeHasField ''ImmutableReserveSettings
+
+newtype MutableReserveSettings = MutableReserveSettings
+  { vFunctionTotalAccrued :: CurrencySymbol
+  }
+  deriving stock
+    ( TSPrelude.Eq
+    , TSPrelude.Show
+    )
+  deriving newtype (ToData, FromData, UnsafeFromData)
+
+makeHasField ''MutableReserveSettings
+
+newtype ReserveStats = ReserveStats
+  { tokenTotalAmountTransferred :: Integer
+  }
+  deriving stock
+    ( TSPrelude.Eq
+    , TSPrelude.Show
+    )
+  deriving newtype (ToData, FromData, UnsafeFromData)
+
+makeHasField ''ReserveStats
+
+data ReserveDatum = ReserveDatum
+  { immutableSettings :: ImmutableReserveSettings
+  , mutableSettings :: MutableReserveSettings
+  , stats :: ReserveStats
+  }
+  deriving stock
+    ( TSPrelude.Eq
+    , TSPrelude.Show
+    )
+
+instance ToData ReserveDatum where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (ReserveDatum s a g) =
+    productToData3 s a g
+
+instance FromData ReserveDatum where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData3 ReserveDatum
+
+instance UnsafeFromData ReserveDatum where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData3 ReserveDatum
+
+makeHasField ''ReserveDatum
+
+data ReserveRedeemer
+  = DepositToReserve
+  | TransferToIlliquidCirculationSupply
+  | UpdateReserve
+  | Handover
+  deriving stock
+    ( TSPrelude.Eq
+    , TSPrelude.Show
+    )
+
+instance ToData ReserveRedeemer where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData DepositToReserve = BuiltinData $ PlutusTx.I 0
+  toBuiltinData TransferToIlliquidCirculationSupply = BuiltinData $ PlutusTx.I 1
+  toBuiltinData UpdateReserve = BuiltinData $ PlutusTx.I 2
+  toBuiltinData Handover = BuiltinData $ PlutusTx.I 3
+
+instance FromData ReserveRedeemer where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData x = do
+    integerValue <- fromBuiltinData x
+    case integerValue :: Integer of
+      0 -> Just DepositToReserve
+      1 -> Just TransferToIlliquidCirculationSupply
+      2 -> Just UpdateReserve
+      3 -> Just Handover
+      _ -> Nothing
+
+instance UnsafeFromData ReserveRedeemer where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData x =
+    let integerValue = unsafeFromBuiltinData x
+     in case integerValue :: Integer of
+          0 -> DepositToReserve
+          1 -> TransferToIlliquidCirculationSupply
+          2 -> UpdateReserve
+          3 -> Handover
+          _ -> error ()
+
+data IlliquidCirculationSupplyRedeemer
+  = DepositMoreToSupply
+  | WithdrawFromSupply
+  deriving stock
+    ( TSPrelude.Eq
+    , TSPrelude.Show
+    )
+
+instance ToData IlliquidCirculationSupplyRedeemer where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData DepositMoreToSupply = BuiltinData $ PlutusTx.I 0
+  toBuiltinData WithdrawFromSupply = BuiltinData $ PlutusTx.I 1
+
+instance FromData IlliquidCirculationSupplyRedeemer where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData x = do
+    integerValue <- fromBuiltinData x
+    case integerValue :: Integer of
+      0 -> Just DepositMoreToSupply
+      1 -> Just WithdrawFromSupply
+      _ -> Nothing
+
+instance UnsafeFromData IlliquidCirculationSupplyRedeemer where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData x =
+    let integerValue = unsafeFromBuiltinData x
+     in case integerValue :: Integer of
+          0 -> DepositMoreToSupply
+          1 -> WithdrawFromSupply
+          _ -> error ()
