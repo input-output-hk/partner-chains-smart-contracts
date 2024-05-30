@@ -9,6 +9,7 @@ import Laws (toDataSafeLaws', toDataUnsafeLaws')
 import Plutus.V2.Ledger.Api (
   CurrencySymbol,
   LedgerBytes (LedgerBytes),
+  POSIXTime (POSIXTime),
   ValidatorHash,
  )
 import Test.QuickCheck (
@@ -94,6 +95,8 @@ import TrustlessSidechain.Types (
   DParameterValidatorDatum (DParameterValidatorDatum),
   EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey),
   FUELMintingRedeemer (FUELBurningRedeemer, FUELMintingRedeemer),
+  IlliquidCirculationSupplyRedeemer (DepositMoreToSupply, WithdrawFromSupply),
+  ImmutableReserveSettings (ImmutableReserveSettings),
   InitTokenAssetClass (
     InitTokenAssetClass
   ),
@@ -114,11 +117,15 @@ import TrustlessSidechain.Types (
     previousMerkleRoot,
     recipient
   ),
+  MutableReserveSettings (MutableReserveSettings),
   PermissionedCandidateKeys (PermissionedCandidateKeys),
   PermissionedCandidatesPolicyRedeemer (PermissionedCandidatesBurn, PermissionedCandidatesMint),
   PermissionedCandidatesValidatorDatum (PermissionedCandidatesValidatorDatum),
   PermissionedCandidatesValidatorRedeemer (RemovePermissionedCandidates, UpdatePermissionedCandidates),
   PubKey (PubKey),
+  ReserveDatum (ReserveDatum),
+  ReserveRedeemer (DepositToReserve, Handover, TransferToIlliquidCirculationSupply, UpdateReserve),
+  ReserveStats (ReserveStats),
   SidechainParams (
     SidechainParams,
     chainId,
@@ -231,6 +238,12 @@ main =
     , testProperty "PermissionedCandidatesValidatorDatum (unsafe)" . toDataUnsafeLaws' genPCVD shrinkPCVD $ show
     , testProperty "PermissionedCandidatesValidatorRedeemer (safe)" . toDataSafeLaws' genPCVR shrinkPCVR $ show
     , testProperty "PermissionedCandidatesValidatorRedeemer (unsafe)" . toDataUnsafeLaws' genPCVR shrinkPCVR $ show
+    , testProperty "ReserveDatum (safe)" . toDataSafeLaws' genRD shrinkRD $ show
+    , testProperty "ReserveDatum (unsafe)" . toDataUnsafeLaws' genRD shrinkRD $ show
+    , testProperty "ReserveRedeemer (safe)" . toDataSafeLaws' genRR shrinkRR $ show
+    , testProperty "ReserveRedeemer (unsafe)" . toDataUnsafeLaws' genRR shrinkRR $ show
+    , testProperty "IlliquidCirculationSupplyRedeemer (safe)" . toDataSafeLaws' genICSR shrinkICSR $ show
+    , testProperty "IlliquidCirculationSupplyRedeemer (unsafe)" . toDataUnsafeLaws' genICSR shrinkICSR $ show
     ]
   where
     go :: QuickCheckTests -> QuickCheckTests
@@ -335,6 +348,35 @@ genPCVD = PermissionedCandidatesValidatorDatum <$> liftArbitrary genPCK
 
 genPCVR :: Gen PermissionedCandidatesValidatorRedeemer
 genPCVR = oneof [pure UpdatePermissionedCandidates, pure RemovePermissionedCandidates]
+
+genRD :: Gen ReserveDatum
+genRD = do
+  pt <- arbitrary
+  ArbitraryCurrencySymbol cs1 <- arbitrary
+  ArbitraryCurrencySymbol cs2 <- arbitrary
+  c <- arbitrary
+
+  pure $
+    ReserveDatum
+      (ImmutableReserveSettings (POSIXTime pt) cs1)
+      (MutableReserveSettings cs2)
+      (ReserveStats c)
+
+genRR :: Gen ReserveRedeemer
+genRR =
+  oneof
+    [ pure DepositToReserve
+    , pure TransferToIlliquidCirculationSupply
+    , pure UpdateReserve
+    , pure Handover
+    ]
+
+genICSR :: Gen IlliquidCirculationSupplyRedeemer
+genICSR =
+  oneof
+    [ pure DepositMoreToSupply
+    , pure WithdrawFromSupply
+    ]
 
 genCP :: Gen CheckpointParameter
 genCP = do
@@ -600,6 +642,15 @@ shrinkPCVD (PermissionedCandidatesValidatorDatum apck) = PermissionedCandidatesV
 
 shrinkPCVR :: PermissionedCandidatesValidatorRedeemer -> [PermissionedCandidatesValidatorRedeemer]
 shrinkPCVR = const []
+
+shrinkRD :: ReserveDatum -> [ReserveDatum]
+shrinkRD = const []
+
+shrinkRR :: ReserveRedeemer -> [ReserveRedeemer]
+shrinkRR = const []
+
+shrinkICSR :: IlliquidCirculationSupplyRedeemer -> [IlliquidCirculationSupplyRedeemer]
+shrinkICSR = const []
 
 shrinkCP :: CheckpointParameter -> [CheckpointParameter]
 shrinkCP (CheckpointParameter {..}) = do
