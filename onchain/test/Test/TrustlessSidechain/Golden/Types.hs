@@ -8,7 +8,7 @@ import Data.ByteString.Base16 (decodeLenient)
 import Data.Text qualified as Text
 import Data.Text.Encoding (encodeUtf8)
 import Plutus.V1.Ledger.Value qualified as Value
-import Plutus.V2.Ledger.Api (TxOutRef (TxOutRef), ValidatorHash (ValidatorHash), toBuiltin)
+import Plutus.V2.Ledger.Api (POSIXTime (POSIXTime), TxOutRef (TxOutRef), ValidatorHash (ValidatorHash), toBuiltin)
 import PlutusTx.Builtins qualified as Builtins
 import Test.Tasty (TestTree, testGroup)
 import Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest)
@@ -76,6 +76,13 @@ import TrustlessSidechain.Types (
     FUELBurningRedeemer,
     FUELMintingRedeemer
   ),
+  IlliquidCirculationSupplyRedeemer (
+    DepositMoreToSupply,
+    WithdrawFromSupply
+  ),
+  ImmutableReserveSettings (
+    ImmutableReserveSettings
+  ),
   InitTokenAssetClass (
     InitTokenAssetClass,
     initTokenCurrencySymbol,
@@ -98,6 +105,7 @@ import TrustlessSidechain.Types (
     previousMerkleRoot,
     recipient
   ),
+  MutableReserveSettings (MutableReserveSettings),
   PermissionedCandidateKeys (
     PermissionedCandidateKeys,
     auraKey,
@@ -116,6 +124,14 @@ import TrustlessSidechain.Types (
     RemovePermissionedCandidates,
     UpdatePermissionedCandidates
   ),
+  ReserveDatum (ReserveDatum, immutableSettings, mutableSettings, stats),
+  ReserveRedeemer (
+    DepositToReserve,
+    Handover,
+    TransferToIlliquidCirculationSupply,
+    UpdateReserve
+  ),
+  ReserveStats (ReserveStats),
   SidechainParams (
     SidechainParams,
     chainId,
@@ -193,6 +209,13 @@ tests =
     , dataEncoderGoldenTest "InitTokenRedeemer1" sampleInitTokenRedeemer1
     , dataEncoderGoldenTest "InitTokenRedeemer2" sampleInitTokenRedeemer2
     , dataEncoderGoldenTest "InitTokenAssetClass" sampleInitTokenAssetClass
+    , dataEncoderGoldenTest "ReserveDatum" sampleReserveDatum
+    , dataEncoderGoldenTest "ReserveRedeemer1" sampleReserveRedeemer1
+    , dataEncoderGoldenTest "ReserveRedeemer2" sampleReserveRedeemer2
+    , dataEncoderGoldenTest "ReserveRedeemer3" sampleReserveRedeemer3
+    , dataEncoderGoldenTest "ReserveRedeemer4" sampleReserveRedeemer4
+    , dataEncoderGoldenTest "IlliquidCirculationSupplyRedeemer1" sampleIlliquidCirculationSupplyRedeemer1
+    , dataEncoderGoldenTest "IlliquidCirculationSupplyRedeemer2" sampleIlliquidCirculationSupplyRedeemer2
     ]
 
 -- * Sample data - building blocks
@@ -503,6 +526,36 @@ sampleInitTokenAssetClass =
     { initTokenCurrencySymbol = "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
     , initTokenName = "foo bar"
     }
+
+sampleReserveDatum :: ReserveDatum
+sampleReserveDatum =
+  ReserveDatum
+    { immutableSettings =
+        ImmutableReserveSettings
+          (POSIXTime 1234513245)
+          "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
+    , mutableSettings =
+        MutableReserveSettings "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
+    , stats = ReserveStats 15
+    }
+
+sampleReserveRedeemer1 :: ReserveRedeemer
+sampleReserveRedeemer1 = DepositToReserve
+
+sampleReserveRedeemer2 :: ReserveRedeemer
+sampleReserveRedeemer2 = TransferToIlliquidCirculationSupply
+
+sampleReserveRedeemer3 :: ReserveRedeemer
+sampleReserveRedeemer3 = UpdateReserve
+
+sampleReserveRedeemer4 :: ReserveRedeemer
+sampleReserveRedeemer4 = Handover
+
+sampleIlliquidCirculationSupplyRedeemer1 :: IlliquidCirculationSupplyRedeemer
+sampleIlliquidCirculationSupplyRedeemer1 = DepositMoreToSupply
+
+sampleIlliquidCirculationSupplyRedeemer2 :: IlliquidCirculationSupplyRedeemer
+sampleIlliquidCirculationSupplyRedeemer2 = WithdrawFromSupply
 
 -- Function to convert hex encoded Text to BuiltinByteString
 hexTextToBuiltinByteString :: Text.Text -> Builtins.BuiltinByteString
