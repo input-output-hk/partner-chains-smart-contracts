@@ -8,13 +8,11 @@ module TrustlessSidechain.ConfigFile
 
 import Contract.Prelude
 
-import Cardano.Serialization.Lib (fromBytes, toBytes)
+import Cardano.Serialization.Lib (fromBytes)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Partial.Unsafe (unsafePartial)
-import Cardano.AsCbor (decodeCbor)
 import Contract.Transaction
-  ( TransactionHash(TransactionHash)
-  , TransactionInput(TransactionInput)
+  ( TransactionInput(TransactionInput)
   )
 import Data.Argonaut.Parser (jsonParser)
 import Data.Codec.Argonaut as CA

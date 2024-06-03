@@ -6,7 +6,7 @@ module TrustlessSidechain.Utils.Transaction
 
 import Contract.Prelude
 
-import Data.ByteArray
+import Data.ByteArray (ByteArray)
 import Cardano.AsCbor (encodeCbor)
 import Contract.BalanceTxConstraints (mustNotSpendUtxoWithOutRef)
 import Contract.ScriptLookups (ScriptLookups)

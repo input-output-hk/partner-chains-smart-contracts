@@ -5,16 +5,15 @@ module TrustlessSidechain.MerkleRoot
   , saveRoot
   ) where
 
-import Contract.Prelude
+import Contract.Prelude hiding (unit)
 
 import Contract.PlutusData
   ( toData
-  , unitDatum
   )
+import Cardano.Types.PlutusData (unit)
 import Contract.Numeric.BigNum as BigNum
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts as Scripts
 import Contract.Transaction
   ( TransactionHash
   )
@@ -26,7 +25,6 @@ import Contract.TxConstraints
 import Cardano.Types.AssetName (mkAssetName)
 import Contract.TxConstraints as TxConstraints
 import Cardano.Types.Value as Value
-import JS.BigInt as BigInt
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT)
@@ -258,8 +256,8 @@ saveRootLookupsAndConstraints
               , output: merkleRootPolicyVersioningOutput
               }
         )
-        <> TxConstraints.mustPayToScript (Scripts.validatorHash rootTokenVal)
-          unitDatum
+        <> TxConstraints.mustPayToScript (PlutusScript.hash rootTokenVal)
+          unit
           TxConstraints.DatumWitness
           value
         <> TxConstraints.mustReferenceOutput merkleRootValidatorVersioningInput

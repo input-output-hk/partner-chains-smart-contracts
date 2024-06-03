@@ -2,7 +2,7 @@ module Test.GarbageCollector where
 
 import Contract.Prelude
 
-import TrustlessSidechain.Utils.Address (fromPaymentPubKeyHash)
+import TrustlessSidechain.Utils.Address (fromPaymentPubKeyHash, getOwnPaymentPubKeyHash)
 import Cardano.Types.NetworkId (NetworkId(TestnetId))
 import Contract.Log (logInfo')
 import Cardano.Types.AssetName (mkAssetName)
@@ -12,7 +12,6 @@ import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Value (TokenName)
-import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import JS.BigInt as BigInt
@@ -24,7 +23,6 @@ import Partial.Unsafe as Unsafe
 import Run (EFFECT, Run)
 import Run (liftEffect) as Run
 import Run.Except (EXCEPT)
-import Run.Except (note) as Run
 import Test.CommitteePlainEcdsaSecp256k1ATMSPolicy (generateSignatures)
 import Test.MerkleRoot as Test.MerkleRoot
 import Test.PlutipTest (PlutipTest)
@@ -41,7 +39,7 @@ import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
-import TrustlessSidechain.Error (OffchainError(GenericInternalError))
+import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.FUELBurningPolicy.V1 as BurningV1
 import TrustlessSidechain.FUELBurningPolicy.V2 as BurningV2
 import TrustlessSidechain.FUELMintingPolicy.V1
@@ -57,7 +55,6 @@ import TrustlessSidechain.InitSidechain
   )
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PrivateKey
   , aggregateKeys
@@ -109,12 +106,12 @@ testScenarioSuccess =
 
         Test.Utils.assertIHaveOutputWithAsset
           fuelMintingCurrencySymbol
-          MintingV1.fuelTokenName
+          MintingV1.fuelAssetName
           # withUnliftApp fails
 
         Test.Utils.assertIHaveOutputWithAsset
           fuelBurningCurrencySymbol
-          BurningV1.fuelTokenName
+          BurningV1.fuelAssetName
           # withUnliftApp fails
 
         Test.Utils.assertIHaveOutputWithAsset
@@ -309,11 +306,11 @@ mintFuelMintingAndFuelBurningTokens { sidechainParams, initCommitteePrvKeys } =
 
     Test.Utils.assertIHaveOutputWithAsset
       fuelMintingCurrencySymbol
-      MintingV1.fuelTokenName
+      MintingV1.fuelAssetName
 
     Test.Utils.assertIHaveOutputWithAsset
       fuelBurningCurrencySymbol
-      BurningV1.fuelTokenName
+      BurningV1.fuelAssetName
 
     Test.Utils.assertIHaveOutputWithAsset
       fuelMintingCurrencySymbol2

@@ -4,22 +4,19 @@ module TrustlessSidechain.InitSidechain.Checkpoint
 
 import Contract.Prelude hiding (note)
 
-import Contract.PlutusData (Datum(..))
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (validatorHash)
+import Cardano.Types.PlutusScript as PlutusScript
 import Contract.Transaction (TransactionHash)
 import Contract.TxConstraints (DatumPresence(..), TxConstraints)
 import Contract.TxConstraints as Constraints
 import Contract.Value as Value
-import Data.Array ((:))
 import JS.BigInt as BigInt
 import Cardano.Types.BigNum as BigNum
 import Cardano.Types.Int as Int
 import Cardano.Types.Mint as Mint
-import Data.Maybe (isJust)
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.Checkpoint (CheckpointDatum(..), checkpointNftTn)
@@ -139,7 +136,7 @@ initCheckpointLookupsAndConstraints initGenesisHash sidechainParams = do
     versionOracleConfig
 
   let
-    checkpointValidatorHash = validatorHash checkpointValidator
+    checkpointValidatorHash = PlutusScript.hash checkpointValidator
 
     payNftToCheckpointValidator =
       { lookups: Lookups.validator checkpointValidator

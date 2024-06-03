@@ -10,7 +10,6 @@ import Contract.PlutusData (toData)
 import Partial.Unsafe (unsafePartial)
 import Cardano.Types.AssetName (mkAssetName)
 import Contract.Prim.ByteArray as ByteArray
-import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import JS.BigInt as BigInt

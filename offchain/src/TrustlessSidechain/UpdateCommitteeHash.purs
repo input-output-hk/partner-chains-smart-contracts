@@ -13,7 +13,6 @@ import Contract.PlutusData
   , toData
   )
 import Cardano.Types.PlutusData (PlutusData)
-import Cardano.Types.OutputDatum (OutputDatum(OutputDatum))
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction
@@ -29,7 +28,6 @@ import Contract.TxConstraints as TxConstraints
 import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Types.Value as Value
 import JS.BigInt (BigInt)
-import JS.BigInt as BigInt
 import Contract.Numeric.BigNum as BigNum
 import Data.Map as Map
 import Run (Run)
@@ -82,7 +80,6 @@ import TrustlessSidechain.Versioning.Types
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
-import Cardano.Types.Int as Int
 
 -- | `UpdateCommitteeHashParams` is the offchain parameter for the update
 -- | committee hash endpoint.

@@ -9,14 +9,12 @@ import Data.Map as Map
 import Contract.Log as Log
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray as ByteArray
-import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Control.Monad.Error.Class as MonadError
 import Data.Array as Array
 import JS.BigInt as BigInt
 import Cardano.Types.BigNum as BigNum
 import Partial.Unsafe (unsafePartial)
-import Data.Map as Map
 import Data.Set as Set
 import Mote.Monad as Mote.Monad
 import Run (Run)
@@ -95,22 +93,6 @@ testScenario1 = Mote.Monad.test "Calling `initSidechain`"
             , initUtxo: genesisUtxo
             , initAggregatedCommittee: toData $ unsafePartial Crypto.aggregateKeys $ map unwrap
                 (map Crypto.toPubKeyUnsafe committeePrvKeys)
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initGovernanceAuthority
-            }
-        liftContract $ Log.logInfo' "WIKSA"
-        let
-          initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
-          initScParams = InitSidechain.InitSidechainParams
-            { initChainId: BigInt.fromInt 69
-            , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial Crypto.aggregateKeys $ map unwrap
-                initCommittee
             , initATMSKind: ATMSPlainEcdsaSecp256k1
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2

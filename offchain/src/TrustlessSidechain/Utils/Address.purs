@@ -13,39 +13,22 @@ module TrustlessSidechain.Utils.Address
 
 
 import Cardano.AsCbor (decodeCbor)
-import Data.BigInt as BigInt
-import Data.Unfoldable (unfoldr)
-import Data.String.CodeUnits (singleton)
-import Data.Maybe (fromMaybe)
-import Data.Foldable (fold)
-import Data.String.CodePoints (drop, take, length) as String
-
-
 import Cardano.Types.PaymentCredential (PaymentCredential(PaymentCredential))
-import Cardano.Types.NetworkId (NetworkId(MainnetId, TestnetId))
-import Cardano.Serialization.Lib as Csl
+import Cardano.Types.NetworkId (NetworkId)
 import Contract.Prelude hiding (note)
 import Cardano.Serialization.Lib
-  ( fromBytes
-  , toBytes
+  ( toBytes
   )
-import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash(PaymentPubKeyHash))
+import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash)
 import Cardano.Types.Credential (Credential(PubKeyHashCredential, ScriptHashCredential))
-import Contract.Address as Address
-import Cardano.Types.Address (toBech32, fromBech32) as Address
-import Contract.PlutusData (class FromData, class ToData, PlutusData)
-import Contract.Prim.ByteArray (ByteArray, CborBytes(CborBytes))
+import Contract.PlutusData (PlutusData)
+import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
 import Cardano.Types.ScriptHash (ScriptHash)
-import Cardano.Types.ScriptHash (fromBech32, toBech32Unsafe) as ScriptHash
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.PlutusScript as PlutusScript
-import Contract.Value (CurrencySymbol)
-import Contract.Value as Value
-import Control.Alternative ((<|>))
-import Cardano.Types.Address (Address)
 import Cardano.Types.Address as Address
-import Partial.Unsafe (unsafePartial)
+import Cardano.Types.Address (Address)
 import Data.Array as Array
 import Run (Run)
 import Run.Except (EXCEPT, note)
@@ -60,9 +43,6 @@ import TrustlessSidechain.Error
   ( OffchainError
       ( NotFoundOwnPubKeyHash
       , InvalidAddress
-      , ConversionError
-      , InvalidCurrencySymbol
-      , InvalidScript
       )
   )
 import TrustlessSidechain.Types (CurrencyInfo)
@@ -130,33 +110,6 @@ getScriptHashHex = ByteArray.byteArrayToHex <<< toBytes <<< unwrap
 
 fromPaymentPubKeyHash :: NetworkId -> PaymentPubKeyHash -> Address
 fromPaymentPubKeyHash networkId pkh = Address.mkPaymentAddress networkId (wrap $ PubKeyHashCredential $ unwrap pkh) Nothing
-
-
-
-
-
-hexToAsciiString :: String -> String
-hexToAsciiString hexStr =
-  let
-    hexPairs :: Array String
-    hexPairs = unfoldr nextPair hexStr
-
-    nextPair :: String -> Maybe (String /\ String)
-    nextPair str =
-      if String.length str < 2 then Nothing
-      else Just (String.take 2 str /\ String.drop 2 str)
-
-    bytes :: Array BigInt.BigInt
-    bytes = map (fromMaybe (BigInt.fromInt 0) <<< BigInt.fromBase 2) hexPairs
-
-    charArray :: Array String
-    charArray = map (singleton <<< toChar) bytes
-  in
-    fold charArray
-  where
-    toChar :: BigInt.BigInt -> Char
-    toChar x = unsafePartial $ fromJust (toEnum =<< BigInt.toInt x)
-
 
 addressFromBech32Bytes :: ByteArray -> Maybe Address
 addressFromBech32Bytes = decodeCbor <<< wrap

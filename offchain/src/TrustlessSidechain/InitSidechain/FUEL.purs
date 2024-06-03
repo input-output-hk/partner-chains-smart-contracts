@@ -4,15 +4,12 @@ module TrustlessSidechain.InitSidechain.FUEL
 
 
 import Cardano.Types.PlutusData (PlutusData)
-import Cardano.Types.Mint (Mint)
 import Contract.PlutusData as PlutusData
 import Contract.Prelude
   ( Maybe(..)
-  , Void
   , bind
   , discard
   , null
-  , one
   , pure
   , show
   , unwrap
@@ -28,8 +25,6 @@ import Cardano.Types.AssetName as AssetName
 import Cardano.Types.Mint as Mint
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (validatorHash)
-import Contract.Scripts as Scripts
 import Contract.Transaction (TransactionHash)
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
@@ -37,7 +32,6 @@ import Contract.TxConstraints
   )
 import Contract.TxConstraints as Constraints
 import Contract.Value as Value
-import Data.Array ((:))
 import JS.BigInt (BigInt)
 import Run (Run)
 import Run.Except (EXCEPT, note, throw)
@@ -75,9 +69,6 @@ import TrustlessSidechain.Versioning
   , getDsPoliciesAndValidators
   , getFuelPoliciesAndValidators
   , getMerkleRootPoliciesAndValidators
-  )
-import TrustlessSidechain.Versioning.ScriptId
-  ( ScriptId(FUELMintingPolicy, DsKeyPolicy)
   )
 import TrustlessSidechain.Versioning.Utils (getVersionOracleConfig)
 import Type.Row (type (+))
@@ -216,7 +207,7 @@ initFuelAndDsLookupsAndConstraints sidechainParams version = do
   let ds = Ds dsConfCurrencySymbol
   insertValidator ← DistributedSet.insertValidator ds
   let
-    insertValidatorHash = Scripts.validatorHash insertValidator
+    insertValidatorHash = PlutusScript.hash insertValidator
     dskm = DsKeyMint
       { dskmValidatorHash: insertValidatorHash
       , dskmConfCurrencySymbol: dsConfCurrencySymbol
@@ -258,7 +249,7 @@ initFuelAndDsLookupsAndConstraints sidechainParams version = do
   -- datum and tokens that should be paid to this validator.
   dsConfValidator ← DistributedSet.dsConfValidator ds
   let
-    dsConfValidatorHash = Scripts.validatorHash dsConfValidator
+    dsConfValidatorHash = PlutusScript.hash dsConfValidator
     dsConfValue = Value.singleton dsConfCurrencySymbol
       DistributedSet.dsConfTokenName
       (BigNum.fromInt 1)
@@ -357,7 +348,7 @@ initCommitteeHashLookupsAndConstraints
       versionOracleConfig
 
     let
-      committeeHashValidatorHash = validatorHash committeeHashValidator
+      committeeHashValidatorHash = PlutusScript.hash committeeHashValidator
 
     -- Building the transaction
     -----------------------------------

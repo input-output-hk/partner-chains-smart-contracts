@@ -22,9 +22,8 @@ module Test.Utils.QuickCheck
   ) where
 
 import Data.Array.NonEmpty (fromNonEmpty) as NonEmptyArray
-import Data.Array as Array
 import Contract.Prelude hiding (oneOf)
-import Cardano.Plutus.Types.ValidatorHash (ValidatorHash(ValidatorHash))
+import Cardano.Plutus.Types.ValidatorHash (ValidatorHash)
 import Aeson (decodeAeson, encodeAeson)
 import Cardano.Plutus.Types.PaymentPubKeyHash (PaymentPubKeyHash(PaymentPubKeyHash))
 import Cardano.Plutus.Types.PubKeyHash (PubKeyHash(PubKeyHash))
@@ -37,22 +36,19 @@ import Contract.Scripts
   ( applyArgs
   )
 import Contract.Transaction
-  ( TransactionHash(TransactionHash)
+  ( TransactionHash
   , TransactionInput(TransactionInput)
   )
 import Cardano.Types.AssetName (AssetName, mkAssetName, unAssetName)
 import Cardano.Types.Asset (Asset(Asset, AdaAsset))
-import Contract.Value
-  ( CurrencySymbol
-  )
 import Cardano.Types.BigNum (BigNum)
-import Cardano.Types.BigNum (toString, fromString, fromInt) as BigNum
+import Cardano.Types.BigNum (toString, fromInt) as BigNum
 import Control.Monad.Rec.Class
   ( Step(Loop, Done)
   , tailRecM
   )
 import Cardano.Types.PlutusScript (hash) as PlutusScript
-import Cardano.Types.ScriptHash (ScriptHash(ScriptHash))
+import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Plutus.Types.Address (Address, pubKeyHashAddress)
 import Cardano.Plutus.Types.Credential
   ( Credential
@@ -68,7 +64,6 @@ import Data.ByteArray
   )
 import JS.BigInt as BigInt
 import Data.Array.NonEmpty as NEA
-import Data.List.Types as NE
 import Data.NonEmpty (NonEmpty(NonEmpty))
 import Data.Ord (abs)
 import Data.Tuple (Tuple(Tuple))

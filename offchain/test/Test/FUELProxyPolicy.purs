@@ -3,8 +3,7 @@ module Test.FUELProxyPolicy (tests) where
 import Contract.Prelude
 
 import Cardano.AsCbor (encodeCbor)
-import Partial.Unsafe (unsafePartial)
-import TrustlessSidechain.Utils.Address (fromPaymentPubKeyHash)
+import TrustlessSidechain.Utils.Address (fromPaymentPubKeyHash, getOwnPaymentPubKeyHash)
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
@@ -15,7 +14,6 @@ import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe (unsafePartial)
 import Run (liftEffect) as Run
-import Run.Except (note) as Run
 import Test.MerkleRoot as Test.MerkleRoot
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
@@ -24,7 +22,6 @@ import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
 import TrustlessSidechain.Effects.Run (withUnliftApp)
-import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.FUELMintingPolicy.V1 (MerkleTreeEntry(..))
 import TrustlessSidechain.FUELMintingPolicy.V1 as Mint.V1
 import TrustlessSidechain.FUELMintingPolicy.V2 as Mint.V2
@@ -39,7 +36,6 @@ import TrustlessSidechain.InitSidechain
   , initSidechain
   )
 import TrustlessSidechain.MerkleTree as MerkleTree
-import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Crypto
   ( aggregateKeys
   , generatePrivKey

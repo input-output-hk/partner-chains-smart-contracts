@@ -37,14 +37,11 @@ module TrustlessSidechain.Utils.Crypto
 
 import Partial.Unsafe (unsafePartial)
 import Contract.Prelude
-import Cardano.AsCbor (encodeCbor, decodeCbor)
-import Cardano.Types.DataHash as DataHash
 import Contract.PlutusData (class FromData, class ToData, fromData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Value (AssetName)
-import Contract.Value as Value
-import Cardano.Types.AssetName (AssetName, mkAssetName)
+import Cardano.Types.AssetName (mkAssetName)
 import Data.Array as Array
 import JS.BigInt (BigInt)
 import JS.BigInt as BigInt

@@ -41,34 +41,21 @@ module TrustlessSidechain.Options.Parsers
 import Contract.Prelude
 
 import Cardano.Serialization.Lib (fromBytes, toBytes)
-import Cardano.FromData (fromData, class FromData)
-import Cardano.ToData (class ToData)
+import Cardano.FromData (fromData)
 import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash(PaymentPubKeyHash))
-import Cardano.Types.Address (Address, fromBech32, toBech32, fromCsl, toCsl)
+import Cardano.Types.Address (Address, fromBech32, fromCsl, toCsl)
 import Contract.CborBytes (CborBytes, cborBytesFromByteArray, hexToCborBytes)
 import Cardano.Plutus.Types.Credential (Credential(ScriptCredential))
 import Cardano.Plutus.Types.Address (fromCardano)
-import Cardano.Types.Credential
-  ( Credential(ScriptHashCredential)
-  )
 import Contract.PlutusData (class FromData)
-import Contract.PlutusData as PlutusData
 import Data.ByteArray (ByteArray)
 import Data.ByteArray as ByteArray
 import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Types.TransactionInput (TransactionInput(TransactionInput))
-import Contract.Transaction
-  ( TransactionHash(TransactionHash)
-  )
 import Cardano.Types.AssetName as AssetName
 import Contract.Value (AssetName)
-import Cardano.Types.AssetName (AssetName)
-import Contract.Value as Value
-import Cardano.Plutus.Types.Address as Conversion.Address
-import Cardano.Types.Address as Serialization.Address
 import Cardano.AsCbor
-  ( class AsCbor
-  , decodeCbor
+  ( decodeCbor
   )
 import JS.BigInt (BigInt)
 import JS.BigInt as BigInt
@@ -100,7 +87,6 @@ import TrustlessSidechain.Utils.SchnorrSecp256k1
   ( SchnorrSecp256k1PrivateKey
   )
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
-import Cardano.Types.Bech32String (Bech32String)
 
 hexToByteArray ∷ String → Maybe ByteArray
 hexToByteArray s = ByteArray.hexToByteArray $ fromMaybe s $ stripPrefix

@@ -4,9 +4,6 @@ module Test.PoCSerialiseData (tests, testScenario1, testScenario2) where
 
 import Contract.Prelude
 
-import Contract.Address as Address
-import Contract.Log as Log
-import Contract.Monad (liftContractM, liftedE)
 import Cardano.AsCbor (encodeCbor)
 import TrustlessSidechain.Utils.Address (toAddress)
 --import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer))
@@ -15,7 +12,6 @@ import Cardano.Types.PlutusScript as PlutusScript
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
 import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptFromEnvelope)
-import Contract.Transaction as Transaction
 import Contract.TxConstraints (DatumPresence(DatumWitness), TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
@@ -41,12 +37,9 @@ import TrustlessSidechain.Effects.Log (logInfo') as Effect
 import Contract.PlutusData (RedeemerDatum(RedeemerDatum))
 import TrustlessSidechain.Effects.Util (mapError)
 import TrustlessSidechain.Error
-  ( OffchainError(BalanceTxError, BuildTxError)
+  ( OffchainError(BalanceTxError, BuildTxError, InvalidScript)
   )
-import TrustlessSidechain.Effects.Util (fromMaybeThrow)
 import Run.Except (note) as Run
-import TrustlessSidechain.Error (OffchainError(InvalidScript))
-import TrustlessSidechain.Effects.Contract (liftContract)
 
 tests ∷ PlutipTest
 tests = Mote.Monad.group "PoCSerialiseData tests" do

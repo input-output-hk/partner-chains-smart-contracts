@@ -7,7 +7,7 @@ module Test.CandidatePermissionToken
 
 import Contract.Prelude
 
-import Contract.Scripts as Scripts
+import Cardano.Types.PlutusScript as PlutusScript
 import Contract.Wallet as Wallet
 import JS.BigInt as BigInt
 import Cardano.Types.BigNum as BigNum
@@ -95,7 +95,7 @@ testScenarioSuccess1 =
           committeeCandidateValidator ←
             CommitteeCandidateValidator.getCommitteeCandidateValidator
               sidechainParams
-          Utils.toAddress (Scripts.validatorHash committeeCandidateValidator)
+          Utils.toAddress (PlutusScript.hash committeeCandidateValidator)
 
         Test.Utils.assertHasOutputWithAsset registerTxId
           committeeCandidiateValidatorAddr
@@ -166,7 +166,7 @@ testScenarioFailure1 =
           committeeCandidateValidator ←
             CommitteeCandidateValidator.getCommitteeCandidateValidator
               sidechainParams
-          Utils.toAddress (Scripts.validatorHash committeeCandidateValidator)
+          Utils.toAddress (PlutusScript.hash committeeCandidateValidator)
 
         Test.Utils.assertHasOutputWithAsset txId committeeCandidiateValidatorAddr
           candidatePermissionInfo.currencySymbol

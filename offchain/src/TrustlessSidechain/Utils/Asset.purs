@@ -1,13 +1,11 @@
 module TrustlessSidechain.Utils.Asset
     ( emptyAssetName
---, mkAssetName
     , unsafeMkAssetName
     , getScriptHash
     ) where
 
 import Contract.Prelude
 import Partial.Unsafe (unsafePartial)
-import Cardano.Serialization.Lib (fromBytes)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Cardano.Types.AssetName (AssetName, mkAssetName)
 import Data.Maybe (fromJust)

@@ -6,32 +6,29 @@ module TrustlessSidechain.ScriptCache
   ( getScriptRefUtxo
   ) where
 
-import Contract.Prelude
+import Contract.Prelude hiding (unit)
 
 import Contract.Numeric.BigNum as BigNum
 import Contract.Address
   ( PaymentPubKeyHash(PaymentPubKeyHash)
   )
 import Contract.BalanceTxConstraints as BalanceTxConstraints
-import Contract.PlutusData (toData, unitDatum)
+import Contract.PlutusData (toData)
+import Cardano.Types.PlutusData (unit)
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction
-  ( ScriptRef(PlutusScriptRef, NativeScriptRef)
+  ( ScriptRef
   , TransactionInput(TransactionInput)
   )
 import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
-import Cardano.Types.TransactionInput (TransactionInput(TransactionInput))
 import Cardano.Types.PlutusScript as PlutusScript
-import Cardano.Types.ScriptHash as ScriptHash
 import Cardano.Types.PlutusScript (PlutusScript)
-import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
   , TxConstraints
   )
 import Contract.TxConstraints as Constraints
 import Contract.Value as Value
-import Data.BigInt as BigInt
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT)
@@ -107,7 +104,7 @@ createScriptRefUtxo (SidechainParams sp) scriptRef = do
     constraints ∷ TxConstraints
     constraints = Constraints.mustPayToScriptWithScriptRef
       scriptCacheValidatorHash
-      unitDatum
+      unit
       DatumInline
       scriptRef
       (Value.lovelaceValueOf $ BigNum.fromInt 1) -- minimum possible ada

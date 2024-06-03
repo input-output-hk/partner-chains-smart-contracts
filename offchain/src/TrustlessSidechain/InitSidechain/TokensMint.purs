@@ -11,7 +11,6 @@ import Contract.ScriptLookups as Lookups
 import Contract.Transaction
   ( TransactionHash
   )
-import Cardano.Types.TransactionOutput (TransactionOutput)
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as Constraints
 import Data.Map as Map

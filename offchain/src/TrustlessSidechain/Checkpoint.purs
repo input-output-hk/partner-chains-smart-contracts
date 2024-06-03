@@ -4,14 +4,15 @@ module TrustlessSidechain.Checkpoint
   , saveCheckpoint
   ) where
 
-import Contract.Prelude
+import Contract.Prelude hiding (unit)
 
-import Contract.PlutusData (toData, unitRedeemer)
+import Contract.PlutusData (toData, RedeemerDatum(RedeemerDatum))
+import Cardano.Types.PlutusData (unit)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
 import Cardano.Types.BigNum as BigNum
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts as Scripts
+import Cardano.Types.PlutusScript as PlutusScript
 import Contract.Transaction (TransactionHash)
 import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
 import Contract.TxConstraints as TxConstraints
@@ -192,7 +193,7 @@ saveCheckpointLookupsAndConstraints
       }
   versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
   validator ← checkpointValidator checkpointParam versionOracleConfig
-  let checkpointValidatorHash = Scripts.validatorHash validator
+  let checkpointValidatorHash = PlutusScript.hash validator
 
   -- Getting the checkpoint utxo
   checkpointUtxoLookup ← findCheckpointUtxo checkpointParam
@@ -218,7 +219,7 @@ saveCheckpointLookupsAndConstraints
       Lookups.unspentOutputs (Map.singleton checkpointOref checkpointTxOut)
         <> Lookups.validator validator
 
-    constraints = TxConstraints.mustSpendScriptOutput checkpointOref unitRedeemer
+    constraints = TxConstraints.mustSpendScriptOutput checkpointOref (RedeemerDatum unit)
       <> TxConstraints.mustPayToScript checkpointValidatorHash newCheckpointDatum
         DatumInline
         value

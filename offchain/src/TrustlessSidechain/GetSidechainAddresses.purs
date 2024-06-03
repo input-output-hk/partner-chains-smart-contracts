@@ -10,8 +10,7 @@ module TrustlessSidechain.GetSidechainAddresses
 import Contract.Prelude
 
 import Cardano.Types.Address
-  ( Address
-  , toBech32
+  ( toBech32
   )
 import Cardano.AsCbor (encodeCbor)
 import Data.ByteArray (byteArrayToHex)
@@ -39,7 +38,6 @@ import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteeP
 import TrustlessSidechain.DParameter.Utils as DParameter
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Effects.Wallet (WALLET)
-import TrustlessSidechain.Effects.Wallet (getNetworkId) as Effect
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.FUELProxyPolicy (getFuelProxyMintingPolicy)
 import TrustlessSidechain.InitSidechain.Utils as InitSidechain

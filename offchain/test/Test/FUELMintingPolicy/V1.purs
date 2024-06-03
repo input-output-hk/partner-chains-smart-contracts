@@ -2,15 +2,13 @@ module Test.FUELMintingPolicy.V1 where
 
 import Contract.Prelude
 
-import TrustlessSidechain.Utils.Address (fromPaymentPubKeyHash)
+import TrustlessSidechain.Utils.Address (fromPaymentPubKeyHash, getOwnPaymentPubKeyHash)
 import Cardano.Types.NetworkId (NetworkId(TestnetId))
 import Cardano.ToData (toData)
-import TrustlessSidechain.Utils.Crypto (blake2b256Hash)
 import Cardano.AsCbor (encodeCbor)
 import Cardano.Types.AssetName as AssetName
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
-import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import JS.BigInt as BigInt
@@ -54,11 +52,11 @@ import TrustlessSidechain.MerkleTree
   , lookupMp
   )
 import TrustlessSidechain.MerkleTree as MerkleTree
-import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Crypto
   ( aggregateKeys
   , generatePrivKey
   , toPubKeyUnsafe
+  , blake2b256Hash
   )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 

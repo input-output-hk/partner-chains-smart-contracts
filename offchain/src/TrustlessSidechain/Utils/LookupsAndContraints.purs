@@ -3,19 +3,12 @@ module TrustlessSidechain.Utils.LookupsAndConstraints
   , burnOneToken
   ) where
 
-import Contract.Prelude
-
-import Contract.PlutusData
-  ( Redeemer
-  )
-import Contract.PlutusData (RedeemerDatum(RedeemerDatum))
+import Contract.PlutusData (RedeemerDatum)
 import Cardano.Types.AssetName (AssetName)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as Constraints
-import Contract.Value (TokenName)
-import Contract.Value as Value
 import TrustlessSidechain.Types (CurrencyInfo)
 import Cardano.Types.Mint as Mint
 import Cardano.Types.Int as Int

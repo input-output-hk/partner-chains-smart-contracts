@@ -7,16 +7,9 @@ module TrustlessSidechain.Types
   , CurrencyInfo
   ) where
 
-import Contract.Prelude
-
-import Cardano.Types.PlutusScript (PlutusScript, hash)
-
+import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.Prim.ByteArray (ByteArray)
-import Cardano.Types.AssetName (AssetName)
-import Contract.Value (CurrencySymbol, Value, valueOf)
-import Contract.Value as Value
-import Data.BigInt (BigInt)
 
 -- * Utility types relating to cryptography
 type PubKey = ByteArray

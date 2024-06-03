@@ -18,7 +18,6 @@ import Contract.Prelude
 import Cardano.Types.Address (Address)
 import Contract.BalanceTxConstraints (BalanceTxConstraintsBuilder)
 import Contract.ScriptLookups (ScriptLookups, UnbalancedTx)
-import Contract.ScriptLookups as ScriptLookups
 import Contract.UnbalancedTx (MkUnbalancedTxError)
 import Contract.UnbalancedTx (mkUnbalancedTx) as UnbalancedTx
 import Contract.Transaction
@@ -41,7 +40,7 @@ import Effect.Aff (Error)
 import Run (Run, interpret, on, send)
 import Run as Run
 import Run.Except (EXCEPT)
-import TrustlessSidechain.Effects.Contract (CONTRACT, withTry, withTryE)
+import TrustlessSidechain.Effects.Contract (CONTRACT, withTry)
 import TrustlessSidechain.Effects.Errors.Context
   ( ErrorContext(ErrorContext)
   , ErrorContextType(Transaction)
@@ -50,7 +49,7 @@ import TrustlessSidechain.Effects.Errors.Parser
   ( parseDefaultError
   , parseFromError
   )
-import TrustlessSidechain.Error (OffchainError(GenericInternalError))
+import TrustlessSidechain.Error (OffchainError)
 import Type.Proxy (Proxy(Proxy))
 import Type.Row (type (+))
 
@@ -162,9 +161,3 @@ handleTransactionLive =
   fromError ∷ String → Error → OffchainError
   fromError ctx = parseFromError parseDefaultError
     (Just (ErrorContext Transaction ctx))
-
-  fromUnbalanced ∷ MkUnbalancedTxError → OffchainError
-  fromUnbalanced = GenericInternalError <<< show
-
-  fromBalanced ∷ BalanceTxError.BalanceTxError → OffchainError
-  fromBalanced = GenericInternalError <<< show

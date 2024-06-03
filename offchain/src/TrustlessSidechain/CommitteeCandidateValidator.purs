@@ -9,7 +9,7 @@ module TrustlessSidechain.CommitteeCandidateValidator
   , deregister
   ) where
 
-import Contract.Prelude
+import Contract.Prelude hiding (unit)
 
 import Contract.Address
   ( PaymentPubKeyHash
@@ -19,27 +19,26 @@ import Contract.PlutusData
   ( class FromData
   , class ToData
   , PlutusData(Constr)
+  , RedeemerDatum(RedeemerDatum)
   , fromData
   , toData
-  , unitRedeemer
   )
+import Cardano.Types.PlutusData (unit)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (Validator, validatorHash)
+import Cardano.Types.PlutusScript as PlutusScript
 import Contract.Transaction
   ( TransactionHash
   )
 
 import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
 import Cardano.Types.TransactionInput (TransactionInput)
-import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
 import Cardano.Types.OutputDatum (outputDatumDatum)
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (UtxoMap)
 import Cardano.Types.Value as Value
 import Control.Alternative (guard)
 import Data.Array (catMaybes)
-import JS.BigInt as BigInt
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT, throw)
@@ -86,7 +85,7 @@ newtype DeregisterParams = DeregisterParams
 getCommitteeCandidateValidator ∷
   ∀ r.
   SidechainParams →
-  Run (EXCEPT OffchainError + r) Validator
+  Run (EXCEPT OffchainError + r) PlutusScript.PlutusScript
 getCommitteeCandidateValidator sp = do
   mkValidatorWithParams CommitteeCandidateValidator [ toData sp ]
 
@@ -253,7 +252,7 @@ register
   ownAddr ← getOwnWalletAddress
 
   validator ← getCommitteeCandidateValidator sidechainParams
-  let valHash = validatorHash validator
+  let valHash = PlutusScript.hash validator
   valAddr ← toAddress valHash
 
   ownUtxos ← Effect.utxosAt ownAddr
@@ -321,7 +320,7 @@ register
         -- Consuming old registration UTxOs
         <> Constraints.mustBeSignedBy ownPkh
         <> mconcat
-          ( flip Constraints.mustSpendScriptOutput unitRedeemer <$>
+          ( flip Constraints.mustSpendScriptOutput (RedeemerDatum unit) <$>
               ownRegistrationUtxos
           )
 
@@ -335,7 +334,7 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
   ownPkh ← getOwnPaymentPubKeyHash
   ownAddr ← getOwnWalletAddress
   validator ← getCommitteeCandidateValidator sidechainParams
-  valAddr ← toAddress (validatorHash validator)
+  valAddr ← toAddress (PlutusScript.hash validator)
   ownUtxos ← Effect.utxosAt ownAddr
   valUtxos ← Effect.utxosAt valAddr
 
@@ -354,7 +353,7 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
     constraints ∷ Constraints.TxConstraints
     constraints = Constraints.mustBeSignedBy ownPkh
       <> mconcat
-        ( flip Constraints.mustSpendScriptOutput unitRedeemer <$>
+        ( flip Constraints.mustSpendScriptOutput (RedeemerDatum unit) <$>
             ownRegistrationUtxos
         )
 

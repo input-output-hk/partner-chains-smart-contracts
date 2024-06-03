@@ -38,20 +38,17 @@ import Contract.PlutusData
   , fromData
   , toData
   )
-import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
+import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.ScriptLookups (ScriptLookups)
 import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
 import Cardano.Types.TransactionInput (TransactionInput)
-import Contract.Scripts as Scripts
 import Contract.TxConstraints (TxConstraints)
 import Cardano.Types.Value as Value
 import Control.Monad.Maybe.Trans (MaybeT(MaybeT), runMaybeT)
 import Data.Array as Array
-import Data.Map as Map
-import Data.Maybe as Maybe
-import Partial.Unsafe as Unsafe
 import Run (Run)
 import Run.Except (EXCEPT)
 import Run.Except as Run
@@ -78,7 +75,7 @@ import TrustlessSidechain.InitSidechain.Utils
   , initTokenCurrencyInfo
   , mintOneInitToken
   )
-import Cardano.Types.AssetName (AssetName)
+import Cardano.Types.AssetName (AssetName, unAssetName)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (CurrencyInfo)
 import TrustlessSidechain.Utils.Address
@@ -103,8 +100,6 @@ import TrustlessSidechain.Versioning.ScriptId
   )
 import Type.Row (type (+))
 import Cardano.Types.Value (getMultiAsset)
-import Cardano.Types.AssetName (unAssetName)
-import Cardano.Types.PlutusScript as PlutusScript
 import TrustlessSidechain.Utils.Asset (emptyAssetName, unsafeMkAssetName)
 import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Types.OutputDatum (outputDatumDatum)
@@ -340,7 +335,7 @@ dsKeyPolicy dskm = mkMintingPolicyWithParams DsKeyPolicy [ toData dskm ]
 insertAddress ∷ ∀ r. Ds → Run (EXCEPT OffchainError + WALLET + r) Address
 insertAddress ds = do
   v ← insertValidator ds
-  toAddress (Scripts.validatorHash v)
+  toAddress (PlutusScript.hash v)
 
 -- * ToData / FromData instances.
 -- These should correspond to the on-chain Haskell types.
@@ -349,7 +344,7 @@ dsToDsKeyMint ∷ ∀ r. Ds → Run (EXCEPT OffchainError + r) DsKeyMint
 dsToDsKeyMint ds = do
   insertValidator' ← insertValidator ds
 
-  let insertValidatorHash = Scripts.validatorHash insertValidator'
+  let insertValidatorHash = PlutusScript.hash insertValidator'
 
   pure $ DsKeyMint
     { dskmValidatorHash: insertValidatorHash
@@ -396,7 +391,7 @@ getDsKeyPolicy ds = do
   insertValidator' ← insertValidator ds
 
   let
-    insertValidatorHash = Scripts.validatorHash insertValidator'
+    insertValidatorHash = PlutusScript.hash insertValidator'
     dskm = DsKeyMint
       { dskmValidatorHash: insertValidatorHash
       , dskmConfCurrencySymbol: dsConf ds
@@ -441,7 +436,7 @@ findDsConfOutput ∷
     }
 findDsConfOutput ds = do
   v ← dsConfValidator ds
-  scriptAddr ← toAddress (Scripts.validatorHash v)
+  scriptAddr ← toAddress (PlutusScript.hash v)
   utxos ← Effect.utxosAt scriptAddr
 
   out ←

@@ -12,13 +12,11 @@ import Contract.Prelude
 import Data.Map as Map
 import Data.Map (Map)
 import Cardano.Types.PlutusScript (PlutusScript)
-import Cardano.Types.PlutusScript as PlutusScript
 import Contract.Transaction (TransactionHash)
 import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Types.AssetName (AssetName)
 import Cardano.Types.Value (Value)
 import Cardano.Types.Value as Value
-import JS.BigInt (BigInt)
 import Data.List (List, filter)
 import Data.List as List
 import Run (Run)
@@ -36,7 +34,6 @@ import TrustlessSidechain.Versioning (getActualVersionedPoliciesAndValidators)
 import TrustlessSidechain.Versioning.ScriptId as Types
 import TrustlessSidechain.Versioning.Types (ScriptId)
 import TrustlessSidechain.Versioning.Utils as Utils
-import Cardano.Types.BigNum as BigNum
 import Cardano.Types.BigNum (BigNum)
 import Type.Row (type (+))
 

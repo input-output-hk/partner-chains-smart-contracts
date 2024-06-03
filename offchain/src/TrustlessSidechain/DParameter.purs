@@ -10,7 +10,6 @@ import Cardano.Types.OutputDatum (OutputDatum(OutputDatum))
 import Cardano.Types.PlutusData as PlutusData
 import Cardano.FromData (fromData)
 import Cardano.ToData (toData)
-import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
@@ -23,10 +22,7 @@ import Cardano.Types.AssetName (AssetName)
 import Cardano.Types.Value as Value
 import Data.Array as Array
 import JS.BigInt (BigInt)
-import JS.BigInt as BigInt
 import Data.Map as Map
-import Data.Maybe as Maybe
-import Partial.Unsafe as Unsafe
 import Run (Run)
 import Run.Except (EXCEPT, throw)
 import Run.Except as Run
@@ -71,7 +67,7 @@ mkInsertDParameterLookupsAndConstraints
   let
     dParameterMintingPolicyHash = dParameterCurrencySymbol
 
-  { dParameterValidatorAddress, dParameterValidator } ←
+  { dParameterValidator } ←
     DParameter.getDParameterValidatorAndAddress sidechainParams
 
   let dParameterValidatorHash = PlutusScript.hash dParameterValidator

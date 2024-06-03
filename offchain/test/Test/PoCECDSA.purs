@@ -4,12 +4,10 @@ module Test.PoCECDSA
   )
   where
 
-import Contract.Prelude
-import Prelude as Prelude
-import Cardano.Types.Address as Address
-import TrustlessSidechain.Effects.Wallet (getNetworkId) as Effect
+import Contract.Prelude hiding (unit)
+
+import Prelude (unit) as Prelude
 import TrustlessSidechain.Effects.Log (logInfo') as Effect
-import Contract.Monad (Contract, liftContractM, liftedE)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( RedeemerDatum(RedeemerDatum)
@@ -19,25 +17,15 @@ import Cardano.Types.PlutusData (PlutusData(Constr), unit)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.ScriptLookups as Lookups
 import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptFromEnvelope)
-import Contract.Transaction
-  ( TransactionHash
-  , awaitTxConfirmed
-  , balanceTx
-  , signTransaction
-  , submit
-  )
 import Contract.TxConstraints as Constraints
-import Contract.Utxos (utxosAt)
 import Contract.Value as Value
 import Contract.Wallet as Wallet
-import JS.BigInt as BigInt
 import Data.Map as Map
 import Data.Set as Set
 import Mote.Monad as Mote.Monad
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.PoCRawScripts (rawPoCECDSA)
-import TrustlessSidechain.Effects.Contract (liftContract)
 import Cardano.Types.PlutusScript as PlutusScript
 import Run.Except (note) as Run
 import TrustlessSidechain.Error
@@ -116,33 +104,32 @@ testScenario = Mote.Monad.test "PoCECDSA: testScenario"
           }
 
     let
-      script = decodeTextEnvelope rawPoCECDSA >>= plutusScriptFromEnvelope
+      script' = decodeTextEnvelope rawPoCECDSA >>= plutusScriptFromEnvelope
 
-    validator ← Run.note (InvalidScript "Decoding text envelope failed.") script
+    validator' ← Run.note (InvalidScript "Decoding text envelope failed.") script'
 
-    let valHash = PlutusScript.hash validator
+    let valHash' = PlutusScript.hash validator'
 
-    netId ← Effect.getNetworkId
-    valAddr ← toAddress valHash
+    valAddr ← toAddress valHash'
 
     scriptUtxos ← Effect.utxosAt valAddr
     txIn ← Run.note (NotFoundUtxo "No UTxOs found at validator address")
       $ Set.findMin
       $ Map.keys scriptUtxos
     let
-      lookups ∷ Lookups.ScriptLookups
-      lookups = Lookups.validator validator
+      lookups' ∷ Lookups.ScriptLookups
+      lookups' = Lookups.validator validator
         <> Lookups.unspentOutputs scriptUtxos
 
-      constraints ∷ Constraints.TxConstraints
-      constraints = Constraints.mustSpendScriptOutput txIn red
-    unbalancedTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups
-      constraints
-    balancedTx ← mapError BalanceTxError $ Effect.balanceTx unbalancedTx
-    signedTx ← Effect.signTransaction balancedTx
-    txId ← Effect.submit signedTx
-    Effect.logInfo' $ "Transaction submitted: " <> show txId
-    Effect.awaitTxConfirmed txId
-    Effect.logInfo' $ "Transaction confirmed: " <> show txId
+      constraints' ∷ Constraints.TxConstraints
+      constraints' = Constraints.mustSpendScriptOutput txIn red
+    unbalancedTx' ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups'
+      constraints'
+    balancedTx' ← mapError BalanceTxError $ Effect.balanceTx unbalancedTx'
+    signedTx' ← Effect.signTransaction balancedTx'
+    txId' ← Effect.submit signedTx'
+    Effect.logInfo' $ "Transaction submitted: " <> show txId'
+    Effect.awaitTxConfirmed txId'
+    Effect.logInfo' $ "Transaction confirmed: " <> show txId'
 
     pure Prelude.unit

@@ -9,7 +9,6 @@ import Contract.PlutusData
   , class ToData
   , PlutusData(Integer)
   )
-import Cardano.Types (BigInt)
 import Cardano.Types.BigInt (fromInt)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)

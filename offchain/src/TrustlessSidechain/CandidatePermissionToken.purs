@@ -7,13 +7,13 @@ module TrustlessSidechain.CandidatePermissionToken
   , mintOneCandidatePermissionInitToken
   ) where
 
-import Contract.Prelude
+import Contract.Prelude hiding (unit)
 
 import Contract.PlutusData
   ( toData
-  , unitRedeemer
+  , RedeemerDatum(RedeemerDatum)
   )
-import Contract.Prim.ByteArray (byteArrayFromAscii)
+import Cardano.Types.PlutusData (unit)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction
@@ -24,9 +24,7 @@ import Contract.TxConstraints as TxConstraints
 import Cardano.Types.AssetName (AssetName)
 import TrustlessSidechain.Utils.Asset (emptyAssetName, unsafeMkAssetName)
 import Cardano.Types.ScriptHash (ScriptHash)
-import Contract.Value as Value
 import JS.BigInt (BigInt)
-import Data.Maybe as Maybe
 import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT)
@@ -50,7 +48,6 @@ import TrustlessSidechain.Versioning.ScriptId
   )
 import Type.Row (type (+))
 import Cardano.Types.Int as Int
-import Partial.Unsafe (unsafePartial)
 import Cardano.Types.Mint as Mint
 
 --------------------------------
@@ -138,7 +135,7 @@ candidatePermissionTokenLookupsAndConstraints sidechainParams amount = do
     constraints ∷ TxConstraints
     constraints =
       TxConstraints.mustMintValueWithRedeemer
-        unitRedeemer
+        (RedeemerDatum unit)
         mintValue
   pure (burnInitToken <> { lookups, constraints })
 

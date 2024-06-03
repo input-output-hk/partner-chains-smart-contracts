@@ -22,30 +22,6 @@ import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Versioning.Types as Types
 import Type.Row (type (+))
 
--- | Validators to store in the versioning system.
-getVersionedValidators ∷
-  SidechainParams →
-  List (Tuple Types.ScriptId PlutusScript)
-getVersionedValidators _sp = do
-  -- Getting validators to version
-  -----------------------------------
-  List.fromFoldable []
-
--- | Minting policies to store in the versioning system.
-getVersionedPolicies ∷
-  ∀ r.
-  SidechainParams →
-  Run (EXCEPT OffchainError + r) (List (Tuple Types.ScriptId PlutusScript))
-getVersionedPolicies sp = do
-  -- Getting policies to version
-  -----------------------------------
-  { fuelMintingPolicy } ← FUELMintingPolicy.V2.getFuelMintingPolicy sp
-  { fuelBurningPolicy } ← FUELBurningPolicy.V2.getFuelBurningPolicy sp
-  pure $ List.fromFoldable
-    [ Types.FUELMintingPolicy /\ fuelMintingPolicy
-    , Types.FUELBurningPolicy /\ fuelBurningPolicy
-    ]
-
 -- | Validators and policies to store in the versioning system.
 getVersionedPoliciesAndValidators ∷
   ∀ r.

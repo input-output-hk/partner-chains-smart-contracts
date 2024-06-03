@@ -6,19 +6,14 @@ module Test.Data
 import Contract.Prelude
 
 import Cardano.Plutus.Types.PaymentPubKeyHash (PaymentPubKeyHash(PaymentPubKeyHash))
-import Cardano.Plutus.Types.PubKeyHash (PubKeyHash(PubKeyHash))
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromIntArrayUnsafe)
-import Cardano.Types.ScriptHash (ScriptHash)
 import Control.Alt ((<|>))
 import Ctl.Internal.Types.Interval (POSIXTime(..))
 import Data.Array.NonEmpty as NE
 import JS.BigInt (BigInt)
 import JS.BigInt as BigInt
 import Data.BigInt as RegularBigInt
-import Partial.Unsafe (unsafePartial)
 import Data.String.CodeUnits (fromCharArray)
-import Cardano.AsCbor (decodeCbor)
-import Cardano.Types.Address (toBech32)
 import Mote.Monad (test)
 import Test.QuickCheck.Arbitrary (arbitrary)
 import Test.QuickCheck.Gen (Gen, arrayOf, chooseInt, elements, vectorOf)
@@ -26,8 +21,7 @@ import Test.QuickCheck.Gen as QGen
 import Test.Utils (WrappedTests, pureGroup)
 import Test.Utils.Laws (toDataLaws)
 import Test.Utils.QuickCheck
-  ( ArbitraryAsset(ArbitraryAsset)
-  , ArbitraryBigInt(ArbitraryBigInt)
+  ( ArbitraryBigInt(ArbitraryBigInt)
   , ArbitraryScriptHash(ArbitraryScriptHash)
   , ArbitraryPaymentPubKeyHash(ArbitraryPaymentPubKeyHash)
   , ArbitraryPubKey(ArbitraryPubKey)
@@ -160,8 +154,6 @@ import TrustlessSidechain.Versioning.Types
       , BurnVersionOracle
       )
   )
-import Cardano.Serialization.Lib
-  ( address_fromBech32 )
 tests ∷ WrappedTests
 tests = pureGroup "Data roundtrip tests" $ do
   test "SidechainParams" $ liftEffect $ toDataLaws testCount genSP

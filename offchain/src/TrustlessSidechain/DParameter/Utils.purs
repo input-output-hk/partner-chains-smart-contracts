@@ -3,7 +3,7 @@ module TrustlessSidechain.DParameter.Utils
   , getDParameterValidatorAndAddress
   ) where
 
-import Contract.Prelude
+import Contract.Prelude hiding (note)
 
 import Cardano.Types.Address
   ( Address

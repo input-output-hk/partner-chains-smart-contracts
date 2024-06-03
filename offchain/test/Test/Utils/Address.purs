@@ -13,7 +13,6 @@ import Cardano.Plutus.Types.Credential
   ( Credential(PubKeyCredential)
   )
 import Cardano.AsCbor (decodeCbor)
-import Cardano.Serialization.Lib (fromBytes)
 import Data.Const (Const)
 import Mote.Monad (Mote)
 import Mote.Monad as Mote.Monad
@@ -21,7 +20,7 @@ import Partial.Unsafe (unsafePartial)
 import Test.Unit (Test)
 import Test.Unit.Assert (shouldEqual)
 import Test.Utils (WrappedTests, pureGroup)
-import Cardano.Types.Address (toBech32, fromBech32, Address) as Address
+import Cardano.Types.Address (toBech32, fromBech32) as Address
 import Cardano.Types.NetworkId (NetworkId(TestnetId))
 type TestCase = Mote (Const Void) Test Unit
 

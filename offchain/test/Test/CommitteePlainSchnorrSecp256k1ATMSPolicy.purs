@@ -13,7 +13,6 @@ import Contract.PlutusData (toData)
 import Partial.Unsafe (unsafePartial)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
-import Contract.Value as Value
 import Cardano.Types.AssetName (mkAssetName)
 import Contract.Wallet as Wallet
 import Data.Array as Array

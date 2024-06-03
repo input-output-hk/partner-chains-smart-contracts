@@ -3,10 +3,9 @@ module TrustlessSidechain.Error
   ) where
 
 import Contract.Prelude
+
 import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.Address (Address)
-import Contract.ScriptLookups as ScriptLookups
-import Contract.Scripts
 import Contract.Transaction as Transaction
 import TrustlessSidechain.Versioning.ScriptId (ScriptId)
 import Contract.UnbalancedTx (MkUnbalancedTxError)

@@ -1,6 +1,6 @@
 module TrustlessSidechain.FUELBurningPolicy.V1
   ( FuelBurnParams(..)
-  , fuelTokenName
+  , fuelAssetName
   , getFuelBurningPolicy
   , mkBurnFuelLookupAndConstraints
   ) where
@@ -11,9 +11,7 @@ import Contract.PlutusData
   ( RedeemerDatum(RedeemerDatum)
   , toData
   )
-import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
-import Contract.Scripts as Scripts
 import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.ScriptHash (ScriptHash)
@@ -23,15 +21,7 @@ import Contract.TxConstraints
   , TxConstraints
   )
 import Contract.TxConstraints as Constraints
-import Contract.Value
-  ( CurrencySymbol
-  , TokenName
-  )
-import Contract.Value as Value
 import JS.BigInt (BigInt)
-import JS.BigInt as BigInt
-import Data.Maybe as Maybe
-import Partial.Unsafe as Unsafe
 import Contract.Numeric.BigNum as BigNum
 import Run (Run)
 import Run.Except (EXCEPT)
@@ -51,8 +41,8 @@ import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
 import Cardano.Types.Int as Int
 import Partial.Unsafe (unsafePartial)
 
-fuelTokenName ∷ TokenName
-fuelTokenName = unsafeMkAssetName "FUEL"
+fuelAssetName ∷ AssetName
+fuelAssetName = unsafeMkAssetName "FUEL"
 
 -- | Gets the FUELBurningPolicy by applying `SidechainParams` to the FUEL
 -- | burning policy
@@ -104,7 +94,7 @@ mkBurnFuelLookupAndConstraints (FuelBurnParams { amount, sidechainParams }) = do
         Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
           (PlutusScript.hash fuelBurningPolicy')
           (RedeemerDatum $ toData unit)
-          fuelTokenName
+          fuelAssetName
           (unsafePartial $ fromJust $ Int.fromBigInt amount)
           (RefInput $ TransactionUnspentOutput {input: scriptRefTxInput, output: scriptRefTxOutput})
     }

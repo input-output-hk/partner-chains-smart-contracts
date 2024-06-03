@@ -15,7 +15,6 @@ import Contract.Transaction (TransactionHash)
 import Contract.Utxos (utxosAt)
 import Contract.Wallet as Wallet
 import Data.Array as Array
-import Data.BigInt as BigInt
 import Data.List.Lazy (replicate)
 import Data.Map as Map
 import Data.Set as Set

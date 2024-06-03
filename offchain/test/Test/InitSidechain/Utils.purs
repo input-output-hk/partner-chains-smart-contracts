@@ -9,11 +9,7 @@ import Cardano.Types.AssetName (AssetName)
 import Cardano.Types.PlutusScript (PlutusScript)
 import Data.Map as Map
 import Contract.Prelude (Tuple, foldr, (/\))
-import Contract.Value (TokenName)
-import Cardano.Types.AssetName as Value
 import Data.Array as Array
-import Data.BigInt (fromInt)
-import Data.BigInt as BigInt
 import Cardano.Types.BigNum (BigNum)
 import Cardano.Types.BigNum as BigNum
 import Data.List (List)

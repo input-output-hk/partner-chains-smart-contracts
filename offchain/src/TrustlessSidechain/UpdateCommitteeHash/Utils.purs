@@ -22,24 +22,19 @@ import Cardano.Types.Asset (Asset(Asset))
 import Cardano.AsCbor (encodeCbor)
 import Partial.Unsafe (unsafePartial)
 import Contract.Address (Address)
-import Contract.CborBytes (cborBytesToByteArray)
-import Contract.Hashing as Hashing
 import Contract.PlutusData
   ( class ToData
   , toData
   )
-import Contract.Scripts
-  ( Validator
-  , ValidatorHash
-  )
-import Contract.Scripts as Scripts
+
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.Transaction
   ( TransactionInput
   )
-import Cardano.Types.TransactionInput (TransactionInput)
-import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
+import Cardano.Types.TransactionOutput (TransactionOutput)
 import Cardano.Types.Value as Value
-import JS.BigInt as BigInt
 import Contract.Numeric.BigNum as BigNum
 import Run (Run)
 import Run.Except (EXCEPT)
@@ -73,7 +68,7 @@ updateCommitteeHashValidator ∷
   ∀ r.
   SidechainParams →
   VersionOracleConfig →
-  Run (EXCEPT OffchainError + r) Validator
+  Run (EXCEPT OffchainError + r) PlutusScript
 updateCommitteeHashValidator sp versionOracleConfig =
   mkValidatorWithParams CommitteeHashValidator
     [ toData sp, toData versionOracleConfig ]
@@ -84,14 +79,14 @@ getUpdateCommitteeHashValidator ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + WALLET + r)
-    { validator ∷ Validator
-    , validatorHash ∷ ValidatorHash
+    { validator ∷ PlutusScript
+    , validatorHash ∷ ScriptHash
     , address ∷ Address
     }
 getUpdateCommitteeHashValidator sp = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sp
   validator ← updateCommitteeHashValidator sp versionOracleConfig
-  let validatorHash = Scripts.validatorHash validator
+  let validatorHash = PlutusScript.hash validator
   address ← toAddress validatorHash
   pure { validator, validatorHash, address }
 
@@ -126,7 +121,7 @@ findUpdateCommitteeHashUtxo ∷
 findUpdateCommitteeHashUtxo sp = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sp
   validator ← updateCommitteeHashValidator sp versionOracleConfig
-  validatorAddress ← toAddress (Scripts.validatorHash validator)
+  validatorAddress ← toAddress (PlutusScript.hash validator)
 
   committeeOracleCurrencySymbol ←
     Versioning.getVersionedCurrencySymbol

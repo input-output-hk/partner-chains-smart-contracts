@@ -29,7 +29,6 @@ import Contract.PlutusData
 import Cardano.Types.PlutusData (PlutusData(Constr))
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
-import Contract.Scripts as Scripts
 import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
 import Cardano.Types.TransactionInput (TransactionInput)
 import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
@@ -44,7 +43,6 @@ import Cardano.Types.Value as Value
 import Cardano.Types.MultiAsset as MultiAsset
 import Cardano.Types.AssetName (unAssetName)
 import Data.Array as Array
-import JS.BigInt as BigInt
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT, throw)
@@ -59,7 +57,7 @@ import TrustlessSidechain.Effects.Transaction (utxosAt) as Effect
 import TrustlessSidechain.Effects.Util (fromMaybeThrow) as Effect
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Effects.Log (LOG)
-import TrustlessSidechain.Effects.Log as Effect
+import TrustlessSidechain.Effects.Log (logInfo') as Effect
 import TrustlessSidechain.Error
   ( OffchainError(NotFoundUtxo, InvalidData, VerificationError)
   )

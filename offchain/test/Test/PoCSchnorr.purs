@@ -26,11 +26,7 @@ import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as TxConstraints
-import Contract.Value (CurrencySymbol)
-import Contract.Value as Value
 import Contract.Wallet as Wallet
-import JS.BigInt as BigInt
-import Data.Semiring as Semiring
 import Data.String as String
 import Mote.Monad as Mote.Monad
 import Run (Run)

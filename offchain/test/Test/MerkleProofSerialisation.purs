@@ -15,7 +15,6 @@ import Test.Unit (Test)
 import Test.Unit.Assert as Test.Unit.Assert
 import Test.Utils (WrappedTests, pureGroup)
 import Test.Utils as Test.Utils
-import Debug (trace)
 import TrustlessSidechain.FUELMintingPolicy.V1
   ( CombinedMerkleProof(CombinedMerkleProof)
   , MerkleTreeEntry(MerkleTreeEntry)
@@ -26,7 +25,6 @@ import TrustlessSidechain.MerkleTree
   , Up(Up)
   , byteArrayToRootHashUnsafe
   )
-import Cardano.Types.Address (toBech32)
 
 -- | `MerkleProofSerialisationTest` is a convenient type alias around `Mote`
 -- | wrapping `Test` with no bracketting for setup

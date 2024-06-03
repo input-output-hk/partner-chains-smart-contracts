@@ -26,16 +26,11 @@ import Contract.Transaction
   ( TransactionHash
   )
 import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
-import Cardano.Types.TransactionInput (TransactionInput)
-import Cardano.Types.OutputDatum (outputDatumDatum)
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as Constraints
 import Cardano.Types.ScriptRef (ScriptRef(PlutusScriptRef))
-import Cardano.Types.Value as Value
 import Data.Array (fromFoldable) as Array
-import JS.BigInt as BigInt
 import Data.List (List)
-import Contract.Numeric.BigNum as BigNum
 import Data.List as List
 import Data.Map as Map
 import Data.Set as Set

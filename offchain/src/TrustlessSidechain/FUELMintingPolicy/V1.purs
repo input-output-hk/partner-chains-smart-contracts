@@ -5,23 +5,18 @@ module TrustlessSidechain.FUELMintingPolicy.V1
   , FUELMintingRedeemer(..)
   , mkMintFuelLookupAndConstraints
   , getFuelMintingPolicy
-  , fuelTokenName
+  , fuelAssetName
   , combinedMerkleProofToFuelParams
   ) where
 
 import Contract.Prelude
-import Cardano.Types.AssetName as AssetName
 import Cardano.Types.Address (getPaymentCredential, getStakeCredential)
 import Cardano.Types.Credential (asPubKeyHash)
 import Contract.Address
   ( Address
-  , PaymentPubKeyHash(PaymentPubKeyHash)
-  , StakePubKeyHash(StakePubKeyHash)
+  , PaymentPubKeyHash
+  , StakePubKeyHash
   )
-import Cardano.Types.Credential
-  ( Credential(PubKeyHashCredential)
-  )
-import Cardano.Types.StakeCredential (StakeCredential(StakeCredential))
 import TrustlessSidechain.Utils.Crypto (blake2b256Hash)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
@@ -32,12 +27,10 @@ import Contract.PlutusData
   )
 import Cardano.Types.PlutusData (PlutusData(Constr))
 import Cardano.Types.PlutusData as PlutusData
-import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.PlutusScript as PlutusScript
-import Contract.Scripts as Scripts
 import Cardano.Types.TransactionInput (TransactionInput)
 import Cardano.Types.TransactionOutput (TransactionOutput)
 import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
@@ -55,8 +48,6 @@ import Cardano.Types.Value as Value
 import JS.BigInt (BigInt)
 import JS.BigInt as BigInt
 import Data.Map as Map
-import Data.Maybe as Maybe
-import Partial.Unsafe as Unsafe
 import Run (Run)
 import Run.Except (EXCEPT)
 import Run.Except as Run
@@ -84,7 +75,6 @@ import TrustlessSidechain.MerkleTree
   , unRootHash
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import Cardano.Types.Address (fromBech32, toBech32)
 import TrustlessSidechain.Utils.Address
   ( getOwnPaymentPubKeyHash
   , addressFromBech32Bytes
@@ -104,13 +94,11 @@ import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
 import Cardano.Types.Int as Int
 import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
-import Cardano.Types.Bech32String (Bech32String)
 import Partial.Unsafe (unsafePartial)
 import Data.ByteArray (ByteArray)
-import Contract.Prim.ByteArray (hexToRawBytes, rawBytesToHex)
 
-fuelTokenName ∷ AssetName
-fuelTokenName = unsafeMkAssetName "FUEL"
+fuelAssetName ∷ AssetName
+fuelAssetName = unsafeMkAssetName "FUEL"
 
 -- | `MerkleTreeEntry` (abbr. mte and pl. mtes) is the data which are the elements in the merkle tree
 -- | for the MerkleRootToken. It contains:
@@ -355,7 +343,7 @@ mkMintFuelLookupAndConstraints
     { confRef, confO } ← DistributedSet.findDsConfOutput ds
 
     insertValidator ← DistributedSet.insertValidator ds
-    let insertValidatorHash = Scripts.validatorHash insertValidator
+    let insertValidatorHash = PlutusScript.hash insertValidator
 
     { mintingPolicy, currencySymbol } ← DistributedSet.getDsKeyPolicy ds
 
@@ -374,7 +362,7 @@ mkMintFuelLookupAndConstraints
     let
       node = DistributedSet.mkNode (unAssetName tnNode) datNode
       amount' = unsafePartial $ fromJust $ BigNum.fromString $ BigInt.toString amount
-      value = Value.singleton fuelMintingCurrencySymbol fuelTokenName amount'
+      value = Value.singleton fuelMintingCurrencySymbol fuelAssetName amount'
       redeemer = wrap (toData (FUELMintingRedeemer merkleTreeEntry merkleProof))
 
     (scriptRefTxInput /\ scriptRefTxOutput) ←
@@ -452,7 +440,7 @@ mkMintFuelLookupAndConstraints
           Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
             (PlutusScript.hash fuelMintingPolicy)
             redeemer
-            fuelTokenName
+            fuelAssetName
             mintAmount
             (RefInput $ TransactionUnspentOutput
                 { input: scriptRefTxInput

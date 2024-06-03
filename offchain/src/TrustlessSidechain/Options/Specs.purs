@@ -2,7 +2,6 @@ module TrustlessSidechain.Options.Specs (options) where
 
 import Contract.Prelude
 
-import Cardano.Plutus.Types.PubKeyHash (PubKeyHash(PubKeyHash))
 import Contract.Config
   ( PrivateStakeKeySource(PrivateStakeKeyFile)
   , ServerConfig

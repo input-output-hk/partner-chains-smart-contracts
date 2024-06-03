@@ -18,9 +18,6 @@ module TrustlessSidechain.MerkleTree
 
 import Contract.Prelude
 
-import Cardano.Types.DataHash as DataHash
-import Cardano.AsCbor (encodeCbor, decodeCbor)
-import Contract.Hashing as Hashing
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData

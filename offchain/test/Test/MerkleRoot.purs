@@ -7,7 +7,6 @@ module Test.MerkleRoot
   )
   where
 
-import Cardano.Serialization.Lib (toBytes)
 import Contract.Prelude
 import Cardano.Types.Credential (Credential(PubKeyHashCredential))
 import Cardano.ToData (toData)
@@ -32,7 +31,7 @@ import Run.Except (note, rethrow) as Run
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
-import Data.ByteArray (ByteArray, byteArrayFromAscii)
+import Data.ByteArray (ByteArray)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSAggregateSignatures(PlainEcdsaSecp256k1)
@@ -58,8 +57,6 @@ import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.MerkleTree (MerkleTree, RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import Cardano.Types.Bech32String (Bech32String)
-import Cardano.Types.Address (toBech32)
 import TrustlessSidechain.Utils.Address
   ( getOwnPaymentPubKeyHash
   )

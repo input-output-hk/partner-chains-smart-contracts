@@ -22,10 +22,8 @@ import Contract.PlutusData
 import Cardano.Types.Int as Int
 import Cardano.ToData (toData)
 import Cardano.FromData (fromData)
-import Cardano.Types.PlutusData (PlutusData)
 import Contract.Numeric.BigNum as BigNum
 import Cardano.Types.OutputDatum (OutputDatum(OutputDatum))
-import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Cardano.Types.PlutusScript (PlutusScript)
@@ -42,16 +40,11 @@ import Contract.TxConstraints
   )
 import Cardano.Types.Mint as Mint
 import Contract.TxConstraints as Constraints
-import Cardano.Types.ScriptRef (ScriptRef(PlutusScriptRef))
-import Cardano.Types.ScriptHash as ScriptHash
 import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Types.AssetName (AssetName)
 import Contract.Value as Value
 import Data.Array as Array
-import Data.BigInt as BigInt
 import Data.Map as Map
-import Data.Maybe as Maybe
-import Partial.Unsafe as Unsafe
 import Run (Run)
 import Run.Except (EXCEPT, throw)
 import Run.Except as Run

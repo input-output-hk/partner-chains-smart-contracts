@@ -3,16 +3,11 @@ module Test.PoCReferenceInput (tests, testScenario1, testScenario2) where
 
 import Contract.Prelude
 
-import Contract.Address as Address
-import Contract.Log as Log
-import Contract.Monad as Monad
 import Contract.PlutusData (RedeemerDatum(RedeemerDatum))
-import Cardano.Types.OutputDatum (OutputDatum(OutputDatum))
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
 import Contract.Scripts as Scripts
 import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptFromEnvelope)
-import Contract.Transaction as Transaction
 import Contract.TxConstraints (DatumPresence(DatumWitness), TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
@@ -25,7 +20,7 @@ import Test.PlutipTest as Test.PlutipTest
 import Test.PoCRawScripts as RawScripts
 import Test.Utils as Test.Utils
 import TrustlessSidechain.Effects.Contract (liftContract)
-import TrustlessSidechain.Effects.Util (lmapThrow)
+import TrustlessSidechain.Effects.Util (lmapThrow, mapError)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Transaction
   ( mkUnbalancedTx
@@ -35,23 +30,16 @@ import TrustlessSidechain.Effects.Transaction
   , awaitTxConfirmed
   ) as Effect
 import TrustlessSidechain.Effects.Log (logInfo') as Effect
-import Contract.PlutusData (RedeemerDatum(RedeemerDatum))
-import TrustlessSidechain.Effects.Util (mapError)
 import TrustlessSidechain.Error
-  ( OffchainError(BalanceTxError, BuildTxError, InvalidScriptArgs, InvalidAddress)
+  ( OffchainError(BalanceTxError, BuildTxError, InvalidScriptArgs, InvalidAddress, InvalidScript)
   )
-import TrustlessSidechain.Effects.Util (fromMaybeThrow)
 import Run.Except (note) as Run
-import TrustlessSidechain.Error (OffchainError(InvalidScript))
-import TrustlessSidechain.Effects.Contract (liftContract)
-import Cardano.AsCbor (encodeCbor)
 import TrustlessSidechain.Utils.Address (toAddress)
---import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer))
-import Cardano.Types.PlutusData as PlutusData
 import Cardano.Types.PlutusScript as PlutusScript
 import Contract.Numeric.BigNum as BigNum
 import Cardano.ToData as ToData
 import Cardano.Plutus.Types.Address as PlutusAddress
+
 -- | `tests` aggregates all the PoCReferenceInput together conveniently
 tests ∷ PlutipTest
 tests = Mote.Monad.group "PoCReferenceInput tests" do

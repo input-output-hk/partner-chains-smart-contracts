@@ -10,26 +10,19 @@ import Contract.Prelude
 import Contract.PlutusData
   ( RedeemerDatum(RedeemerDatum)
   )
-import Cardano.FromData (fromData)
 import Cardano.ToData (toData)
 import Contract.PlutusData as PlutusData
 import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.PlutusScript (PlutusScript)
-import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts as Scripts
 import Contract.TxConstraints
   ( InputWithScriptRef(RefInput)
   , TxConstraints
   )
 import Contract.TxConstraints as Constraints
-import Contract.Value as Value
 import JS.BigInt (BigInt)
-import JS.BigInt as BigInt
-import Data.Maybe as Maybe
-import Partial.Unsafe as Unsafe
 import Run (Run)
 import Run.Except (EXCEPT)
 import Test.PoCRawScripts (rawPoCMintingPolicy)

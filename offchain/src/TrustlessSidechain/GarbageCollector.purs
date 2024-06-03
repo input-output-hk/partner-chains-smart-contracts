@@ -7,16 +7,15 @@ module TrustlessSidechain.GarbageCollector
   ( mkBurnNFTsLookupsAndConstraints
   ) where
 
-import Contract.Prelude
+import Contract.Prelude hiding (unit)
 
 import Contract.PlutusData
   ( RedeemerDatum(RedeemerDatum)
   , toData
-  , unitRedeemer
   )
 import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.PlutusData (unit)
 import Contract.ScriptLookups (ScriptLookups)
-import Contract.Scripts as Scripts
 import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
 import Contract.TxConstraints
   ( InputWithScriptRef(RefInput)
@@ -29,7 +28,6 @@ import Cardano.Types.Value (getMultiAsset)
 import Cardano.Types.MultiAsset (flatten)
 import Contract.Numeric.BigNum as BigNum
 import Data.Array (filter)
-import JS.BigInt as BigInt
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as EcdsaATMSPolicy
@@ -162,7 +160,7 @@ mkBurnNFTsLookupsAndConstraints sidechainParams = do
         , mkConstraint: \{ tokenName, amount } →
             ( TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
                 (PlutusScript.hash fuelBurningPolicy)
-                unitRedeemer
+                (RedeemerDatum unit)
                 tokenName
                 (Int.negate amount)
                 ( RefInput $ TransactionUnspentOutput

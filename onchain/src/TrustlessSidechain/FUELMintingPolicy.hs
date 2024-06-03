@@ -3,7 +3,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module TrustlessSidechain.FUELMintingPolicy (
-  fuelTokenName,
+  fuelAssetName,
   mkMintingPolicy,
   mkMintingPolicyUntyped,
   serialisableMintingPolicy,
@@ -48,11 +48,11 @@ import TrustlessSidechain.Versioning (
   merkleRootTokenPolicyId,
  )
 
--- | 'fuelTokenName' is a constant for the token name of FUEL (the currency of
+-- | 'fuelAssetName' is a constant for the token name of FUEL (the currency of
 -- the side chain).
-{-# INLINEABLE fuelTokenName #-}
-fuelTokenName :: TokenName
-fuelTokenName = TokenName "FUEL"
+{-# INLINEABLE fuelAssetName #-}
+fuelAssetName :: TokenName
+fuelAssetName = TokenName "FUEL"
 
 -- | 'mkMintingPolicy' verifies the following
 --
@@ -172,7 +172,7 @@ mkMintingPolicy _sp versioningConfig (FUELMintingRedeemer mte mp) ctx =
     fuelAmount
       | Just tns <- AssocMap.lookup ownCurrencySymbol $ getValue minted
         , [(tn, amount)] <- AssocMap.toList tns
-        , tn == fuelTokenName =
+        , tn == fuelAssetName =
         amount
       | otherwise = traceError "ERROR-FUEL-MINTING-POLICY-08"
 mkMintingPolicy _ _ _ _ = False

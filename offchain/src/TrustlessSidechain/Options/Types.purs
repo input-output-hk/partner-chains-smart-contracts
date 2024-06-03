@@ -11,7 +11,7 @@ module TrustlessSidechain.Options.Types
 import Contract.Prelude
 
 import Contract.Address (Address)
-import Cardano.Types.NetworkId (NetworkId(TestnetId, MainnetId))
+import Cardano.Types.NetworkId (NetworkId)
 import Contract.Config (ContractParams, ServerConfig)
 import Contract.PlutusData (PlutusData)
 import Contract.Prim.ByteArray (ByteArray)

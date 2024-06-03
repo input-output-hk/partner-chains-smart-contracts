@@ -14,7 +14,7 @@ import Contract.PlutusData
   , RedeemerDatum(RedeemerDatum)
   , toData
   )
-import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
+import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Cardano.Types.PlutusScript (PlutusScript)
@@ -26,11 +26,7 @@ import Contract.TxConstraints as Constraints
 import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Types.AssetName (AssetName)
 import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
-import Contract.Value as Value
 import JS.BigInt (BigInt)
-import JS.BigInt as BigInt
-import Data.Maybe as Maybe
-import Partial.Unsafe as Unsafe
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.Effects.App (APP)
@@ -51,7 +47,6 @@ import TrustlessSidechain.Versioning.ScriptId
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
 import Contract.Numeric.BigNum (BigNum)
-import Contract.Numeric.BigNum as BigNum
 import Cardano.Types.Int as Int
 import Partial.Unsafe (unsafePartial)
 import Cardano.Types.Mint as Mint

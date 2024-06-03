@@ -12,23 +12,17 @@ module TrustlessSidechain.Checkpoint.Utils
 
 import Contract.Prelude
 
-import Contract.CborBytes (cborBytesToByteArray)
-import Contract.Hashing as Hashing
 import Contract.PlutusData (toData)
 import Cardano.AsCbor (encodeCbor)
-import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
-import Contract.Scripts
-  ( Validator
-  )
-import Contract.Scripts as Scripts
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.PlutusScript (PlutusScript)
 import Contract.Numeric.BigNum as BigNum
 import Cardano.Types.TransactionInput (TransactionInput)
 import Cardano.Types.TransactionOutput (TransactionOutput)
 import Contract.TxConstraints (TxConstraints)
-import Cardano.Types.AssetName (AssetName, mkAssetName)
+import Cardano.Types.AssetName (AssetName)
 import Contract.Value as Value
-import Data.Maybe as Maybe
 import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT)
@@ -63,7 +57,6 @@ import TrustlessSidechain.Versioning.ScriptId
 import TrustlessSidechain.Versioning.Types (VersionOracleConfig)
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
-import Partial.Unsafe (unsafePartial)
 
 -- | A name for the checkpoint initialization token.  Must be unique among
 -- | initialization tokens.
@@ -118,7 +111,7 @@ checkpointValidator ∷
   ∀ r.
   CheckpointParameter →
   VersionOracleConfig →
-  Run (EXCEPT OffchainError + r) Validator
+  Run (EXCEPT OffchainError + r) PlutusScript
 checkpointValidator cp voc =
   mkValidatorWithParams CheckpointValidator [ toData cp, toData voc ]
 
@@ -152,7 +145,7 @@ findCheckpointUtxo checkpointParameter = do
   versionOracleConfig ← Versioning.getVersionOracleConfig $
     (unwrap checkpointParameter).sidechainParams
   validator ← checkpointValidator checkpointParameter versionOracleConfig
-  validatorAddress ← toAddress (Scripts.validatorHash validator)
+  validatorAddress ← toAddress (PlutusScript.hash validator)
 
   Utils.Utxos.findUtxoByValueAt validatorAddress \value →
     let asset = case (unwrap checkpointParameter).checkpointAssetClass of

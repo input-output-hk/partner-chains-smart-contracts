@@ -21,7 +21,6 @@ module Test.Utils
 import Cardano.Types.Asset (Asset(Asset))
 import Cardano.AsCbor (encodeCbor)
 import Contract.Prelude
-import Cardano.Types.Value (valueToCoin)
 import Contract.Address (Address)
 import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash)
 import Contract.Log as Log
@@ -39,7 +38,6 @@ import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Contract.Wallet (getWalletUtxos)
 import Control.Monad.Error.Class as MonadError
-import Cardano.Serialization.Lib as Hash
 import JS.BigInt (BigInt)
 import JS.BigInt as BigInt
 import Cardano.Types.BigNum as BigNum

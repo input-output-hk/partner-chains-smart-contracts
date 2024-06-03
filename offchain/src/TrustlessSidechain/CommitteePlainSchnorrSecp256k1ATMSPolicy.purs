@@ -30,7 +30,6 @@ import Contract.PlutusData
 import Cardano.Types.PlutusData (PlutusData(Constr))
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
-import Contract.Scripts as Scripts
 import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
 import Cardano.Types.TransactionInput (TransactionInput)
 import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
@@ -41,10 +40,8 @@ import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.OutputDatum (outputDatumDatum)
 import Contract.TxConstraints (InputWithScriptRef(RefInput), TxConstraints)
 import Contract.TxConstraints as TxConstraints
-import Cardano.Types.Value (flatten)
 import Cardano.Types.AssetName (unAssetName)
 import Data.Array as Array
-import JS.BigInt as BigInt
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT, throw)
@@ -55,7 +52,6 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   )
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
-import TrustlessSidechain.Effects.Transaction (utxosAt) as Effect
 import TrustlessSidechain.Effects.Util (fromMaybeThrow) as Effect
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
@@ -70,7 +66,6 @@ import Cardano.Types.Value as Value
 import TrustlessSidechain.UpdateCommitteeHash.Utils as UpdateCommitteeHash.Utils
 import TrustlessSidechain.Utils.Address
   ( getCurrencyInfo
-  , getOwnWalletAddress
   )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction

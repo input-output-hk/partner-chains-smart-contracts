@@ -4,7 +4,6 @@ import Contract.Prelude
 
 import Contract.CborBytes (cborBytesToByteArray)
 import Cardano.AsCbor (encodeCbor)
-import Contract.Hashing as Hashing
 import Contract.Monad (launchAff_)
 import Contract.PlutusData as PlutusData
 import Cardano.Types.BigNum as BigNum

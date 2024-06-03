@@ -18,7 +18,6 @@ import Contract.PlutusData
   ( class ToData
   , PlutusData
   )
-import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray
   ( ByteArray
   , byteArrayToHex
@@ -29,7 +28,6 @@ import Cardano.Types.AssetName (AssetName)
 import Data.Argonaut (Json)
 import Data.Argonaut.Core as J
 import Data.Bifunctor (rmap)
-import JS.BigInt (BigInt)
 import Data.Codec.Argonaut as CA
 import Data.Codec.Argonaut.Compat as CAC
 import Data.List (List)

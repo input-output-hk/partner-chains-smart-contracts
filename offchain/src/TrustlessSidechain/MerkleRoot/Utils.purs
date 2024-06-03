@@ -19,12 +19,8 @@ module TrustlessSidechain.MerkleRoot.Utils
 
 import Contract.Prelude
 import Partial.Unsafe (unsafePartial)
-import Contract.CborBytes (cborBytesToByteArray)
-import Contract.Hashing as Hashing
 import Contract.PlutusData (toData)
 import Cardano.AsCbor (encodeCbor)
-import Contract.Scripts (Validator)
-import Contract.Scripts as Scripts
 import Cardano.Types.TransactionInput (TransactionInput)
 import Cardano.Types.TransactionOutput (TransactionOutput)
 import Cardano.Types.AssetName (AssetName, mkAssetName)
@@ -102,7 +98,7 @@ findMerkleRootTokenUtxo ∷
     (Maybe { index ∷ TransactionInput, value ∷ TransactionOutput })
 findMerkleRootTokenUtxo merkleRoot sp = do
   validator ← merkleRootTokenValidator sp
-  validatorAddress ← toAddress (Scripts.validatorHash validator)
+  validatorAddress ← toAddress (PlutusScript.hash validator)
   { currencySymbol } ← merkleRootCurrencyInfo sp
 
   Utils.Utxos.findUtxoByValueAt validatorAddress \value →

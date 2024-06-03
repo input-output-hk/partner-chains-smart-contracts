@@ -7,8 +7,7 @@ import Partial.Unsafe (unsafePartial)
 import Cardano.AsCbor (decodeCbor)
 import Contract.Prim.ByteArray (hexToByteArray, hexToByteArrayUnsafe)
 import Contract.Transaction
-  ( TransactionHash(TransactionHash)
-  , TransactionInput(TransactionInput)
+  ( TransactionInput(TransactionInput)
   )
 import Data.Const (Const)
 import Data.UInt as UInt

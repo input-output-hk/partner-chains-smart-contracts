@@ -11,8 +11,6 @@ import Data.Array as Array
 import JS.BigInt as BigInt
 import Data.List as List
 import Data.Map as Map
-import Contract.Wallet as Wallet
-import JS.BigInt as BigInt
 import Cardano.Types.BigNum as BigNum
 import Mote.Monad as Mote.Monad
 import Run (liftEffect) as Run

@@ -31,7 +31,6 @@ import TrustlessSidechain.Versioning.ScriptId
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Types.PlutusScript as PlutusScript
-import Cardano.Types.ScriptHash as ScriptHash
 import Type.Row (type (+))
 import Cardano.Plutus.Types.Address (fromCardano)
 

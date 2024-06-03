@@ -13,7 +13,7 @@ import Cardano.Types.OutputDatum (OutputDatum(OutputDatum))
 import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
 import Cardano.FromData (fromData)
 import Cardano.ToData (toData)
-import Contract.Prim.ByteArray (ByteArray, byteArrayFromAscii)
+import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.TxConstraints
@@ -25,10 +25,7 @@ import Contract.Value (TokenName, Value)
 import Contract.Value as Value
 import Data.Array (nub, sort, (\\))
 import Data.Array as Array
-import Data.BigInt as BigInt
 import Data.Map as Map
-import Data.Maybe as Maybe
-import Partial.Unsafe as Unsafe
 import Run (Run)
 import Run.Except (EXCEPT, throw)
 import Run.Except as Run

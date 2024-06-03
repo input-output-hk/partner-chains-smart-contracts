@@ -11,11 +11,8 @@ import Contract.Prelude
 import Cardano.Types.AssetName (AssetName)
 import TrustlessSidechain.Utils.Asset (unsafeMkAssetName, emptyAssetName)
 import Cardano.ToData (toData)
-import Contract.Prim.ByteArray (byteArrayFromAscii)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.TxConstraints (TxConstraints)
-import Cardano.Types.Value as Value
-import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.Error (OffchainError)

@@ -11,7 +11,7 @@ import Contract.Wallet as Wallet
 import Data.Array as Array
 import JS.BigInt as BigInt
 import Cardano.Types.BigNum as BigNum
-import Partial.Unsafe
+import Partial.Unsafe (unsafePartial)
 import Mote.Monad as Mote.Monad
 import Run (liftEffect) as Run
 import Run.Except (note) as Run

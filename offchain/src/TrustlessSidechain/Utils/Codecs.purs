@@ -12,7 +12,6 @@ import Contract.Prelude
 
 import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash)
 import Cardano.Types.CborBytes (CborBytes(CborBytes))
-import Cardano.Plutus.Types.PubKeyHash (PubKeyHash)
 import Aeson as Aeson
 import Data.Map as Map
 import Data.Map (Map)
@@ -20,11 +19,9 @@ import Contract.Prim.ByteArray
   ( ByteArray
   , byteArrayToHex
   , hexToByteArray
-  , hexToByteArrayUnsafe
   )
 import Contract.Transaction
-  ( TransactionHash(TransactionHash)
-  , TransactionInput(TransactionInput)
+  ( TransactionInput(TransactionInput)
   )
 import Cardano.Types.AssetName (AssetName)
 import Cardano.AsCbor (encodeCbor, decodeCbor)
