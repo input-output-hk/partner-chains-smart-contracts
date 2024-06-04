@@ -2,22 +2,23 @@ module Main (main) where
 
 import Contract.Prelude
 
-import Contract.CborBytes (cborBytesToByteArray)
 import Cardano.AsCbor (encodeCbor)
+import Cardano.ToData (toData)
+import Cardano.Types.BigNum as BigNum
+import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Monad (launchAff_)
 import Contract.PlutusData as PlutusData
-import Cardano.Types.BigNum as BigNum
-import Cardano.ToData (toData)
 import Contract.Prim.ByteArray (ByteArray)
 import Control.Monad.Error.Class (throwError)
 import Data.Array as Array
-import JS.BigInt as BigInt
 import Data.List as List
 import Data.List.NonEmpty as NonEmpty
 import Data.List.Types as Data.List.Types
 import Effect.Class (liftEffect)
 import Effect.Exception (error)
+import JS.BigInt as BigInt
 import Options.Applicative (execParser)
+import Partial.Unsafe (unsafePartial)
 import Run (EFFECT, Run)
 import TrustlessSidechain.CLIVersion (versionString)
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
@@ -70,7 +71,6 @@ import TrustlessSidechain.EndpointResp
       )
   , stringifyEndpointResp
   )
-import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.FUELMintingPolicy.V1 as Mint.V1
 import TrustlessSidechain.FUELMintingPolicy.V2 as Mint.V2
 import TrustlessSidechain.FUELProxyPolicy as FUELProxyPolicy
@@ -558,7 +558,8 @@ runTxEndpoint sidechainEndpointParams endpoint =
             , sidechainEpoch
             , mNewCommitteeValidatorHash
             }
-        saveRootTransactionId ← txHashToByteArray <$> MerkleRoot.saveRoot saveRootParams
+        saveRootTransactionId ← txHashToByteArray <$> MerkleRoot.saveRoot
+          saveRootParams
         committeeHashTransactionId ← txHashToByteArray <$>
           UpdateCommitteeHash.updateCommitteeHash uchParams
         pure $ CommitteeHandoverResp
@@ -819,7 +820,8 @@ runUtilsEndpoint = case _ of
       publicKeysArray = List.toUnfoldable $ Data.List.Types.toList $ publicKeys
 
       aggregatedPublicKeys ∷ ByteArray
-      aggregatedPublicKeys = unsafePartial $ Utils.Crypto.aggregateKeys publicKeysArray
+      aggregatedPublicKeys = unsafePartial $ Utils.Crypto.aggregateKeys
+        publicKeysArray
     in
       pure $
         CborPlainAggregatePublicKeysResp

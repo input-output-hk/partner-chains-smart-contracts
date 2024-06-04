@@ -2,13 +2,14 @@ module Test.PermissionedCandidates (tests) where
 
 import Contract.Prelude
 
+import Cardano.Types.BigNum as BigNum
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import JS.BigInt as BigInt
-import Cardano.Types.BigNum as BigNum
 import Mote.Monad as Mote.Monad
+import Partial.Unsafe (unsafePartial)
 import Run as Run
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
@@ -25,7 +26,6 @@ import TrustlessSidechain.InitSidechain
   )
 import TrustlessSidechain.PermissionedCandidates as PermissionedCandidates
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
-import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.Utils.Crypto
   ( aggregateKeys
   , generatePrivKey

@@ -7,14 +7,20 @@ module TrustlessSidechain.FUELBurningPolicy.V2
 
 import Contract.Prelude
 
+import Cardano.ToData (toData)
+import Cardano.Types.AssetName (AssetName)
+import Cardano.Types.Int as Int
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.TransactionUnspentOutput
+  ( TransactionUnspentOutput(TransactionUnspentOutput)
+  )
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( RedeemerDatum(RedeemerDatum)
   )
-import Cardano.ToData (toData)
 import Contract.PlutusData as PlutusData
-import Cardano.Types.ScriptHash (ScriptHash)
-import Cardano.Types.PlutusScript as PlutusScript
-import Cardano.Types.PlutusScript (PlutusScript)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.TxConstraints
@@ -23,14 +29,15 @@ import Contract.TxConstraints
   )
 import Contract.TxConstraints as Constraints
 import JS.BigInt (BigInt)
+import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT)
 import Test.PoCRawScripts (rawPoCMintingPolicy)
-import Contract.Numeric.BigNum as BigNum
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams'
   )
@@ -39,12 +46,7 @@ import TrustlessSidechain.Versioning.Types
   , VersionOracle(VersionOracle)
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
-import Cardano.Types.AssetName (AssetName)
-import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
 import Type.Row (type (+))
-import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
-import Cardano.Types.Int as Int
-import Partial.Unsafe (unsafePartial)
 
 dummyTokenName ∷ AssetName
 dummyTokenName = unsafeMkAssetName "Dummy tokens"
@@ -103,6 +105,8 @@ mkBurnFuelLookupAndConstraints (FuelBurnParams { sidechainParams, amount }) = do
         (RedeemerDatum $ PlutusData.toData unit)
         dummyTokenName
         (unsafePartial $ fromJust $ Int.fromBigInt amount)
-        (RefInput $ TransactionUnspentOutput {input: scriptRefTxInput, output: scriptRefTxOutput})
+        ( RefInput $ TransactionUnspentOutput
+            { input: scriptRefTxInput, output: scriptRefTxOutput }
+        )
 
   pure { lookups, constraints }

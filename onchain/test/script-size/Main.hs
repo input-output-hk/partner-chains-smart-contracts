@@ -83,7 +83,7 @@ main =
         , scriptFitsInto
             "mkCheckpointValidator (serialized)"
             CV.serialisableCheckpointValidator
-            2_409
+            2_381
         , scriptFitsInto
             "mkCheckpointPolicy (serialized)"
             CV.serialisableCheckpointPolicy

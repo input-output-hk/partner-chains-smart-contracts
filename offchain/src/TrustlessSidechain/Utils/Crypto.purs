@@ -35,21 +35,22 @@ module TrustlessSidechain.Utils.Crypto
   , blake2b256Hash
   ) where
 
-import Partial.Unsafe (unsafePartial)
 import Contract.Prelude
+
+import Cardano.Types.AssetName (mkAssetName)
 import Contract.PlutusData (class FromData, class ToData, fromData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Value (AssetName)
-import Cardano.Types.AssetName (mkAssetName)
 import Data.Array as Array
-import JS.BigInt (BigInt)
-import JS.BigInt as BigInt
 import Data.BigInt as RegularBigInt
-import Data.ByteArray (hexToByteArrayUnsafe, byteArrayToHex)
+import Data.ByteArray (byteArrayToHex, hexToByteArrayUnsafe)
 import Data.Function (on)
 import Data.Maybe as Maybe
 import Data.Ord as Ord
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
+import Partial.Unsafe (unsafePartial)
 import Partial.Unsafe as Unsafe
 
 -- | Invariant: length of the pubkey must be 33 bytes.
@@ -370,13 +371,19 @@ verifyMultiSignature
       let
         ok = signed >
           ( unsafePartial
-          $ fromJust
-          $ BigInt.fromString
-          $ RegularBigInt.toString
-          ( RegularBigInt.quot
-              ((unsafePartial $ fromJust $ RegularBigInt.fromString (BigInt.toString thresholdNumerator)) * RegularBigInt.fromInt (Array.length pubKeys))
-              ((unsafePartial $ fromJust $ RegularBigInt.fromString (BigInt.toString thresholdDenominator)))
-          )
+              $ fromJust
+              $ BigInt.fromString
+              $ RegularBigInt.toString
+                  ( RegularBigInt.quot
+                      ( ( unsafePartial $ fromJust $ RegularBigInt.fromString
+                            (BigInt.toString thresholdNumerator)
+                        ) * RegularBigInt.fromInt (Array.length pubKeys)
+                      )
+                      ( ( unsafePartial $ fromJust $ RegularBigInt.fromString
+                            (BigInt.toString thresholdDenominator)
+                        )
+                      )
+                  )
           )
       in
         case Array.uncons pubs of
@@ -406,21 +413,14 @@ isSorted xss = case Array.tail xss of
   Just xs → and (Array.zipWith (<=) xss xs)
   Nothing → false
 
+foreign import blake2b256 ∷ String → String
 
-
-
-
-foreign import blake2b256 :: String -> String
-blake2b256Hash :: Partial => ByteArray -> ByteArray
+blake2b256Hash ∷ Partial ⇒ ByteArray → ByteArray
 blake2b256Hash d = hexToByteArrayUnsafe $ blake2b256 $ byteArrayToHex d
-
-
 
 -- | `aggregateKeys` aggregates a list of keys s.t. the resulting `ByteArray`
 -- | may be stored in the `UpdateCommitteeDatum` in an onchain compatible way.
 -- | Note: this sorts the input array
-aggregateKeys ∷ Partial => Array ByteArray → ByteArray
+aggregateKeys ∷ Partial ⇒ Array ByteArray → ByteArray
 aggregateKeys keys = blake2b256Hash $ mconcat $ Array.sort keys
-
-
 

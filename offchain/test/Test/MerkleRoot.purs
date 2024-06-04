@@ -4,26 +4,27 @@ module Test.MerkleRoot
   , testScenario2
   , tests
   , paymentPubKeyHashToBech32Bytes
-  )
-  where
+  ) where
 
 import Contract.Prelude
-import Cardano.Types.Credential (Credential(PubKeyHashCredential))
-import Cardano.ToData (toData)
+
 import Cardano.AsCbor (encodeCbor)
-import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash(PaymentPubKeyHash))
-import Cardano.Types.NetworkId (NetworkId(TestnetId))
+import Cardano.ToData (toData)
 import Cardano.Types.Address as Address
-import Partial.Unsafe (unsafePartial)
+import Cardano.Types.BigNum as BigNum
+import Cardano.Types.Credential (Credential(PubKeyHashCredential))
+import Cardano.Types.NetworkId (NetworkId(TestnetId))
+import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash(PaymentPubKeyHash))
 import Contract.Log as Log
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.Bifunctor (lmap)
+import Data.ByteArray (ByteArray)
 import JS.BigInt as BigInt
-import Cardano.Types.BigNum as BigNum
 import Mote.Monad as Mote.Monad
+import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run (liftEffect) as Run
 import Run.Except (EXCEPT)
@@ -31,7 +32,6 @@ import Run.Except (note, rethrow) as Run
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
-import Data.ByteArray (ByteArray)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSAggregateSignatures(PlainEcdsaSecp256k1)
@@ -77,7 +77,9 @@ tests = plutipGroup "Merkle root insertion" $ do
 -- | Note this assumes no staking public key hash to simplify writing tests.
 paymentPubKeyHashToBech32Bytes ∷ PaymentPubKeyHash → ByteArray
 paymentPubKeyHashToBech32Bytes (PaymentPubKeyHash pubKeyHash) =
-  unwrap $ encodeCbor $ Address.mkPaymentAddress TestnetId (wrap $ PubKeyHashCredential pubKeyHash) Nothing
+  unwrap $ encodeCbor $ Address.mkPaymentAddress TestnetId
+    (wrap $ PubKeyHashCredential pubKeyHash)
+    Nothing
 
 -- | `saveRoot` is a wrapper around `MerkleRoot.saveRoot` to make writing test
 -- | cases a bit more terse (note that it makes all committee members sign the new root).
@@ -195,7 +197,8 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
           { initChainId: BigInt.fromInt 69
           , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
-          , initAggregatedCommittee: PlutusData.toData $ unsafePartial Crypto.aggregateKeys
+          , initAggregatedCommittee: PlutusData.toData
+              $ unsafePartial Crypto.aggregateKeys
               $ map unwrap
                   initCommitteePubKeys
           , initSidechainEpoch: zero
@@ -203,7 +206,8 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
           , initATMSKind: ATMSPlainEcdsaSecp256k1
-          , initGovernanceAuthority: Governance.mkGovernanceAuthority ownPaymentPubKeyHash
+          , initGovernanceAuthority: Governance.mkGovernanceAuthority
+              ownPaymentPubKeyHash
           }
 
       { sidechainParams } ← InitSidechain.initSidechain initSidechainParams 1
@@ -307,7 +311,8 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
           { initChainId: BigInt.fromInt 69
           , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
-          , initAggregatedCommittee: PlutusData.toData $ unsafePartial Crypto.aggregateKeys
+          , initAggregatedCommittee: PlutusData.toData
+              $ unsafePartial Crypto.aggregateKeys
               $ map unwrap
                   initCommitteePubKeys
           , initSidechainEpoch: zero
@@ -315,7 +320,8 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
           , initThresholdDenominator: BigInt.fromInt 3
           , initCandidatePermissionTokenMintInfo: Nothing
           , initATMSKind: ATMSPlainEcdsaSecp256k1
-          , initGovernanceAuthority: Governance.mkGovernanceAuthority ownPaymentPubKeyHash
+          , initGovernanceAuthority: Governance.mkGovernanceAuthority
+              ownPaymentPubKeyHash
           }
 
       { sidechainParams } ← InitSidechain.initSidechain initSidechainParams 1
@@ -401,7 +407,8 @@ testScenario3 =
             { initChainId: BigInt.fromInt 69
             , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: PlutusData.toData $ unsafePartial Crypto.aggregateKeys
+            , initAggregatedCommittee: PlutusData.toData
+                $ unsafePartial Crypto.aggregateKeys
                 $ map unwrap
                     initCommitteePubKeys
             , initSidechainEpoch: zero

@@ -5,10 +5,11 @@ module TrustlessSidechain.DParameter.Utils
 
 import Contract.Prelude hiding (note)
 
+import Cardano.Plutus.Types.Address (fromCardano)
+import Cardano.ToData (toData)
 import Cardano.Types.Address
   ( Address
   )
-import Cardano.ToData (toData)
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.ScriptHash (ScriptHash)
@@ -29,7 +30,6 @@ import TrustlessSidechain.Versioning.ScriptId
       )
   )
 import Type.Row (type (+))
-import Cardano.Plutus.Types.Address (fromCardano)
 
 -- | Get the PoCMintingPolicy by applying `SidechainParams` to the dummy
 -- | minting policy.
@@ -40,9 +40,12 @@ decodeDParameterMintingPolicy ∷
 decodeDParameterMintingPolicy sidechainParams = do
   { dParameterValidatorAddress } ← getDParameterValidatorAndAddress
     sidechainParams
-  plutusAddressData <-
-    note (InvalidAddress "Couldn't map address to PlutusData" dParameterValidatorAddress)
-    $ fromCardano dParameterValidatorAddress
+  plutusAddressData ←
+    note
+      ( InvalidAddress "Couldn't map address to PlutusData"
+          dParameterValidatorAddress
+      )
+      $ fromCardano dParameterValidatorAddress
   mkMintingPolicyWithParams DParameterPolicy $
     [ toData sidechainParams, toData plutusAddressData ]
 

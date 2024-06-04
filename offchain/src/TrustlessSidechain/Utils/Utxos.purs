@@ -8,14 +8,14 @@ module TrustlessSidechain.Utils.Utxos
 import Contract.Prelude
 
 import Cardano.Types.Address (Address)
-import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
 import Cardano.Types.TransactionInput (TransactionInput)
-import Contract.Utxos (UtxoMap)
+import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
 import Cardano.Types.Value (Value)
 import Cardano.Types.Value (sum) as Value
+import Contract.Utxos (UtxoMap)
+import Data.Array as Array
 import Data.FoldableWithIndex as FoldableWithIndex
 import Data.Map as Map
-import Data.Array as Array
 import Run (Run)
 import Run.Except (EXCEPT)
 import Run.Except (note) as Run

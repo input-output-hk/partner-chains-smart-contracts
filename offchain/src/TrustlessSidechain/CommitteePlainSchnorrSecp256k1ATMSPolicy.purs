@@ -19,6 +19,18 @@ module TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy
 
 import Contract.Prelude
 
+import Cardano.Types.Asset (Asset(Asset))
+import Cardano.Types.AssetName (unAssetName)
+import Cardano.Types.Int as Int
+import Cardano.Types.OutputDatum (outputDatumDatum)
+import Cardano.Types.PlutusData (PlutusData(Constr))
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.TransactionInput (TransactionInput)
+import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
+import Cardano.Types.TransactionUnspentOutput
+  ( TransactionUnspentOutput(TransactionUnspentOutput)
+  )
+import Cardano.Types.Value as Value
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
@@ -27,22 +39,16 @@ import Contract.PlutusData
   , fromData
   , toData
   )
-import Cardano.Types.PlutusData (PlutusData(Constr))
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
-import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
-import Cardano.Types.TransactionInput (TransactionInput)
-import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
 import Contract.Transaction
   ( TransactionHash
   )
-import Cardano.Types.PlutusScript as PlutusScript
-import Cardano.Types.OutputDatum (outputDatumDatum)
 import Contract.TxConstraints (InputWithScriptRef(RefInput), TxConstraints)
 import Contract.TxConstraints as TxConstraints
-import Cardano.Types.AssetName (unAssetName)
 import Data.Array as Array
 import Data.Map as Map
+import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT, throw)
 import Run.Except as Run
@@ -62,32 +68,27 @@ import TrustlessSidechain.Types (CurrencyInfo)
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   )
-import Cardano.Types.Value as Value
 import TrustlessSidechain.UpdateCommitteeHash.Utils as UpdateCommitteeHash.Utils
 import TrustlessSidechain.Utils.Address
   ( getCurrencyInfo
   )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
+import TrustlessSidechain.Utils.SchnorrSecp256k1
+  ( SchnorrSecp256k1PublicKey
+  , SchnorrSecp256k1Signature
+  )
+import TrustlessSidechain.Utils.SchnorrSecp256k1 as SchnorrSecp256k1
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 import TrustlessSidechain.Utils.Utxos (getOwnUTxOsTotalValue)
+import TrustlessSidechain.Versioning.ScriptId
+  ( ScriptId(CommitteePlainSchnorrSecp256k1ATMSPolicy)
+  )
 import TrustlessSidechain.Versioning.Types
   ( ScriptId(CommitteeOraclePolicy, CommitteeCertificateVerificationPolicy)
   , VersionOracle(VersionOracle)
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
-
-import TrustlessSidechain.Utils.SchnorrSecp256k1
-  ( SchnorrSecp256k1PublicKey
-  , SchnorrSecp256k1Signature
-  )
-import TrustlessSidechain.Utils.SchnorrSecp256k1 as SchnorrSecp256k1
-import TrustlessSidechain.Versioning.ScriptId
-  ( ScriptId(CommitteePlainSchnorrSecp256k1ATMSPolicy)
-  )
-import Cardano.Types.Asset (Asset(Asset))
-import Cardano.Types.Int as Int
-import Partial.Unsafe (unsafePartial)
 
 -- | `ATMSPlainSchnorrSecp256k1Multisignature` corresponds to the onchain type
 newtype ATMSPlainSchnorrSecp256k1Multisignature =
@@ -226,7 +227,7 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
     { index: committeeORef
     , value:
         committeeTxOut@
-          (TransactionOutput tOut )
+          (TransactionOutput tOut)
     } = currentCommitteeUtxo
 
   comitteeHashDatum ←
@@ -234,7 +235,8 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
       ( InvalidData
           "Update committee UTxO is missing inline datum"
       )
-      $ tOut.datum >>= outputDatumDatum
+      $ tOut.datum
+      >>= outputDatumDatum
   UpdateCommitteeDatum datum ← Run.note
     ( InvalidData
         "Datum at update committee UTxO fromData failed"
@@ -310,16 +312,16 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
         -- Filtering the entire list is probably suboptimal. If possible this
         -- should be optimised.
         Array.find
-          ( \a -> case a of
+          ( \a → case a of
               (Asset cs _ /\ _) → cs ==
-                  committeePlainSchnorrSecp256k1ATMS.currencySymbol
-              _ -> false
+                committeePlainSchnorrSecp256k1ATMS.currencySymbol
+              _ → false
           )
           (Value.flatten ownValue)
-      tokenName <- case asset of
-        (Asset _ tokenName) -> Just tokenName
-        _ -> Nothing
-      mintAmount <- Int.fromBigInt $ negate $ BigNum.toBigInt amount
+      tokenName ← case asset of
+        (Asset _ tokenName) → Just tokenName
+        _ → Nothing
+      mintAmount ← Int.fromBigInt $ negate $ BigNum.toBigInt amount
       pure $
         TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
           ( PlutusScript.hash

@@ -6,12 +6,12 @@ module TrustlessSidechain.Utils.Transaction
 
 import Contract.Prelude
 
-import Data.ByteArray (ByteArray)
 import Cardano.AsCbor (encodeCbor)
 import Contract.BalanceTxConstraints (mustNotSpendUtxoWithOutRef)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.Transaction (TransactionHash, TransactionInput)
 import Contract.TxConstraints (TxConstraints)
+import Data.ByteArray (ByteArray)
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.Effects.Log (LOG)
@@ -77,6 +77,5 @@ balanceSignAndSubmitWithoutSpendingUtxo
 
   pure txId
 
-
-txHashToByteArray :: TransactionHash -> ByteArray
+txHashToByteArray ∷ TransactionHash → ByteArray
 txHashToByteArray txHash = unwrap $ encodeCbor txHash

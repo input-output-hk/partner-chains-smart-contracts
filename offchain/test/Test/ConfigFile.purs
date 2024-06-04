@@ -2,9 +2,8 @@ module Test.ConfigFile (tests) where
 
 import Contract.Prelude
 
-import Cardano.Types.NetworkId (NetworkId(TestnetId))
-import Partial.Unsafe (unsafePartial)
 import Cardano.AsCbor (decodeCbor)
+import Cardano.Types.NetworkId (NetworkId(TestnetId))
 import Contract.Prim.ByteArray (hexToByteArray, hexToByteArrayUnsafe)
 import Contract.Transaction
   ( TransactionInput(TransactionInput)
@@ -12,6 +11,7 @@ import Contract.Transaction
 import Data.Const (Const)
 import Data.UInt as UInt
 import Mote.Monad (Mote, test)
+import Partial.Unsafe (unsafePartial)
 import Test.Unit (Test)
 import Test.Unit.Assert (shouldEqual)
 import Test.Utils (WrappedTests, pureGroup)

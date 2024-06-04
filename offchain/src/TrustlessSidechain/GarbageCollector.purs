@@ -9,25 +9,27 @@ module TrustlessSidechain.GarbageCollector
 
 import Contract.Prelude hiding (unit)
 
+import Cardano.Types.Int as Int
+import Cardano.Types.MultiAsset (flatten)
+import Cardano.Types.PlutusData (unit)
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.TransactionUnspentOutput
+  ( TransactionUnspentOutput(TransactionUnspentOutput)
+  )
+import Cardano.Types.Value (getMultiAsset)
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( RedeemerDatum(RedeemerDatum)
   , toData
   )
-import Cardano.Types.PlutusScript as PlutusScript
-import Cardano.Types.PlutusData (unit)
 import Contract.ScriptLookups (ScriptLookups)
-import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
 import Contract.TxConstraints
   ( InputWithScriptRef(RefInput)
   , TxConstraints
   )
-import Partial.Unsafe (unsafePartial)
-import Cardano.Types.Int as Int
 import Contract.TxConstraints as TxConstraints
-import Cardano.Types.Value (getMultiAsset)
-import Cardano.Types.MultiAsset (flatten)
-import Contract.Numeric.BigNum as BigNum
 import Data.Array (filter)
+import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as EcdsaATMSPolicy
@@ -181,7 +183,11 @@ mkBurnNFTsLookupsAndConstraints sidechainParams = do
         filter
           (\(cs /\ _ /\ _) → cs == currencySymbol)
           (flatten $ getMultiAsset ownValue)
-      pure $ mkConstraint { tokenName, amount: unsafePartial $ fromJust $ Int.fromString $ BigNum.toString amount}
+      pure $ mkConstraint
+        { tokenName
+        , amount: unsafePartial $ fromJust $ Int.fromString $ BigNum.toString
+            amount
+        }
 
   pure
     { constraints

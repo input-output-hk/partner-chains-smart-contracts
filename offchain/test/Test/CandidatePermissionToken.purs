@@ -7,10 +7,10 @@ module Test.CandidatePermissionToken
 
 import Contract.Prelude
 
+import Cardano.Types.BigNum as BigNum
 import Cardano.Types.PlutusScript as PlutusScript
 import Contract.Wallet as Wallet
 import JS.BigInt as BigInt
-import Cardano.Types.BigNum as BigNum
 import Mote.Monad as Mote.Monad
 import Run (Run)
 import Run.Except (EXCEPT)

@@ -3,6 +3,12 @@ module Test.PoCReferenceScript (tests, testScenario1, testScenario2) where
 
 import Contract.Prelude
 
+import Cardano.ToData as ToData
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.TransactionUnspentOutput
+  ( TransactionUnspentOutput(TransactionUnspentOutput)
+  )
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData (RedeemerDatum(RedeemerDatum))
 import Contract.PlutusData as PlutusData
 import Contract.ScriptLookups (ScriptLookups)
@@ -19,30 +25,26 @@ import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Data.Map as Map
 import Mote.Monad as Mote.Monad
+import Run.Except (note) as Run
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.PoCRawScripts as RawScripts
 import Test.Utils as Test.Utils
 import TrustlessSidechain.Effects.Contract (liftContract)
+import TrustlessSidechain.Effects.Log (logInfo') as Effect
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Transaction
-  ( mkUnbalancedTx
+  ( awaitTxConfirmed
+  , balanceTx
+  , mkUnbalancedTx
   , signTransaction
   , submit
-  , balanceTx
-  , awaitTxConfirmed
   ) as Effect
-import TrustlessSidechain.Effects.Log (logInfo') as Effect
 import TrustlessSidechain.Effects.Util (mapError)
 import TrustlessSidechain.Error
   ( OffchainError(BalanceTxError, BuildTxError, InvalidScript)
   )
-import Run.Except (note) as Run
 import TrustlessSidechain.Utils.Address (toAddress)
-import Cardano.Types.PlutusScript as PlutusScript
-import Contract.Numeric.BigNum as BigNum
-import Cardano.ToData as ToData
-import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
 
 tests ∷ PlutipTest
 tests = Mote.Monad.group "PoCReferenceScript tests" do
@@ -90,26 +92,31 @@ testScenario1 = Mote.Monad.test "PoCReferenceScript: testScenario1"
   $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       -- 1.
       let
-        toReferenceScript = decodeTextEnvelope RawScripts.rawPoCToReferenceScript >>=
-          plutusScriptFromEnvelope
+        toReferenceScript = decodeTextEnvelope RawScripts.rawPoCToReferenceScript
+          >>=
+            plutusScriptFromEnvelope
 
-      toReferenceValidator ← Run.note (InvalidScript "Decoding text envelope failed.") toReferenceScript
+      toReferenceValidator ← Run.note
+        (InvalidScript "Decoding text envelope failed.")
+        toReferenceScript
       let
         toReferenceScriptHash = PlutusScript.hash toReferenceValidator
         toReferenceValidatorDat = ToData.toData $ unit
-      toReferenceValidatorAddress <- toAddress toReferenceScriptHash
+      toReferenceValidatorAddress ← toAddress toReferenceScriptHash
 
       let
         referenceScript = decodeTextEnvelope RawScripts.rawPoCReferenceScript
           >>= plutusScriptFromEnvelope
 
-      referenceValidator ← Run.note (InvalidScript "Decoding text envelope failed.") referenceScript
+      referenceValidator ← Run.note
+        (InvalidScript "Decoding text envelope failed.")
+        referenceScript
 
       let
         referenceScriptHash = PlutusScript.hash referenceValidator
         referenceValidatorDat = ToData.toData $ unit
 
-      referenceValidatorAddress <- toAddress referenceScriptHash
+      referenceValidatorAddress ← toAddress referenceScriptHash
 
       let
         referenceScriptRef =
@@ -146,8 +153,9 @@ testScenario1 = Mote.Monad.test "PoCReferenceScript: testScenario1"
 
       -- 3.
       void do
-        toReferenceIn /\ toReferenceOut ← liftContract $ Test.Utils.getUniqueUtxoAt
-          toReferenceValidatorAddress
+        toReferenceIn /\ toReferenceOut ← liftContract $
+          Test.Utils.getUniqueUtxoAt
+            toReferenceValidatorAddress
         referenceIn /\ referenceOut ← liftContract $ Test.Utils.getUniqueUtxoAt
           referenceValidatorAddress
 
@@ -162,7 +170,9 @@ testScenario1 = Mote.Monad.test "PoCReferenceScript: testScenario1"
               referenceIn
               referenceValidatorRedeemer
               ( SpendInput
-                  (TransactionUnspentOutput {input: toReferenceIn, output: toReferenceOut})
+                  ( TransactionUnspentOutput
+                      { input: toReferenceIn, output: toReferenceOut }
+                  )
               )
               <> TxConstraints.mustSpendScriptOutput toReferenceIn
                 toReferenceValidatorRedeemer
@@ -198,26 +208,31 @@ testScenario2 = Mote.Monad.test "PoCReferenceScript: testScenario2"
       -- 1.
 
       let
-        toReferenceScript = decodeTextEnvelope RawScripts.rawPoCToReferenceScript >>=
-          plutusScriptFromEnvelope
+        toReferenceScript = decodeTextEnvelope RawScripts.rawPoCToReferenceScript
+          >>=
+            plutusScriptFromEnvelope
 
-      toReferenceValidator ← Run.note (InvalidScript "Decoding text envelope failed.") toReferenceScript
+      toReferenceValidator ← Run.note
+        (InvalidScript "Decoding text envelope failed.")
+        toReferenceScript
       let
         toReferenceScriptHash = PlutusScript.hash toReferenceValidator
         toReferenceValidatorDat = ToData.toData $ unit
-      toReferenceValidatorAddress <- toAddress toReferenceScriptHash
+      toReferenceValidatorAddress ← toAddress toReferenceScriptHash
 
       let
         referenceScript = decodeTextEnvelope RawScripts.rawPoCReferenceScript
           >>= plutusScriptFromEnvelope
 
-      referenceValidator ← Run.note (InvalidScript "Decoding text envelope failed.") referenceScript
+      referenceValidator ← Run.note
+        (InvalidScript "Decoding text envelope failed.")
+        referenceScript
 
       let
         referenceScriptHash = PlutusScript.hash referenceValidator
         referenceValidatorDat = ToData.toData $ unit
 
-      referenceValidatorAddress <- toAddress referenceScriptHash
+      referenceValidatorAddress ← toAddress referenceScriptHash
 
       -- END of duplicated code from `testScenario1`
 
@@ -253,8 +268,9 @@ testScenario2 = Mote.Monad.test "PoCReferenceScript: testScenario2"
 
       -- 3.
       withUnliftApp (Test.Utils.fails) do
-        toReferenceIn /\ toReferenceOut ← liftContract $ Test.Utils.getUniqueUtxoAt
-          toReferenceValidatorAddress
+        toReferenceIn /\ toReferenceOut ← liftContract $
+          Test.Utils.getUniqueUtxoAt
+            toReferenceValidatorAddress
         referenceIn /\ referenceOut ← liftContract $ Test.Utils.getUniqueUtxoAt
           referenceValidatorAddress
 

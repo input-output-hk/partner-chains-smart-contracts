@@ -16,7 +16,11 @@ module Test.PoCSchnorrSecp256k1 (tests) where
 
 import Contract.Prelude
 
+import Cardano.Types.Int as Int
 import Cardano.Types.Mint as Mint
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData (class ToData, PlutusData(Constr))
 import Contract.PlutusData as PlutusData
@@ -39,15 +43,11 @@ import Test.PoCRawScripts as RawScripts
 import Test.Utils as Test.Utils
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
+import TrustlessSidechain.Utils.Asset as Utils.Asset
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
 import TrustlessSidechain.Utils.Scripts as Utils.Scripts
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 import Type.Row (type (+))
-import TrustlessSidechain.Utils.Asset as Utils.Asset
-import Cardano.Types.ScriptHash (ScriptHash)
-import Cardano.Types.PlutusScript (PlutusScript)
-import Cardano.Types.PlutusScript as PlutusScript
-import Cardano.Types.Int as Int
 
 -- | `SchnorrSecp256k1Redeemer` corresponds to the onchain type.
 newtype SchnorrSecp256k1Redeemer = SchnorrSecp256k1Redeemer

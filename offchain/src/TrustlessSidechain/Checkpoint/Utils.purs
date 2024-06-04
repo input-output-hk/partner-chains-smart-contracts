@@ -12,16 +12,18 @@ module TrustlessSidechain.Checkpoint.Utils
 
 import Contract.Prelude
 
-import Contract.PlutusData (toData)
 import Cardano.AsCbor (encodeCbor)
-import Contract.ScriptLookups (ScriptLookups)
-import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.Asset (Asset(Asset))
+import Cardano.Types.AssetClass (AssetClass(AssetClass))
+import Cardano.Types.AssetName (AssetName)
 import Cardano.Types.PlutusScript (PlutusScript)
-import Contract.Numeric.BigNum as BigNum
+import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.TransactionInput (TransactionInput)
 import Cardano.Types.TransactionOutput (TransactionOutput)
+import Contract.Numeric.BigNum as BigNum
+import Contract.PlutusData (toData)
+import Contract.ScriptLookups (ScriptLookups)
 import Contract.TxConstraints (TxConstraints)
-import Cardano.Types.AssetName (AssetName)
 import Contract.Value as Value
 import Partial.Unsafe (unsafePartial)
 import Run (Run)
@@ -30,7 +32,6 @@ import TrustlessSidechain.Checkpoint.Types
   ( CheckpointMessage
   , CheckpointParameter
   )
-import TrustlessSidechain.Utils.Asset (emptyAssetName, unsafeMkAssetName)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
@@ -44,9 +45,8 @@ import TrustlessSidechain.InitSidechain.Utils
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (CurrencyInfo)
-import Cardano.Types.AssetClass (AssetClass(AssetClass))
-import Cardano.Types.Asset (Asset(Asset))
 import TrustlessSidechain.Utils.Address (getCurrencyInfo, toAddress)
+import TrustlessSidechain.Utils.Asset (emptyAssetName, unsafeMkAssetName)
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1Message)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Scripts (mkValidatorWithParams)
@@ -130,12 +130,13 @@ checkpointNftTn = emptyAssetName
 serialiseCheckpointMessage ∷ CheckpointMessage → Maybe EcdsaSecp256k1Message
 serialiseCheckpointMessage message = unsafePartial
   ( Utils.Crypto.ecdsaSecp256k1Message
-  $ Utils.Crypto.blake2b256Hash
-  $ unwrap
-  $ encodeCbor
-  $ toData
-  $ message
+      $ Utils.Crypto.blake2b256Hash
+      $ unwrap
+      $ encodeCbor
+      $ toData
+      $ message
   )
+
 findCheckpointUtxo ∷
   ∀ r.
   CheckpointParameter →
@@ -148,10 +149,12 @@ findCheckpointUtxo checkpointParameter = do
   validatorAddress ← toAddress (PlutusScript.hash validator)
 
   Utils.Utxos.findUtxoByValueAt validatorAddress \value →
-    let asset = case (unwrap checkpointParameter).checkpointAssetClass of
-          AssetClass currencySymbol tokenName →
-            Asset currencySymbol tokenName
+    let
+      asset = case (unwrap checkpointParameter).checkpointAssetClass of
+        AssetClass currencySymbol tokenName →
+          Asset currencySymbol tokenName
 
     -- Note: there should either be 0 or 1 tokens of this checkpoint nft.
-    in Value.valueOf asset value
-      /= (BigNum.fromInt 0)
+    in
+      Value.valueOf asset value
+        /= (BigNum.fromInt 0)

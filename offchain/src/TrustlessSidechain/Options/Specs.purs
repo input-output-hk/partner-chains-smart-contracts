@@ -2,6 +2,7 @@ module TrustlessSidechain.Options.Specs (options) where
 
 import Contract.Prelude
 
+import Cardano.AsCbor (decodeCbor)
 import Contract.Config
   ( PrivateStakeKeySource(PrivateStakeKeyFile)
   , ServerConfig
@@ -17,13 +18,12 @@ import Contract.Wallet
   )
 import Control.Alternative ((<|>))
 import Ctl.Internal.Helpers (logWithLevel)
-import Cardano.AsCbor (decodeCbor)
-import JS.BigInt (BigInt)
-import JS.BigInt as BigInt
 import Data.List (List)
 import Data.List.Types (NonEmptyList)
 import Data.UInt (UInt)
 import Data.UInt as UInt
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
 import Options.Applicative
   ( Parser
   , ParserInfo

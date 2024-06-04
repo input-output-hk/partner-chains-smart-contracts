@@ -21,6 +21,7 @@ import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.TxConstraints (TxConstraints)
+import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT, throw)
 import TrustlessSidechain.CommitteeATMSSchemes.Types
@@ -60,6 +61,7 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   ) as ExportCommitteeATMSSchemesTypes
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
+import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
@@ -73,8 +75,6 @@ import TrustlessSidechain.Types (CurrencyInfo)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as SchnorrSecp256k1
 import Type.Row (type (+))
-import Partial.Unsafe (unsafePartial)
-import TrustlessSidechain.Effects.Log (LOG)
 
 -- | `atmsSchemeLookupsAndConstraints` returns the lookups and constraints
 -- | corresponding to the given `ATMSSchemeParams`
@@ -230,7 +230,10 @@ aggregateATMSPublicKeys ∷
 aggregateATMSPublicKeys { atmsKind, committeePubKeys } =
   case atmsKind of
     ATMSPlainEcdsaSecp256k1 →
-      map (PlutusData.toData <<< (unsafePartial Utils.Crypto.aggregateKeys) <<< map unwrap)
+      map
+        ( PlutusData.toData <<< (unsafePartial Utils.Crypto.aggregateKeys) <<< map
+            unwrap
+        )
         $ flip traverse committeePubKeys
         $
           \pk → do
@@ -243,7 +246,10 @@ aggregateATMSPublicKeys { atmsKind, committeePubKeys } =
               Just pk' → pure pk'
             pure $ pk'
     ATMSPlainSchnorrSecp256k1 →
-      map (PlutusData.toData <<< (unsafePartial Utils.Crypto.aggregateKeys) <<< map unwrap)
+      map
+        ( PlutusData.toData <<< (unsafePartial Utils.Crypto.aggregateKeys) <<< map
+            unwrap
+        )
         $ flip traverse committeePubKeys
         $
           \pk → do

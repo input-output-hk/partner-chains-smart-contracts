@@ -3,6 +3,9 @@ module Test.PoCInlineDatum (tests, testScenario1, testScenario2) where
 
 import Contract.Prelude
 
+import Cardano.ToData as ToData
+import Cardano.Types.PlutusScript as PlutusScript
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData (RedeemerDatum(RedeemerDatum))
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
@@ -15,34 +18,36 @@ import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Control.Applicative as Applicative
-import JS.BigInt as BigInt
 import Data.FoldableWithIndex as FoldableWithIndex
 import Data.Map as Map
+import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
+import Run.Except (note) as Run
+import Run.Except (throw)
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.PoCRawScripts as RawScripts
 import Test.Utils as Test.Utils
+import TrustlessSidechain.Effects.Log (logInfo') as Effect
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Transaction
-  ( mkUnbalancedTx
+  ( awaitTxConfirmed
+  , balanceTx
+  , mkUnbalancedTx
   , signTransaction
   , submit
-  , balanceTx
-  , awaitTxConfirmed
   , utxosAt
   ) as Effect
-import TrustlessSidechain.Effects.Log (logInfo') as Effect
 import TrustlessSidechain.Effects.Util (mapError)
 import TrustlessSidechain.Error
-  ( OffchainError(BalanceTxError, BuildTxError, GenericInternalError, InvalidScript)
+  ( OffchainError
+      ( BalanceTxError
+      , BuildTxError
+      , GenericInternalError
+      , InvalidScript
+      )
   )
-import Run.Except (note) as Run
 import TrustlessSidechain.Utils.Address (toAddress)
-import Cardano.Types.PlutusScript as PlutusScript
-import Contract.Numeric.BigNum as BigNum
-import Cardano.ToData as ToData
-import Run.Except (throw)
 
 -- | `tests` aggregates all the PoCInlineDatums together conveniently
 tests ∷ PlutipTest
@@ -74,7 +79,7 @@ testScenario1 = Mote.Monad.test "PoCInlineDatum: testScenario1"
       let
         validatorHash = PlutusScript.hash validator
         validatorDat = ToData.toData $ BigInt.fromInt 69
-      validatorAddress <- toAddress validatorHash
+      validatorAddress ← toAddress validatorHash
 
       -- 2.
       void do
@@ -153,7 +158,7 @@ testScenario2 = Mote.Monad.test "PoCInlineDatum: testScenario2"
       let
         validatorHash = PlutusScript.hash validator
         validatorDat = ToData.toData $ BigInt.fromInt 69
-      validatorAddress <- toAddress validatorHash
+      validatorAddress ← toAddress validatorHash
 
       -- 2.
       void do
@@ -165,7 +170,6 @@ testScenario2 = Mote.Monad.test "PoCInlineDatum: testScenario2"
 
           lookups ∷ ScriptLookups
           lookups = mempty
-
 
         unbalancedTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups
           constraints

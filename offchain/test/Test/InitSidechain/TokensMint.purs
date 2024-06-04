@@ -4,9 +4,9 @@ module Test.InitSidechain.TokensMint
 
 import Contract.Prelude
 
+import Cardano.Types.BigNum as BigNum
 import Contract.Wallet as Wallet
 import JS.BigInt as BigInt
-import Cardano.Types.BigNum as BigNum
 import Mote.Monad as Mote.Monad
 import Test.InitSidechain.Utils (expectedInitTokens, failMsg, unorderedEq)
 import Test.PlutipTest (PlutipTest)

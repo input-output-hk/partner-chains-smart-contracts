@@ -2,16 +2,16 @@ module Test.DParameter (tests) where
 
 import Contract.Prelude
 
+import Cardano.Types.BigNum as BigNum
 import Contract.Log (logInfo')
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Utxos (getUtxo)
 import Contract.Wallet as Wallet
-import Partial.Unsafe (unsafePartial)
 import Data.Array as Array
 import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
-import Cardano.Types.BigNum as BigNum
+import Partial.Unsafe (unsafePartial)
 import Run as Run
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest

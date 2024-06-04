@@ -5,10 +5,11 @@ module Test.PoCSerialiseData (tests, testScenario1, testScenario2) where
 import Contract.Prelude
 
 import Cardano.AsCbor (encodeCbor)
-import TrustlessSidechain.Utils.Address (toAddress)
 --import Contract.PlutusData (Datum(Datum), Redeemer(Redeemer))
 import Cardano.Types.PlutusData as PlutusData
 import Cardano.Types.PlutusScript as PlutusScript
+import Contract.Numeric.BigNum as BigNum
+import Contract.PlutusData (RedeemerDatum(RedeemerDatum))
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
 import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptFromEnvelope)
@@ -16,30 +17,29 @@ import Contract.TxConstraints (DatumPresence(DatumWitness), TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
 import Contract.Wallet as Wallet
-import JS.BigInt as BigInt
-import Contract.Numeric.BigNum as BigNum
 import Data.Map as Map
+import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
+import Run.Except (note) as Run
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.PoCRawScripts as RawScripts
 import Test.Utils as Test.Utils
 import TrustlessSidechain.Effects.Contract (liftContract)
+import TrustlessSidechain.Effects.Log (logInfo') as Effect
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Transaction
-  ( mkUnbalancedTx
+  ( awaitTxConfirmed
+  , balanceTx
+  , mkUnbalancedTx
   , signTransaction
   , submit
-  , balanceTx
-  , awaitTxConfirmed
   ) as Effect
-import TrustlessSidechain.Effects.Log (logInfo') as Effect
-import Contract.PlutusData (RedeemerDatum(RedeemerDatum))
 import TrustlessSidechain.Effects.Util (mapError)
 import TrustlessSidechain.Error
   ( OffchainError(BalanceTxError, BuildTxError, InvalidScript)
   )
-import Run.Except (note) as Run
+import TrustlessSidechain.Utils.Address (toAddress)
 
 tests ∷ PlutipTest
 tests = Mote.Monad.group "PoCSerialiseData tests" do
@@ -71,7 +71,7 @@ testScenario1 = Mote.Monad.test "PoCSerialiseData: testScenario1"
       validator ← Run.note (InvalidScript "Decoding text envelope failed.") script
       let
         scriptHash = PlutusScript.hash validator
-      validatorAddress <- toAddress scriptHash
+      validatorAddress ← toAddress scriptHash
       -- Getting this validator's datum is a bit confusing..
       -- First, we have
       --  - The integer 69
@@ -107,9 +107,11 @@ testScenario1 = Mote.Monad.test "PoCSerialiseData: testScenario1"
 
       -- 3.
       void do
-        (txIn /\ txOut) ← liftContract $ Test.Utils.getUniqueUtxoAt validatorAddress
+        (txIn /\ txOut) ← liftContract $ Test.Utils.getUniqueUtxoAt
+          validatorAddress
         let
-          validatorRedeemer = RedeemerDatum $ PlutusData.Integer $ BigInt.fromInt 69
+          validatorRedeemer = RedeemerDatum $ PlutusData.Integer $ BigInt.fromInt
+            69
 
           constraints ∷ TxConstraints
           constraints = TxConstraints.mustSpendScriptOutput txIn validatorRedeemer
@@ -155,7 +157,7 @@ testScenario2 = Mote.Monad.test "PoCSerialiseData: testScenario2"
       validator ← Run.note (InvalidScript "Decoding text envelope failed.") script
       let
         scriptHash = PlutusScript.hash validator
-      validatorAddress <- toAddress scriptHash
+      validatorAddress ← toAddress scriptHash
       -- Getting this validator's datum is a bit confusing..
       -- First, we have
       --  - The integer 69
@@ -191,10 +193,12 @@ testScenario2 = Mote.Monad.test "PoCSerialiseData: testScenario2"
 
       -- 3.
       withUnliftApp (Test.Utils.fails) do
-        (txIn /\ txOut) ← liftContract $ Test.Utils.getUniqueUtxoAt validatorAddress
+        (txIn /\ txOut) ← liftContract $ Test.Utils.getUniqueUtxoAt
+          validatorAddress
         let
           -- The only distinct line from `testScenario1`.
-          validatorRedeemer = RedeemerDatum $ PlutusData.Integer $ BigInt.fromInt 70
+          validatorRedeemer = RedeemerDatum $ PlutusData.Integer $ BigInt.fromInt
+            70
 
           constraints ∷ TxConstraints
           constraints = TxConstraints.mustSpendScriptOutput txIn validatorRedeemer

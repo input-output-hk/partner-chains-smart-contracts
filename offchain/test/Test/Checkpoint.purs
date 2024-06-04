@@ -10,17 +10,17 @@ module Test.Checkpoint
 
 import Contract.Prelude
 
-import Partial.Unsafe (unsafePartial)
+import Cardano.Types.BigNum as BigNum
 import Contract.Log (logInfo')
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
 import Data.Array (mapWithIndex)
 import Data.Array as Array
-import Cardano.Types.BigNum as BigNum
 import JS.BigInt (BigInt)
 import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
+import Partial.Unsafe (unsafePartial)
 import Run (liftEffect) as Run
 import Run.Except (note) as Run
 import Test.PlutipTest (PlutipTest)
@@ -126,7 +126,8 @@ saveCheckpointTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map unwrap
+            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map
+                unwrap
                 initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
@@ -196,7 +197,8 @@ notEnoughSignaturesTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map unwrap
+            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map
+                unwrap
                 initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
@@ -275,7 +277,8 @@ outOfOrderCheckpointTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map unwrap
+            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map
+                unwrap
                 initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
@@ -347,7 +350,8 @@ invalidCheckpointBlockHashTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map unwrap
+            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map
+                unwrap
                 initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
@@ -422,7 +426,8 @@ signedByUnknownCommitteeTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map unwrap
+            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map
+                unwrap
                 initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3
@@ -499,7 +504,8 @@ committeeChangeCheckpointTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map unwrap
+            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map
+                unwrap
                 initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
             , initThresholdDenominator: BigInt.fromInt 3

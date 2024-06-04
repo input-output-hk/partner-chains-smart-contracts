@@ -2,15 +2,15 @@ module Test.Versioning (tests) where
 
 import Contract.Prelude
 
+import Cardano.Types.BigNum as BigNum
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
-import Partial.Unsafe (unsafePartial)
 import Data.Array as Array
-import JS.BigInt as BigInt
-import Cardano.Types.BigNum as BigNum
 import Data.List as List
+import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
+import Partial.Unsafe (unsafePartial)
 import Run (AFF, EFFECT, Run)
 import Run.Except (EXCEPT)
 import Test.PlutipTest (PlutipTest)

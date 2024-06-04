@@ -2,11 +2,11 @@ module Test.InitSidechain.CandidatePermissionToken where
 
 import Contract.Prelude
 
+import Cardano.Types.BigNum as BigNum
 import Contract.Log as Log
 import Contract.Wallet as Wallet
 import JS.BigInt (fromInt)
 import JS.BigInt as BigInt
-import Cardano.Types.BigNum as BigNum
 import Mote.Monad as Mote.Monad
 import Test.InitSidechain.Utils (failMsg)
 import Test.PlutipTest (PlutipTest)

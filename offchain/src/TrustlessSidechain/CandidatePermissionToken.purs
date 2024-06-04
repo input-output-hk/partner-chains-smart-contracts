@@ -9,11 +9,15 @@ module TrustlessSidechain.CandidatePermissionToken
 
 import Contract.Prelude hiding (unit)
 
-import Contract.PlutusData
-  ( toData
-  , RedeemerDatum(RedeemerDatum)
-  )
+import Cardano.Types.AssetName (AssetName)
+import Cardano.Types.Int as Int
+import Cardano.Types.Mint as Mint
 import Cardano.Types.PlutusData (unit)
+import Cardano.Types.ScriptHash (ScriptHash)
+import Contract.PlutusData
+  ( RedeemerDatum(RedeemerDatum)
+  , toData
+  )
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction
@@ -21,9 +25,6 @@ import Contract.Transaction
   )
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as TxConstraints
-import Cardano.Types.AssetName (AssetName)
-import TrustlessSidechain.Utils.Asset (emptyAssetName, unsafeMkAssetName)
-import Cardano.Types.ScriptHash (ScriptHash)
 import JS.BigInt (BigInt)
 import Partial.Unsafe (unsafePartial)
 import Run (Run)
@@ -42,13 +43,12 @@ import TrustlessSidechain.InitSidechain.Utils
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (CurrencyInfo)
 import TrustlessSidechain.Utils.Address (getCurrencyInfo)
+import TrustlessSidechain.Utils.Asset (emptyAssetName, unsafeMkAssetName)
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(CandidatePermissionPolicy)
   )
 import Type.Row (type (+))
-import Cardano.Types.Int as Int
-import Cardano.Types.Mint as Mint
 
 --------------------------------
 -- Working with the onchain code
@@ -56,7 +56,8 @@ import Cardano.Types.Mint as Mint
 -- | A name for the candidate permission initialization token.  Must be unique
 -- | among initialization tokens.
 candidatePermissionInitTokenName ∷ AssetName
-candidatePermissionInitTokenName = unsafeMkAssetName "CandidatePermission InitToken"
+candidatePermissionInitTokenName = unsafeMkAssetName
+  "CandidatePermission InitToken"
 
 -- | A name for the candidate permission token.
 candidatePermissionTokenName ∷ AssetName

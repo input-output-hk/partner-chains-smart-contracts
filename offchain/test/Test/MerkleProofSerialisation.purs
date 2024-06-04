@@ -47,7 +47,7 @@ combinedMerkleProofTestCase =
         { index: Test.Utils.unsafeBigIntFromString "-8858258933817599851"
         , amount: Test.Utils.unsafeBigIntFromString "8887194232705394223"
         , recipient: ByteArray.hexToByteArrayUnsafe
-             "ecff7f9199faff168fb0015f01801b5e017f7fb2f3bdfc7fb58436d515000180"
+            "ecff7f9199faff168fb0015f01801b5e017f7fb2f3bdfc7fb58436d515000180"
         , previousMerkleRoot: Just
             ( byteArrayToRootHashUnsafe $ ByteArray.hexToByteArrayUnsafe
                 "803399802c80ff3b7f82ff6f00d9887a51ff47ff7912ff15f10a84ff01ff7f01"
@@ -111,8 +111,10 @@ test1 =
           expectedPlutusData =
             Constr (BigNum.fromInt 0)
               [ Constr (BigNum.fromInt 0)
-                  [ Integer $ Test.Utils.unsafeBigIntFromString "-8858258933817599851"
-                  , Integer $ Test.Utils.unsafeBigIntFromString "8887194232705394223"
+                  [ Integer $ Test.Utils.unsafeBigIntFromString
+                      "-8858258933817599851"
+                  , Integer $ Test.Utils.unsafeBigIntFromString
+                      "8887194232705394223"
                   , Bytes $ ByteArray.hexToByteArrayUnsafe
                       "ecff7f9199faff168fb0015f01801b5e017f7fb2f3bdfc7fb58436d515000180"
                   , Constr (BigNum.fromInt 0)
@@ -160,7 +162,7 @@ test1 =
               ]
 
         Test.Unit.Assert.assert "expected different plutus data"
-            (expectedPlutusData == PlutusData.toData testCase)
+          (expectedPlutusData == PlutusData.toData testCase)
 
 -- | `test2` is an integration test of serialization to cbor
 test2 ∷ MerkleProofSerialisationTest
@@ -192,7 +194,8 @@ test3 =
             { transaction: MerkleTreeEntry
                 { index: Test.Utils.unsafeBigIntFromString "12542"
                 , amount: Test.Utils.unsafeBigIntFromString "539422"
-                , recipient: ByteArray.hexToByteArrayUnsafe "ecff7f9199faff168fb0015f01801b5e017f7fb2f3bdfc7fb58436d515000180"
+                , recipient: ByteArray.hexToByteArrayUnsafe
+                    "ecff7f9199faff168fb0015f01801b5e017f7fb2f3bdfc7fb58436d515000180"
                 , previousMerkleRoot:
                     Just
                       $ byteArrayToRootHashUnsafe

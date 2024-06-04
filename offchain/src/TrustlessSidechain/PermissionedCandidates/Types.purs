@@ -12,6 +12,7 @@ module TrustlessSidechain.PermissionedCandidates.Types
   ) where
 
 import Contract.Prelude
+
 import Contract.PlutusData
   ( class FromData
   , class ToData

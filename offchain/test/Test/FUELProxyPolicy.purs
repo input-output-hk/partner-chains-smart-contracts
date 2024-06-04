@@ -3,13 +3,12 @@ module Test.FUELProxyPolicy (tests) where
 import Contract.Prelude
 
 import Cardano.AsCbor (encodeCbor)
-import TrustlessSidechain.Utils.Address (fromPaymentPubKeyHash, getOwnPaymentPubKeyHash)
+import Cardano.Types.BigNum as BigNum
+import Cardano.Types.NetworkId (NetworkId(TestnetId))
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
-import Cardano.Types.NetworkId (NetworkId(TestnetId))
 import Data.Array as Array
-import Cardano.Types.BigNum as BigNum
 import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe (unsafePartial)
@@ -36,6 +35,10 @@ import TrustlessSidechain.InitSidechain
   , initSidechain
   )
 import TrustlessSidechain.MerkleTree as MerkleTree
+import TrustlessSidechain.Utils.Address
+  ( fromPaymentPubKeyHash
+  , getOwnPaymentPubKeyHash
+  )
 import TrustlessSidechain.Utils.Crypto
   ( aggregateKeys
   , generatePrivKey

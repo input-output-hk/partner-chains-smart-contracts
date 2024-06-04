@@ -29,9 +29,16 @@ module TrustlessSidechain.DistributedSet
 
 import Contract.Prelude
 
+import Cardano.Types.AssetName (AssetName, unAssetName)
+import Cardano.Types.OutputDatum (outputDatumDatum)
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.TransactionInput (TransactionInput)
+import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
+import Cardano.Types.Value (getMultiAsset)
+import Cardano.Types.Value as Value
 import Contract.Address (Address)
-import Data.Map as Map
-
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -41,14 +48,10 @@ import Contract.PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.ScriptLookups (ScriptLookups)
-import Cardano.Types.PlutusScript (PlutusScript)
-import Cardano.Types.PlutusScript as PlutusScript
-import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
-import Cardano.Types.TransactionInput (TransactionInput)
 import Contract.TxConstraints (TxConstraints)
-import Cardano.Types.Value as Value
 import Control.Monad.Maybe.Trans (MaybeT(MaybeT), runMaybeT)
 import Data.Array as Array
+import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT)
 import Run.Except as Run
@@ -75,13 +78,13 @@ import TrustlessSidechain.InitSidechain.Utils
   , initTokenCurrencyInfo
   , mintOneInitToken
   )
-import Cardano.Types.AssetName (AssetName, unAssetName)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (CurrencyInfo)
 import TrustlessSidechain.Utils.Address
   ( getCurrencyInfo
   , toAddress
   )
+import TrustlessSidechain.Utils.Asset (emptyAssetName, unsafeMkAssetName)
 import TrustlessSidechain.Utils.Data
   ( productFromData2
   , productToData2
@@ -99,10 +102,6 @@ import TrustlessSidechain.Versioning.ScriptId
       )
   )
 import Type.Row (type (+))
-import Cardano.Types.Value (getMultiAsset)
-import TrustlessSidechain.Utils.Asset (emptyAssetName, unsafeMkAssetName)
-import Cardano.Types.ScriptHash (ScriptHash)
-import Cardano.Types.OutputDatum (outputDatumDatum)
 
 -- * Types
 -- For more information, see the on-chain Haskell file.
@@ -446,7 +445,7 @@ findDsConfOutput ds = do
         )
       )
       $ Array.find
-          ( \(_ /\ TransactionOutput {amount}) → not $ null
+          ( \(_ /\ TransactionOutput { amount }) → not $ null
               $ Map.lookup (dsConf ds)
               $ unwrap
               $ Value.getMultiAsset amount
@@ -457,7 +456,9 @@ findDsConfOutput ds = do
     Run.note
       ( NotFoundUtxo "Distributed Set config utxo does not contain datum"
       )
-      $ (unwrap (snd out)).datum >>= outputDatumDatum >>= fromData
+      $ (unwrap (snd out)).datum
+      >>= outputDatumDatum
+      >>= fromData
 
   pure
     { confRef: fst out
@@ -503,7 +504,9 @@ findDsOutput ds tn txInput = do
   dat ←
     Run.note
       (ConversionError "datum not a distributed set node")
-      $ (unwrap txOut).datum >>= outputDatumDatum >>= fromData
+      $ (unwrap txOut).datum
+      >>= outputDatumDatum
+      >>= fromData
 
   --  Validate that this is a distributed set node / grab the necessary
   -- information about it
@@ -611,7 +614,8 @@ slowFindDsOutput ds tn = do
 
             tns ←
               hoistMaybe $ Map.lookup dsKeyCurSym
-                $ unwrap $ getMultiAsset (unwrap o).amount
+                $ unwrap
+                $ getMultiAsset (unwrap o).amount
 
             tn' ← hoistMaybe $ Array.head $ Array.fromFoldable $ Map.keys tns
 

@@ -4,15 +4,15 @@ module Test.MerkleRootChaining (tests) where
 
 import Contract.Prelude
 
+import Cardano.Types.BigNum as BigNum
 import Contract.Log as Log
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import JS.BigInt as BigInt
-import Cardano.Types.BigNum as BigNum
-import Partial.Unsafe (unsafePartial)
 import Mote.Monad as Mote.Monad
+import Partial.Unsafe (unsafePartial)
 import Run (liftEffect) as Run
 import Run.Except (note) as Run
 import Test.MerkleRoot as Test.MerkleRoot
@@ -68,8 +68,9 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
       ]
   $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       ownPaymentPubKeyHash ← getOwnPaymentPubKeyHash
-      let ownRecipient = Test.MerkleRoot.paymentPubKeyHashToBech32Bytes
-              ownPaymentPubKeyHash
+      let
+        ownRecipient = Test.MerkleRoot.paymentPubKeyHashToBech32Bytes
+          ownPaymentPubKeyHash
 
       -- 1. Initializing the sidechain
       -------------------------------
@@ -86,7 +87,8 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
             { initChainId: BigInt.fromInt 69_420
             , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial Utils.Crypto.aggregateKeys
+            , initAggregatedCommittee: toData
+                $ unsafePartial Utils.Crypto.aggregateKeys
                 $ map unwrap
                 $ map
                     Utils.Crypto.toPubKeyUnsafe
@@ -96,7 +98,8 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority ownPaymentPubKeyHash
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority
+                ownPaymentPubKeyHash
             }
       { sidechainParams } ← InitSidechain.initSidechain isp 1
 
@@ -219,8 +222,9 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
       ]
   $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       ownPaymentPubKeyHash ← getOwnPaymentPubKeyHash
-      let ownRecipient = Test.MerkleRoot.paymentPubKeyHashToBech32Bytes
-              ownPaymentPubKeyHash
+      let
+        ownRecipient = Test.MerkleRoot.paymentPubKeyHashToBech32Bytes
+          ownPaymentPubKeyHash
 
       -- 1. Initializing the sidechain
       -------------------------------
@@ -237,7 +241,8 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
             { initChainId: BigInt.fromInt 69_420
             , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial Utils.Crypto.aggregateKeys
+            , initAggregatedCommittee: toData
+                $ unsafePartial Utils.Crypto.aggregateKeys
                 $ map unwrap
                 $ map
                     Utils.Crypto.toPubKeyUnsafe
@@ -247,7 +252,8 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
             , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority ownPaymentPubKeyHash
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority
+                ownPaymentPubKeyHash
             }
       { sidechainParams } ← InitSidechain.initSidechain isp 1
 
@@ -293,7 +299,8 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
           $ UpdateCommitteeHash.serialiseUchmHash
           $ UpdateCommitteeHashMessage
               { sidechainParams: sidechainParams
-              , newAggregatePubKeys: unsafePartial Utils.Crypto.aggregateKeys $ map unwrap
+              , newAggregatePubKeys: unsafePartial Utils.Crypto.aggregateKeys $ map
+                  unwrap
                   committee3PubKeys
               ,
                 -- Note: since we can trust the committee will sign the "correct" root,
@@ -310,7 +317,8 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
         $
           UpdateCommitteeHashParams
             { sidechainParams
-            , newAggregatePubKeys: unsafePartial Utils.Crypto.aggregateKeys $ map unwrap
+            , newAggregatePubKeys: unsafePartial Utils.Crypto.aggregateKeys $ map
+                unwrap
                 committee3PubKeys
             , aggregateSignature:
                 PlainEcdsaSecp256k1 $

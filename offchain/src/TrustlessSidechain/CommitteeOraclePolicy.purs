@@ -8,9 +8,8 @@ module TrustlessSidechain.CommitteeOraclePolicy
 
 import Contract.Prelude
 
-import Cardano.Types.AssetName (AssetName)
-import TrustlessSidechain.Utils.Asset (unsafeMkAssetName, emptyAssetName)
 import Cardano.ToData (toData)
+import Cardano.Types.AssetName (AssetName)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.TxConstraints (TxConstraints)
 import Run (Run)
@@ -27,6 +26,7 @@ import TrustlessSidechain.InitSidechain.Utils
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (CurrencyInfo)
 import TrustlessSidechain.Utils.Address (getCurrencyInfo)
+import TrustlessSidechain.Utils.Asset (emptyAssetName, unsafeMkAssetName)
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(CommitteeOraclePolicy)
   )

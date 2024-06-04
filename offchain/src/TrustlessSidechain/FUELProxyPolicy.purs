@@ -7,6 +7,13 @@ module TrustlessSidechain.FUELProxyPolicy
 
 import Contract.Prelude
 
+import Cardano.Types.AssetName (AssetName)
+import Cardano.Types.Int as Int
+import Cardano.Types.Mint as Mint
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.ScriptHash (ScriptHash)
+import Contract.Numeric.BigNum (BigNum)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class ToData
@@ -17,16 +24,12 @@ import Contract.PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Cardano.Types.PlutusScript (PlutusScript)
-import Cardano.Types.PlutusScript as PlutusScript
 import Contract.TxConstraints
   ( TxConstraints
   )
 import Contract.TxConstraints as Constraints
-import Cardano.Types.ScriptHash (ScriptHash)
-import Cardano.Types.AssetName (AssetName)
-import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
 import JS.BigInt (BigInt)
+import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.Effects.App (APP)
@@ -38,6 +41,7 @@ import TrustlessSidechain.FUELBurningPolicy.V2 as Burn.V2
 import TrustlessSidechain.FUELMintingPolicy.V1 as Mint.V1
 import TrustlessSidechain.FUELMintingPolicy.V2 as Mint.V2
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   )
@@ -46,10 +50,6 @@ import TrustlessSidechain.Versioning.ScriptId
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
-import Contract.Numeric.BigNum (BigNum)
-import Cardano.Types.Int as Int
-import Partial.Unsafe (unsafePartial)
-import Cardano.Types.Mint as Mint
 
 -- | Redeemer for the proxy FUEL that tells whether fuel should be minted or
 -- | burned, and which version of the fuel script to use.  Burn case also
@@ -139,7 +139,9 @@ mkFuelProxyMintLookupsAndConstraints sidechainParams fmp = do
       fuelConstraints
         <> Constraints.mustMintValueWithRedeemer
           (RedeemerDatum $ toData $ FuelProxyMint { version })
-          (Mint.singleton fuelProxyCurrencySymbol fuelProxyTokenName (unsafePartial $ fromJust $ Int.fromBigInt amount))
+          ( Mint.singleton fuelProxyCurrencySymbol fuelProxyTokenName
+              (unsafePartial $ fromJust $ Int.fromBigInt amount)
+          )
   pure { lookups, constraints }
 
 -- | Build lookups and constraints for minting a given amount of proxy fuel.

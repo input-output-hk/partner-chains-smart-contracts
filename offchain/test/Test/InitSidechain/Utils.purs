@@ -5,15 +5,16 @@ module Test.InitSidechain.Utils
   ) where
 
 import Prelude
+
 import Cardano.Types.AssetName (AssetName)
-import Cardano.Types.PlutusScript (PlutusScript)
-import Data.Map as Map
-import Contract.Prelude (Tuple, foldr, (/\))
-import Data.Array as Array
 import Cardano.Types.BigNum (BigNum)
 import Cardano.Types.BigNum as BigNum
+import Cardano.Types.PlutusScript (PlutusScript)
+import Contract.Prelude (Tuple, foldr, (/\))
+import Data.Array as Array
 import Data.List (List)
 import Data.List as List
+import Data.Map as Map
 import TrustlessSidechain.Versioning.ScriptId as Types
 import TrustlessSidechain.Versioning.Utils as Versioning
 

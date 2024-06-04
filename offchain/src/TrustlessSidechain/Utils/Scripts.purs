@@ -4,8 +4,10 @@ module TrustlessSidechain.Utils.Scripts
   , mkMintingPolicyWithParams
   , mkMintingPolicyWithParams'
   ) where
-import Cardano.Types.PlutusScript (PlutusScript)
+
 import Contract.Prelude hiding (note)
+
+import Cardano.Types.PlutusScript (PlutusScript)
 import Contract.PlutusData (PlutusData)
 import Contract.Scripts as Scripts
 import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptFromEnvelope)

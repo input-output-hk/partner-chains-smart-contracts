@@ -6,8 +6,8 @@ module TrustlessSidechain.InitSidechain.Utils
 
 import Contract.Prelude
 
-import Contract.PlutusData (RedeemerDatum(RedeemerDatum))
 import Cardano.ToData (toData)
+import Contract.PlutusData (RedeemerDatum(RedeemerDatum))
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.TxConstraints (TxConstraints)
 import Contract.Value (TokenName)
@@ -51,7 +51,8 @@ mintOneInitToken ∷
     , constraints ∷ TxConstraints
     }
 mintOneInitToken sp tn =
-  mintOneToken tn (RedeemerDatum $ toData MintInitToken) <$> initTokenCurrencyInfo sp
+  mintOneToken tn (RedeemerDatum $ toData MintInitToken) <$>
+    initTokenCurrencyInfo sp
 
 -- | Build lookups and constraints to burn one initialisation token of a
 -- | specified name.
@@ -64,4 +65,5 @@ burnOneInitToken ∷
     , constraints ∷ TxConstraints
     }
 burnOneInitToken sp tn =
-  burnOneToken tn (RedeemerDatum $ toData BurnInitToken) <$> initTokenCurrencyInfo sp
+  burnOneToken tn (RedeemerDatum $ toData BurnInitToken) <$>
+    initTokenCurrencyInfo sp

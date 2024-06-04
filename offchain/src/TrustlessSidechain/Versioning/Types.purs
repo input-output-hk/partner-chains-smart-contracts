@@ -11,6 +11,9 @@ module TrustlessSidechain.Versioning.Types
 
 import Contract.Prelude
 
+import Cardano.Types.BigNum (BigNum)
+import Cardano.Types.PlutusScript (PlutusScript, hash)
+import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
@@ -19,15 +22,11 @@ import Contract.PlutusData
   , fromData
   , toData
   )
-import Cardano.Types.PlutusScript (PlutusScript, hash)
-
-import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.Value (CurrencySymbol)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import TrustlessSidechain.Utils.Data (productFromData2, productToData2)
 import TrustlessSidechain.Versioning.ScriptId (ScriptId(..)) as ScriptId
-import Cardano.Types.BigNum (BigNum)
 
 -- | Datum attached to 'VersionOraclePolicy' tokens stored on the
 -- | 'VersionOracleValidator' script.

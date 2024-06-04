@@ -18,24 +18,24 @@ module TrustlessSidechain.UpdateCommitteeHash.Utils
   ) where
 
 import Contract.Prelude
-import Cardano.Types.Asset (Asset(Asset))
+
 import Cardano.AsCbor (encodeCbor)
-import Partial.Unsafe (unsafePartial)
+import Cardano.Types.Asset (Asset(Asset))
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.TransactionOutput (TransactionOutput)
+import Cardano.Types.Value as Value
 import Contract.Address (Address)
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class ToData
   , toData
   )
-
-import Cardano.Types.PlutusScript as PlutusScript
-import Cardano.Types.PlutusScript (PlutusScript)
-import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.Transaction
   ( TransactionInput
   )
-import Cardano.Types.TransactionOutput (TransactionOutput)
-import Cardano.Types.Value as Value
-import Contract.Numeric.BigNum as BigNum
+import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
@@ -102,10 +102,10 @@ serialiseUchmHash ∷
   Maybe EcdsaSecp256k1Message
 serialiseUchmHash keys = unsafePartial
   ( Utils.Crypto.ecdsaSecp256k1Message
-  $ Utils.Crypto.blake2b256Hash
-  $ unwrap
-  $ encodeCbor
-  $ toData keys
+      $ Utils.Crypto.blake2b256Hash
+      $ unwrap
+      $ encodeCbor
+      $ toData keys
   )
 
 -- | `findUpdateCommitteeHashUtxo` returns the (unique) utxo which hold the token which
@@ -132,5 +132,9 @@ findUpdateCommitteeHashUtxo sp = do
 
   Utils.Utxos.findUtxoByValueAt validatorAddress \value →
     -- Note: there should either be 0 or 1 tokens of this committee hash nft.
-    Value.valueOf (Asset committeeOracleCurrencySymbol CommitteeOraclePolicy.committeeOracleTn) value
+    Value.valueOf
+      ( Asset committeeOracleCurrencySymbol
+          CommitteeOraclePolicy.committeeOracleTn
+      )
+      value
       /= BigNum.fromInt 0

@@ -4,15 +4,15 @@ module Test.InitSidechain.FUEL
 
 import Contract.Prelude
 
-import Partial.Unsafe (unsafePartial)
+import Cardano.Types.BigNum as BigNum
 import Contract.PlutusData (toData)
 import Contract.Wallet as Wallet
 import Data.Array as Array
-import JS.BigInt as BigInt
 import Data.List as List
 import Data.Map as Map
-import Cardano.Types.BigNum as BigNum
+import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
+import Partial.Unsafe (unsafePartial)
 import Run (liftEffect) as Run
 import Test.InitSidechain.Utils (expectedInitTokens, failMsg, unorderedEq)
 import Test.PlutipTest (PlutipTest)
@@ -92,9 +92,10 @@ initFuelSucceeds =
             initATMSKind = ATMSPlainEcdsaSecp256k1
             initSidechainEpoch = zero
             initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
-            initAggregatedCommittee = toData $ unsafePartial Crypto.aggregateKeys $ map
-              unwrap
-              initCommittee
+            initAggregatedCommittee = toData $ unsafePartial Crypto.aggregateKeys $
+              map
+                unwrap
+                initCommittee
             sidechainParams = SidechainParams.SidechainParams
               { chainId: BigInt.fromInt 9
               , genesisUtxo: genesisUtxo
@@ -220,9 +221,10 @@ initFuelIdempotent =
             version = 1
             initSidechainEpoch = zero
             initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
-            initAggregatedCommittee = toData $ unsafePartial Crypto.aggregateKeys $ map
-              unwrap
-              initCommittee
+            initAggregatedCommittee = toData $ unsafePartial Crypto.aggregateKeys $
+              map
+                unwrap
+                initCommittee
             initATMSKind = ATMSPlainEcdsaSecp256k1
             sidechainParams = SidechainParams.SidechainParams
               { chainId: BigInt.fromInt 9

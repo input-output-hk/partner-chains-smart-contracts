@@ -5,15 +5,18 @@ module Test.Data
 
 import Contract.Prelude
 
-import Cardano.Plutus.Types.PaymentPubKeyHash (PaymentPubKeyHash(PaymentPubKeyHash))
+import Cardano.Plutus.Types.PaymentPubKeyHash
+  ( PaymentPubKeyHash(PaymentPubKeyHash)
+  )
+import Contract.Numeric.BigNum as BigNum
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromIntArrayUnsafe)
 import Control.Alt ((<|>))
 import Ctl.Internal.Types.Interval (POSIXTime(..))
 import Data.Array.NonEmpty as NE
-import JS.BigInt (BigInt)
-import JS.BigInt as BigInt
 import Data.BigInt as RegularBigInt
 import Data.String.CodeUnits (fromCharArray)
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
 import Mote.Monad (test)
 import Test.QuickCheck.Arbitrary (arbitrary)
 import Test.QuickCheck.Gen (Gen, arrayOf, chooseInt, elements, vectorOf)
@@ -21,12 +24,12 @@ import Test.QuickCheck.Gen as QGen
 import Test.Utils (WrappedTests, pureGroup)
 import Test.Utils.Laws (toDataLaws)
 import Test.Utils.QuickCheck
-  ( ArbitraryBigInt(ArbitraryBigInt)
-  , ArbitraryScriptHash(ArbitraryScriptHash)
+  ( ArbitraryAssetName(ArbitraryAssetName)
+  , ArbitraryBigInt(ArbitraryBigInt)
   , ArbitraryPaymentPubKeyHash(ArbitraryPaymentPubKeyHash)
   , ArbitraryPubKey(ArbitraryPubKey)
+  , ArbitraryScriptHash(ArbitraryScriptHash)
   , ArbitrarySignature(ArbitrarySignature)
-  , ArbitraryAssetName(ArbitraryAssetName)
   , ArbitraryTransactionInput(ArbitraryTransactionInput)
   , DA
   , NonNegative(NonNegative)
@@ -91,7 +94,6 @@ import TrustlessSidechain.NativeTokenManagement.Types
   , ReserveRedeemer(..)
   , ReserveStats(..)
   )
-import Contract.Numeric.BigNum as BigNum
 import TrustlessSidechain.PermissionedCandidates.Types
   ( PermissionedCandidateKeys(PermissionedCandidateKeys)
   , PermissionedCandidatesPolicyRedeemer
@@ -154,6 +156,7 @@ import TrustlessSidechain.Versioning.Types
       , BurnVersionOracle
       )
   )
+
 tests ∷ WrappedTests
 tests = pureGroup "Data roundtrip tests" $ do
   test "SidechainParams" $ liftEffect $ toDataLaws testCount genSP
@@ -637,7 +640,10 @@ genByteArrayLen len =
 -- Instead, we generate a binary string of required size, then convert it.
 genBigIntBits ∷ Int → Gen BigInt
 genBigIntBits bitSize = suchThatMap mkChars
-  (((BigInt.fromString <<< RegularBigInt.toString) <=< (RegularBigInt.fromBase 2 <<< fromCharArray)))
+  ( ( (BigInt.fromString <<< RegularBigInt.toString) <=<
+        (RegularBigInt.fromBase 2 <<< fromCharArray)
+    )
+  )
   where
   mkChars ∷ Gen (Array Char)
   mkChars = vectorOf bitSize (elements (NE.cons' '0' [ '1' ]))

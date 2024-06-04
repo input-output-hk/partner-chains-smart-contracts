@@ -7,8 +7,9 @@ import Contract.Prelude
 import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.Address (Address)
 import Contract.Transaction as Transaction
-import TrustlessSidechain.Versioning.ScriptId (ScriptId)
 import Contract.UnbalancedTx (MkUnbalancedTxError)
+import TrustlessSidechain.Versioning.ScriptId (ScriptId)
+
 -- | Error raised from the off-chain code of the application
 data OffchainError
   -- | A UTxO that should exist (not given as user input) could not be found

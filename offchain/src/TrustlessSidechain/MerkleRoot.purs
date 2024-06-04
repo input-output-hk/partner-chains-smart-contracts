@@ -7,24 +7,28 @@ module TrustlessSidechain.MerkleRoot
 
 import Contract.Prelude hiding (unit)
 
+import Cardano.Types.AssetName (mkAssetName)
+import Cardano.Types.Int as Int
+import Cardano.Types.PlutusData (unit)
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.TransactionUnspentOutput
+  ( TransactionUnspentOutput(TransactionUnspentOutput)
+  )
+import Cardano.Types.Value as Value
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( toData
   )
-import Cardano.Types.PlutusData (unit)
-import Contract.Numeric.BigNum as BigNum
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction
   ( TransactionHash
   )
-import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
 import Contract.TxConstraints
   ( InputWithScriptRef(RefInput)
   , TxConstraints
   )
-import Cardano.Types.AssetName (mkAssetName)
 import Contract.TxConstraints as TxConstraints
-import Cardano.Types.Value as Value
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT)
@@ -62,7 +66,6 @@ import TrustlessSidechain.MerkleRoot.Utils
   , merkleRootTokenValidator
   , serialiseMrimHash
   )
-import Cardano.Types.PlutusScript as PlutusScript
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -79,7 +82,6 @@ import TrustlessSidechain.Versioning.Types
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
-import Cardano.Types.Int as Int
 
 -- | `saveRoot` is the endpoint.
 saveRoot ∷
@@ -252,9 +254,9 @@ saveRootLookupsAndConstraints
         merkleRootTokenName
         (Int.fromInt 1)
         ( RefInput $ TransactionUnspentOutput
-              { input: merkleRootPolicyVersioningInput
-              , output: merkleRootPolicyVersioningOutput
-              }
+            { input: merkleRootPolicyVersioningInput
+            , output: merkleRootPolicyVersioningOutput
+            }
         )
         <> TxConstraints.mustPayToScript (PlutusScript.hash rootTokenVal)
           unit

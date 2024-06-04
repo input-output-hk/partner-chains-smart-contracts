@@ -18,6 +18,18 @@ module TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy
 
 import Contract.Prelude
 
+import Cardano.Types.AssetName (unAssetName)
+import Cardano.Types.Int as Int
+import Cardano.Types.MultiAsset as MultiAsset
+import Cardano.Types.OutputDatum (outputDatumDatum)
+import Cardano.Types.PlutusData (PlutusData(Constr))
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.TransactionInput (TransactionInput)
+import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
+import Cardano.Types.TransactionUnspentOutput
+  ( TransactionUnspentOutput(TransactionUnspentOutput)
+  )
+import Cardano.Types.Value as Value
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
@@ -26,24 +38,16 @@ import Contract.PlutusData
   , fromData
   , toData
   )
-import Cardano.Types.PlutusData (PlutusData(Constr))
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
-import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
-import Cardano.Types.TransactionInput (TransactionInput)
-import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
 import Contract.Transaction
   ( TransactionHash
   )
-import Cardano.Types.PlutusScript as PlutusScript
-import Cardano.Types.OutputDatum (outputDatumDatum)
 import Contract.TxConstraints (InputWithScriptRef(RefInput), TxConstraints)
 import Contract.TxConstraints as TxConstraints
-import Cardano.Types.Value as Value
-import Cardano.Types.MultiAsset as MultiAsset
-import Cardano.Types.AssetName (unAssetName)
 import Data.Array as Array
 import Data.Map as Map
+import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT, throw)
 import Run.Except as Run
@@ -52,12 +56,12 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Log (LOG)
+import TrustlessSidechain.Effects.Log (logInfo') as Effect
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Transaction (utxosAt) as Effect
 import TrustlessSidechain.Effects.Util (fromMaybeThrow) as Effect
 import TrustlessSidechain.Effects.Wallet (WALLET)
-import TrustlessSidechain.Effects.Log (LOG)
-import TrustlessSidechain.Effects.Log (logInfo') as Effect
 import TrustlessSidechain.Error
   ( OffchainError(NotFoundUtxo, InvalidData, VerificationError)
   )
@@ -87,8 +91,6 @@ import TrustlessSidechain.Versioning.Types
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
-import Cardano.Types.Int as Int
-import Partial.Unsafe (unsafePartial)
 
 -- | `ATMSPlainEcdsaSecp256k1Multisignature` corresponds to the onchain type
 newtype ATMSPlainEcdsaSecp256k1Multisignature =
@@ -231,7 +233,8 @@ mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
       ( InvalidData
           "Update committee UTxO is missing inline datum"
       )
-      $ tOut.datum >>= outputDatumDatum
+      $ tOut.datum
+      >>= outputDatumDatum
   UpdateCommitteeDatum datum ← Run.note
     ( InvalidData
         "Datum at update committee UTxO fromData failed"
@@ -312,7 +315,7 @@ mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
               committeePlainEcdsaSecp256k1ATMS.currencySymbol
           )
           (MultiAsset.flatten $ Value.getMultiAsset ownValue)
-      mintAmount <- Int.fromBigInt $ negate $ BigNum.toBigInt amount
+      mintAmount ← Int.fromBigInt $ negate $ BigNum.toBigInt amount
       pure $
         TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
           ( PlutusScript.hash
@@ -322,9 +325,9 @@ mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
           tokenName
           mintAmount
           ( RefInput $ TransactionUnspentOutput
-            { input: committeeCertificateVerificationVersioningInput
-            , output: committeeCertificateVerificationVersioningOutput
-            }
+              { input: committeeCertificateVerificationVersioningInput
+              , output: committeeCertificateVerificationVersioningOutput
+              }
           )
 
   ownAddr ← getOwnWalletAddress
@@ -345,9 +348,9 @@ mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
           message
           (Int.fromInt 1)
           ( RefInput $ TransactionUnspentOutput
-            { input: committeeCertificateVerificationVersioningInput
-            , output: committeeCertificateVerificationVersioningOutput
-            }
+              { input: committeeCertificateVerificationVersioningInput
+              , output: committeeCertificateVerificationVersioningOutput
+              }
           )
           <> versioningConstraints
           <> burnWasteTokenConstraints
@@ -381,8 +384,10 @@ runCommitteePlainEcdsaSecp256k1ATMSPolicy ∷
 runCommitteePlainEcdsaSecp256k1ATMSPolicy sidechainParams params = do
   mustMintCommitteeATMSPolicyLookupsAndConstraints ←
     mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy sidechainParams params
-  Effect.logInfo' (show
-            (unwrap params).currentCommitteeUtxo.value)
+  Effect.logInfo'
+    ( show
+        (unwrap params).currentCommitteeUtxo.value
+    )
   let
     extraLookupsAndContraints =
       { lookups: mempty

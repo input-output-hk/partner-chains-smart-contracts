@@ -6,19 +6,20 @@ module TrustlessSidechain.Checkpoint
 
 import Contract.Prelude hiding (unit)
 
-import Contract.PlutusData (toData, RedeemerDatum(RedeemerDatum))
+import Cardano.Types.BigNum as BigNum
 import Cardano.Types.PlutusData (unit)
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.Value as Value
+import Contract.PlutusData (RedeemerDatum(RedeemerDatum), toData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
-import Cardano.Types.BigNum as BigNum
 import Contract.ScriptLookups as Lookups
-import Cardano.Types.PlutusScript as PlutusScript
 import Contract.Transaction (TransactionHash)
 import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
 import Contract.TxConstraints as TxConstraints
-import Cardano.Types.ScriptHash (ScriptHash)
-import JS.BigInt (BigInt)
 import Data.Map as Map
+import JS.BigInt (BigInt)
 import Run (Run)
 import Run.Except (EXCEPT)
 import Run.Except as Run
@@ -66,7 +67,6 @@ import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
-import Cardano.Types.Value as Value
 
 saveCheckpoint ∷
   ∀ r.
@@ -212,17 +212,20 @@ saveCheckpointLookupsAndConstraints
           , blockNumber: newCheckpointBlockNumber
           }
       )
-    value = Value.assetToValue (unwrap checkpointParam).checkpointAssetClass (BigNum.fromInt 1)
+    value = Value.assetToValue (unwrap checkpointParam).checkpointAssetClass
+      (BigNum.fromInt 1)
 
     lookups ∷ Lookups.ScriptLookups
     lookups =
       Lookups.unspentOutputs (Map.singleton checkpointOref checkpointTxOut)
         <> Lookups.validator validator
 
-    constraints = TxConstraints.mustSpendScriptOutput checkpointOref (RedeemerDatum unit)
-      <> TxConstraints.mustPayToScript checkpointValidatorHash newCheckpointDatum
-        DatumInline
-        value
+    constraints =
+      TxConstraints.mustSpendScriptOutput checkpointOref (RedeemerDatum unit)
+        <> TxConstraints.mustPayToScript checkpointValidatorHash
+          newCheckpointDatum
+          DatumInline
+          value
 
   pure
     { lookupsAndConstraints: { constraints, lookups }

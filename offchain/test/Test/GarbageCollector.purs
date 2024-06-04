@@ -2,21 +2,20 @@ module Test.GarbageCollector where
 
 import Contract.Prelude
 
-import TrustlessSidechain.Utils.Address (fromPaymentPubKeyHash, getOwnPaymentPubKeyHash)
-import Cardano.Types.NetworkId (NetworkId(TestnetId))
-import Contract.Log (logInfo')
-import Cardano.Types.AssetName (mkAssetName)
 import Cardano.AsCbor (encodeCbor)
 import Cardano.ToData (toData)
+import Cardano.Types.AssetName (mkAssetName)
+import Cardano.Types.BigNum as BigNum
+import Cardano.Types.NetworkId (NetworkId(TestnetId))
+import Contract.Log (logInfo')
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Value (TokenName)
 import Contract.Wallet as Wallet
 import Data.Array as Array
-import JS.BigInt as BigInt
-import Cardano.Types.BigNum as BigNum
 import Data.Maybe as Maybe
+import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe (unsafePartial)
 import Partial.Unsafe as Unsafe
@@ -55,6 +54,10 @@ import TrustlessSidechain.InitSidechain
   )
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Address
+  ( fromPaymentPubKeyHash
+  , getOwnPaymentPubKeyHash
+  )
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PrivateKey
   , aggregateKeys
@@ -190,7 +193,8 @@ mintATMSTokens { sidechainParams, initCommitteePrvKeys } = do
     sidechainMessage = Utils.Crypto.byteArrayToEcdsaSecp256k1MessageUnsafe
       sidechainMessageByteArray
     sidechainMessageTokenName =
-      Unsafe.unsafePartial $ Maybe.fromJust $ mkAssetName sidechainMessageByteArray
+      Unsafe.unsafePartial $ Maybe.fromJust $ mkAssetName
+        sidechainMessageByteArray
 
     allPubKeysAndSignatures = generateSignatures
       { -- the current committee stored on chain

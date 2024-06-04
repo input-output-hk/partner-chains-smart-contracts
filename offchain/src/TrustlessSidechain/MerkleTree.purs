@@ -26,15 +26,14 @@ import Contract.PlutusData
   , fromData
   , toData
   )
-import Partial.Unsafe (unsafePartial)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
 import Data.Function as Function
 import Data.List (List(Cons, Nil), (:))
 import Data.String.Common as String
 import Data.Unfoldable as Unfoldable
+import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.Utils.Crypto as Crypto
-
 
 -- * Merkle tree data types
 -- Each of these types should correspond the the on chain types.

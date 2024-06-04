@@ -4,12 +4,12 @@ module TrustlessSidechain.Versioning.ScriptId
 
 import Contract.Prelude
 
+import Cardano.Types.BigInt (fromInt)
 import Contract.PlutusData
   ( class FromData
   , class ToData
   , PlutusData(Integer)
   )
-import Cardano.Types.BigInt (fromInt)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 

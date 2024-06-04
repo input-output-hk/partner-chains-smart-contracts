@@ -11,24 +11,26 @@ module TrustlessSidechain.Utils.Address
   , addressFromBech32Bytes
   ) where
 
+import Contract.Prelude hiding (note)
 
 import Cardano.AsCbor (decodeCbor)
-import Cardano.Types.PaymentCredential (PaymentCredential(PaymentCredential))
-import Cardano.Types.NetworkId (NetworkId)
-import Contract.Prelude hiding (note)
 import Cardano.Serialization.Lib
   ( toBytes
   )
+import Cardano.Types.Address (Address)
+import Cardano.Types.Address as Address
+import Cardano.Types.Credential
+  ( Credential(PubKeyHashCredential, ScriptHashCredential)
+  )
+import Cardano.Types.NetworkId (NetworkId)
+import Cardano.Types.PaymentCredential (PaymentCredential(PaymentCredential))
 import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash)
-import Cardano.Types.Credential (Credential(PubKeyHashCredential, ScriptHashCredential))
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.PlutusData (PlutusData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
-import Cardano.Types.ScriptHash (ScriptHash)
-import Cardano.Types.PlutusScript (PlutusScript)
-import Cardano.Types.PlutusScript as PlutusScript
-import Cardano.Types.Address as Address
-import Cardano.Types.Address (Address)
 import Data.Array as Array
 import Run (Run)
 import Run.Except (EXCEPT, note)
@@ -72,13 +74,14 @@ getOwnWalletAddress = do
 -- | represent a script.
 toScriptHash ∷ ∀ r. Address → Run (EXCEPT OffchainError + r) ScriptHash
 toScriptHash addr = do
-  PaymentCredential c <- note
-    (InvalidAddress "Cannot convert Address to ScriptHash" addr)
-    $ Address.getPaymentCredential addr
+  PaymentCredential c ←
+    note
+      (InvalidAddress "Cannot convert Address to ScriptHash" addr)
+      $ Address.getPaymentCredential addr
 
   case c of
-    ScriptHashCredential sh -> pure sh
-    _ -> Run.throw $ InvalidAddress "Address does not represent a script" addr
+    ScriptHashCredential sh → pure sh
+    _ → Run.throw $ InvalidAddress "Address does not represent a script" addr
 
 -- | Convert ValidatorHash to Address in the current network, raising an error
 -- | if the hash is not valid.
@@ -98,20 +101,22 @@ getCurrencyInfo ∷
 getCurrencyInfo scriptId params = do
   plutusScript ← mkMintingPolicyWithParams scriptId params
 
-  pure $ { mintingPolicy: plutusScript
-         , currencySymbol: PlutusScript.hash plutusScript
-         }
+  pure $
+    { mintingPolicy: plutusScript
+    , currencySymbol: PlutusScript.hash plutusScript
+    }
 
-getPlutusScriptHex :: Partial => PlutusScript -> String
+getPlutusScriptHex ∷ Partial ⇒ PlutusScript → String
 getPlutusScriptHex = ByteArray.byteArrayToHex <<< toBytes <<< PlutusScript.toCsl
 
-getScriptHashHex :: ScriptHash -> String
+getScriptHashHex ∷ ScriptHash → String
 getScriptHashHex = ByteArray.byteArrayToHex <<< toBytes <<< unwrap
 
-fromPaymentPubKeyHash :: NetworkId -> PaymentPubKeyHash -> Address
-fromPaymentPubKeyHash networkId pkh = Address.mkPaymentAddress networkId (wrap $ PubKeyHashCredential $ unwrap pkh) Nothing
+fromPaymentPubKeyHash ∷ NetworkId → PaymentPubKeyHash → Address
+fromPaymentPubKeyHash networkId pkh = Address.mkPaymentAddress networkId
+  (wrap $ PubKeyHashCredential $ unwrap pkh)
+  Nothing
 
-addressFromBech32Bytes :: ByteArray -> Maybe Address
+addressFromBech32Bytes ∷ ByteArray → Maybe Address
 addressFromBech32Bytes = decodeCbor <<< wrap
-
 

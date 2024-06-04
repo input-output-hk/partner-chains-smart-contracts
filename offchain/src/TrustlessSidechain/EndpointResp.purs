@@ -10,9 +10,12 @@ import Aeson
   ( encodeAeson
   , toStringifiedNumbersJson
   )
+import Cardano.AsCbor (encodeCbor)
 import Cardano.ToData (toData)
-import Data.Map (Map)
+import Cardano.Types.AssetName (AssetName)
 import Cardano.Types.BigNum (BigNum)
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.PlutusData
   ( class ToData
@@ -22,15 +25,13 @@ import Contract.Prim.ByteArray
   ( ByteArray
   , byteArrayToHex
   )
-import Cardano.Types.PlutusScript (PlutusScript)
-import Cardano.Types.ScriptHash (ScriptHash)
-import Cardano.Types.AssetName (AssetName)
 import Data.Argonaut (Json)
 import Data.Argonaut.Core as J
 import Data.Bifunctor (rmap)
 import Data.Codec.Argonaut as CA
 import Data.Codec.Argonaut.Compat as CAC
 import Data.List (List)
+import Data.Map (Map)
 import Foreign.Object as Object
 import TrustlessSidechain.FUELMintingPolicy.V1
   ( CombinedMerkleProof
@@ -42,7 +43,6 @@ import TrustlessSidechain.MerkleTree
   , unRootHash
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import Cardano.AsCbor (encodeCbor)
 import TrustlessSidechain.Utils.Codecs
   ( encodeInitTokenStatusData
   , scParamsCodec
@@ -164,8 +164,9 @@ data EndpointResp
 -- | `serialisePlutusDataToHex` serialises plutus data to CBOR, and shows the
 -- | hex encoded CBOR.
 serialisePlutusDataToHex ∷ ∀ a. ToData a ⇒ a → String
-serialisePlutusDataToHex = byteArrayToHex <<< cborBytesToByteArray <<<
-  encodeCbor <<< toData
+serialisePlutusDataToHex = byteArrayToHex <<< cborBytesToByteArray
+  <<< encodeCbor
+  <<< toData
 
 -- Note [BigInt values and JSON]
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -224,7 +225,8 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
         , "candidatePermissionCurrencySymbol"
             /\ J.fromString
-              ( byteArrayToHex $ unwrap $ encodeCbor candidatePermissionCurrencySymbol
+              ( byteArrayToHex $ unwrap $ encodeCbor
+                  candidatePermissionCurrencySymbol
               )
         ]
     GetAddrsResp { sidechainAddresses } →

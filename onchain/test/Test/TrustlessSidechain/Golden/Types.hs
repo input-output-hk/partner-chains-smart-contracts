@@ -62,6 +62,7 @@ import TrustlessSidechain.Types (
     merkleProof,
     transaction
   ),
+  CustomAssetClass (CustomAssetClass),
   CommitteeCertificateMint (
     CommitteeCertificateMint,
     thresholdDenominator,
@@ -433,7 +434,7 @@ sampleCheckpointParameter :: CheckpointParameter
 sampleCheckpointParameter =
   CheckpointParameter
     { sidechainParams = sampleSidechainParams
-    , assetClass = Value.assetClass "c446faf0e8117442c1ebbc9a3a5692e29ce1135df45c5d75eb63d672" ""
+    , assetClass = CustomAssetClass "c446faf0e8117442c1ebbc9a3a5692e29ce1135df45c5d75eb63d672" ""
     }
 
 sampleCheckpointMessage :: CheckpointMessage

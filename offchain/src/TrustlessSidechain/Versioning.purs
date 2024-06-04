@@ -16,19 +16,21 @@ module TrustlessSidechain.Versioning
 
 import Contract.Prelude
 
-import Contract.PlutusData (RedeemerDatum(RedeemerDatum), toData)
-import Contract.ScriptLookups (ScriptLookups)
-import Contract.ScriptLookups as Lookups
+import Cardano.Types.Int as Int
+import Cardano.Types.Mint as Mint
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.ScriptRef (ScriptRef(PlutusScriptRef))
+import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
+import Contract.PlutusData (RedeemerDatum(RedeemerDatum), toData)
+import Contract.ScriptLookups (ScriptLookups)
+import Contract.ScriptLookups as Lookups
 import Contract.Transaction
   ( TransactionHash
   )
-import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as Constraints
-import Cardano.Types.ScriptRef (ScriptRef(PlutusScriptRef))
 import Data.Array (fromFoldable) as Array
 import Data.List (List)
 import Data.List as List
@@ -58,8 +60,6 @@ import TrustlessSidechain.Versioning.Utils as Utils
 import TrustlessSidechain.Versioning.V1 as V1
 import TrustlessSidechain.Versioning.V2 as V2
 import Type.Row (type (+))
-import Cardano.Types.Mint as Mint
-import Cardano.Types.Int as Int
 
 -- | Mint multiple version oracle init tokens.  Exact amount minted depends on
 -- | protocol version.
@@ -449,8 +449,9 @@ getActualVersionedPoliciesAndValidators { sidechainParams, atmsKind } version =
         List.catMaybes
           $ map
               ( \(TransactionOutput { scriptRef }) → case scriptRef of
-                    Just (PlutusScriptRef plutusScript) -> Just $ PlutusScript.hash plutusScript
-                    _ -> Nothing
+                  Just (PlutusScriptRef plutusScript) → Just $ PlutusScript.hash
+                    plutusScript
+                  _ → Nothing
               )
           $ Map.values scriptUtxos
 

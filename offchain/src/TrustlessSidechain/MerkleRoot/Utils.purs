@@ -14,24 +14,27 @@ module TrustlessSidechain.MerkleRoot.Utils
   , merkleRootTokenValidator
   , findMerkleRootTokenUtxo
   , serialiseMrimHash
-  )
-  where
+  ) where
 
 import Contract.Prelude
-import Partial.Unsafe (unsafePartial)
-import Contract.PlutusData (toData)
+
 import Cardano.AsCbor (encodeCbor)
+import Cardano.Types.Asset (Asset(Asset))
+import Cardano.Types.AssetName (AssetName, mkAssetName)
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.TransactionInput (TransactionInput)
 import Cardano.Types.TransactionOutput (TransactionOutput)
-import Cardano.Types.AssetName (AssetName, mkAssetName)
 import Cardano.Types.Value as Value
+import Contract.Numeric.BigNum as BigNum
+import Contract.PlutusData (toData)
+import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT)
 import Run.Except as Run
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError(InvalidData))
-import Contract.Numeric.BigNum as BigNum
 import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage
   )
@@ -54,9 +57,6 @@ import TrustlessSidechain.Versioning.ScriptId
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
-import Cardano.Types.PlutusScript as PlutusScript
-import Cardano.Types.PlutusScript (PlutusScript)
-import Cardano.Types.Asset (Asset(Asset))
 
 -- | `merkleRootCurrencyInfo` gets the minting policy and currency symbol
 -- | corresponding to `MerkleRootTokenPolicy`
@@ -140,8 +140,8 @@ findPreviousMerkleRootTokenUtxo maybeLastMerkleRoot sp =
 serialiseMrimHash ∷ MerkleRootInsertionMessage → Maybe EcdsaSecp256k1Message
 serialiseMrimHash message = unsafePartial
   ( Utils.Crypto.ecdsaSecp256k1Message
-  $ Utils.Crypto.blake2b256Hash
-  $ unwrap
-  $ encodeCbor
-  $ toData message
+      $ Utils.Crypto.blake2b256Hash
+      $ unwrap
+      $ encodeCbor
+      $ toData message
   )

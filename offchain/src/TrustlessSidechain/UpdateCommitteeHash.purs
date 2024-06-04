@@ -7,29 +7,29 @@ module TrustlessSidechain.UpdateCommitteeHash
 
 import Contract.Prelude
 
+import Cardano.Types.PlutusData (PlutusData)
+import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.TransactionInput (TransactionInput)
+import Cardano.Types.TransactionOutput (TransactionOutput)
+import Cardano.Types.Value as Value
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class ToData
   , RedeemerDatum(RedeemerDatum)
   , toData
   )
-import Cardano.Types.PlutusData (PlutusData)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction
   ( TransactionHash
   )
-import Cardano.Types.TransactionInput (TransactionInput)
-import Cardano.Types.TransactionOutput (TransactionOutput)
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
   , TxConstraints
   )
 import Contract.TxConstraints as TxConstraints
-import Cardano.Types.ScriptHash (ScriptHash)
-import Cardano.Types.Value as Value
-import JS.BigInt (BigInt)
-import Contract.Numeric.BigNum as BigNum
 import Data.Map as Map
+import JS.BigInt (BigInt)
 import Run (Run)
 import Run.Except (EXCEPT)
 import Run.Except as Run

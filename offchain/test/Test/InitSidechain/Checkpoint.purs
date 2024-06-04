@@ -4,11 +4,12 @@ module Test.InitSidechain.Checkpoint
 
 import Contract.Prelude
 
+import Cardano.Types.BigNum as BigNum
 import Contract.Log as Log
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Wallet as Wallet
-import JS.BigInt as BigInt
 import Data.List (head)
+import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Test.InitSidechain.Utils (expectedInitTokens, failMsg, unorderedEq)
 import Test.PlutipTest (PlutipTest)
@@ -37,7 +38,6 @@ import TrustlessSidechain.Versioning
   , getExpectedVersionedPoliciesAndValidators
   ) as Versioning
 import TrustlessSidechain.Versioning.ScriptId (ScriptId(..))
-import Cardano.Types.BigNum as BigNum
 
 -- | `tests` aggregates all the tests together in one convenient function
 tests ∷ WrappedTests

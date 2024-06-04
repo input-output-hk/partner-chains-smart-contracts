@@ -10,16 +10,16 @@ module TrustlessSidechain.Options.Types
 
 import Contract.Prelude
 
-import Contract.Address (Address)
 import Cardano.Types.NetworkId (NetworkId)
+import Contract.Address (Address)
 import Contract.Config (ContractParams, ServerConfig)
 import Contract.PlutusData (PlutusData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Scripts (ValidatorHash)
 import Contract.Transaction (TransactionInput)
-import JS.BigInt (BigInt)
 import Data.List (List)
 import Data.List.NonEmpty (NonEmptyList)
+import JS.BigInt (BigInt)
 import Node.Path (FilePath)
 import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSKinds)
 import TrustlessSidechain.CommitteeCandidateValidator

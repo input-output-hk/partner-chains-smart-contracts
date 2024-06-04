@@ -10,14 +10,29 @@ module TrustlessSidechain.FUELMintingPolicy.V1
   ) where
 
 import Contract.Prelude
+
+import Cardano.AsCbor (encodeCbor)
 import Cardano.Types.Address (getPaymentCredential, getStakeCredential)
+import Cardano.Types.AssetName (AssetName, mkAssetName, unAssetName)
 import Cardano.Types.Credential (asPubKeyHash)
+import Cardano.Types.Int as Int
+import Cardano.Types.PlutusData (PlutusData(Constr))
+import Cardano.Types.PlutusData as PlutusData
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.TransactionInput (TransactionInput)
+import Cardano.Types.TransactionOutput (TransactionOutput)
+import Cardano.Types.TransactionUnspentOutput
+  ( TransactionUnspentOutput(TransactionUnspentOutput)
+  )
+import Cardano.Types.Value (Value)
+import Cardano.Types.Value as Value
 import Contract.Address
   ( Address
   , PaymentPubKeyHash
   , StakePubKeyHash
   )
-import TrustlessSidechain.Utils.Crypto (blake2b256Hash)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
@@ -25,29 +40,19 @@ import Contract.PlutusData
   , fromData
   , toData
   )
-import Cardano.Types.PlutusData (PlutusData(Constr))
-import Cardano.Types.PlutusData as PlutusData
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Cardano.Types.PlutusScript (PlutusScript)
-import Cardano.Types.PlutusScript as PlutusScript
-import Cardano.Types.TransactionInput (TransactionInput)
-import Cardano.Types.TransactionOutput (TransactionOutput)
-import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
   , InputWithScriptRef(RefInput)
   , TxConstraints
   )
-import Cardano.AsCbor (encodeCbor)
 import Contract.TxConstraints as Constraints
-import Cardano.Types.ScriptHash (ScriptHash)
-import Cardano.Types.AssetName (AssetName, unAssetName, mkAssetName)
-import Cardano.Types.Value (Value)
-import Cardano.Types.Value as Value
+import Data.ByteArray (ByteArray)
+import Data.Map as Map
 import JS.BigInt (BigInt)
 import JS.BigInt as BigInt
-import Data.Map as Map
+import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT)
 import Run.Except as Run
@@ -76,9 +81,11 @@ import TrustlessSidechain.MerkleTree
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address
-  ( getOwnPaymentPubKeyHash
-  , addressFromBech32Bytes
+  ( addressFromBech32Bytes
+  , getOwnPaymentPubKeyHash
   )
+import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
+import TrustlessSidechain.Utils.Crypto (blake2b256Hash)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   )
@@ -92,10 +99,6 @@ import TrustlessSidechain.Versioning.Types
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
-import Cardano.Types.Int as Int
-import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
-import Partial.Unsafe (unsafePartial)
-import Data.ByteArray (ByteArray)
 
 fuelAssetName ∷ AssetName
 fuelAssetName = unsafeMkAssetName "FUEL"
@@ -361,7 +364,8 @@ mkMintFuelLookupAndConstraints
 
     let
       node = DistributedSet.mkNode (unAssetName tnNode) datNode
-      amount' = unsafePartial $ fromJust $ BigNum.fromString $ BigInt.toString amount
+      amount' = unsafePartial $ fromJust $ BigNum.fromString $ BigInt.toString
+        amount
       value = Value.singleton fuelMintingCurrencySymbol fuelAssetName amount'
       redeemer = wrap (toData (FUELMintingRedeemer merkleTreeEntry merkleProof))
 
@@ -423,7 +427,9 @@ mkMintFuelLookupAndConstraints
 
     mustAddDSNodeA ← mkNodeConstraints nodeA
     mustAddDSNodeB ← mkNodeConstraints nodeB
-    let mintAmount = unsafePartial $ fromJust $ Int.fromString $ BigInt.toString amount
+    let
+      mintAmount = unsafePartial $ fromJust $ Int.fromString $ BigInt.toString
+        amount
     pure
       { lookups:
           Lookups.plutusMintingPolicy mintingPolicy
@@ -442,7 +448,7 @@ mkMintFuelLookupAndConstraints
             redeemer
             fuelAssetName
             mintAmount
-            (RefInput $ TransactionUnspentOutput
+            ( RefInput $ TransactionUnspentOutput
                 { input: scriptRefTxInput
                 , output: scriptRefTxOutput
                 }
@@ -485,11 +491,13 @@ findMerkleRootTokenUtxoByRootHash sidechainParams rootHash = do
 
 -- | Derive the public key hash from a public key address
 toPaymentPubKeyHash ∷ Address → Maybe PaymentPubKeyHash
-toPaymentPubKeyHash addr = wrap <$> ((asPubKeyHash <<< unwrap) =<< getPaymentCredential addr)
+toPaymentPubKeyHash addr = wrap <$>
+  ((asPubKeyHash <<< unwrap) =<< getPaymentCredential addr)
 
 -- | Derive the stake key hash from a public key address
 toStakePubKeyHash ∷ Address → Maybe StakePubKeyHash
-toStakePubKeyHash addr = wrap <$> ((asPubKeyHash <<< unwrap) =<< getStakeCredential addr)
+toStakePubKeyHash addr = wrap <$>
+  ((asPubKeyHash <<< unwrap) =<< getStakeCredential addr)
 
 -- | Pay values to a public key address (with optional staking key)
 mustPayToPubKeyAddress' ∷

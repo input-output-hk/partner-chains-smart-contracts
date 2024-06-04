@@ -4,19 +4,19 @@ module TrustlessSidechain.InitSidechain.Checkpoint
 
 import Contract.Prelude hiding (note)
 
+import Cardano.Types.BigNum as BigNum
+import Cardano.Types.Int as Int
+import Cardano.Types.Mint as Mint
+import Cardano.Types.PlutusScript as PlutusScript
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Cardano.Types.PlutusScript as PlutusScript
 import Contract.Transaction (TransactionHash)
 import Contract.TxConstraints (DatumPresence(..), TxConstraints)
 import Contract.TxConstraints as Constraints
 import Contract.Value as Value
 import JS.BigInt as BigInt
-import Cardano.Types.BigNum as BigNum
-import Cardano.Types.Int as Int
-import Cardano.Types.Mint as Mint
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.Checkpoint (CheckpointDatum(..), checkpointNftTn)
@@ -107,7 +107,8 @@ initCheckpointLookupsAndConstraints initGenesisHash sidechainParams = do
 
   let
     checkpointNftValue =
-      Value.singleton checkpointNft.currencySymbol checkpointNftTn (BigNum.fromInt 1)
+      Value.singleton checkpointNft.currencySymbol checkpointNftTn
+        (BigNum.fromInt 1)
     checkpointNftMint =
       Mint.singleton checkpointNft.currencySymbol checkpointNftTn (Int.fromInt 1)
 

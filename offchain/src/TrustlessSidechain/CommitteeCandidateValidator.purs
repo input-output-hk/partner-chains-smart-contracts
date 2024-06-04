@@ -11,6 +11,12 @@ module TrustlessSidechain.CommitteeCandidateValidator
 
 import Contract.Prelude hiding (unit)
 
+import Cardano.Types.OutputDatum (outputDatumDatum)
+import Cardano.Types.PlutusData (unit)
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.TransactionInput (TransactionInput)
+import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
+import Cardano.Types.Value as Value
 import Contract.Address
   ( PaymentPubKeyHash
   )
@@ -23,23 +29,17 @@ import Contract.PlutusData
   , fromData
   , toData
   )
-import Cardano.Types.PlutusData (unit)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups as Lookups
-import Cardano.Types.PlutusScript as PlutusScript
 import Contract.Transaction
   ( TransactionHash
   )
-
-import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
-import Cardano.Types.TransactionInput (TransactionInput)
-import Cardano.Types.OutputDatum (outputDatumDatum)
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (UtxoMap)
-import Cardano.Types.Value as Value
 import Control.Alternative (guard)
 import Data.Array (catMaybes)
 import Data.Map as Map
+import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT, throw)
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
@@ -63,7 +63,6 @@ import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(CommitteeCandidateValidator)
   )
 import Type.Row (type (+))
-import Partial.Unsafe (unsafePartial)
 
 newtype RegisterParams = RegisterParams
   { sidechainParams ∷ SidechainParams
@@ -306,7 +305,8 @@ register
       <> Lookups.validator validator
       <> Lookups.unspentOutputs valUtxos
       <>
-        if usePermissionToken then Lookups.plutusMintingPolicy candidateMintingPolicy
+        if usePermissionToken then Lookups.plutusMintingPolicy
+          candidateMintingPolicy
         else mempty
 
     constraints ∷ Constraints.TxConstraints

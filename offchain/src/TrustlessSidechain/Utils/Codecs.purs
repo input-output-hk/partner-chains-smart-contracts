@@ -10,11 +10,14 @@ module TrustlessSidechain.Utils.Codecs
 
 import Contract.Prelude
 
-import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash)
-import Cardano.Types.CborBytes (CborBytes(CborBytes))
 import Aeson as Aeson
-import Data.Map as Map
-import Data.Map (Map)
+import Cardano.AsCbor (decodeCbor, encodeCbor)
+import Cardano.Types.AssetName (AssetName)
+import Cardano.Types.BigNum (BigNum)
+import Cardano.Types.BigNum as BigNum
+import Cardano.Types.CborBytes (CborBytes(CborBytes))
+import Cardano.Types.Ed25519KeyHash (Ed25519KeyHash)
+import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash)
 import Contract.Prim.ByteArray
   ( ByteArray
   , byteArrayToHex
@@ -23,22 +26,19 @@ import Contract.Prim.ByteArray
 import Contract.Transaction
   ( TransactionInput(TransactionInput)
   )
-import Cardano.Types.AssetName (AssetName)
-import Cardano.AsCbor (encodeCbor, decodeCbor)
 import Data.Argonaut (Json)
 import Data.Argonaut.Core as J
 import Data.Array as Array
-import JS.BigInt (BigInt)
-import JS.BigInt as BigInt
-import Cardano.Types.BigNum (BigNum)
-import Cardano.Types.BigNum as BigNum
-
 import Data.Codec.Argonaut as CA
 import Data.Codec.Argonaut.Record as CAR
+import Data.Map (Map)
+import Data.Map as Map
 import Data.Profunctor (wrapIso)
 import Data.String (Pattern(Pattern), split)
 import Data.UInt as UInt
 import Foreign.Object as Object
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
 import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSKinds
@@ -55,7 +55,6 @@ import TrustlessSidechain.Governance
   )
 import TrustlessSidechain.Options.Parsers as Parsers
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
-import Cardano.Types.Ed25519KeyHash (Ed25519KeyHash)
 
 -- Note [BigInt values and JSON]
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -85,7 +84,7 @@ transactionInputCodec =
     case split (Pattern "#") txIn of
       [ txId, txIdx ] → ado
         index ← UInt.fromString txIdx
-        transactionId <- (decodeCbor <<< wrap) =<< hexToByteArray txId
+        transactionId ← (decodeCbor <<< wrap) =<< hexToByteArray txId
         in
           TransactionInput
             { transactionId
@@ -158,7 +157,7 @@ scParamsCodec =
         }
     )
 
-pubKeyHashCodec :: CA.JsonCodec PaymentPubKeyHash
+pubKeyHashCodec ∷ CA.JsonCodec PaymentPubKeyHash
 pubKeyHashCodec = CA.prismaticCodec "PaymentPubKeyHash"
   (Just <<< wrap)
   unwrap

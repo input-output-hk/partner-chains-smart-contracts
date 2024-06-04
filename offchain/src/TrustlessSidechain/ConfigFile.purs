@@ -10,7 +10,6 @@ import Contract.Prelude
 
 import Cardano.Serialization.Lib (fromBytes)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
-import Partial.Unsafe (unsafePartial)
 import Contract.Transaction
   ( TransactionInput(TransactionInput)
   )
@@ -21,6 +20,7 @@ import Data.UInt as UInt
 import Effect.Exception as Exception
 import Node.Encoding (Encoding(ASCII))
 import Node.FS.Sync (exists, readTextFile)
+import Partial.Unsafe (unsafePartial)
 import Run (EFFECT, Run)
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
@@ -41,8 +41,12 @@ optExample =
   { sidechainParameters: Just
       { chainId: Just 1
       , genesisUtxo: Just $ TransactionInput
-          { transactionId: (wrap $ unsafePartial $ fromJust $ fromBytes
-              (hexToByteArrayUnsafe "ea092fb8d592f7533021598178182ba9db2ef5f8c233db802ca1728994df1193"))
+          { transactionId:
+              ( wrap $ unsafePartial $ fromJust $ fromBytes
+                  ( hexToByteArrayUnsafe
+                      "ea092fb8d592f7533021598178182ba9db2ef5f8c233db802ca1728994df1193"
+                  )
+              )
           , index: UInt.fromInt 2
           }
       , threshold: Just

@@ -5,6 +5,10 @@ module TrustlessSidechain.PermissionedCandidates.Utils
 
 import Contract.Prelude
 
+import Cardano.Plutus.Types.Address (fromCardano)
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.Address
   ( Address
   )
@@ -28,11 +32,7 @@ import TrustlessSidechain.Versioning.ScriptId
       , PermissionedCandidatesPolicy
       )
   )
-import Cardano.Types.PlutusScript (PlutusScript)
-import Cardano.Types.ScriptHash (ScriptHash)
-import Cardano.Types.PlutusScript as PlutusScript
 import Type.Row (type (+))
-import Cardano.Plutus.Types.Address (fromCardano)
 
 -- | Get the PoCMintingPolicy by applying `SidechainParams` to the dummy
 -- | minting policy.
@@ -43,9 +43,12 @@ decodePermissionedCandidatesMintingPolicy ∷
 decodePermissionedCandidatesMintingPolicy sidechainParams = do
   { permissionedCandidatesValidatorAddress } ←
     getPermissionedCandidatesValidatorAndAddress sidechainParams
-  plutusAddress <- Run.note
-    (InvalidAddress "Invalid permissioned candidates validator address." permissionedCandidatesValidatorAddress)
-    $ fromCardano permissionedCandidatesValidatorAddress
+  plutusAddress ←
+    Run.note
+      ( InvalidAddress "Invalid permissioned candidates validator address."
+          permissionedCandidatesValidatorAddress
+      )
+      $ fromCardano permissionedCandidatesValidatorAddress
   mkMintingPolicyWithParams PermissionedCandidatesPolicy
     [ toData sidechainParams, toData plutusAddress ]
 
@@ -83,6 +86,8 @@ getPermissionedCandidatesMintingPolicyAndCurrencySymbol ∷
 getPermissionedCandidatesMintingPolicyAndCurrencySymbol sidechainParams = do
   permissionedCandidatesMintingPolicy ← decodePermissionedCandidatesMintingPolicy
     sidechainParams
-  let permissionedCandidatesCurrencySymbol = PlutusScript.hash permissionedCandidatesMintingPolicy
+  let
+    permissionedCandidatesCurrencySymbol = PlutusScript.hash
+      permissionedCandidatesMintingPolicy
   pure
     { permissionedCandidatesMintingPolicy, permissionedCandidatesCurrencySymbol }

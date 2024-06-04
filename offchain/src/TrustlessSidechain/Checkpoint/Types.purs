@@ -7,6 +7,8 @@ module TrustlessSidechain.Checkpoint.Types
 
 import Contract.Prelude
 
+import Cardano.Types.AssetClass (AssetClass(AssetClass))
+import Cardano.Types.PlutusData (PlutusData(Constr))
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
@@ -14,12 +16,10 @@ import Contract.PlutusData
   , fromData
   , toData
   )
-import Cardano.Types.PlutusData (PlutusData(Constr))
 import Contract.Prim.ByteArray (ByteArray)
 import JS.BigInt (BigInt)
 import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSAggregateSignatures)
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import Cardano.Types.AssetClass (AssetClass(AssetClass))
 import TrustlessSidechain.Utils.Data
   ( productFromData2
   , productToData2
@@ -68,15 +68,15 @@ instance ToData CheckpointParameter where
 
 instance FromData CheckpointParameter where
   fromData d = do
-    {sidechainParams, checkpointAssetClassData} <- productFromData2
-        ( \sidechainParams
-           checkpointAssetClassData →
-              { sidechainParams
-              , checkpointAssetClassData
-              }
-        ) d
-    checkpointAssetClass <- productFromData2 AssetClass checkpointAssetClassData
-    pure $ CheckpointParameter {sidechainParams, checkpointAssetClass}
+    { sidechainParams, checkpointAssetClassData } ← productFromData2
+      ( \sidechainParams checkpointAssetClassData →
+          { sidechainParams
+          , checkpointAssetClassData
+          }
+      )
+      d
+    checkpointAssetClass ← productFromData2 AssetClass checkpointAssetClassData
+    pure $ CheckpointParameter { sidechainParams, checkpointAssetClass }
 
 derive newtype instance Show CheckpointParameter
 

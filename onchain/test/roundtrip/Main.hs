@@ -60,6 +60,9 @@ import TrustlessSidechain.MerkleTree (
   Up (Up),
  )
 import TrustlessSidechain.PlutusPrelude qualified as PTPrelude
+import Plutus.V1.Ledger.Value (
+  AssetClass (AssetClass),
+ )
 import TrustlessSidechain.Types (
   ATMSPlainAggregatePubKey (ATMSPlainAggregatePubKey),
   ATMSPlainMultisignature (ATMSPlainMultisignature),
@@ -87,6 +90,7 @@ import TrustlessSidechain.Types (
     assetClass,
     sidechainParams
   ),
+  CustomAssetClass(CustomAssetClass),
   CombinedMerkleProof (CombinedMerkleProof),
   CommitteeCertificateMint (
     CommitteeCertificateMint,
@@ -383,8 +387,8 @@ genICSR =
 genCP :: Gen CheckpointParameter
 genCP = do
   sp <- genSP
-  ArbitraryAssetClass ac <- arbitrary
-  pure . CheckpointParameter sp $ ac
+  ArbitraryAssetClass (AssetClass (cs, tn)) <- arbitrary
+  pure . CheckpointParameter sp $ (CustomAssetClass cs tn)
 
 -- Generates arbitrary bytes
 genAPM :: Gen ATMSPlainMultisignature
@@ -656,9 +660,11 @@ shrinkICSR = const []
 
 shrinkCP :: CheckpointParameter -> [CheckpointParameter]
 shrinkCP (CheckpointParameter {..}) = do
+  let assetClass' = case assetClass of
+        CustomAssetClass cs' tn' -> AssetClass (cs', tn')
   sp' <- shrinkSP sidechainParams
-  ArbitraryAssetClass ac' <- shrink (ArbitraryAssetClass assetClass)
-  pure . CheckpointParameter sp' $ ac'
+  ArbitraryAssetClass (AssetClass (cs,tn)) <- shrink (ArbitraryAssetClass assetClass')
+  pure . CheckpointParameter sp' $ (CustomAssetClass cs tn)
 
 shrinkAPM ::
   ATMSPlainMultisignature ->

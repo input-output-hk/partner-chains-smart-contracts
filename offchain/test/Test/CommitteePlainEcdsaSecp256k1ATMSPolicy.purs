@@ -5,17 +5,17 @@ module Test.CommitteePlainEcdsaSecp256k1ATMSPolicy
 
 import Contract.Prelude
 
+import Cardano.Types.AssetName (mkAssetName)
+import Cardano.Types.BigNum as BigNum
 import Contract.Log (logInfo')
 import Contract.PlutusData (toData)
-import Partial.Unsafe (unsafePartial)
-import Cardano.Types.AssetName (mkAssetName)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Wallet as Wallet
 import Data.Array as Array
-import JS.BigInt as BigInt
-import Cardano.Types.BigNum as BigNum
 import Data.Maybe as Maybe
+import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
+import Partial.Unsafe (unsafePartial)
 import Partial.Unsafe as Unsafe
 import Run as Run
 import Test.PlutipTest (PlutipTest)
@@ -106,7 +106,8 @@ testScenario1 =
             { initChainId: BigInt.fromInt 1
             , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial Utils.Crypto.aggregateKeys
+            , initAggregatedCommittee: toData
+                $ unsafePartial Utils.Crypto.aggregateKeys
                 $ map unwrap initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2

@@ -4,15 +4,18 @@ module TrustlessSidechain.PermissionedCandidates
 
 import Contract.Prelude
 
+import Cardano.FromData (fromData)
+import Cardano.ToData (toData)
+import Cardano.Types.Asset (Asset(Asset))
+import Cardano.Types.Int as Int
+import Cardano.Types.OutputDatum (OutputDatum(OutputDatum))
+import Cardano.Types.PlutusData (PlutusData)
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( RedeemerDatum(RedeemerDatum)
   )
-import Contract.Numeric.BigNum as BigNum
-import Cardano.Types.Asset (Asset(Asset))
-import Cardano.Types.OutputDatum (OutputDatum(OutputDatum))
-import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
-import Cardano.FromData (fromData)
-import Cardano.ToData (toData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
@@ -47,12 +50,9 @@ import TrustlessSidechain.PermissionedCandidates.Types
       )
   )
 import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
-import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import Cardano.Types.PlutusScript as PlutusScript
-import Cardano.Types.PlutusData (PlutusData)
+import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
 import Type.Row (type (+))
-import Cardano.Types.Int as Int
 
 permissionedCandidatesTokenName ∷ TokenName
 permissionedCandidatesTokenName = unsafeMkAssetName ""
@@ -86,19 +86,22 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
     PermissionedCandidates.getPermissionedCandidatesMintingPolicyAndCurrencySymbol
       sidechainParams
   let
-    permissionedCandidatesMintingPolicyHash = permissionedCandidatesCurrencySymbol
+    permissionedCandidatesMintingPolicyHash =
+      permissionedCandidatesCurrencySymbol
 
   { permissionedCandidatesValidatorAddress, permissionedCandidatesValidator } ←
     PermissionedCandidates.getPermissionedCandidatesValidatorAndAddress
       sidechainParams
 
-  let permissionedCandidatesValidatorHash = PlutusScript.hash permissionedCandidatesValidator
+  let
+    permissionedCandidatesValidatorHash = PlutusScript.hash
+      permissionedCandidatesValidator
 
   -- find the permissioned candidates UTxO
   maybePermissionedCandidatesUTxO ←
     ( Array.find
-        ( \( _ /\ TransactionOutput { amount, datum: outputDatum })
-           → fromMaybe false $ do
+        ( \(_ /\ TransactionOutput { amount, datum: outputDatum }) →
+            fromMaybe false $ do
               d ← case outputDatum of
                 Just (OutputDatum d) → pure d
                 _ → Nothing
@@ -110,7 +113,7 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
                         permissionedCandidatesTokenName
                     )
                     amount
-                     > BigNum.fromInt 0
+                    > BigNum.fromInt 0
                 )
         )
         <<< Map.toUnfoldable

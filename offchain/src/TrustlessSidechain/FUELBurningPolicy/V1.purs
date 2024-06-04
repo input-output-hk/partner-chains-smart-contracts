@@ -7,28 +7,34 @@ module TrustlessSidechain.FUELBurningPolicy.V1
 
 import Contract.Prelude
 
+import Cardano.Types.AssetName (AssetName)
+import Cardano.Types.Int as Int
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.TransactionUnspentOutput
+  ( TransactionUnspentOutput(TransactionUnspentOutput)
+  )
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( RedeemerDatum(RedeemerDatum)
   , toData
   )
 import Contract.ScriptLookups (ScriptLookups)
-import Cardano.Types.PlutusScript as PlutusScript
-import Cardano.Types.PlutusScript (PlutusScript)
-import Cardano.Types.ScriptHash (ScriptHash)
-import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
 import Contract.TxConstraints
   ( InputWithScriptRef(RefInput)
   , TxConstraints
   )
 import Contract.TxConstraints as Constraints
 import JS.BigInt (BigInt)
-import Contract.Numeric.BigNum as BigNum
+import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
 import TrustlessSidechain.Utils.Scripts (mkMintingPolicyWithParams)
 import TrustlessSidechain.Versioning.Types
   ( ScriptId(FUELBurningPolicy)
@@ -36,10 +42,6 @@ import TrustlessSidechain.Versioning.Types
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
-import Cardano.Types.AssetName (AssetName)
-import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
-import Cardano.Types.Int as Int
-import Partial.Unsafe (unsafePartial)
 
 fuelAssetName ∷ AssetName
 fuelAssetName = unsafeMkAssetName "FUEL"
@@ -96,5 +98,7 @@ mkBurnFuelLookupAndConstraints (FuelBurnParams { amount, sidechainParams }) = do
           (RedeemerDatum $ toData unit)
           fuelAssetName
           (unsafePartial $ fromJust $ Int.fromBigInt amount)
-          (RefInput $ TransactionUnspentOutput {input: scriptRefTxInput, output: scriptRefTxOutput})
+          ( RefInput $ TransactionUnspentOutput
+              { input: scriptRefTxInput, output: scriptRefTxOutput }
+          )
     }

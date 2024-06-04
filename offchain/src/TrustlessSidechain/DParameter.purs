@@ -5,28 +5,31 @@ module TrustlessSidechain.DParameter
 
 import Contract.Prelude
 
-import Contract.PlutusData (RedeemerDatum(RedeemerDatum))
-import Cardano.Types.OutputDatum (OutputDatum(OutputDatum))
-import Cardano.Types.PlutusData as PlutusData
 import Cardano.FromData (fromData)
 import Cardano.ToData (toData)
+import Cardano.Types.Asset (Asset(Asset))
+import Cardano.Types.AssetName (AssetName)
+import Cardano.Types.Int as Int
+import Cardano.Types.OutputDatum (OutputDatum(OutputDatum))
+import Cardano.Types.PlutusData as PlutusData
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
+import Cardano.Types.Value as Value
+import Contract.Numeric.BigNum as BigNum
+import Contract.PlutusData (RedeemerDatum(RedeemerDatum))
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
   , TxConstraints
   )
 import Contract.TxConstraints as Constraints
-import Cardano.Types.AssetName (AssetName)
-import Cardano.Types.Value as Value
 import Data.Array as Array
-import JS.BigInt (BigInt)
 import Data.Map as Map
+import JS.BigInt (BigInt)
 import Run (Run)
 import Run.Except (EXCEPT, throw)
 import Run.Except as Run
-import Contract.Numeric.BigNum as BigNum
 import TrustlessSidechain.DParameter.Types
   ( DParameterValidatorDatum(DParameterValidatorDatum)
   )
@@ -39,11 +42,8 @@ import TrustlessSidechain.Error
   )
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import Cardano.Types.PlutusScript as PlutusScript
-import Type.Row (type (+))
-import Cardano.Types.Asset (Asset(Asset))
 import TrustlessSidechain.Utils.Asset (emptyAssetName)
-import Cardano.Types.Int as Int
+import Type.Row (type (+))
 
 dParameterTokenName ∷ AssetName
 dParameterTokenName = emptyAssetName
@@ -132,8 +132,9 @@ mkUpdateDParameterLookupsAndConstraints
     ( Array.head
         <<< Map.toUnfoldable
         <<< Map.filter
-          ( \( TransactionOutput { amount })
-              → Value.valueOf (Asset dParameterCurrencySymbol dParameterTokenName) amount
+          ( \(TransactionOutput { amount }) →
+              Value.valueOf (Asset dParameterCurrencySymbol dParameterTokenName)
+                amount
                 > BigNum.fromInt 0
           )
     )
@@ -148,12 +149,12 @@ mkUpdateDParameterLookupsAndConstraints
   let
     dParameterTokenAmount = case oldDParameterOutput of
       TransactionOutput { amount }
-         → Value.valueOf (Asset dParameterCurrencySymbol dParameterTokenName) amount
+      → Value.valueOf (Asset dParameterCurrencySymbol dParameterTokenName) amount
 
   -- if the old D Parameter is exactly the same as the new one, throw an error
   case oldDParameterOutput of
     TransactionOutput { datum: Just (OutputDatum d) }
-       → case fromData d of
+    → case fromData d of
       Just (DParameterValidatorDatum dParameter)
         | dParameter.permissionedCandidatesCount == permissionedCandidatesCount
             && dParameter.registeredCandidatesCount

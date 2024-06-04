@@ -8,21 +8,21 @@ module TrustlessSidechain.ScriptCache
 
 import Contract.Prelude hiding (unit)
 
-import Contract.Numeric.BigNum as BigNum
+import Cardano.Types.PlutusData (unit)
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
 import Contract.Address
   ( PaymentPubKeyHash(PaymentPubKeyHash)
   )
 import Contract.BalanceTxConstraints as BalanceTxConstraints
+import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData (toData)
-import Cardano.Types.PlutusData (unit)
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction
   ( ScriptRef
   , TransactionInput(TransactionInput)
   )
-import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
-import Cardano.Types.PlutusScript as PlutusScript
-import Cardano.Types.PlutusScript (PlutusScript)
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
   , TxConstraints

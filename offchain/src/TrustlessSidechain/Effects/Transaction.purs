@@ -18,8 +18,6 @@ import Contract.Prelude
 import Cardano.Types.Address (Address)
 import Contract.BalanceTxConstraints (BalanceTxConstraintsBuilder)
 import Contract.ScriptLookups (ScriptLookups, UnbalancedTx)
-import Contract.UnbalancedTx (MkUnbalancedTxError)
-import Contract.UnbalancedTx (mkUnbalancedTx) as UnbalancedTx
 import Contract.Transaction
   ( Transaction
   , TransactionHash
@@ -34,6 +32,8 @@ import Contract.Transaction
   ) as Transaction
 import Contract.Transaction as BalanceTxError
 import Contract.TxConstraints (TxConstraints)
+import Contract.UnbalancedTx (MkUnbalancedTxError)
+import Contract.UnbalancedTx (mkUnbalancedTx) as UnbalancedTx
 import Contract.Utxos (UtxoMap)
 import Contract.Utxos (getUtxo, utxosAt) as Transaction
 import Effect.Aff (Error)
@@ -77,7 +77,7 @@ handleTransactionWith ∷
 handleTransactionWith f = interpret (on _transaction f send)
 
 utxosAt ∷
-  ∀ r . Address → Run (TRANSACTION + r) UtxoMap
+  ∀ r. Address → Run (TRANSACTION + r) UtxoMap
 utxosAt address = Run.lift _transaction
   (UtxosAt address identity)
 

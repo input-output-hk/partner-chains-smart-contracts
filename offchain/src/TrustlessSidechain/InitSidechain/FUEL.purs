@@ -2,8 +2,12 @@ module TrustlessSidechain.InitSidechain.FUEL
   ( initFuel
   ) where
 
-
+import Cardano.Types.AssetName as AssetName
+import Cardano.Types.BigNum as BigNum
+import Cardano.Types.Int as Int
+import Cardano.Types.Mint as Mint
 import Cardano.Types.PlutusData (PlutusData)
+import Cardano.Types.PlutusScript as PlutusScript
 import Contract.PlutusData as PlutusData
 import Contract.Prelude
   ( Maybe(..)
@@ -19,10 +23,6 @@ import Contract.Prelude
   , (>>=)
   , (>>>)
   )
-import Cardano.Types.Int as Int
-import Cardano.Types.BigNum as BigNum
-import Cardano.Types.AssetName as AssetName
-import Cardano.Types.Mint as Mint
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction (TransactionHash)
@@ -62,7 +62,6 @@ import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeDatum(UpdateCommitteeDatum)
   )
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
-import Cardano.Types.PlutusScript as PlutusScript
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning
   ( getCommitteeSelectionPoliciesAndValidators
@@ -239,10 +238,12 @@ initFuelAndDsLookupsAndConstraints sidechainParams version = do
     case version of
       1 → FUELMintingPolicy.V1.getFuelMintingPolicy sidechainParams
         >>= _.fuelMintingPolicy
-        >>> PlutusScript.hash >>> pure
+        >>> PlutusScript.hash
+        >>> pure
       2 → FUELMintingPolicy.V2.getFuelMintingPolicy sidechainParams
         >>= _.fuelMintingPolicy
-        >>> PlutusScript.hash >>> pure
+        >>> PlutusScript.hash
+        >>> pure
       _ → throw $ GenericInternalError ("Invalid version: " <> show version)
 
   -- Validator for the configuration of the distributed set / the associated

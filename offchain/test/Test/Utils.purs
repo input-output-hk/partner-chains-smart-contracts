@@ -18,11 +18,15 @@ module Test.Utils
   , fromMaybeTestError
   ) where
 
-import Cardano.Types.Asset (Asset(Asset))
-import Cardano.AsCbor (encodeCbor)
 import Contract.Prelude
-import Contract.Address (Address)
+
+import Cardano.AsCbor (encodeCbor)
+import Cardano.Serialization.Lib as CSL
+import Cardano.Types.Asset (Asset(Asset))
+import Cardano.Types.BigNum as BigNum
 import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash)
+import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
+import Contract.Address (Address)
 import Contract.Log as Log
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
@@ -32,27 +36,27 @@ import Contract.Transaction
   ( TransactionHash(TransactionHash)
   , TransactionInput(TransactionInput)
   )
-import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
 import Contract.Utxos (utxosAt)
 import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Contract.Wallet (getWalletUtxos)
 import Control.Monad.Error.Class as MonadError
-import JS.BigInt (BigInt)
-import JS.BigInt as BigInt
-import Cardano.Types.BigNum as BigNum
 import Data.Const (Const)
 import Data.Function (on)
 import Data.List ((:))
 import Data.List as List
 import Data.Map as Map
+import Data.Maybe (fromJust)
 import Data.Maybe as Maybe
 import Data.Ord (compare)
 import Data.UInt as UInt
 import Effect.Exception as Exception
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
 import Mote.Monad (Mote)
 import Mote.Monad as Mote.Monad
 import Mote.Plan as Mote.Plan
+import Partial.Unsafe (unsafePartial)
 import Partial.Unsafe as Unsafe
 import Run (Run)
 import Run.Except (EXCEPT, throw)
@@ -65,14 +69,12 @@ import TrustlessSidechain.Effects.Util as Effect
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import Type.Row (type (+))
-import Cardano.Serialization.Lib as CSL
-import Data.Maybe (fromJust)
-import Partial.Unsafe (unsafePartial)
 
 toTxIn ∷ String → Int → TransactionInput
 toTxIn txId txIdx =
   TransactionInput
-    { transactionId: TransactionHash $ unsafePartial $ fromJust $ CSL.fromBytes $ hexToByteArrayUnsafe txId
+    { transactionId: TransactionHash $ unsafePartial $ fromJust $ CSL.fromBytes $
+        hexToByteArrayUnsafe txId
     , index: UInt.fromInt txIdx
     }
 
@@ -117,7 +119,7 @@ getOwnTransactionInput = do
     List.sortBy
       ( compare `on`
           ( snd >>>
-              ( \(TransactionOutput { amount }) → Value.valueToCoin amount )
+              (\(TransactionOutput { amount }) → Value.valueToCoin amount)
           )
       )
       (Map.toUnfoldable ownUtxos)
@@ -240,9 +242,9 @@ assertIHaveOutputWithAsset cs tn = do
       let
         go input = case List.uncons input of
           Nothing → false
-          Just { head: TransactionOutput {amount}, tail } →
-              if Value.valueOf (Asset cs tn) amount > BigNum.zero then true
-              else go tail
+          Just { head: TransactionOutput { amount }, tail } →
+            if Value.valueOf (Asset cs tn) amount > BigNum.zero then true
+            else go tail
       in
         go ownUtxos
 
@@ -283,7 +285,7 @@ assertHasOutputWithAsset txId addr cs tn = do
   where
   hasAsset ∷ (TransactionInput /\ TransactionOutput) → Boolean
   hasAsset
-    ( TransactionInput { transactionId } /\  TransactionOutput {amount}
+    ( TransactionInput { transactionId } /\ TransactionOutput { amount }
     ) =
     transactionId == txId
       && (Value.valueOf (Asset cs tn) amount > BigNum.zero)

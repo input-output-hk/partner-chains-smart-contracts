@@ -10,7 +10,6 @@ module TrustlessSidechain.Versioning.V1
 
 import Contract.Prelude
 
-
 import Cardano.Types.PlutusScript (PlutusScript)
 import Data.List (List)
 import Data.List as List

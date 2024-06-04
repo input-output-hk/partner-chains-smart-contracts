@@ -21,12 +21,29 @@ module Test.Utils.QuickCheck
   , liftArbitrary
   ) where
 
-import Data.Array.NonEmpty (fromNonEmpty) as NonEmptyArray
 import Contract.Prelude hiding (oneOf)
-import Cardano.Plutus.Types.ValidatorHash (ValidatorHash)
+
 import Aeson (decodeAeson, encodeAeson)
-import Cardano.Plutus.Types.PaymentPubKeyHash (PaymentPubKeyHash(PaymentPubKeyHash))
+import Cardano.AsCbor (decodeCbor, encodeCbor)
+import Cardano.Plutus.Types.Address (Address, pubKeyHashAddress)
+import Cardano.Plutus.Types.Credential
+  ( Credential
+      ( PubKeyCredential
+      , ScriptCredential
+      )
+  )
+import Cardano.Plutus.Types.PaymentPubKeyHash
+  ( PaymentPubKeyHash(PaymentPubKeyHash)
+  )
 import Cardano.Plutus.Types.PubKeyHash (PubKeyHash(PubKeyHash))
+import Cardano.Plutus.Types.ValidatorHash (ValidatorHash)
+import Cardano.Types.Asset (Asset(Asset, AdaAsset))
+import Cardano.Types.AssetName (AssetName, mkAssetName, unAssetName)
+import Cardano.Types.BigNum (BigNum)
+import Cardano.Types.BigNum (fromInt, toString) as BigNum
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript (hash) as PlutusScript
+import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -39,36 +56,22 @@ import Contract.Transaction
   ( TransactionHash
   , TransactionInput(TransactionInput)
   )
-import Cardano.Types.AssetName (AssetName, mkAssetName, unAssetName)
-import Cardano.Types.Asset (Asset(Asset, AdaAsset))
-import Cardano.Types.BigNum (BigNum)
-import Cardano.Types.BigNum (toString, fromInt) as BigNum
 import Control.Monad.Rec.Class
   ( Step(Loop, Done)
   , tailRecM
   )
-import Cardano.Types.PlutusScript (hash) as PlutusScript
-import Cardano.Types.ScriptHash (ScriptHash)
-import Cardano.Plutus.Types.Address (Address, pubKeyHashAddress)
-import Cardano.Plutus.Types.Credential
-  ( Credential
-      ( PubKeyCredential
-      , ScriptCredential
-      )
-  )
-import Cardano.Types.PlutusScript (PlutusScript)
-import Cardano.AsCbor (decodeCbor, encodeCbor)
+import Data.Array.NonEmpty (fromNonEmpty) as NonEmptyArray
+import Data.Array.NonEmpty as NEA
 import Data.ByteArray
   ( byteArrayFromIntArrayUnsafe
   , byteArrayToIntArray
   )
-import JS.BigInt as BigInt
-import Data.Array.NonEmpty as NEA
 import Data.NonEmpty (NonEmpty(NonEmpty))
 import Data.Ord (abs)
 import Data.Tuple (Tuple(Tuple))
 import Data.UInt (UInt)
 import Data.UInt as UInt
+import JS.BigInt as BigInt
 import Partial.Unsafe (unsafePartial)
 import Test.QuickCheck.Arbitrary
   ( class Arbitrary
@@ -133,7 +136,7 @@ instance Coarbitrary ArbitraryAsset where
   coarbitrary (ArbitraryAsset (Asset sh an)) =
     coarbitrary (ArbitraryScriptHash sh) >>>
       coarbitrary (ArbitraryAssetName an)
-  coarbitrary (ArbitraryAsset AdaAsset) = \x -> x
+  coarbitrary (ArbitraryAsset AdaAsset) = \x → x
 
 -- | Generator wrapper for 'Credential'
 newtype ArbitraryCredential = ArbitraryCredential Credential
@@ -234,8 +237,8 @@ class Arbitrary1 (f ∷ Type → Type) where
 
 instance Arbitrary1 Maybe where
   liftArbitrary gen =
-    frequency $ NonEmptyArray.fromNonEmpty $ NonEmpty (Tuple 1.0 (pure Nothing)) [(Tuple 3.0 (Just <$> gen))]
-
+    frequency $ NonEmptyArray.fromNonEmpty $ NonEmpty (Tuple 1.0 (pure Nothing))
+      [ (Tuple 3.0 (Just <$> gen)) ]
 
 instance Arbitrary1 Array where
   liftArbitrary = arrayOf

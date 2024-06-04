@@ -19,10 +19,10 @@ module TrustlessSidechain.CommitteeATMSSchemes.Types
 
 import Contract.Prelude
 
-import Contract.PlutusData (class FromData, class ToData)
+import Cardano.Types.AssetName (AssetName)
 import Cardano.Types.TransactionInput (TransactionInput)
 import Cardano.Types.TransactionOutput (TransactionOutput)
-import Cardano.Types.AssetName (AssetName)
+import Contract.PlutusData (class FromData, class ToData)
 import JS.BigInt (BigInt)
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PubKey

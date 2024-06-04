@@ -6,6 +6,7 @@ module Test.CommitteeCandidateValidator
 
 import Contract.Prelude
 
+import Contract.Numeric.BigNum as BigNum
 import Contract.Prim.ByteArray
   ( ByteArray
   , byteArrayFromIntArrayUnsafe
@@ -27,7 +28,6 @@ import Run.Except (note) as Run
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, dummySidechainParams, fails, plutipGroup)
-import Contract.Numeric.BigNum as BigNum
 import TrustlessSidechain.CommitteeCandidateValidator
   ( DeregisterParams(DeregisterParams)
   , RegisterParams(RegisterParams)

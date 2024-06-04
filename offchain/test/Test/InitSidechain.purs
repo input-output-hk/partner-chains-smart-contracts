@@ -5,18 +5,18 @@ module Test.InitSidechain
 import Contract.Prelude
 
 import Cardano.Types.AssetName (AssetName)
-import Data.Map as Map
+import Cardano.Types.BigNum as BigNum
 import Contract.Log as Log
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Wallet as Wallet
 import Control.Monad.Error.Class as MonadError
 import Data.Array as Array
-import JS.BigInt as BigInt
-import Cardano.Types.BigNum as BigNum
-import Partial.Unsafe (unsafePartial)
+import Data.Map as Map
 import Data.Set as Set
+import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
+import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run (liftEffect) as Run
 import Run.Except (note) as Run
@@ -87,12 +87,13 @@ testScenario1 = Mote.Monad.test "Calling `initSidechain`"
         initGovernanceAuthority ← (Governance.mkGovernanceAuthority)
           <$> getOwnPaymentPubKeyHash
         let
-           initScParams = InitSidechain.InitSidechainParams
+          initScParams = InitSidechain.InitSidechainParams
             { initChainId: BigInt.fromInt 69
             , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial Crypto.aggregateKeys $ map unwrap
-                (map Crypto.toPubKeyUnsafe committeePrvKeys)
+            , initAggregatedCommittee: toData $ unsafePartial Crypto.aggregateKeys
+                $ map unwrap
+                    (map Crypto.toPubKeyUnsafe committeePrvKeys)
             , initATMSKind: ATMSPlainEcdsaSecp256k1
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
@@ -147,8 +148,9 @@ testScenario2 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
             { initChainId: BigInt.fromInt 69
             , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial Crypto.aggregateKeys $ map unwrap
-                initCommittee
+            , initAggregatedCommittee: toData $ unsafePartial Crypto.aggregateKeys
+                $ map unwrap
+                    initCommittee
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
             , initATMSKind: ATMSPlainEcdsaSecp256k1
@@ -198,7 +200,8 @@ testScenario3 =
               { initChainId: BigInt.fromInt 69
               , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
               , initUtxo: genesisUtxo
-              , initAggregatedCommittee: toData $ unsafePartial Crypto.aggregateKeys
+              , initAggregatedCommittee: toData
+                  $ unsafePartial Crypto.aggregateKeys
                   $ map unwrap initCommittee
               , initSidechainEpoch: zero
               , initThresholdNumerator: BigInt.fromInt 2
@@ -236,7 +239,8 @@ initSimpleSidechain amt = do
       { initChainId: BigInt.fromInt 69
       , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
       , initUtxo: genesisUtxo
-      , initAggregatedCommittee: toData $ unsafePartial Crypto.aggregateKeys $ map unwrap
+      , initAggregatedCommittee: toData $ unsafePartial Crypto.aggregateKeys $ map
+          unwrap
           initCommittee
       , initATMSKind: ATMSPlainEcdsaSecp256k1
       , initSidechainEpoch: zero
@@ -344,7 +348,9 @@ testInitTokenStatusOneToken =
           -- since we did not use it to create any CandidatePermission tokens.
           let
             expected = foldr (\(k /\ v) → Map.insert k v) Map.empty
-              [ CandidatePermissionToken.candidatePermissionInitTokenName /\ BigNum.fromInt 1 ]
+              [ CandidatePermissionToken.candidatePermissionInitTokenName /\
+                  BigNum.fromInt 1
+              ]
 
           { initTokenStatusData: res } ← Init.getInitTokenStatus
             sidechainParams

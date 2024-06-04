@@ -2,17 +2,16 @@ module Test.FUELMintingPolicy.V1 where
 
 import Contract.Prelude
 
-import TrustlessSidechain.Utils.Address (fromPaymentPubKeyHash, getOwnPaymentPubKeyHash)
-import Cardano.Types.NetworkId (NetworkId(TestnetId))
-import Cardano.ToData (toData)
 import Cardano.AsCbor (encodeCbor)
+import Cardano.ToData (toData)
 import Cardano.Types.AssetName as AssetName
+import Cardano.Types.BigNum as BigNum
+import Cardano.Types.NetworkId (NetworkId(TestnetId))
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import JS.BigInt as BigInt
-import Cardano.Types.BigNum as BigNum
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe (unsafePartial)
 import Run (liftEffect) as Run
@@ -52,11 +51,15 @@ import TrustlessSidechain.MerkleTree
   , lookupMp
   )
 import TrustlessSidechain.MerkleTree as MerkleTree
+import TrustlessSidechain.Utils.Address
+  ( fromPaymentPubKeyHash
+  , getOwnPaymentPubKeyHash
+  )
 import TrustlessSidechain.Utils.Crypto
   ( aggregateKeys
+  , blake2b256Hash
   , generatePrivKey
   , toPubKeyUnsafe
-  , blake2b256Hash
   )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 
@@ -95,7 +98,8 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
           { initChainId: BigInt.fromInt 1
           , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
-          , initAggregatedCommittee: PlutusData.toData $ unsafePartial aggregateKeys
+          , initAggregatedCommittee: PlutusData.toData
+              $ unsafePartial aggregateKeys
               $ map unwrap
                   initCommitteePubKeys
           , initSidechainEpoch: zero
@@ -176,7 +180,8 @@ testScenarioSuccess2 =
             { initChainId: BigInt.fromInt 1
             , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: PlutusData.toData $ unsafePartial aggregateKeys
+            , initAggregatedCommittee: PlutusData.toData
+                $ unsafePartial aggregateKeys
                 $ map unwrap initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
@@ -313,7 +318,8 @@ testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
             { initChainId: BigInt.fromInt 1
             , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: PlutusData.toData $ unsafePartial aggregateKeys
+            , initAggregatedCommittee: PlutusData.toData
+                $ unsafePartial aggregateKeys
                 $ map unwrap initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
