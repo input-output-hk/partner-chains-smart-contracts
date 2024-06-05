@@ -53,7 +53,7 @@ testInitCandidatePermissionToken =
             liftContract $ Log.logInfo'
               "InitSidechain 'testInitCandidatePermissionToken'"
             genesisUtxo ← Test.Utils.getOwnTransactionInput
-            initGovernanceAuthority ← (Governance.mkGovernanceAuthority)
+            initGovernanceAuthority ← Governance.mkGovernanceAuthority
               <$> getOwnPaymentPubKeyHash
             let
               version = 1
@@ -92,7 +92,7 @@ testInitCandidatePermissionTokenIdempotent =
             liftContract $ Log.logInfo'
               "InitSidechain 'testInitCandidatePermissionTokenIdempotent'"
             genesisUtxo ← Test.Utils.getOwnTransactionInput
-            initGovernanceAuthority ← (Governance.mkGovernanceAuthority)
+            initGovernanceAuthority ← Governance.mkGovernanceAuthority
               <$> getOwnPaymentPubKeyHash
             let
               version = 1

@@ -79,7 +79,7 @@ initFuelSucceeds =
           genesisUtxo ← Test.Utils.getOwnTransactionInput
 
           initGovernanceAuthority ←
-            (Governance.mkGovernanceAuthority)
+            Governance.mkGovernanceAuthority
               <$> getOwnPaymentPubKeyHash
 
           let committeeSize = 25
@@ -209,7 +209,7 @@ initFuelIdempotent =
           genesisUtxo ← Test.Utils.getOwnTransactionInput
 
           initGovernanceAuthority ←
-            (Governance.mkGovernanceAuthority)
+            Governance.mkGovernanceAuthority
               <$> getOwnPaymentPubKeyHash
 
           let committeeSize = 25

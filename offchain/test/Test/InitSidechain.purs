@@ -84,7 +84,7 @@ testScenario1 = Mote.Monad.test "Calling `initSidechain`"
           committeeSize
           Crypto.generatePrivKey
 
-        initGovernanceAuthority ← (Governance.mkGovernanceAuthority)
+        initGovernanceAuthority ← Governance.mkGovernanceAuthority
           <$> getOwnPaymentPubKeyHash
         let
           initScParams = InitSidechain.InitSidechainParams
@@ -140,7 +140,7 @@ testScenario2 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
         committeePrvKeys ← liftEffect $ sequence $ Array.replicate
           committeeSize
           Crypto.generatePrivKey
-        initGovernanceAuthority ← (Governance.mkGovernanceAuthority)
+        initGovernanceAuthority ← Governance.mkGovernanceAuthority
           <$> getOwnPaymentPubKeyHash
         let
           initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
@@ -192,7 +192,7 @@ testScenario3 =
           committeePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
             committeeSize
             Crypto.generatePrivKey
-          initGovernanceAuthority ← (Governance.mkGovernanceAuthority)
+          initGovernanceAuthority ← Governance.mkGovernanceAuthority
             <$> getOwnPaymentPubKeyHash
           let
             initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
@@ -231,7 +231,7 @@ initSimpleSidechain amt = do
   committeePrvKeys ← liftEffect $ sequence $ Array.replicate committeeSize
     Crypto.generatePrivKey
 
-  initGovernanceAuthority ← (Governance.mkGovernanceAuthority)
+  initGovernanceAuthority ← Governance.mkGovernanceAuthority
     <$> getOwnPaymentPubKeyHash
   let
     initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys

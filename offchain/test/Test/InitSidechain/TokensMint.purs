@@ -58,7 +58,7 @@ initTokensMintScenario1 =
           genesisUtxo ← Test.Utils.getOwnTransactionInput
 
           initGovernanceAuthority ←
-            (Governance.mkGovernanceAuthority)
+            Governance.mkGovernanceAuthority
               <$> getOwnPaymentPubKeyHash
 
           let
@@ -121,7 +121,7 @@ initTokensMintIdempotent =
           genesisUtxo ← Test.Utils.getOwnTransactionInput
 
           initGovernanceAuthority ←
-            (Governance.mkGovernanceAuthority)
+            Governance.mkGovernanceAuthority
               <$> getOwnPaymentPubKeyHash
 
           let

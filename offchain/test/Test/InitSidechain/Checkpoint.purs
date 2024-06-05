@@ -65,7 +65,7 @@ testInitCheckpointUninitialised =
               "InitSidechain 'testInitCheckpointUninitialised'"
             genesisUtxo ← Test.Utils.getOwnTransactionInput
 
-            initGovernanceAuthority ← (Governance.mkGovernanceAuthority)
+            initGovernanceAuthority ← Governance.mkGovernanceAuthority
               <$> getOwnPaymentPubKeyHash
             let
               initGenesisHash = ByteArray.hexToByteArrayUnsafe "abababababa"
@@ -101,7 +101,7 @@ testInitCheckpoint =
               "InitSidechain 'testInitCheckpoint'"
             genesisUtxo ← Test.Utils.getOwnTransactionInput
 
-            initGovernanceAuthority ← (Governance.mkGovernanceAuthority)
+            initGovernanceAuthority ← Governance.mkGovernanceAuthority
               <$> getOwnPaymentPubKeyHash
             let
               version = 1
@@ -187,7 +187,7 @@ testInitCheckpointIdempotent =
               "InitSidechain 'testInitCheckpointIdempotent'"
             genesisUtxo ← Test.Utils.getOwnTransactionInput
 
-            initGovernanceAuthority ← (Governance.mkGovernanceAuthority)
+            initGovernanceAuthority ← Governance.mkGovernanceAuthority
               <$> getOwnPaymentPubKeyHash
             let
               version = 1
