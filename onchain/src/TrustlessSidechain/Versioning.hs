@@ -118,7 +118,12 @@ fuelMintingPolicyId
   , permissionedCandidatesPolicyId
   , permissionedCandidatesValidatorId
   , scriptCacheId
-  , initTokensPolicyId ::
+  , initTokensPolicyId
+  , reserveValidatorId
+  , reserveAuthPolicyId
+  , illiquidCirculationSupplyValidatorId
+  , illiquidCirculationSupplyWithdrawalPolicyId
+  , governancePolicyId ::
     Integer
 fuelMintingPolicyId = 0
 merkleRootTokenPolicyId = 1
@@ -146,6 +151,11 @@ permissionedCandidatesPolicyId = 24
 permissionedCandidatesValidatorId = 25
 scriptCacheId = 26
 initTokensPolicyId = 27
+reserveValidatorId = 28
+reserveAuthPolicyId = 29
+illiquidCirculationSupplyValidatorId = 30
+illiquidCirculationSupplyWithdrawalPolicyId = 31
+governancePolicyId = 32
 
 -- | Datum attached to 'VersionOraclePolicy' tokens stored on the
 -- 'VersionOracleValidator' script.

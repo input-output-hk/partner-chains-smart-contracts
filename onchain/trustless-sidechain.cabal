@@ -93,12 +93,14 @@ library
     TrustlessSidechain.FUELMintingPolicy
     TrustlessSidechain.FUELProxyPolicy
     TrustlessSidechain.Governance
+    TrustlessSidechain.IlliquidCirculationSupply
     TrustlessSidechain.InitToken
     TrustlessSidechain.MerkleRootTokenMintingPolicy
     TrustlessSidechain.MerkleRootTokenValidator
     TrustlessSidechain.MerkleTree
     TrustlessSidechain.OffChain
     TrustlessSidechain.PermissionedCandidates
+    TrustlessSidechain.Reserve
     TrustlessSidechain.ScriptCache
     TrustlessSidechain.Types
     TrustlessSidechain.Types.Unsafe
@@ -138,6 +140,7 @@ library
 library onchain-poc
   import:          common-lang, common-script-lang
   exposed-modules:
+    TrustlessSidechain.PoCAlwaysPassingScripts
     TrustlessSidechain.PoCECDSA
     TrustlessSidechain.PoCInlineDatum
     TrustlessSidechain.PoCMintingPolicy

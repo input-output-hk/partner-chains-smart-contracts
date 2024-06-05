@@ -59,6 +59,11 @@ data ScriptId
   | PermissionedCandidatesValidator
   | ScriptCache
   | InitTokenPolicy
+  | ReserveValidator
+  | ReserveAuthPolicy
+  | IlliquidCirculationSupplyValidator
+  | IlliquidCirculationSupplyWithdrawalPolicy
+  | GovernancePolicy
 
 derive instance Eq ScriptId
 derive instance Ord ScriptId
@@ -119,6 +124,16 @@ instance FromData ScriptId where
     Just ScriptCache
   fromData (Integer i) | i == BigInt.fromInt 27 =
     Just InitTokenPolicy
+  fromData (Integer i) | i == BigInt.fromInt 28 =
+    Just ReserveValidator
+  fromData (Integer i) | i == BigInt.fromInt 29 =
+    Just ReserveAuthPolicy
+  fromData (Integer i) | i == BigInt.fromInt 30 =
+    Just IlliquidCirculationSupplyValidator
+  fromData (Integer i) | i == BigInt.fromInt 31 =
+    Just IlliquidCirculationSupplyWithdrawalPolicy
+  fromData (Integer i) | i == BigInt.fromInt 32 =
+    Just GovernancePolicy
   fromData _ = Nothing
 
 instance ToData ScriptId where
@@ -148,3 +163,8 @@ instance ToData ScriptId where
   toData PermissionedCandidatesValidator = Integer (BigInt.fromInt 25)
   toData ScriptCache = Integer (BigInt.fromInt 26)
   toData InitTokenPolicy = Integer (BigInt.fromInt 27)
+  toData ReserveValidator = Integer (BigInt.fromInt 28)
+  toData ReserveAuthPolicy = Integer (BigInt.fromInt 29)
+  toData IlliquidCirculationSupplyValidator = Integer (BigInt.fromInt 30)
+  toData IlliquidCirculationSupplyWithdrawalPolicy = Integer (BigInt.fromInt 31)
+  toData GovernancePolicy = Integer (BigInt.fromInt 32)

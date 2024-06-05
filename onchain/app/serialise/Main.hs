@@ -32,10 +32,12 @@ import TrustlessSidechain.DistributedSet qualified as DistributedSet
 import TrustlessSidechain.FUELMintingPolicy qualified as FUELMintingPolicy
 import TrustlessSidechain.FUELProxyPolicy qualified as FUELProxyPolicy
 import TrustlessSidechain.HaskellPrelude
+import TrustlessSidechain.IlliquidCirculationSupply qualified as IlliquidCirculationSupply
 import TrustlessSidechain.InitToken qualified as InitToken
 import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTokenMintingPolicy
 import TrustlessSidechain.MerkleRootTokenValidator qualified as MerkleRootTokenValidator
 import TrustlessSidechain.PermissionedCandidates qualified as PermissionedCandidates
+import TrustlessSidechain.PoCAlwaysPassingScripts qualified as PoCAlwaysPassing
 import TrustlessSidechain.PoCECDSA qualified as PoCECDSA
 import TrustlessSidechain.PoCInlineDatum qualified as PoCInlineDatum
 import TrustlessSidechain.PoCMintingPolicy as PoCMintingPolicy
@@ -43,6 +45,7 @@ import TrustlessSidechain.PoCReferenceInput qualified as PoCReferenceInput
 import TrustlessSidechain.PoCReferenceScript qualified as PoCReferenceScript
 import TrustlessSidechain.PoCSchnorr qualified as PoCSchnorr
 import TrustlessSidechain.PoCSerialiseData qualified as PoCSerialiseData
+import TrustlessSidechain.Reserve qualified as Reserve
 import TrustlessSidechain.ScriptCache qualified as ScriptCache
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import TrustlessSidechain.Utils (scriptToPlutusScript)
@@ -358,6 +361,12 @@ main =
             ( "PermissionedCandidatesValidator"
             , PermissionedCandidates.serialisableValidator
             )
+          , ("ReserveValidator", Reserve.serialisableReserveValidator)
+          , ("ReserveAuthPolicy", Reserve.serialisableReserveAuthPolicy)
+          ,
+            ( "IlliquidCirculationSupplyValidator"
+            , IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyValidator
+            )
           ]
         -- Validators for proof of concept tests.
         plutusPoCScripts =
@@ -385,6 +394,8 @@ main =
           , ("PoCECDSA", PoCECDSA.serialisableValidator)
           , ("PoCSchnorr", PoCSchnorr.serialisablePolicy)
           , ("PoCMintingPolicy", PoCMintingPolicy.serialisablePoCMintingPolicy)
+          , ("PoCAlwaysPassingValidator", PoCAlwaysPassing.serialisableAlwaysPassingValidator)
+          , ("PoCAlwaysPassingPolicy", PoCAlwaysPassing.serialisableAlwaysPassingPolicy)
           ]
         plutusScriptsDotPlutus =
           fmap
