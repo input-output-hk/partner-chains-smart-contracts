@@ -4,7 +4,7 @@ module TrustlessSidechain.Versioning.ScriptId
 
 import Contract.Prelude
 
-import Cardano.Types.BigInt (fromInt)
+import Cardano.Types.BigInt (fromInt) as BigInt
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -72,57 +72,57 @@ instance Show ScriptId where
   show = genericShow
 
 instance FromData ScriptId where
-  fromData (Integer i) | i == fromInt 0 =
+  fromData (Integer i) | i == BigInt.fromInt 0 =
     Just FUELMintingPolicy
-  fromData (Integer i) | i == fromInt 1 =
+  fromData (Integer i) | i == BigInt.fromInt 1 =
     Just MerkleRootTokenPolicy
-  fromData (Integer i) | i == fromInt 2 =
+  fromData (Integer i) | i == BigInt.fromInt 2 =
     Just MerkleRootTokenValidator
-  fromData (Integer i) | i == fromInt 3 =
+  fromData (Integer i) | i == BigInt.fromInt 3 =
     Just CommitteeCandidateValidator
-  fromData (Integer i) | i == fromInt 4 =
+  fromData (Integer i) | i == BigInt.fromInt 4 =
     Just CandidatePermissionPolicy
-  fromData (Integer i) | i == fromInt 7 =
+  fromData (Integer i) | i == BigInt.fromInt 7 =
     Just CommitteeHashValidator
-  fromData (Integer i) | i == fromInt 8 =
+  fromData (Integer i) | i == BigInt.fromInt 8 =
     Just DsKeyPolicy
-  fromData (Integer i) | i == fromInt 9 =
+  fromData (Integer i) | i == BigInt.fromInt 9 =
     Just DsConfPolicy
-  fromData (Integer i) | i == fromInt 10 =
+  fromData (Integer i) | i == BigInt.fromInt 10 =
     Just DsConfValidator
-  fromData (Integer i) | i == fromInt 11 =
+  fromData (Integer i) | i == BigInt.fromInt 11 =
     Just DsInsertValidator
-  fromData (Integer i) | i == fromInt 12 =
+  fromData (Integer i) | i == BigInt.fromInt 12 =
     Just CheckpointValidator
-  fromData (Integer i) | i == fromInt 13 =
+  fromData (Integer i) | i == BigInt.fromInt 13 =
     Just CheckpointPolicy
-  fromData (Integer i) | i == fromInt 14 =
+  fromData (Integer i) | i == BigInt.fromInt 14 =
     Just FUELBurningPolicy
-  fromData (Integer i) | i == fromInt 15 =
+  fromData (Integer i) | i == BigInt.fromInt 15 =
     Just VersionOraclePolicy
-  fromData (Integer i) | i == fromInt 16 =
+  fromData (Integer i) | i == BigInt.fromInt 16 =
     Just VersionOracleValidator
-  fromData (Integer i) | i == fromInt 17 =
+  fromData (Integer i) | i == BigInt.fromInt 17 =
     Just FUELProxyPolicy
-  fromData (Integer i) | i == fromInt 18 =
+  fromData (Integer i) | i == BigInt.fromInt 18 =
     Just CommitteeCertificateVerificationPolicy
-  fromData (Integer i) | i == fromInt 19 =
+  fromData (Integer i) | i == BigInt.fromInt 19 =
     Just CommitteeOraclePolicy
-  fromData (Integer i) | i == fromInt 20 =
+  fromData (Integer i) | i == BigInt.fromInt 20 =
     Just CommitteePlainEcdsaSecp256k1ATMSPolicy
-  fromData (Integer i) | i == fromInt 21 =
+  fromData (Integer i) | i == BigInt.fromInt 21 =
     Just CommitteePlainSchnorrSecp256k1ATMSPolicy
-  fromData (Integer i) | i == fromInt 22 =
+  fromData (Integer i) | i == BigInt.fromInt 22 =
     Just DParameterPolicy
-  fromData (Integer i) | i == fromInt 23 =
+  fromData (Integer i) | i == BigInt.fromInt 23 =
     Just DParameterValidator
-  fromData (Integer i) | i == fromInt 24 =
+  fromData (Integer i) | i == BigInt.fromInt 24 =
     Just PermissionedCandidatesPolicy
-  fromData (Integer i) | i == fromInt 25 =
+  fromData (Integer i) | i == BigInt.fromInt 25 =
     Just PermissionedCandidatesValidator
-  fromData (Integer i) | i == fromInt 26 =
+  fromData (Integer i) | i == BigInt.fromInt 26 =
     Just ScriptCache
-  fromData (Integer i) | i == fromInt 27 =
+  fromData (Integer i) | i == BigInt.fromInt 27 =
     Just InitTokenPolicy
   fromData (Integer i) | i == BigInt.fromInt 28 =
     Just ReserveValidator
