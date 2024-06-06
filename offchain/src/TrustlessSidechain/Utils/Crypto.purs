@@ -43,14 +43,13 @@ import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Value (AssetName)
 import Data.Array as Array
-import Data.BigInt as RegularBigInt
 import Data.ByteArray (byteArrayToHex, hexToByteArrayUnsafe)
 import Data.Function (on)
 import Data.Maybe as Maybe
 import Data.Ord as Ord
+import Data.EuclideanRing (div)
 import JS.BigInt (BigInt)
 import JS.BigInt as BigInt
-import Partial.Unsafe (unsafePartial)
 import Partial.Unsafe as Unsafe
 
 -- | Invariant: length of the pubkey must be 33 bytes.
@@ -370,21 +369,10 @@ verifyMultiSignature
     go signed pubs sigs =
       let
         ok = signed >
-          ( unsafePartial
-              $ fromJust
-              $ BigInt.fromString
-              $ RegularBigInt.toString
-                  ( RegularBigInt.quot
-                      ( ( unsafePartial $ fromJust $ RegularBigInt.fromString
-                            (BigInt.toString thresholdNumerator)
-                        ) * RegularBigInt.fromInt (Array.length pubKeys)
-                      )
-                      ( ( unsafePartial $ fromJust $ RegularBigInt.fromString
-                            (BigInt.toString thresholdDenominator)
-                        )
-                      )
-                  )
-          )
+             ( div
+                (thresholdNumerator * BigInt.fromInt (Array.length pubKeys))
+                thresholdDenominator
+             )
       in
         case Array.uncons pubs of
           Nothing → ok

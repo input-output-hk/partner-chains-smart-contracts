@@ -364,8 +364,7 @@ mkMintFuelLookupAndConstraints
 
     let
       node = DistributedSet.mkNode (unAssetName tnNode) datNode
-      amount' = unsafePartial $ fromJust $ BigNum.fromString $ BigInt.toString
-        amount
+      amount' = BigNum.fromStringUnsafe $ BigInt.toString amount
       value = Value.singleton fuelMintingCurrencySymbol fuelAssetName amount'
       redeemer = wrap (toData (FUELMintingRedeemer merkleTreeEntry merkleProof))
 
