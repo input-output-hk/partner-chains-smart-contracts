@@ -240,12 +240,16 @@ Available commands:
 
 #### 3.3.1.1 Initialising the sidechain in full
 
-Before we can start claiming tokens, we must initialise the sidechain by:
-initialising the sidechain's tokens, and setting our initial committee. Only
-after these steps will we be able to obtain the validator addresses.
+The `init` command initializes all components of a sidechain.  It first burns
+the genesis UTxO and mints required initialization tokens, and then uses these
+initialization tokens to initialize the following functionalities of a
+sidechain:
 
-To initialise the sidechain, we can run the following command which will spend
-the genesis committee hash UTxO.
+  * claiming and burning the fuel as well as the committee selection mechanism
+  * checkpointing
+  * candidate permission tokens (optional - see below)
+
+To initialise the sidechain, we run the following command:
 
 ```
 nix run .#sidechain-main-cli -- init \
@@ -269,18 +273,15 @@ nix run .#sidechain-main-cli -- init \
   --candidate-permission-token-amount 42
 ```
 
+The `init` command is idempotent, i.e. in case of failure it can safely be
+re-run to finish an interrupted sidechain initialization.
+
 #### 3.3.1.2 Initialising the sidechain in parts
 
-All of the following commands are idempotent.
+As an alternative to using the `init` command, the user might want to perform
+each initialization step individually.
 
-Before we can start claiming tokens, we must initialise the sidechain by:
-initialising the sidechain's tokens, and setting our initial committee. Only
-after these steps will we be able to obtain the validator addresses.
-
-To initialise the sidechain, we can run the following commands which will spend
-the genesis committee hash UTxO:
-
-# Initialise Mint
+##### Mint initialization tokens
 
 Mint the tokens to be used in subsequent commands.
 
@@ -300,7 +301,7 @@ Mints:
 nix run .#sidechain-main-cli -- init-tokens-mint --version 1
 ```
 
-# Init FUEL and committee selection
+##### Init FUEL and committee selection
 
 Initialise the FUEL and committee selection mechanisms.  Burn `"DistributedSet
 InitToken"` and `"Committee oracle InitToken"`.
@@ -326,7 +327,7 @@ nix run .#sidechain-main-cli -- init-fuel
   --version 1
 ```
 
-# Init Checkpoint
+##### Init Checkpoint
 
 Initialise the Checkpoint mechanism. Burns `"Checkpoint InitToken"`.
 
@@ -341,7 +342,7 @@ nix run .#sidechain-main-cli -- init-checkpoint \
   --candidate-permission-token-amount 42
 ```
 
-# Initialise Candidate Permission Token
+##### Initialise Candidate Permission Token
 
 Initialise the Candidate Permission Token mechanism.
 Burns `"Candidate permission token init"`.
@@ -352,12 +353,6 @@ Insert validator: `CheckpointValidator`
 nix run .#sidechain-main-cli -- init-candidate-permission-token \
   --version 1
   --candidate-permission-token-amount 42
-```
-
-# Insert Version 2
-
-```
-nix run .#sidechain-main-cli -- insert-version-2
 ```
 
 #### 3.3.2. List currently versioned scripts
@@ -554,9 +549,10 @@ nix run .#sidechain-main-cli -- save-checkpoint \
 
 #### 3.3.13 Insert new protocol version
 
+This command is only for testing purposes and shouldn't be used.
+
 ```
-nix run .#sidechain-main-cli -- insert-version \
-  --version 2
+nix run .#sidechain-main-cli -- insert-version-2
 ```
 
 #### 3.3.14 Update existing protocol version
