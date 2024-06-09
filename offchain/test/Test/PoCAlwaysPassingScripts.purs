@@ -4,8 +4,8 @@ module Test.AlwaysPassingScripts
   ) where
 
 import Contract.PlutusData (toData)
-import Contract.Scripts (MintingPolicy, Validator)
-import Data.BigInt (BigInt)
+import Cardano.Types.PlutusScript (PlutusScript)
+import JS.BigInt (BigInt)
 import Run (Run)
 import Run.Except (EXCEPT)
 import Test.PoCRawScripts as RawScripts
@@ -16,7 +16,7 @@ import Type.Row (type (+))
 alwaysPassingValidator ∷
   ∀ r.
   BigInt →
-  Run (EXCEPT OffchainError + r) Validator
+  Run (EXCEPT OffchainError + r) PlutusScript
 alwaysPassingValidator seed =
   Utils.Scripts.mkValidatorWithParams'
     RawScripts.rawPoCAlwaysPassingValidator
@@ -25,7 +25,7 @@ alwaysPassingValidator seed =
 alwaysPassingPolicy ∷
   ∀ r.
   BigInt →
-  Run (EXCEPT OffchainError + r) MintingPolicy
+  Run (EXCEPT OffchainError + r) PlutusScript
 alwaysPassingPolicy seed =
   Utils.Scripts.mkMintingPolicyWithParams'
     RawScripts.rawPoCAlwaysPassingPolicy
