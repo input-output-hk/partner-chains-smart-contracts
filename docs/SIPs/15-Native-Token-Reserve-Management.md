@@ -108,7 +108,7 @@ datum:
 
 data ImmutableSettings = ImmutableSettings
   { t0 :: POSIXTime
-  , tokenKind :: CurrencySymbol
+  , tokenKind :: AssetClass
   }
 
 data MutableSettings = MutableSettings
@@ -136,7 +136,7 @@ Description of reserve state in `Bootstraping` phase follows:
   - `ImmutableSettings` represents settings that cannot be changed during
     reserve lifetime:
     * `t0` is a posix timestamp of the moment the reserve is launched
-    * `tokenKind` is the currency symbol of tokens that a reserve is allowed to
+    * `tokenKind` is the asset class of tokens that a reserve is allowed to
       store
   - `MutableSettings` represents settings that can be changed using governance
     referred by`VersionOracleConfig`:
@@ -218,7 +218,8 @@ on illiquid circulation supply validator's address
 ### Reserve authentication token
 
 This token will be carried around by reserve utxos and provides a proof that a
-reserve utxo has been initialized in a correct way.
+reserve utxo has been initialized in a correct way. A valid authentication
+token must have empty token name.
 
 Reserve authentication minting policy will be parametrized by
 `VersionOracleConfig`.

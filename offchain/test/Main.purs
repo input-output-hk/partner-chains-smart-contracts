@@ -31,6 +31,7 @@ import Test.PoCReferenceInput as PoCReferenceInput
 import Test.PoCReferenceScript as PoCReferenceScript
 import Test.PoCSchnorrSecp256k1 as PoCSchnorrSecp256k1
 import Test.PoCSerialiseData as PoCSerialiseData
+import Test.Reserve as Reserve
 import Test.Unit.Main as Test.Unit.Main
 import Test.UpdateCommitteeHash as UpdateCommitteeHash
 import Test.Utils (interpretWrappedTest, plutipGroup)
@@ -59,6 +60,7 @@ main = do
           ConfigFile.tests
 
         group "Plutip integration tests" do
+          Reserve.tests
           InitCandidatePermissionToken.tests
           InitSidechain.tests
           InitMint.tests

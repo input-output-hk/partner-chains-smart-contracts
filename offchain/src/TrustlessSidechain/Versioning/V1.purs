@@ -5,6 +5,7 @@ module TrustlessSidechain.Versioning.V1
   , getFuelPoliciesAndValidators
   , getDsPoliciesAndValidators
   , getMerkleRootPoliciesAndValidators
+  , getNativeTokenManagementPoliciesAndValidators
   ) where
 
 import Contract.Prelude
@@ -33,24 +34,15 @@ import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.FUELBurningPolicy.V1 as FUELBurningPolicy.V1
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import TrustlessSidechain.MerkleRoot as MerkleRoot
+import TrustlessSidechain.NativeTokenManagement.Reserve
+  ( reserveAuthPolicy
+  , reserveValidator
+  )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash.Utils
   ( getUpdateCommitteeHashValidator
   )
-import TrustlessSidechain.Versioning.Types
-  ( ScriptId
-      ( MerkleRootTokenValidator
-      , CheckpointValidator
-      , CommitteeHashValidator
-      , CommitteeCandidateValidator
-      , MerkleRootTokenPolicy
-      , FUELMintingPolicy
-      , FUELBurningPolicy
-      , DsKeyPolicy
-      , CommitteeCertificateVerificationPolicy
-      , CommitteeOraclePolicy
-      )
-  )
+import TrustlessSidechain.Versioning.Types (ScriptId(..))
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
 
@@ -69,9 +61,14 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   fuelScripts ← getFuelPoliciesAndValidators sp
   dsScripts ← getDsPoliciesAndValidators sp
   merkleRootScripts ← getMerkleRootPoliciesAndValidators sp
+  nativeTokenManagementScripts ← getNativeTokenManagementPoliciesAndValidators sp
 
-  pure $ committeeScripts <> checkpointScripts <> fuelScripts <> dsScripts
+  pure $ committeeScripts
+    <> checkpointScripts
+    <> fuelScripts
+    <> dsScripts
     <> merkleRootScripts
+    <> nativeTokenManagementScripts
 
 getMerkleRootPoliciesAndValidators ∷
   ∀ r.
@@ -170,6 +167,28 @@ getCheckpointPoliciesAndValidators sp = do
       ]
 
   pure $ { versionedPolicies: mempty, versionedValidators }
+
+getNativeTokenManagementPoliciesAndValidators ∷
+  ∀ r.
+  SidechainParams →
+  Run (EXCEPT OffchainError + WALLET + r)
+    { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
+    , versionedValidators ∷ List (Tuple ScriptId Validator)
+    }
+getNativeTokenManagementPoliciesAndValidators sp = do
+  versionOracleConfig ← Versioning.getVersionOracleConfig sp
+  reserveAuthPolicy' ← reserveAuthPolicy versionOracleConfig
+  reserveValidator' ← reserveValidator versionOracleConfig
+
+  let
+    versionedPolicies = List.fromFoldable
+      [ ReserveAuthPolicy /\ reserveAuthPolicy'
+      ]
+    versionedValidators = List.fromFoldable
+      [ ReserveValidator /\ reserveValidator'
+      ]
+
+  pure $ { versionedPolicies, versionedValidators }
 
 -- | Return policies and validators needed for FUEL minting
 -- | and burning.

@@ -6,6 +6,7 @@ import Crypto.Secp256k1 qualified as SECP
 import Data.Bits (unsafeShiftL)
 import GHC.Exts (fromList)
 import Laws (toDataSafeLaws', toDataUnsafeLaws')
+import Plutus.V1.Ledger.Value (AssetClass (AssetClass))
 import Plutus.V2.Ledger.Api (
   CurrencySymbol,
   LedgerBytes (LedgerBytes),
@@ -358,7 +359,7 @@ genRD = do
 
   pure $
     ReserveDatum
-      (ImmutableReserveSettings (POSIXTime pt) cs1)
+      (ImmutableReserveSettings (POSIXTime pt) (AssetClass (cs1, "")))
       (MutableReserveSettings cs2)
       (ReserveStats c)
 

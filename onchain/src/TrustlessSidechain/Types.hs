@@ -937,8 +937,11 @@ instance UnsafeFromData InitTokenAssetClass where
   unsafeFromBuiltinData = productUnsafeFromData2 InitTokenAssetClass
 
 data ImmutableReserveSettings = ImmutableReserveSettings
-  { t0 :: POSIXTime
-  , tokenKind :: CurrencySymbol
+  { -- | `t0` is a POSIX time of a reserve UTxO initialization
+    t0 :: POSIXTime
+  , -- | `tokenKind` is an asset class of tokens that a reserve
+    -- UTxO is allowed to store
+    tokenKind :: AssetClass
   }
   deriving stock
     ( TSPrelude.Eq
@@ -961,7 +964,11 @@ instance UnsafeFromData ImmutableReserveSettings where
 makeHasField ''ImmutableReserveSettings
 
 newtype MutableReserveSettings = MutableReserveSettings
-  { vFunctionTotalAccrued :: CurrencySymbol
+  { -- | `vFunctionTotalAccrued` is a currency symbol of a minting policy
+    -- that dictates the upper bound on the number of `tokenKind` tokens that
+    -- can be transferred from a reserve utxo to an illiquid circulation supply
+    -- from `t0` till now
+    vFunctionTotalAccrued :: CurrencySymbol
   }
   deriving stock
     ( TSPrelude.Eq
@@ -972,13 +979,16 @@ newtype MutableReserveSettings = MutableReserveSettings
 makeHasField ''MutableReserveSettings
 
 newtype ReserveStats = ReserveStats
-  { tokenTotalAmountTransferred :: Integer
+  { -- | `tokenTotalAmountTransferred` is the total number
+    -- of tokens that already have been transferred from a reserve utxo
+    -- to an illiquid circulation supply
+    tokenTotalAmountTransferred :: Integer
   }
   deriving stock
     ( TSPrelude.Eq
     , TSPrelude.Show
     )
-  deriving newtype (ToData, FromData, UnsafeFromData)
+  deriving newtype (ToData, FromData, UnsafeFromData, Eq)
 
 makeHasField ''ReserveStats
 

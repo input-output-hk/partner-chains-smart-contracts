@@ -20,6 +20,7 @@ import Contract.PlutusData
 import Contract.Value (CurrencySymbol)
 import Ctl.Internal.Types.Interval (POSIXTime)
 import Data.BigInt as BigInt
+import TrustlessSidechain.Types (AssetClass)
 import TrustlessSidechain.Utils.Data
   ( productFromData2
   , productFromData3
@@ -29,7 +30,7 @@ import TrustlessSidechain.Utils.Data
 
 newtype ImmutableReserveSettings = ImmutableReserveSettings
   { t0 ∷ POSIXTime
-  , tokenKind ∷ CurrencySymbol
+  , tokenKind ∷ AssetClass
   }
 
 derive instance Generic ImmutableReserveSettings _

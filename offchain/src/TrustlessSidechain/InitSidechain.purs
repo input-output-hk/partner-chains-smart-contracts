@@ -26,17 +26,14 @@ import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain.CandidatePermissionToken
   ( initCandidatePermissionToken
   )
-import TrustlessSidechain.InitSidechain.Checkpoint
-  ( initCheckpoint
-  )
-import TrustlessSidechain.InitSidechain.FUEL
-  ( initFuel
+import TrustlessSidechain.InitSidechain.Checkpoint (initCheckpoint)
+import TrustlessSidechain.InitSidechain.FUEL (initFuel)
+import TrustlessSidechain.InitSidechain.NativeTokenManagement
+  ( initNativeTokenMgmt
   )
 import TrustlessSidechain.InitSidechain.TokensMint (mintAllTokens)
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
-import TrustlessSidechain.Utils.Maybe
-  ( maybeToArray
-  )
+import TrustlessSidechain.Utils.Maybe (maybeToArray)
 import Type.Row (type (+))
 
 -- | Parameters to initialize a sidechain (purely an offchain type)
@@ -142,6 +139,10 @@ initSidechain (InitSidechainParams isp) version = do
     initCandidatePermissionToken sidechainParams
       isp.initCandidatePermissionTokenMintInfo
 
+  -- Initialize Native Token Management.
+  nativeTokenMgmtInitTxs ←
+    initNativeTokenMgmt sidechainParams isp.initATMSKind version
+
   -- Grabbing the required sidechain addresses of particular validators /
   -- minting policies
   sidechainAddresses ←
@@ -160,6 +161,7 @@ initSidechain (InitSidechainParams isp) version = do
           <> maybeToArray permissionTokensInitTx
           <> checkpointInitTx.scriptsInitTxIds
           <> maybeToArray checkpointInitTx.tokensInitTxId
+          <> nativeTokenMgmtInitTxs
     , sidechainParams
     , sidechainAddresses
     }

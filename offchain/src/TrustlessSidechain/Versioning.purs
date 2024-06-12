@@ -11,6 +11,7 @@ module TrustlessSidechain.Versioning
   , getFuelPoliciesAndValidators
   , getDsPoliciesAndValidators
   , getMerkleRootPoliciesAndValidators
+  , getNativeTokenManagementPoliciesAndValidators
   ) where
 
 import Contract.Prelude
@@ -381,6 +382,20 @@ getCheckpointPoliciesAndValidators sidechainParams version = do
   case version of
     1 → V1.getCheckpointPoliciesAndValidators sidechainParams
     2 → V2.getCheckpointPoliciesAndValidators sidechainParams
+    _ → throw $ GenericInternalError ("Invalid version: " <> show version)
+
+getNativeTokenManagementPoliciesAndValidators ∷
+  ∀ r.
+  SidechainParams →
+  Int →
+  Run (EXCEPT OffchainError + WALLET + r)
+    { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
+    , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+    }
+getNativeTokenManagementPoliciesAndValidators sidechainParams version = do
+  case version of
+    1 → V1.getNativeTokenManagementPoliciesAndValidators sidechainParams
+    2 → V2.getNativeTokenManagementPoliciesAndValidators sidechainParams
     _ → throw $ GenericInternalError ("Invalid version: " <> show version)
 
 -- | Get the list of "actual" validators and minting policies that should be versioned.

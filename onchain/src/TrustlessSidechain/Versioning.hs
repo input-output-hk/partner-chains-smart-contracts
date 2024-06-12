@@ -13,6 +13,7 @@ module TrustlessSidechain.Versioning (
   mkVersionOraclePolicy,
   mkVersionOracleValidator,
   getVersionedValidatorAddress,
+  getVersionedValidatorAddressUnsafe,
   getVersionedCurrencySymbol,
   getVersionedCurrencySymbolUnsafe,
   VersionOracle (..),
@@ -46,6 +47,11 @@ module TrustlessSidechain.Versioning (
   permissionedCandidatesValidatorId,
   scriptCacheId,
   initTokensPolicyId,
+  reserveValidatorId,
+  reserveAuthPolicyId,
+  illiquidCirculationSupplyValidatorId,
+  illiquidCirculationSupplyWithdrawalPolicyId,
+  governancePolicyId,
 ) where
 
 import Plutus.V1.Ledger.Address (scriptHashAddress)
@@ -544,6 +550,15 @@ getVersionedValidatorAddress ::
   Address
 getVersionedValidatorAddress voConfig vo =
   scriptHashAddress . ValidatorHash . getVersionedScriptHash voConfig vo
+
+{-# INLINEABLE getVersionedValidatorAddressUnsafe #-}
+getVersionedValidatorAddressUnsafe ::
+  VersionOracleConfig ->
+  VersionOracle ->
+  Unsafe.ScriptContext ->
+  Address
+getVersionedValidatorAddressUnsafe voConfig vo =
+  scriptHashAddress . ValidatorHash . getVersionedScriptHashUnsafe voConfig vo
 
 -- | Searches for a specified minting policy passed as a reference input.  Note
 -- that if requested script ID corresponds to a validator this function will

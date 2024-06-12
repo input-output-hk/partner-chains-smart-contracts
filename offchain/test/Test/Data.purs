@@ -415,15 +415,15 @@ genATMSRedeemerSchnorr = QGen.oneOf $ NE.cons'
 genReserveDatum ∷ Gen ReserveDatum
 genReserveDatum = do
   ArbitraryBigInt pt ← arbitrary
-  ArbitraryCurrencySymbol cs1 ← arbitrary
-  ArbitraryCurrencySymbol cs2 ← arbitrary
+  ArbitraryCurrencySymbol cs ← arbitrary
   ArbitraryBigInt c ← arbitrary
+  ArbitraryAssetClass ac ← arbitrary
 
   pure $
     ReserveDatum
       { immutableSettings: ImmutableReserveSettings
-          { t0: (POSIXTime pt), tokenKind: cs1 }
-      , mutableSettings: MutableReserveSettings { vFunctionTotalAccrued: cs2 }
+          { t0: (POSIXTime pt), tokenKind: ac }
+      , mutableSettings: MutableReserveSettings { vFunctionTotalAccrued: cs }
       , stats: ReserveStats { tokenTotalAmountTransferred: c }
       }
 
