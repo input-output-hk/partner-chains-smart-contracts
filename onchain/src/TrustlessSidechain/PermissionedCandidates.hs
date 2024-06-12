@@ -17,7 +17,7 @@ import Plutus.V2.Ledger.Api (
   fromCompiledCode,
  )
 import PlutusTx qualified
-import TrustlessSidechain.Governance qualified as Governance
+import TrustlessSidechain.Governance.Admin qualified as Governance
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   PermissionedCandidatesPolicyRedeemer (

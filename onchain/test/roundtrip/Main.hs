@@ -50,7 +50,7 @@ import TrustlessSidechain.DistributedSet (
   Node (Node),
  )
 import TrustlessSidechain.FUELProxyPolicy (FuelProxyRedeemer (FuelProxyBurn, FuelProxyMint))
-import TrustlessSidechain.Governance (GovernanceAuthority (GovernanceAuthority))
+import TrustlessSidechain.Governance.Admin (GovernanceAuthority (GovernanceAuthority))
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleTree (
   MerkleProof (MerkleProof),

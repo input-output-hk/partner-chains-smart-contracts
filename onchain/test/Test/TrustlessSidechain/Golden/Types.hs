@@ -13,7 +13,7 @@ import PlutusTx.Builtins qualified as Builtins
 import Test.Tasty (TestTree, testGroup)
 import Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest)
 import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CommitteePlainATMSPolicy
-import TrustlessSidechain.Governance (mkGovernanceAuthority)
+import TrustlessSidechain.Governance.Admin (mkGovernanceAuthority)
 import TrustlessSidechain.MerkleTree (MerkleProof (MerkleProof), MerkleTree (Bin, Tip), RootHash (RootHash), Side (L, R), Up (Up), sibling, siblingSide)
 import TrustlessSidechain.Types (
   ATMSPlainAggregatePubKey,
