@@ -93,6 +93,7 @@ library
     TrustlessSidechain.FUELMintingPolicy
     TrustlessSidechain.FUELProxyPolicy
     TrustlessSidechain.Governance
+    TrustlessSidechain.Governance.MultiSig
     TrustlessSidechain.IlliquidCirculationSupply
     TrustlessSidechain.InitToken
     TrustlessSidechain.MerkleRootTokenMintingPolicy
