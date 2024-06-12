@@ -73,7 +73,7 @@ import PlutusTx.Builtins.Internal (
  )
 import System.IO (FilePath)
 import System.IO.Error (userError)
-import TrustlessSidechain.Governance (
+import TrustlessSidechain.Governance.Admin (
   GovernanceAuthority,
   mkGovernanceAuthority,
  )

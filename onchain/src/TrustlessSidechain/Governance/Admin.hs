@@ -1,6 +1,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module TrustlessSidechain.Governance (
+-- | Legacy governance mechanism.  This implementation was intended as a
+-- placeholder until we get a proper governance mechanism in place.  A proper
+-- governance mechanism is now live, but infortunatelly this piece of crap here
+-- is used in the scripts used by customers and thus cannot be simply removed
+-- without a proper migration strategy.
+module TrustlessSidechain.Governance.Admin (
   GovernanceAuthority (GovernanceAuthority),
   isApprovedBy,
   isApprovedByUnsafe,
