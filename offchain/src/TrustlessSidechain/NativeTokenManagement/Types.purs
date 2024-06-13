@@ -5,8 +5,8 @@ module TrustlessSidechain.NativeTokenManagement.Types
   , ReserveRedeemer(..)
   , ReserveStats(..)
   , MutableReserveSettings(..)
-  )
-  where
+  , ReserveAuthPolicyRedeemer(..)
+  ) where
 
 import Contract.Prelude
 
@@ -129,9 +129,12 @@ instance FromData ReserveDatum where
 
 data ReserveRedeemer
   = DepositToReserve
+    { governanceVersion :: BigInt.BigInt }
   | TransferToIlliquidCirculationSupply
   | UpdateReserve
+    { governanceVersion :: BigInt.BigInt }
   | Handover
+    { governanceVersion :: BigInt.BigInt }
 
 derive instance Eq ReserveRedeemer
 
@@ -141,19 +144,58 @@ instance Show ReserveRedeemer where
   show = genericShow
 
 instance ToData ReserveRedeemer where
-  toData DepositToReserve = Integer (BigInt.fromInt 0)
-  toData TransferToIlliquidCirculationSupply = Integer (BigInt.fromInt 1)
-  toData UpdateReserve = Integer (BigInt.fromInt 2)
-  toData Handover = Integer (BigInt.fromInt 3)
+  toData (DepositToReserve { governanceVersion }) =
+    Constr (BigNum.fromInt 0) [ toData governanceVersion ]
+  toData TransferToIlliquidCirculationSupply =
+    Constr (BigNum.fromInt 1) []
+  toData (UpdateReserve { governanceVersion }) =
+    Constr (BigNum.fromInt 2) [ toData governanceVersion ]
+  toData (Handover { governanceVersion }) =
+    Constr (BigNum.fromInt 3) [ toData governanceVersion ]
 
 instance FromData ReserveRedeemer where
   fromData = case _ of
-    Integer tag | tag == BigInt.fromInt 0 → pure DepositToReserve
-    Integer tag | tag == BigInt.fromInt 1 → pure
+    Constr tag args | tag == BigNum.fromInt 0 →
+      case args of
+        [ x ] -> do
+          governanceVersion <- fromData x
+          pure $ DepositToReserve { governanceVersion }
+        _ -> Nothing
+    Constr tag [] | tag == BigNum.fromInt 1 → pure
       TransferToIlliquidCirculationSupply
-    Integer tag | tag == BigInt.fromInt 2 → pure UpdateReserve
-    Integer tag | tag == BigInt.fromInt 3 → pure Handover
+    Constr tag args | tag == BigNum.fromInt 2 →
+      case args of
+        [ x ] -> do
+          governanceVersion <- fromData x
+          pure $ UpdateReserve { governanceVersion }
+        _ -> Nothing
+    Constr tag [arg] | tag == BigNum.fromInt 3 → do
+      governanceVersion <- fromData arg
+      pure $ Handover { governanceVersion }
     _ → Nothing
+
+newtype ReserveAuthPolicyRedeemer = ReserveAuthPolicyRedeemer
+  { governanceVersion ∷ BigInt.BigInt
+  }
+
+derive newtype instance Eq ReserveAuthPolicyRedeemer
+
+derive instance Generic ReserveAuthPolicyRedeemer _
+
+derive instance Newtype ReserveAuthPolicyRedeemer _
+
+instance Show ReserveAuthPolicyRedeemer where
+  show = genericShow
+
+instance ToData ReserveAuthPolicyRedeemer where
+  toData (ReserveAuthPolicyRedeemer { governanceVersion }) = toData
+    governanceVersion
+
+instance FromData ReserveAuthPolicyRedeemer where
+  fromData dat = do
+    governanceVersion ← fromData dat
+    pure $ ReserveAuthPolicyRedeemer { governanceVersion }
+
 
 data IlliquidCirculationSupplyRedeemer
   = DepositMoreToSupply

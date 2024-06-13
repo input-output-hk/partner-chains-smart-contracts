@@ -40,6 +40,7 @@ module TrustlessSidechain.Types (
   ReserveStats (..),
   ReserveDatum (..),
   ReserveRedeemer (..),
+  ReserveAuthPolicyRedeemer (..),
   IlliquidCirculationSupplyRedeemer (..),
 ) where
 
@@ -1033,43 +1034,33 @@ instance UnsafeFromData ReserveDatum where
 makeHasField ''ReserveDatum
 
 data ReserveRedeemer
-  = DepositToReserve
+  = DepositToReserve Integer
   | TransferToIlliquidCirculationSupply
-  | UpdateReserve
-  | Handover
+  | UpdateReserve Integer
+  | Handover Integer
   deriving stock
     ( TSPrelude.Eq
     , TSPrelude.Show
     )
 
-instance ToData ReserveRedeemer where
-  {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData DepositToReserve = BuiltinData $ PlutusTx.I 0
-  toBuiltinData TransferToIlliquidCirculationSupply = BuiltinData $ PlutusTx.I 1
-  toBuiltinData UpdateReserve = BuiltinData $ PlutusTx.I 2
-  toBuiltinData Handover = BuiltinData $ PlutusTx.I 3
+PlutusTx.makeIsDataIndexed
+  ''ReserveRedeemer
+  [ ('DepositToReserve, 0)
+  , ('TransferToIlliquidCirculationSupply, 1)
+  , ('UpdateReserve, 2)
+  , ('Handover, 3)
+  ]
 
-instance FromData ReserveRedeemer where
-  {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData x = do
-    integerValue <- fromBuiltinData x
-    case integerValue :: Integer of
-      0 -> Just DepositToReserve
-      1 -> Just TransferToIlliquidCirculationSupply
-      2 -> Just UpdateReserve
-      3 -> Just Handover
-      _ -> Nothing
+newtype ReserveAuthPolicyRedeemer = ReserveAuthPolicyRedeemer
+  { governanceVersion :: Integer
+  }
+  deriving stock
+    ( TSPrelude.Eq
+    , TSPrelude.Show
+    )
+  deriving newtype (ToData, FromData, UnsafeFromData, Eq)
 
-instance UnsafeFromData ReserveRedeemer where
-  {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData x =
-    let integerValue = unsafeFromBuiltinData x
-     in case integerValue :: Integer of
-          0 -> DepositToReserve
-          1 -> TransferToIlliquidCirculationSupply
-          2 -> UpdateReserve
-          3 -> Handover
-          _ -> error ()
+makeHasField ''ReserveAuthPolicyRedeemer
 
 data IlliquidCirculationSupplyRedeemer
   = DepositMoreToSupply

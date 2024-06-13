@@ -57,6 +57,7 @@ import TrustlessSidechain.NativeTokenManagement.Types
   , ReserveDatum(..)
   , ReserveRedeemer(..)
   , ReserveStats(..)
+  , ReserveAuthPolicyRedeemer(..)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Scripts
@@ -362,7 +363,9 @@ initialiseReserveUtxo
       constraints =
         governanceConstraints
           <> reserveConstraints
-          <> TxConstraints.mustMintValue (Mint.fromMultiAsset $ Value.getMultiAsset reserveAuthTokenValue)
+          <> TxConstraints.mustMintValueWithRedeemer
+               (RedeemerDatum $ toData reserveAuthPolicyRedeemer)
+               (Mint.fromMultiAsset $ Value.getMultiAsset reserveAuthTokenValue)
           <> TxConstraints.mustPayToScript
             reserveValidator'
             (toData initialReserveDatum)
@@ -379,6 +382,12 @@ initialiseReserveUtxo
     { immutableSettings
     , mutableSettings
     , stats: ReserveStats { tokenTotalAmountTransferred: BigInt.fromInt 0 }
+    }
+
+  --JSTOLAREK: parameterize version
+  reserveAuthPolicyRedeemer :: ReserveAuthPolicyRedeemer
+  reserveAuthPolicyRedeemer = ReserveAuthPolicyRedeemer
+    { governanceVersion: BigInt.fromInt 1
     }
 
 extractReserveDatum ∷ TransactionOutput → Maybe ReserveDatum
@@ -460,7 +469,7 @@ depositToReserve sp asset amount = do
           DatumInline
           newValue
         <> TxConstraints.mustSpendScriptOutput (fst utxo)
-          (RedeemerDatum $ toData DepositToReserve)
+          (RedeemerDatum $ toData $ DepositToReserve { governanceVersion: BigInt.fromInt 1 })
 
   void $ balanceSignAndSubmit
     "Deposit to a reserve utxo"
@@ -521,7 +530,7 @@ updateReserveUtxo sp updatedMutableSettings utxo = do
           DatumInline
           value
         <> TxConstraints.mustSpendScriptOutput (fst utxo)
-          (RedeemerDatum $ toData UpdateReserve)
+          (RedeemerDatum $ toData $ UpdateReserve { governanceVersion: BigInt.fromInt 1 })
 
   void $ balanceSignAndSubmit
     "Update reserve mutable settings"
@@ -734,7 +743,7 @@ handover
           toHandover
         <> TxConstraints.mustSpendScriptOutputUsingScriptRef
           (fst utxo)
-          (RedeemerDatum $ toData Handover)
+          (RedeemerDatum $ toData $ Handover { governanceVersion: BigInt.fromInt 1 })
           ( RefInput $ TransactionUnspentOutput
               { input: reserveRefTxInput
               , output: reserveRefTxOutput

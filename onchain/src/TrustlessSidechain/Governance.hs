@@ -10,8 +10,12 @@ import TrustlessSidechain.Versioning
 
 -- | This function will be moved to a governance module in the future
 {-# INLINEABLE approvedByGovernance #-}
-approvedByGovernance :: VersionOracleConfig -> Unsafe.ScriptContext -> Bool
-approvedByGovernance voc ctx =
+approvedByGovernance
+  :: VersionOracleConfig
+  -> Integer -- ^ Governance version
+  -> Unsafe.ScriptContext
+  -> Bool
+approvedByGovernance voc version ctx =
   flip (maybe False) ofGovernanceCs $ \case
     [(_, amount)] | amount > 0 -> True -- must mint at least one token, any name
     _ -> False
@@ -24,7 +28,7 @@ approvedByGovernance voc ctx =
     governanceTokenCurrencySymbol =
       getVersionedCurrencySymbolUnsafe
         voc
-        (VersionOracle {version = 1, scriptId = governancePolicyId})
+        (VersionOracle {version, scriptId = governancePolicyId})
         ctx
 
     minted :: Value

@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
@@ -50,6 +51,7 @@ import TrustlessSidechain.Types (
     UpdateReserve
   ),
   ReserveStats (ReserveStats),
+  ReserveAuthPolicyRedeemer(..),
  )
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Utils qualified as Utils
@@ -90,7 +92,12 @@ vFunctionTotalAccruedTokenName = adaToken
 --   ERROR-RESERVE-17: An authentication token is not burnt
 --   ERROR-RESERVE-18: Other tokens than auth token and governance token are minted or burnt
 --   ERROR-RESERVE-19: Not all reserve tokens are transferred to illiquid circulation supply
---   ERROR-RESERVE-20: Continuing output exists without an authentication token
+--   ERROR-RESERVE-20: Reserve utxo input exists without an authentication token
+--   ERROR-RESERVE-21: Reserve utxo output exists without an authentication token
+--   ERROR-RESERVE-22: Governance approval is not present
+--   ERROR-RESERVE-23: Other tokens than governance token are minted or burnt
+--   ERROR-RESERVE-24: Governance approval is not present
+--   ERROR-RESERVE-25: Continuing output exists without an authentication token
 mkReserveValidator ::
   VersionOracleConfig ->
   BuiltinData ->
@@ -98,14 +105,14 @@ mkReserveValidator ::
   Unsafe.ScriptContext ->
   Bool
 mkReserveValidator voc _ redeemer ctx = case redeemer of
-  DepositToReserve ->
-    traceIfFalse "ERROR-RESERVE-01" isApprovedByGovernance
+  DepositToReserve governanceVersion ->
+    traceIfFalse "ERROR-RESERVE-01" (isApprovedByGovernance governanceVersion)
       && traceIfFalse "ERROR-RESERVE-02" noOtherTokensButGovernanceMinted
       && traceIfFalse "ERROR-RESERVE-03" datumDoesNotChange
       && traceIfFalse "ERROR-RESERVE-04" assetsChangeOnlyByPositiveAmountOfReserveTokens
-  UpdateReserve ->
-    traceIfFalse "ERROR-RESERVE-01" isApprovedByGovernance
-      && traceIfFalse "ERROR-RESERVE-02" noOtherTokensButGovernanceMinted
+  UpdateReserve governanceVersion ->
+    traceIfFalse "ERROR-RESERVE-22" (isApprovedByGovernance governanceVersion)
+      && traceIfFalse "ERROR-RESERVE-23" noOtherTokensButGovernanceMinted
       && traceIfFalse "ERROR-RESERVE-09" datumChangesOnlyByMutableSettings
       && traceIfFalse "ERROR-RESERVE-10" assetsDoNotChange
   TransferToIlliquidCirculationSupply ->
@@ -114,8 +121,8 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
       && traceIfFalse "ERROR-RESERVE-13" assetsChangeOnlyByCorrectAmountOfReserveTokens
       && traceIfFalse "ERROR-RESERVE-14" datumChangesOnlyByStats
       && traceIfFalse "ERROR-RESERVE-15" correctAmountOfReserveTokensTransferredToICS
-  Handover ->
-    traceIfFalse "ERROR-RESERVE-01" isApprovedByGovernance
+  Handover governanceVersion ->
+    traceIfFalse "ERROR-RESERVE-24" (isApprovedByGovernance governanceVersion)
       && traceIfFalse "ERROR-RESERVE-17" oneReserveAuthTokenBurnt
       && traceIfFalse "ERROR-RESERVE-18" noOtherTokensButReserveAuthBurntAndGovernanceMinted
       && traceIfFalse "ERROR-RESERVE-19" allReserveTokensTransferredToICS
@@ -191,7 +198,7 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
     outputReserveUtxo =
       case Unsafe.getContinuingOutputs ctx of
         [out] | carriesAuthToken out -> out
-        [_] -> traceError "ERROR-RESERVE-20"
+        [_] -> traceError "ERROR-RESERVE-25"
         _ -> traceError "ERROR-RESERVE-06"
 
     inputDatum :: ReserveDatum
@@ -200,9 +207,8 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
     outputDatum :: ReserveDatum
     outputDatum = Utils.fromJust "ERROR-RESERVE-08" (extractReserveUtxoDatumUnsafe outputReserveUtxo)
 
-    {-# INLINEABLE isApprovedByGovernance #-}
-    isApprovedByGovernance :: Bool
-    isApprovedByGovernance = approvedByGovernance voc ctx
+    isApprovedByGovernance :: Integer -> Bool
+    isApprovedByGovernance gv = approvedByGovernance voc gv ctx
 
     {-# INLINEABLE kindsOfTokenMinted #-}
     kindsOfTokenMinted :: Integer -> Bool
@@ -344,8 +350,12 @@ extractReserveUtxoDatumUnsafe txOut =
 --   ERROR-RESERVE-AUTH-06: No unique output UTxO at the reserve address
 --   ERROR-RESERVE-AUTH-07: Output reserve UTxO carries no inline datum or malformed datum
 {-# INLINEABLE mkReserveAuthPolicy #-}
-mkReserveAuthPolicy :: VersionOracleConfig -> BuiltinData -> Unsafe.ScriptContext -> Bool
-mkReserveAuthPolicy voc _ ctx =
+mkReserveAuthPolicy
+  :: VersionOracleConfig
+  -> ReserveAuthPolicyRedeemer
+  -> Unsafe.ScriptContext
+  -> Bool
+mkReserveAuthPolicy voc ReserveAuthPolicyRedeemer{..} ctx =
   if valueOf minted ownCurrencySymbol reserveAuthTokenTokenName < 0
     then True -- delegating to reserve validator
     else
@@ -387,7 +397,7 @@ mkReserveAuthPolicy voc _ ctx =
         Nothing -> traceError "ERROR-RESERVE-AUTH-07"
 
     isApprovedByAdminGovernance :: Bool
-    isApprovedByAdminGovernance = approvedByGovernance voc ctx
+    isApprovedByAdminGovernance = approvedByGovernance voc governanceVersion ctx
 
     oneReserveAuthTokenIsMinted :: Bool
     oneReserveAuthTokenIsMinted =
@@ -421,7 +431,7 @@ mkReserveAuthPolicyUntyped voc red ctx =
   check $
     mkReserveAuthPolicy
       (PlutusTx.unsafeFromBuiltinData voc)
-      red
+      (PlutusTx.unsafeFromBuiltinData red)
       (Unsafe.wrap ctx)
 
 serialisableReserveAuthPolicy :: Script
