@@ -13,7 +13,7 @@ import TrustlessSidechain.Versioning
 approvedByGovernance :: VersionOracleConfig -> Unsafe.ScriptContext -> Bool
 approvedByGovernance voc ctx =
   flip (maybe False) ofGovernanceCs $ \case
-    [(_, 1)] -> True -- any token name is allowed
+    [(_, amount)] | amount > 0 -> True -- must mint at least one token, any name
     _ -> False
   where
     ofGovernanceCs :: Maybe [(TokenName, Integer)]
