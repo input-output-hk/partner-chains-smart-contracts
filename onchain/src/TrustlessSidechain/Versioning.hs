@@ -168,12 +168,12 @@ governancePolicyId = 32
 --
 -- @since v5.0.0
 data VersionOracle = VersionOracle
-  { -- | Version of the script.
-    -- @since v5.0.0
-    version :: Integer
-  , -- | Unique identifier of the validator.
-    -- @since v5.0.0
-    scriptId :: Integer
+  { version :: Integer
+  -- ^ Version of the script.
+  -- @since v5.0.0
+  , scriptId :: Integer
+  -- ^ Unique identifier of the validator.
+  -- @since v5.0.0
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
@@ -235,8 +235,8 @@ instance Eq VersionOracleDatum where
 --
 -- @since v5.0.0
 newtype VersionOracleConfig = VersionOracleConfig
-  { -- | @since v5.0.0
-    versionOracleCurrencySymbol :: CurrencySymbol
+  { versionOracleCurrencySymbol :: CurrencySymbol
+  -- ^ @since v5.0.0
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
@@ -378,7 +378,7 @@ mkVersionOraclePolicy
           -- Check that transaction was approved by governance authority
           signedByGovernanceAuthority :: Bool
           signedByGovernanceAuthority =
-            txInfo `Governance.isApprovedByUnsafe` get @"governanceAuthority" sp
+            txInfo `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
 
           -- Check that this transaction mints a token with correct datum and script
           -- hash.
@@ -412,7 +412,7 @@ mkVersionOraclePolicy
           -- Check that transaction was approved by governance authority
           signedByGovernanceAuthority :: Bool
           signedByGovernanceAuthority =
-            txInfo `Governance.isApprovedByUnsafe` get @"governanceAuthority" sp
+            txInfo `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
 
           -- Check that the script version to be invalidated is present in exactly
           -- one transaction input.
@@ -498,7 +498,7 @@ mkVersionOracleValidator
       txInfo = Unsafe.scriptContextTxInfo ctx
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority =
-        txInfo `Governance.isApprovedByUnsafe` get @"governanceAuthority" sp
+        txInfo `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
 
       -- Check that version oracle in the datum matches the redeemer
       versionOraclesMatch = versionOracle == versionOracle'

@@ -48,7 +48,7 @@ mkMintingPolicy
           -- Check that transaction was approved by governance authority
           signedByGovernanceAuthority :: Bool
           signedByGovernanceAuthority =
-            txInfo `Governance.isApprovedByUnsafe` get @"governanceAuthority" sp
+            txInfo `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
 
           -- Amount of DParameterToken sent to the DParameterValidator address
           outAmount :: Integer
@@ -98,7 +98,7 @@ dParameterValidator sp _dat _redeemer ctx =
     -- Check that transaction was approved by governance authority
     signedByGovernanceAuthority :: Bool
     signedByGovernanceAuthority =
-      Unsafe.scriptContextTxInfo ctx `Governance.isApprovedByUnsafe` get @"governanceAuthority" sp
+      Unsafe.scriptContextTxInfo ctx `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
 
 mkValidatorUntyped ::
   BuiltinData ->
