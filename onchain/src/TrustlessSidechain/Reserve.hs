@@ -18,7 +18,7 @@ import Plutus.V1.Ledger.Value (
   AssetClass (AssetClass, unAssetClass),
   CurrencySymbol,
   TokenName,
-  Value (getValue),
+  Value,
   adaSymbol,
   adaToken,
   assetClassValueOf,
@@ -38,9 +38,9 @@ import Plutus.V2.Ledger.Api (
   fromCompiledCode,
  )
 import PlutusTx qualified
-import PlutusTx.AssocMap (lookup, toList)
 import PlutusTx.Bool
 import TrustlessSidechain.HaskellPrelude (on)
+import TrustlessSidechain.Governance
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   ReserveDatum (mutableSettings, stats),
@@ -61,7 +61,6 @@ import TrustlessSidechain.Versioning (
   VersionOracleConfig,
   getVersionedCurrencySymbolUnsafe,
   getVersionedValidatorAddressUnsafe,
-  governancePolicyId,
   illiquidCirculationSupplyValidatorId,
   reserveAuthPolicyId,
   reserveValidatorId,
@@ -320,8 +319,8 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
 
 mkReserveValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkReserveValidatorUntyped voc rd rr ctx =
-  check $
-    mkReserveValidator
+  check
+    $ mkReserveValidator
       (PlutusTx.unsafeFromBuiltinData voc)
       (PlutusTx.unsafeFromBuiltinData rd)
       (PlutusTx.unsafeFromBuiltinData rr)
@@ -347,28 +346,6 @@ extractReserveUtxoDatum :: TxOut -> Maybe ReserveDatum
 extractReserveUtxoDatum txOut = case txOutDatum txOut of
   OutputDatum datum -> PlutusTx.fromBuiltinData . getDatum $ datum
   _ -> Nothing
-
--- | This function will be moved to a governance module in the future
-{-# INLINEABLE approvedByGovernance #-}
-approvedByGovernance :: VersionOracleConfig -> Unsafe.ScriptContext -> Bool
-approvedByGovernance voc ctx =
-  flip (maybe False) ofGovernanceCs $ \case
-    [(_, 1)] -> True -- any token name is allowed
-    _ -> False
-  where
-    ofGovernanceCs :: Maybe [(TokenName, Integer)]
-    ofGovernanceCs =
-      fmap toList . lookup governanceTokenCurrencySymbol . getValue $ minted
-
-    governanceTokenCurrencySymbol :: CurrencySymbol
-    governanceTokenCurrencySymbol =
-      getVersionedCurrencySymbolUnsafe
-        voc
-        (VersionOracle {version = 1, scriptId = governancePolicyId})
-        ctx
-
-    minted :: Value
-    minted = Unsafe.decode . Unsafe.txInfoMint . Unsafe.scriptContextTxInfo $ ctx
 
 -- | Error codes description follows:
 --
@@ -409,9 +386,10 @@ mkReserveAuthPolicy voc _ ctx =
 
     reserveUtxo :: TxOut
     reserveUtxo =
-      Unsafe.decode $
-        Utils.fromSingleton "ERROR-RESERVE-AUTH-06" $
-          info `getOutputsAt` reserveAddress
+      Unsafe.decode
+        $ Utils.fromSingleton "ERROR-RESERVE-AUTH-06"
+        $ info
+        `getOutputsAt` reserveAddress
 
     reserveUtxoValue :: Value
     reserveUtxoValue = txOutValue reserveUtxo
@@ -442,8 +420,10 @@ mkReserveAuthPolicy voc _ ctx =
 
     reserveUtxoCarriesOnlyAdaTokenKindAndAuthToken :: Bool
     reserveUtxoCarriesOnlyAdaTokenKindAndAuthToken =
-      assetClassValueOf reserveUtxoValue tokenKind' /= 0
-        && (length . flattenValue $ reserveUtxoValue) == expectedNumOfAssets
+      assetClassValueOf reserveUtxoValue tokenKind'
+        /= 0
+        && (length . flattenValue $ reserveUtxoValue)
+        == expectedNumOfAssets
       where
         expectedNumOfAssets =
           if AssetClass (adaSymbol, adaToken) == tokenKind'
@@ -455,7 +435,7 @@ mkReserveAuthPolicy voc _ ctx =
 mkReserveAuthPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkReserveAuthPolicyUntyped voc red ctx =
   check $
-    mkReserveAuthPolicy
+      mkReserveAuthPolicy
       (PlutusTx.unsafeFromBuiltinData voc)
       (PlutusTx.unsafeFromBuiltinData red)
       (Unsafe.ScriptContext ctx)

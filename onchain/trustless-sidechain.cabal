@@ -92,6 +92,7 @@ library
     TrustlessSidechain.DParameter
     TrustlessSidechain.FUELMintingPolicy
     TrustlessSidechain.FUELProxyPolicy
+    TrustlessSidechain.Governance
     TrustlessSidechain.Governance.Admin
     TrustlessSidechain.Governance.MultiSig
     TrustlessSidechain.IlliquidCirculationSupply
