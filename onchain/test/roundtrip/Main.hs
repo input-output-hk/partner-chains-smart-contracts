@@ -126,6 +126,7 @@ import TrustlessSidechain.Types (
   PubKey (PubKey),
   ReserveDatum (ReserveDatum),
   ReserveRedeemer (DepositToReserve, Handover, TransferToIlliquidCirculationSupply, UpdateReserve),
+  ReserveAuthPolicyRedeemer (ReserveAuthPolicyRedeemer),
   ReserveStats (ReserveStats),
   SidechainParams (
     SidechainParams,
@@ -243,6 +244,8 @@ main =
     , testProperty "ReserveDatum (unsafe)" . toDataUnsafeLaws' genRD shrinkRD $ show
     , testProperty "ReserveRedeemer (safe)" . toDataSafeLaws' genRR shrinkRR $ show
     , testProperty "ReserveRedeemer (unsafe)" . toDataUnsafeLaws' genRR shrinkRR $ show
+    , testProperty "ReserveAuthPolicyRedeemer (safe)" . toDataSafeLaws' genRAPR shrinkRAPR $ show
+    , testProperty "ReserveAuthPolicyRedeemer (unsafe)" . toDataUnsafeLaws' genRAPR shrinkRAPR $ show
     , testProperty "IlliquidCirculationSupplyRedeemer (safe)" . toDataSafeLaws' genICSR shrinkICSR $ show
     , testProperty "IlliquidCirculationSupplyRedeemer (unsafe)" . toDataUnsafeLaws' genICSR shrinkICSR $ show
     ]
@@ -365,13 +368,19 @@ genRD = do
       (ReserveStats c)
 
 genRR :: Gen ReserveRedeemer
-genRR =
+genRR = do
+  v <- arbitrary
   oneof
-    [ pure DepositToReserve
+    [ pure (DepositToReserve v)
     , pure TransferToIlliquidCirculationSupply
-    , pure UpdateReserve
-    , pure Handover
+    , pure (UpdateReserve v)
+    , pure (Handover v)
     ]
+
+genRAPR :: Gen ReserveAuthPolicyRedeemer
+genRAPR = do
+  version <- arbitrary
+  pure $ ReserveAuthPolicyRedeemer version
 
 genICSR :: Gen IlliquidCirculationSupplyRedeemer
 genICSR =
@@ -650,6 +659,9 @@ shrinkRD = const []
 
 shrinkRR :: ReserveRedeemer -> [ReserveRedeemer]
 shrinkRR = const []
+
+shrinkRAPR :: ReserveAuthPolicyRedeemer -> [ReserveAuthPolicyRedeemer]
+shrinkRAPR = const []
 
 shrinkICSR :: IlliquidCirculationSupplyRedeemer -> [IlliquidCirculationSupplyRedeemer]
 shrinkICSR = const []

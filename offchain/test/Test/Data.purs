@@ -431,13 +431,15 @@ genReserveDatum = do
       }
 
 genReserveRedeemer ∷ Gen ReserveRedeemer
-genReserveRedeemer = QGen.oneOf $ NE.cons'
-  ( pure DepositToReserve
-  )
-  [ pure TransferToIlliquidCirculationSupply
-  , pure UpdateReserve
-  , pure Handover
-  ]
+genReserveRedeemer = do
+  ArbitraryBigInt governanceVersion <- arbitrary
+  QGen.oneOf $ NE.cons'
+    ( pure $ DepositToReserve { governanceVersion }
+    )
+    [ pure TransferToIlliquidCirculationSupply
+    , pure $ UpdateReserve { governanceVersion }
+    , pure $ Handover { governanceVersion }
+    ]
 
 genIlliquidCirculationSupplyRedeemer ∷ Gen IlliquidCirculationSupplyRedeemer
 genIlliquidCirculationSupplyRedeemer = QGen.oneOf $ NE.cons'

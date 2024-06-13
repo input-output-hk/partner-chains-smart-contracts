@@ -131,6 +131,7 @@ import TrustlessSidechain.Types (
     TransferToIlliquidCirculationSupply,
     UpdateReserve
   ),
+  ReserveAuthPolicyRedeemer (ReserveAuthPolicyRedeemer),
   ReserveStats (ReserveStats),
   SidechainParams (
     SidechainParams,
@@ -214,6 +215,7 @@ tests =
     , dataEncoderGoldenTest "ReserveRedeemer2" sampleReserveRedeemer2
     , dataEncoderGoldenTest "ReserveRedeemer3" sampleReserveRedeemer3
     , dataEncoderGoldenTest "ReserveRedeemer4" sampleReserveRedeemer4
+    , dataEncoderGoldenTest "ReserveAuthPolicyRedeemer" sampleReserveAuthPolicyRedeemer
     , dataEncoderGoldenTest "IlliquidCirculationSupplyRedeemer1" sampleIlliquidCirculationSupplyRedeemer1
     , dataEncoderGoldenTest "IlliquidCirculationSupplyRedeemer2" sampleIlliquidCirculationSupplyRedeemer2
     ]
@@ -540,16 +542,19 @@ sampleReserveDatum =
     }
 
 sampleReserveRedeemer1 :: ReserveRedeemer
-sampleReserveRedeemer1 = DepositToReserve
+sampleReserveRedeemer1 = DepositToReserve 1
 
 sampleReserveRedeemer2 :: ReserveRedeemer
 sampleReserveRedeemer2 = TransferToIlliquidCirculationSupply
 
 sampleReserveRedeemer3 :: ReserveRedeemer
-sampleReserveRedeemer3 = UpdateReserve
+sampleReserveRedeemer3 = UpdateReserve 1
 
 sampleReserveRedeemer4 :: ReserveRedeemer
-sampleReserveRedeemer4 = Handover
+sampleReserveRedeemer4 = Handover 1
+
+sampleReserveAuthPolicyRedeemer :: ReserveAuthPolicyRedeemer
+sampleReserveAuthPolicyRedeemer = ReserveAuthPolicyRedeemer 1
 
 sampleIlliquidCirculationSupplyRedeemer1 :: IlliquidCirculationSupplyRedeemer
 sampleIlliquidCirculationSupplyRedeemer1 = DepositMoreToSupply
