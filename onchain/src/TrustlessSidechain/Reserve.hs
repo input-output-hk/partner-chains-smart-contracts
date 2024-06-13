@@ -319,8 +319,8 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
 
 mkReserveValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkReserveValidatorUntyped voc rd rr ctx =
-  check
-    $ mkReserveValidator
+  check $
+    mkReserveValidator
       (PlutusTx.unsafeFromBuiltinData voc)
       (PlutusTx.unsafeFromBuiltinData rd)
       (PlutusTx.unsafeFromBuiltinData rr)
@@ -362,7 +362,7 @@ mkReserveAuthPolicy voc _ ctx =
   if valueOf minted ownCurrencySymbol reserveAuthTokenTokenName < 0
     then True -- delegating to reserve validator
     else
-      traceIfFalse "ERROR-RESERVE-AUTH-01" isApprovedByGovernance
+      traceIfFalse "ERROR-RESERVE-AUTH-01" isApprovedByAdminGovernance
         && traceIfFalse "ERROR-RESERVE-AUTH-02" oneReserveAuthTokenIsMinted
         && traceIfFalse "ERROR-RESERVE-AUTH-03" reserveUtxoCarriesReserveAuthToken
         && traceIfFalse "ERROR-RESERVE-AUTH-04" reserveUtxoCarriesCorrectInitialDatum
@@ -386,10 +386,9 @@ mkReserveAuthPolicy voc _ ctx =
 
     reserveUtxo :: TxOut
     reserveUtxo =
-      Unsafe.decode
-        $ Utils.fromSingleton "ERROR-RESERVE-AUTH-06"
-        $ info
-        `getOutputsAt` reserveAddress
+      Unsafe.decode $
+        Utils.fromSingleton "ERROR-RESERVE-AUTH-06" $
+          info `getOutputsAt` reserveAddress
 
     reserveUtxoValue :: Value
     reserveUtxoValue = txOutValue reserveUtxo
@@ -400,8 +399,8 @@ mkReserveAuthPolicy voc _ ctx =
         Just d -> d
         Nothing -> traceError "ERROR-RESERVE-AUTH-07"
 
-    isApprovedByGovernance :: Bool
-    isApprovedByGovernance = approvedByGovernance voc ctx
+    isApprovedByAdminGovernance :: Bool
+    isApprovedByAdminGovernance = approvedByGovernance voc ctx
 
     oneReserveAuthTokenIsMinted :: Bool
     oneReserveAuthTokenIsMinted =
@@ -420,10 +419,8 @@ mkReserveAuthPolicy voc _ ctx =
 
     reserveUtxoCarriesOnlyAdaTokenKindAndAuthToken :: Bool
     reserveUtxoCarriesOnlyAdaTokenKindAndAuthToken =
-      assetClassValueOf reserveUtxoValue tokenKind'
-        /= 0
-        && (length . flattenValue $ reserveUtxoValue)
-        == expectedNumOfAssets
+      assetClassValueOf reserveUtxoValue tokenKind' /= 0
+        && (length . flattenValue $ reserveUtxoValue) == expectedNumOfAssets
       where
         expectedNumOfAssets =
           if AssetClass (adaSymbol, adaToken) == tokenKind'
@@ -435,7 +432,7 @@ mkReserveAuthPolicy voc _ ctx =
 mkReserveAuthPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkReserveAuthPolicyUntyped voc red ctx =
   check $
-      mkReserveAuthPolicy
+    mkReserveAuthPolicy
       (PlutusTx.unsafeFromBuiltinData voc)
       (PlutusTx.unsafeFromBuiltinData red)
       (Unsafe.ScriptContext ctx)

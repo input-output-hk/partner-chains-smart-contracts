@@ -7,8 +7,8 @@
 -- without a proper migration strategy.
 module TrustlessSidechain.Governance.Admin (
   GovernanceAuthority (GovernanceAuthority),
-  isApprovedBy,
-  isApprovedByUnsafe,
+  isApprovedByAdmin,
+  isApprovedByAdminUnsafe,
   mkGovernanceAuthority,
 ) where
 
@@ -22,10 +22,10 @@ import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 mkGovernanceAuthority :: PubKeyHash -> GovernanceAuthority
 mkGovernanceAuthority = GovernanceAuthority
 
-{-# INLINEABLE isApprovedBy #-}
-isApprovedBy :: TxInfo -> GovernanceAuthority -> Bool
-isApprovedBy txInfo (GovernanceAuthority pkh) = txSignedBy txInfo pkh
+{-# INLINEABLE isApprovedByAdmin #-}
+isApprovedByAdmin :: TxInfo -> GovernanceAuthority -> Bool
+isApprovedByAdmin txInfo (GovernanceAuthority pkh) = txSignedBy txInfo pkh
 
-{-# INLINEABLE isApprovedByUnsafe #-}
-isApprovedByUnsafe :: Unsafe.TxInfo -> GovernanceAuthority -> Bool
-isApprovedByUnsafe txInfo (GovernanceAuthority pkh) = Unsafe.txSignedBy txInfo pkh
+{-# INLINEABLE isApprovedByAdminUnsafe #-}
+isApprovedByAdminUnsafe :: Unsafe.TxInfo -> GovernanceAuthority -> Bool
+isApprovedByAdminUnsafe txInfo (GovernanceAuthority pkh) = Unsafe.txSignedBy txInfo pkh

@@ -66,7 +66,7 @@ mkMintingPolicy
           -- Check that transaction was approved by governance authority
           signedByGovernanceAuthority :: Bool
           signedByGovernanceAuthority =
-            txInfo `Governance.isApprovedByUnsafe` get @"governanceAuthority" sp
+            txInfo `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
 
           -- Amount of PermissionedCandidatesToken sent to the
           -- PermissionedCandidatesValidator address
@@ -104,7 +104,7 @@ mkMintingPolicy
           -- Check that transaction was approved by governance authority
           signedByGovernanceAuthority :: Bool
           signedByGovernanceAuthority =
-            txInfo `Governance.isApprovedByUnsafe` get @"governanceAuthority" sp
+            txInfo `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
 
           -- Amount of PermissionedCandidatesToken sent output by this transaction
           outAmount :: Integer
@@ -155,7 +155,7 @@ permissionedCandidatesValidator
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority =
-        Unsafe.scriptContextTxInfo ctx `Governance.isApprovedByUnsafe` get @"governanceAuthority" sp
+        Unsafe.scriptContextTxInfo ctx `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
 permissionedCandidatesValidator
   sp
   _
@@ -168,7 +168,7 @@ permissionedCandidatesValidator
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority =
-        Unsafe.scriptContextTxInfo ctx `Governance.isApprovedByUnsafe` get @"governanceAuthority" sp
+        Unsafe.scriptContextTxInfo ctx `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
 
 mkMintingPolicyUntyped ::
   BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
