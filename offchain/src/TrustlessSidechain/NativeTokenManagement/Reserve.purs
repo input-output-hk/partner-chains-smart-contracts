@@ -3,20 +3,31 @@ module TrustlessSidechain.NativeTokenManagement.Reserve
   , reserveAuthPolicy
   , initialiseReserveUtxo
   , findReserveUtxos
+  , depositToReserve
   ) where
 
 import Contract.Prelude
 
 import Contract.Address (Address)
-import Contract.PlutusData (Datum(..), toData)
+import Contract.PlutusData
+  ( Datum(..)
+  , Redeemer(..)
+  , fromData
+  , toData
+  )
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy(..), Validator)
+import Contract.Scripts
+  ( MintingPolicy(..)
+  , Validator
+  )
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( ScriptRef(..)
   , TransactionInput
+  , TransactionOutput
   , TransactionOutputWithRefScript
   , mkTxUnspentOut
+  , outputDatumDatum
   )
 import Contract.TxConstraints
   ( DatumPresence(..)
@@ -39,15 +50,18 @@ import Run (Run)
 import Run.Except (EXCEPT, throw)
 import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
+import TrustlessSidechain.Effects.Util (fromMaybeThrow)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError(..))
 import TrustlessSidechain.NativeTokenManagement.Types
   ( ImmutableReserveSettings
   , MutableReserveSettings
   , ReserveDatum(..)
+  , ReserveRedeemer(..)
   , ReserveStats(..)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Types (AssetClass)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   , mkValidatorWithParams
@@ -137,6 +151,17 @@ getReserveScriptRefUtxo sidechainParams =
   Versioning.getVersionedScriptRefUtxo
     sidechainParams
     reserveVersionOracle
+
+getReserveAuthScriptRefUtxo ∷
+  ∀ r.
+  SidechainParams →
+  Run
+    (EXCEPT OffchainError + WALLET + TRANSACTION + r)
+    (TransactionInput /\ TransactionOutputWithRefScript)
+getReserveAuthScriptRefUtxo sidechainParams =
+  Versioning.getVersionedScriptRefUtxo
+    sidechainParams
+    reserveAuthVersionOracle
 
 getGovernancePolicy ∷
   ∀ r.
@@ -250,4 +275,97 @@ initialiseReserveUtxo
     , mutableSettings
     , stats: ReserveStats { tokenTotalAmountTransferred: zero }
     }
+
+extractReserveDatum ∷ TransactionOutput → Maybe ReserveDatum
+extractReserveDatum txOut =
+  outputDatumDatum (unwrap txOut).datum >>= unwrap >>> fromData
+
+findReserveUtxoForAssetClass ∷
+  ∀ r.
+  SidechainParams →
+  AssetClass →
+  Run
+    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+    UtxoMap
+findReserveUtxoForAssetClass sp ac = do
+  utxos ← findReserveUtxos sp
+
+  let
+    extractTokenKind =
+      unwrap >>> _.immutableSettings >>> unwrap >>> _.tokenKind
+    extractTxOut = unwrap >>> _.output
+
+  pure $ flip Map.filter utxos $ extractTxOut >>> \txOut →
+    flip (maybe false) (extractReserveDatum txOut)
+      $ extractTokenKind
+      >>> (_ == ac)
+
+depositToReserve ∷
+  ∀ r.
+  SidechainParams →
+  AssetClass →
+  BigInt →
+  Run
+    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+    Unit
+depositToReserve sp ac amount = do
+  utxo ← fromMaybeThrow (NotFoundUtxo "Reserve UTxO for asset class not found")
+    $ (Map.toUnfoldable <$> findReserveUtxoForAssetClass sp ac)
+
+  (governanceRefTxInput /\ governanceRefTxOutput) ←
+    getGovernanceScriptRefUtxo sp
+
+  (reserveAuthRefTxInput /\ reserveAuthRefTxOutput) ←
+    getReserveAuthScriptRefUtxo sp
+
+  governancePolicy ← getGovernancePolicy sp
+
+  versionOracleConfig ← Versioning.getVersionOracleConfig sp
+  reserveValidator' ← reserveValidator versionOracleConfig
+
+  datum ← fromMaybeThrow (InvalidData "Reserve does not carry inline datum")
+    $ pure
+    $ outputDatumDatum
+    $ unwrap
+    >>> _.output
+    >>> unwrap
+    >>> _.datum
+    $ snd utxo
+
+  let
+    value = unwrap >>> _.output >>> unwrap >>> _.amount $ snd utxo
+
+    newValue = value <> Value.singleton (fst ac) (snd ac) amount
+
+    lookups ∷ Lookups.ScriptLookups Void
+    lookups =
+      Lookups.unspentOutputs
+        (Map.singleton reserveAuthRefTxInput reserveAuthRefTxOutput)
+        <> Lookups.unspentOutputs
+          (Map.singleton governanceRefTxInput governanceRefTxOutput)
+        <> Lookups.unspentOutputs (uncurry Map.singleton utxo)
+        <> Lookups.validator reserveValidator'
+
+    constraints =
+      TxConstraints.mustMintCurrencyUsingScriptRef
+        (Scripts.mintingPolicyHash governancePolicy)
+        emptyTokenName
+        (BigInt.fromInt 1)
+        ( RefInput $ mkTxUnspentOut
+            governanceRefTxInput
+            governanceRefTxOutput
+        )
+        <> TxConstraints.mustPayToScript
+          (Scripts.validatorHash reserveValidator')
+          datum
+          DatumInline
+          newValue
+        <> TxConstraints.mustReferenceOutput reserveAuthRefTxInput
+        <> TxConstraints.mustReferenceOutput governanceRefTxInput
+        <> TxConstraints.mustSpendScriptOutput (fst utxo)
+          (toData >>> Redeemer $ DepositToReserve)
+
+  void $ balanceSignAndSubmit
+    "Reserve initialization transaction"
+    { constraints, lookups }
 

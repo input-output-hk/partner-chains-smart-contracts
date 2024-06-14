@@ -127,18 +127,18 @@ instance Show ReserveRedeemer where
   show = genericShow
 
 instance ToData ReserveRedeemer where
-  toData DepositToReserve = Constr (BigNum.fromInt 0) []
-  toData TransferToIlliquidCirculationSupply = Constr (BigNum.fromInt 1) []
-  toData UpdateReserve = Constr (BigNum.fromInt 2) []
-  toData Handover = Constr (BigNum.fromInt 3) []
+  toData DepositToReserve = Integer (BigInt.fromInt 0)
+  toData TransferToIlliquidCirculationSupply = Integer (BigInt.fromInt 1)
+  toData UpdateReserve = Integer (BigInt.fromInt 2)
+  toData Handover = Integer (BigInt.fromInt 3)
 
 instance FromData ReserveRedeemer where
   fromData = case _ of
-    Constr tag [] | tag == BigNum.fromInt 0 → pure DepositToReserve
-    Constr tag [] | tag == BigNum.fromInt 1 → pure
+    Integer tag | tag == BigInt.fromInt 0 → pure DepositToReserve
+    Integer tag | tag == BigInt.fromInt 1 → pure
       TransferToIlliquidCirculationSupply
-    Constr tag [] | tag == BigNum.fromInt 2 → pure UpdateReserve
-    Constr tag [] | tag == BigNum.fromInt 3 → pure Handover
+    Integer tag | tag == BigInt.fromInt 2 → pure UpdateReserve
+    Integer tag | tag == BigInt.fromInt 3 → pure Handover
     _ → Nothing
 
 data IlliquidCirculationSupplyRedeemer

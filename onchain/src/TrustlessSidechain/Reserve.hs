@@ -40,9 +40,10 @@ import PlutusTx.Bool
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   ReserveDatum (),
-  ReserveRedeemer,
+  ReserveRedeemer (DepositToReserve),
   ReserveStats (ReserveStats),
  )
+import TrustlessSidechain.Types.Unsafe (getContinuingOutputs)
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Utils (oneTokenMinted)
 import TrustlessSidechain.Utils qualified as Utils
@@ -52,19 +53,102 @@ import TrustlessSidechain.Versioning (
   getVersionedCurrencySymbolUnsafe,
   getVersionedValidatorAddressUnsafe,
   governancePolicyId,
+  reserveAuthPolicyId,
   reserveValidatorId,
  )
 
 reserveAuthTokenTokenName :: TokenName
 reserveAuthTokenTokenName = adaToken
 
+-- | Error codes description follows:
+--
+--   ERROR-RESERVE-01: Governance approval is not present
+--   ERROR-RESERVE-02: Other tokens than governance token are minted or burnt
+--   ERROR-RESERVE-03: Datum of a propagated reserve utxo changes
+--   ERROR-RESERVE-04: Assets of a propagated reserve utxo don't increase by reserve tokens
+--   ERROR-RESERVE-05: No unique input utxo carrying authentication token
+--   ERROR-RESERVE-06: No unique output utxo at the reserve address and carrying authentication token
+--   ERROR-RESERVE-07: Datum of input reserve utxo malformed
 mkReserveValidator ::
   VersionOracleConfig ->
   ReserveDatum ->
   ReserveRedeemer ->
   Unsafe.ScriptContext ->
   Bool
-mkReserveValidator _ _ _ _ = True
+mkReserveValidator voc _ redeemer ctx = case redeemer of
+  DepositToReserve ->
+    traceIfFalse "ERROR-RESERVE-01" isApprovedByGovernance
+      && traceIfFalse "ERROR-RESERVE-02" noOtherTokensButGovernanceMinted
+      && traceIfFalse "ERROR-RESERVE-03" datumDoesNotChange
+      && traceIfFalse "ERROR-RESERVE-04" assetsChangeOnlyByPositiveAmountOfReserveTokens
+  _ -> error ()
+  where
+    info :: Unsafe.TxInfo
+    info = Unsafe.scriptContextTxInfo ctx
+
+    minted :: Value
+    minted = Unsafe.decode . Unsafe.txInfoMint . Unsafe.scriptContextTxInfo $ ctx
+
+    reserveAuthCurrencySymbol :: CurrencySymbol
+    reserveAuthCurrencySymbol =
+      getVersionedCurrencySymbolUnsafe
+        voc
+        (VersionOracle {version = 1, scriptId = reserveAuthPolicyId})
+        ctx
+
+    carriesAuthToken :: TxOut -> Bool
+    carriesAuthToken txOut =
+      valueOf
+        (txOutValue txOut)
+        reserveAuthCurrencySymbol
+        reserveAuthTokenTokenName
+        == 1
+
+    -- this function verifies that assets of a propagated unique reserve utxo
+    -- change only by reserve tokens and returns the difference wrapped in `Maybe`
+    -- otherwise it returns `Nothing`
+    changeOfReserveTokens :: Maybe Integer
+    changeOfReserveTokens =
+      let diff = txOutValue outputReserveUtxo - txOutValue inputReserveUtxo
+          ac = get @"tokenKind" . get @"immutableSettings" $ inputDatum
+       in case flattenValue diff of
+            [(cs, tn, num)] | AssetClass (cs, tn) == ac -> Just num
+            _ -> Nothing
+
+    inputReserveUtxo :: TxOut
+    inputReserveUtxo =
+      Unsafe.decode $
+        Utils.fromSingleton "ERROR-RESERVE-05" $
+          filter (carriesAuthToken . Unsafe.decode) $
+            Unsafe.txInInfoResolved <$> Unsafe.txInfoInputs info
+
+    outputReserveUtxo :: TxOut
+    outputReserveUtxo =
+      Unsafe.decode $
+        Utils.fromSingleton "ERROR-RESERVE-06" $
+          filter (carriesAuthToken . Unsafe.decode) $
+            getContinuingOutputs ctx
+
+    inputDatum :: ReserveDatum
+    inputDatum =
+      case extractReserveUtxoDatum inputReserveUtxo of
+        Just d -> d
+        Nothing -> traceError "ERROR-RESERVE-07"
+
+    isApprovedByGovernance :: Bool
+    isApprovedByGovernance = approvedByGovernance voc ctx
+
+    -- this is valid only if `isApprovedByGovernance` is True
+    noOtherTokensButGovernanceMinted :: Bool
+    noOtherTokensButGovernanceMinted = (length . flattenValue $ minted) == 1
+
+    datumDoesNotChange :: Bool
+    datumDoesNotChange =
+      txOutDatum inputReserveUtxo == txOutDatum outputReserveUtxo
+
+    assetsChangeOnlyByPositiveAmountOfReserveTokens :: Bool
+    assetsChangeOnlyByPositiveAmountOfReserveTokens =
+      maybe False (> 0) changeOfReserveTokens
 
 mkReserveValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkReserveValidatorUntyped voc rd rr ctx =
@@ -114,21 +198,21 @@ approvedByGovernance voc ctx =
 
 -- | Error codes description follows:
 --
---   ERROR-RESERVE-01: Governance approval is not present
---   ERROR-RESERVE-02: Single reserve authentication token is not minted
---   ERROR-RESERVE-03: Output reserve UTxO doesn't carry auth token
---   ERROR-RESERVE-04: Output reserve UTxO doesn't carry correct initial datum
---   ERROR-RESERVE-05: Output reserve UTxO carries other tokens
---   ERROR-RESERVE-06: No unique output UTxO at the reserve address
---   ERROR-RESERVE-07: Output reserve UTxO carries no inline datum or malformed datum
+--   ERROR-RESERVE-AUTH-01: Governance approval is not present
+--   ERROR-RESERVE-AUTH-02: Single reserve authentication token is not minted
+--   ERROR-RESERVE-AUTH-03: Output reserve UTxO doesn't carry auth token
+--   ERROR-RESERVE-AUTH-04: Output reserve UTxO doesn't carry correct initial datum
+--   ERROR-RESERVE-AUTH-05: Output reserve UTxO carries other tokens
+--   ERROR-RESERVE-AUTH-06: No unique output UTxO at the reserve address
+--   ERROR-RESERVE-AUTH-07: Output reserve UTxO carries no inline datum or malformed datum
 {-# INLINEABLE mkReserveAuthPolicy #-}
 mkReserveAuthPolicy :: VersionOracleConfig -> BuiltinData -> Unsafe.ScriptContext -> Bool
 mkReserveAuthPolicy voc _ ctx =
-  traceIfFalse "ERROR-RESERVE-01" isApprovedByGovernance
-    && traceIfFalse "ERROR-RESERVE-02" oneReserveAuthTokenIsMinted
-    && traceIfFalse "ERROR-RESERVE-03" reserveUtxoCarriesReserveAuthToken
-    && traceIfFalse "ERROR-RESERVE-04" reserveUtxoCarriesCorrectInitialDatum
-    && traceIfFalse "ERROR-RESERVE-05" reserveUtxoCarriesOnlyAdaTokenKindAndAuthToken
+  traceIfFalse "ERROR-RESERVE-AUTH-01" isApprovedByGovernance
+    && traceIfFalse "ERROR-RESERVE-AUTH-02" oneReserveAuthTokenIsMinted
+    && traceIfFalse "ERROR-RESERVE-AUTH-03" reserveUtxoCarriesReserveAuthToken
+    && traceIfFalse "ERROR-RESERVE-AUTH-04" reserveUtxoCarriesCorrectInitialDatum
+    && traceIfFalse "ERROR-RESERVE-AUTH-05" reserveUtxoCarriesOnlyAdaTokenKindAndAuthToken
   where
     info :: Unsafe.TxInfo
     info = Unsafe.scriptContextTxInfo ctx
@@ -149,7 +233,7 @@ mkReserveAuthPolicy voc _ ctx =
     reserveUtxo :: TxOut
     reserveUtxo =
       Unsafe.decode $
-        Utils.fromSingleton "ERROR-RESERVE-06" $
+        Utils.fromSingleton "ERROR-RESERVE-AUTH-06" $
           info `getOutputsAt` reserveAddress
 
     reserveUtxoValue :: Value
@@ -157,8 +241,9 @@ mkReserveAuthPolicy voc _ ctx =
 
     reserveUtxoDatum :: ReserveDatum
     reserveUtxoDatum =
-      fromMaybe (traceError "ERROR-RESERVE-07") $
-        extractReserveUtxoDatum reserveUtxo
+      case extractReserveUtxoDatum reserveUtxo of
+        Just d -> d
+        Nothing -> traceError "ERROR-RESERVE-AUTH-07"
 
     isApprovedByGovernance :: Bool
     isApprovedByGovernance = approvedByGovernance voc ctx

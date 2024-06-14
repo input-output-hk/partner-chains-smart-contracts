@@ -6,18 +6,20 @@ import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.ScriptLookups as Lookups
 import Contract.TxConstraints as TxConstraints
-import Contract.Value (adaSymbol, adaToken, mkCurrencySymbol)
+import Contract.Value (adaSymbol, adaToken, mkCurrencySymbol, valueOf)
 import Contract.Value as Scripts
 import Contract.Value as Value
 import Contract.Wallet as Wallet
+import Control.Monad.Error.Class (throwError)
 import Data.Array as Array
 import Data.BigInt (BigInt)
 import Data.BigInt as BigInt
 import Data.Map as Map
+import Effect.Exception (error)
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe (unsafePartial)
 import Run (EFFECT, Run)
-import Run.Except (EXCEPT, throw)
+import Run.Except (EXCEPT)
 import Test.AlwaysPassingScripts (alwaysPassingPolicy)
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
@@ -27,16 +29,17 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
 import TrustlessSidechain.Effects.App (APP)
-import TrustlessSidechain.Effects.Contract (CONTRACT)
+import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
 import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
-import TrustlessSidechain.Error (OffchainError(..))
+import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
 import TrustlessSidechain.NativeTokenManagement.Reserve
-  ( findReserveUtxos
+  ( depositToReserve
+  , findReserveUtxos
   , initialiseReserveUtxo
   )
 import TrustlessSidechain.NativeTokenManagement.Types
@@ -61,6 +64,7 @@ tests ∷ WrappedTests
 tests = plutipGroup "Reserve" $ do
   testScenario1
   testScenario2
+  testScenario3
 
 insertFakeGovernancePolicy ∷
   ∀ r.
@@ -173,7 +177,10 @@ testScenario1 =
 
         utxoMap ← findReserveUtxos sidechainParams
 
-        when (Map.isEmpty utxoMap) $ throw $ NotFoundUtxo "Reserve utxo not found"
+        when (Map.isEmpty utxoMap)
+          $ liftContract
+          $ throwError
+          $ error "Reserve utxo not found"
 
 testScenario2 ∷ PlutipTest
 testScenario2 =
@@ -203,4 +210,55 @@ testScenario2 =
 
         utxoMap ← findReserveUtxos sidechainParams
 
-        when (Map.isEmpty utxoMap) $ throw $ NotFoundUtxo "Reserve utxo not found"
+        when (Map.isEmpty utxoMap)
+          $ liftContract
+          $ throwError
+          $ error "Reserve utxo not found"
+
+testScenario3 ∷ PlutipTest
+testScenario3 =
+  Mote.Monad.test
+    "Deposit more non-ADA to a reserve"
+    $ Test.PlutipTest.mkPlutipConfigTest initialDistribution
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+        sidechainParams ← dummyInitialiseSidechain
+
+        insertFakeGovernancePolicy sidechainParams
+
+        let
+          initialAmountOfNonAdaTokens = BigInt.fromInt 50
+          depositAmountOfNonAdaTokens = BigInt.fromInt 51
+          numOfNonAdaTokens =
+            initialAmountOfNonAdaTokens + depositAmountOfNonAdaTokens
+
+        tokenKind ← mintNonAdaTokens numOfNonAdaTokens
+
+        let
+          immutableSettings = ImmutableReserveSettings
+            { t0: zero
+            , tokenKind
+            }
+
+        initialiseReserveUtxo
+          sidechainParams
+          immutableSettings
+          invalidMutableSettings
+          initialAmountOfNonAdaTokens
+
+        depositToReserve
+          sidechainParams
+          tokenKind
+          depositAmountOfNonAdaTokens
+
+        maybeUtxo ← Map.toUnfoldable
+          <$> findReserveUtxos sidechainParams
+
+        let
+          extractValue = snd >>> unwrap >>> _.output >>> unwrap >>> _.amount
+          isExpectedAmount = \v → valueOf v (fst tokenKind) (snd tokenKind)
+
+        unless
+          ( Just numOfNonAdaTokens ==
+              (extractValue >>> isExpectedAmount <$> maybeUtxo)
+          )
+          (liftContract $ throwError $ error "Deposit not sucessful")
