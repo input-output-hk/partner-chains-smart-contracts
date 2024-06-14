@@ -39,8 +39,8 @@ import PlutusTx.AssocMap (lookup, toList)
 import PlutusTx.Bool
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
-  ReserveDatum (),
-  ReserveRedeemer (DepositToReserve),
+  ReserveDatum (mutableSettings),
+  ReserveRedeemer (DepositToReserve, UpdateReserve),
   ReserveStats (ReserveStats),
  )
 import TrustlessSidechain.Types.Unsafe (getContinuingOutputs)
@@ -69,6 +69,9 @@ reserveAuthTokenTokenName = adaToken
 --   ERROR-RESERVE-05: No unique input utxo carrying authentication token
 --   ERROR-RESERVE-06: No unique output utxo at the reserve address and carrying authentication token
 --   ERROR-RESERVE-07: Datum of input reserve utxo malformed
+--   ERROR-RESERVE-08: Datum of output reserve utxo malformed
+--   ERROR-RESERVE-09: Datum of a propagated reserve utxo changes not only by immutable settings
+--   ERROR-RESERVE-10: Assets of a propagated reserve utxo change
 mkReserveValidator ::
   VersionOracleConfig ->
   ReserveDatum ->
@@ -81,6 +84,11 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
       && traceIfFalse "ERROR-RESERVE-02" noOtherTokensButGovernanceMinted
       && traceIfFalse "ERROR-RESERVE-03" datumDoesNotChange
       && traceIfFalse "ERROR-RESERVE-04" assetsChangeOnlyByPositiveAmountOfReserveTokens
+  UpdateReserve ->
+    traceIfFalse "ERROR-RESERVE-01" isApprovedByGovernance
+      && traceIfFalse "ERROR-RESERVE-02" noOtherTokensButGovernanceMinted
+      && traceIfFalse "ERROR-RESERVE-09" datumChangesOnlyByMutableSettings
+      && traceIfFalse "ERROR-RESERVE-10" assetsDoNotChange
   _ -> error ()
   where
     info :: Unsafe.TxInfo
@@ -135,6 +143,12 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
         Just d -> d
         Nothing -> traceError "ERROR-RESERVE-07"
 
+    outputDatum :: ReserveDatum
+    outputDatum =
+      case extractReserveUtxoDatum outputReserveUtxo of
+        Just d -> d
+        Nothing -> traceError "ERROR-RESERVE-08"
+
     isApprovedByGovernance :: Bool
     isApprovedByGovernance = approvedByGovernance voc ctx
 
@@ -149,6 +163,16 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
     assetsChangeOnlyByPositiveAmountOfReserveTokens :: Bool
     assetsChangeOnlyByPositiveAmountOfReserveTokens =
       maybe False (> 0) changeOfReserveTokens
+
+    datumChangesOnlyByMutableSettings :: Bool
+    datumChangesOnlyByMutableSettings =
+      let updatedMutablePart = mutableSettings outputDatum
+       in toBuiltinData inputDatum {mutableSettings = updatedMutablePart}
+            == toBuiltinData outputDatum
+
+    assetsDoNotChange :: Bool
+    assetsDoNotChange =
+      txOutValue inputReserveUtxo == txOutValue outputReserveUtxo
 
 mkReserveValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkReserveValidatorUntyped voc rd rr ctx =

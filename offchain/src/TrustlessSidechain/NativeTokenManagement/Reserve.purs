@@ -4,6 +4,8 @@ module TrustlessSidechain.NativeTokenManagement.Reserve
   , initialiseReserveUtxo
   , findReserveUtxos
   , depositToReserve
+  , extractReserveDatum
+  , updateReserveUtxo
   ) where
 
 import Contract.Prelude
@@ -16,10 +18,7 @@ import Contract.PlutusData
   , toData
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts
-  ( MintingPolicy(..)
-  , Validator
-  )
+import Contract.Scripts (MintingPolicy(..), Validator)
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( ScriptRef(..)
@@ -195,6 +194,73 @@ findReserveUtxos sidechainParams = do
       reserveAuthCurrencySymbol
       reserveAuthTokenName
 
+reserveAuthLookupsAndConstraints ∷
+  ∀ r.
+  SidechainParams →
+  Run
+    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+    { reserveAuthLookups ∷ Lookups.ScriptLookups Void
+    , reserveAuthConstraints ∷ TxConstraints.TxConstraints Void Void
+    }
+reserveAuthLookupsAndConstraints sp = do
+  (reserveAuthRefTxInput /\ reserveAuthRefTxOutput) ←
+    getReserveAuthScriptRefUtxo sp
+
+  pure
+    { reserveAuthLookups: Lookups.unspentOutputs
+        (Map.singleton reserveAuthRefTxInput reserveAuthRefTxOutput)
+    , reserveAuthConstraints: TxConstraints.mustReferenceOutput
+        reserveAuthRefTxInput
+    }
+
+reserveLookupsAndConstraints ∷
+  ∀ r.
+  SidechainParams →
+  Run
+    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+    { reserveLookups ∷ Lookups.ScriptLookups Void
+    , reserveConstraints ∷ TxConstraints.TxConstraints Void Void
+    }
+reserveLookupsAndConstraints sp = do
+  (reserveRefTxInput /\ reserveRefTxOutput) ←
+    getReserveScriptRefUtxo sp
+
+  pure
+    { reserveLookups: Lookups.unspentOutputs
+        (Map.singleton reserveRefTxInput reserveRefTxOutput)
+    , reserveConstraints: TxConstraints.mustReferenceOutput
+        reserveRefTxInput
+    }
+
+governanceLookupsAndConstraints ∷
+  ∀ r.
+  SidechainParams →
+  Run
+    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+    { governanceLookups ∷ Lookups.ScriptLookups Void
+    , governanceConstraints ∷ TxConstraints.TxConstraints Void Void
+    }
+governanceLookupsAndConstraints sp = do
+  (governanceRefTxInput /\ governanceRefTxOutput) ←
+    getGovernanceScriptRefUtxo sp
+
+  governancePolicy ← getGovernancePolicy sp
+
+  pure
+    { governanceLookups: Lookups.unspentOutputs
+        (Map.singleton governanceRefTxInput governanceRefTxOutput)
+    , governanceConstraints:
+        TxConstraints.mustReferenceOutput governanceRefTxInput
+          <> TxConstraints.mustMintCurrencyUsingScriptRef
+            (Scripts.mintingPolicyHash governancePolicy)
+            emptyTokenName
+            (BigInt.fromInt 1)
+            ( RefInput $ mkTxUnspentOut
+                governanceRefTxInput
+                governanceRefTxOutput
+            )
+    }
+
 initialiseReserveUtxo ∷
   ∀ r.
   SidechainParams →
@@ -210,15 +276,15 @@ initialiseReserveUtxo
   mutableSettings
   numOfTokens =
   do
-    (governanceRefTxInput /\ governanceRefTxOutput) ←
-      getGovernanceScriptRefUtxo sidechainParams
+    { governanceLookups
+    , governanceConstraints
+    } ← governanceLookupsAndConstraints sidechainParams
 
-    (reserveRefTxInput /\ reserveRefTxOutput) ←
-      getReserveScriptRefUtxo sidechainParams
+    { reserveLookups
+    , reserveConstraints
+    } ← reserveLookupsAndConstraints sidechainParams
 
     reserveAuthCurrencySymbol ← getReserveAuthCurrencySymbol sidechainParams
-
-    governancePolicy ← getGovernancePolicy sidechainParams
 
     versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
 
@@ -238,22 +304,14 @@ initialiseReserveUtxo
     let
       lookups ∷ Lookups.ScriptLookups Void
       lookups =
-        Lookups.unspentOutputs
-          (Map.singleton reserveRefTxInput reserveRefTxOutput)
-          <> Lookups.unspentOutputs
-            (Map.singleton governanceRefTxInput governanceRefTxOutput)
+        governanceLookups
+          <> reserveLookups
           <> Lookups.mintingPolicy reserveAuthPolicy'
 
       constraints =
-        TxConstraints.mustMintValue reserveAuthTokenValue
-          <> TxConstraints.mustMintCurrencyUsingScriptRef
-            (Scripts.mintingPolicyHash governancePolicy)
-            emptyTokenName
-            (BigInt.fromInt 1)
-            ( RefInput $ mkTxUnspentOut
-                governanceRefTxInput
-                governanceRefTxOutput
-            )
+        governanceConstraints
+          <> reserveConstraints
+          <> TxConstraints.mustMintValue reserveAuthTokenValue
           <> TxConstraints.mustPayToScript
             reserveValidator'
             (Datum $ toData initialReserveDatum)
@@ -261,8 +319,6 @@ initialiseReserveUtxo
             ( Value.singleton tokenKindCs tokenKindTn numOfTokens
                 <> reserveAuthTokenValue
             )
-          <> TxConstraints.mustReferenceOutput reserveRefTxInput
-          <> TxConstraints.mustReferenceOutput governanceRefTxInput
 
     void $ balanceSignAndSubmit
       "Reserve initialization transaction"
@@ -312,13 +368,13 @@ depositToReserve sp ac amount = do
   utxo ← fromMaybeThrow (NotFoundUtxo "Reserve UTxO for asset class not found")
     $ (Map.toUnfoldable <$> findReserveUtxoForAssetClass sp ac)
 
-  (governanceRefTxInput /\ governanceRefTxOutput) ←
-    getGovernanceScriptRefUtxo sp
+  { governanceLookups
+  , governanceConstraints
+  } ← governanceLookupsAndConstraints sp
 
-  (reserveAuthRefTxInput /\ reserveAuthRefTxOutput) ←
-    getReserveAuthScriptRefUtxo sp
-
-  governancePolicy ← getGovernancePolicy sp
+  { reserveAuthLookups
+  , reserveAuthConstraints
+  } ← reserveAuthLookupsAndConstraints sp
 
   versionOracleConfig ← Versioning.getVersionOracleConfig sp
   reserveValidator' ← reserveValidator versionOracleConfig
@@ -339,33 +395,77 @@ depositToReserve sp ac amount = do
 
     lookups ∷ Lookups.ScriptLookups Void
     lookups =
-      Lookups.unspentOutputs
-        (Map.singleton reserveAuthRefTxInput reserveAuthRefTxOutput)
-        <> Lookups.unspentOutputs
-          (Map.singleton governanceRefTxInput governanceRefTxOutput)
+      reserveAuthLookups
+        <> governanceLookups
         <> Lookups.unspentOutputs (uncurry Map.singleton utxo)
         <> Lookups.validator reserveValidator'
 
     constraints =
-      TxConstraints.mustMintCurrencyUsingScriptRef
-        (Scripts.mintingPolicyHash governancePolicy)
-        emptyTokenName
-        (BigInt.fromInt 1)
-        ( RefInput $ mkTxUnspentOut
-            governanceRefTxInput
-            governanceRefTxOutput
-        )
+      governanceConstraints
+        <> reserveAuthConstraints
         <> TxConstraints.mustPayToScript
           (Scripts.validatorHash reserveValidator')
           datum
           DatumInline
           newValue
-        <> TxConstraints.mustReferenceOutput reserveAuthRefTxInput
-        <> TxConstraints.mustReferenceOutput governanceRefTxInput
         <> TxConstraints.mustSpendScriptOutput (fst utxo)
           (toData >>> Redeemer $ DepositToReserve)
 
   void $ balanceSignAndSubmit
-    "Reserve initialization transaction"
+    "Deposit to a reserve utxo"
     { constraints, lookups }
 
+-- utxo passed to this function must be a reserve utxo
+-- use `findReserveUtxos` and `extractReserveDatum` to find utxos of interest
+updateReserveUtxo ∷
+  ∀ r.
+  SidechainParams →
+  MutableReserveSettings →
+  (TransactionInput /\ TransactionOutputWithRefScript) →
+  Run
+    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+    Unit
+updateReserveUtxo sp updatedMutableSettings utxo = do
+  { governanceLookups
+  , governanceConstraints
+  } ← governanceLookupsAndConstraints sp
+
+  { reserveAuthLookups
+  , reserveAuthConstraints
+  } ← reserveAuthLookupsAndConstraints sp
+
+  versionOracleConfig ← Versioning.getVersionOracleConfig sp
+  reserveValidator' ← reserveValidator versionOracleConfig
+
+  datum ← fromMaybeThrow (InvalidData "Reserve does not carry inline datum")
+    $ pure
+    $ extractReserveDatum
+    $ (snd >>> unwrap >>> _.output)
+    $ utxo
+
+  let
+    updatedDatum = ReserveDatum $ (unwrap datum)
+      { mutableSettings = updatedMutableSettings }
+    value = unwrap >>> _.output >>> unwrap >>> _.amount $ snd utxo
+
+    lookups ∷ Lookups.ScriptLookups Void
+    lookups =
+      reserveAuthLookups
+        <> governanceLookups
+        <> Lookups.unspentOutputs (uncurry Map.singleton utxo)
+        <> Lookups.validator reserveValidator'
+
+    constraints =
+      governanceConstraints
+        <> reserveAuthConstraints
+        <> TxConstraints.mustPayToScript
+          (Scripts.validatorHash reserveValidator')
+          (Datum $ toData updatedDatum)
+          DatumInline
+          value
+        <> TxConstraints.mustSpendScriptOutput (fst utxo)
+          (toData >>> Redeemer $ UpdateReserve)
+
+  void $ balanceSignAndSubmit
+    "Update reserve mutable settings"
+    { constraints, lookups }

@@ -1,4 +1,6 @@
-module Test.Reserve (tests) where
+module Test.Reserve
+  ( tests
+  ) where
 
 import Contract.Prelude
 
@@ -39,8 +41,10 @@ import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
 import TrustlessSidechain.NativeTokenManagement.Reserve
   ( depositToReserve
+  , extractReserveDatum
   , findReserveUtxos
   , initialiseReserveUtxo
+  , updateReserveUtxo
   )
 import TrustlessSidechain.NativeTokenManagement.Types
   ( ImmutableReserveSettings(..)
@@ -59,12 +63,19 @@ import TrustlessSidechain.Versioning.ScriptId (ScriptId(..))
 import TrustlessSidechain.Versioning.Utils (insertVersionLookupsAndConstraints)
 import Type.Row (type (+))
 
+immutableAdaSettings ∷ ImmutableReserveSettings
+immutableAdaSettings = ImmutableReserveSettings
+  { t0: zero
+  , tokenKind: adaSymbol /\ adaToken
+  }
+
 -- | `tests` aggregates all UpdateCommitteeHash the tests.
 tests ∷ WrappedTests
 tests = plutipGroup "Reserve" $ do
   testScenario1
   testScenario2
   testScenario3
+  testScenario4
 
 insertFakeGovernancePolicy ∷
   ∀ r.
@@ -77,7 +88,8 @@ insertFakeGovernancePolicy sidechainParams =
     governanceFakePolicy ← alwaysPassingPolicy $ BigInt.fromInt 10
 
     void
-      $ insertVersionLookupsAndConstraints sidechainParams 1
+      $
+        insertVersionLookupsAndConstraints sidechainParams 1
           (GovernancePolicy /\ governanceFakePolicy)
       >>= balanceSignAndSubmit "Insert governance policy"
 
@@ -163,15 +175,9 @@ testScenario1 =
 
         insertFakeGovernancePolicy sidechainParams
 
-        let
-          immutableSettings = ImmutableReserveSettings
-            { t0: zero
-            , tokenKind: adaSymbol /\ adaToken
-            }
-
         initialiseReserveUtxo
           sidechainParams
-          immutableSettings
+          immutableAdaSettings
           invalidMutableSettings
           (BigInt.fromInt 100)
 
@@ -262,3 +268,75 @@ testScenario3 =
               (extractValue >>> isExpectedAmount <$> maybeUtxo)
           )
           (liftContract $ throwError $ error "Deposit not sucessful")
+
+fromMaybeTestError ∷
+  ∀ r a.
+  String →
+  Run
+    (EXCEPT OffchainError + CONTRACT + r)
+    (Maybe a) →
+  Run
+    (EXCEPT OffchainError + CONTRACT + r)
+    a
+fromMaybeTestError msg = flip bind $ maybe
+  ( liftContract $ throwError $ error msg
+  )
+  pure
+
+testScenario4 ∷ PlutipTest
+testScenario4 =
+  Mote.Monad.test
+    "Update reserve utxo mutable settings"
+    $ Test.PlutipTest.mkPlutipConfigTest initialDistribution
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice)
+        do
+          sidechainParams ← dummyInitialiseSidechain
+
+          insertFakeGovernancePolicy sidechainParams
+
+          initialiseReserveUtxo
+            sidechainParams
+            immutableAdaSettings
+            invalidMutableSettings
+            (BigInt.fromInt 2_000_000)
+
+          utxoBefore ← fromMaybeTestError "Utxo after initialization not found" $
+            (Map.toUnfoldable <$> findReserveUtxos sidechainParams)
+
+          let
+            updatedMutableSettings = MutableReserveSettings
+              { vFunctionTotalAccrued:
+                  unsafePartial
+                    $ fromJust
+                    $ mkCurrencySymbol
+                    $ hexToByteArrayUnsafe
+                        "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
+              }
+
+          updateReserveUtxo
+            sidechainParams
+            updatedMutableSettings
+            utxoBefore
+
+          utxoAfter ←
+            fromMaybeTestError "Utxo after update not found"
+              $ Map.toUnfoldable
+              <$> findReserveUtxos sidechainParams
+
+          let
+            unwrappedDatum =
+              snd
+                >>> unwrap
+                >>> _.output
+                >>> extractReserveDatum
+                >>> map unwrap
+
+            withUpdatedMutableSettings = _
+              { mutableSettings = updatedMutableSettings }
+
+          unless
+            ( (withUpdatedMutableSettings <$> unwrappedDatum utxoBefore)
+                == unwrappedDatum utxoAfter
+            )
+            (liftContract $ throwError $ error "Update not sucessful")
+
