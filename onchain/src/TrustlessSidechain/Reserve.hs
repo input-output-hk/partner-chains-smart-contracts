@@ -12,7 +12,7 @@ module TrustlessSidechain.Reserve (
 ) where
 
 import Plutus.V1.Ledger.Value (
-  AssetClass (AssetClass),
+  AssetClass (AssetClass, unAssetClass),
   CurrencySymbol,
   TokenName,
   Value (getValue),
@@ -39,8 +39,12 @@ import PlutusTx.AssocMap (lookup, toList)
 import PlutusTx.Bool
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
-  ReserveDatum (mutableSettings),
-  ReserveRedeemer (DepositToReserve, UpdateReserve),
+  ReserveDatum (mutableSettings, stats),
+  ReserveRedeemer (
+    DepositToReserve,
+    TransferToIlliquidCirculationSupply,
+    UpdateReserve
+  ),
   ReserveStats (ReserveStats),
  )
 import TrustlessSidechain.Types.Unsafe (getContinuingOutputs)
@@ -53,12 +57,16 @@ import TrustlessSidechain.Versioning (
   getVersionedCurrencySymbolUnsafe,
   getVersionedValidatorAddressUnsafe,
   governancePolicyId,
+  illiquidCirculationSupplyValidatorId,
   reserveAuthPolicyId,
   reserveValidatorId,
  )
 
 reserveAuthTokenTokenName :: TokenName
 reserveAuthTokenTokenName = adaToken
+
+vFunctionTotalAccruedTokenName :: TokenName
+vFunctionTotalAccruedTokenName = adaToken
 
 -- | Error codes description follows:
 --
@@ -72,6 +80,12 @@ reserveAuthTokenTokenName = adaToken
 --   ERROR-RESERVE-08: Datum of output reserve utxo malformed
 --   ERROR-RESERVE-09: Datum of a propagated reserve utxo changes not only by immutable settings
 --   ERROR-RESERVE-10: Assets of a propagated reserve utxo change
+--   ERROR-RESERVE-11: V(t) tokens are not minted
+--   ERROR-RESERVE-12: Other tokens than V(t) tokens are minted or burnt
+--   ERROR-RESERVE-13: Assets of a propagated reserve utxo don't decrease by reserve tokens in desired way
+--   ERROR-RESERVE-14: Datum of a propagated reserve utxo changes not only by stats in desired way
+--   ERROR-RESERVE-15: Reserve tokens don't go into an illiquid circulation supply
+--   ERROR-RESERVE-16: No unique output utxo at the illiquid circulation supply address
 mkReserveValidator ::
   VersionOracleConfig ->
   ReserveDatum ->
@@ -89,6 +103,12 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
       && traceIfFalse "ERROR-RESERVE-02" noOtherTokensButGovernanceMinted
       && traceIfFalse "ERROR-RESERVE-09" datumChangesOnlyByMutableSettings
       && traceIfFalse "ERROR-RESERVE-10" assetsDoNotChange
+  TransferToIlliquidCirculationSupply ->
+    traceIfFalse "ERROR-RESERVE-11" vtTokensAreMinted
+      && traceIfFalse "ERROR-RESERVE-12" noOtherTokensButVtMinted
+      && traceIfFalse "ERROR-RESERVE-13" assetsChangeOnlyByNegativeAndCorrectAmountOfVtTokens
+      && traceIfFalse "ERROR-RESERVE-14" datumChangesOnlyByStats
+      && traceIfFalse "ERROR-RESERVE-15" reserveTokensGoToIlliquidCirculationSupply
   _ -> error ()
   where
     info :: Unsafe.TxInfo
@@ -104,6 +124,13 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
         (VersionOracle {version = 1, scriptId = reserveAuthPolicyId})
         ctx
 
+    illiquidCirculationSupplyAddress :: Address
+    illiquidCirculationSupplyAddress =
+      getVersionedValidatorAddressUnsafe
+        voc
+        (VersionOracle {version = 1, scriptId = illiquidCirculationSupplyValidatorId})
+        ctx
+
     carriesAuthToken :: TxOut -> Bool
     carriesAuthToken txOut =
       valueOf
@@ -112,15 +139,17 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
         reserveAuthTokenTokenName
         == 1
 
+    tokenKind' :: AssetClass
+    tokenKind' = get @"tokenKind" . get @"immutableSettings" $ inputDatum
+
     -- this function verifies that assets of a propagated unique reserve utxo
     -- change only by reserve tokens and returns the difference wrapped in `Maybe`
     -- otherwise it returns `Nothing`
     changeOfReserveTokens :: Maybe Integer
     changeOfReserveTokens =
       let diff = txOutValue outputReserveUtxo - txOutValue inputReserveUtxo
-          ac = get @"tokenKind" . get @"immutableSettings" $ inputDatum
        in case flattenValue diff of
-            [(cs, tn, num)] | AssetClass (cs, tn) == ac -> Just num
+            [(cs, tn, num)] | AssetClass (cs, tn) == tokenKind' -> Just num
             _ -> Nothing
 
     inputReserveUtxo :: TxOut
@@ -173,6 +202,49 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
     assetsDoNotChange :: Bool
     assetsDoNotChange =
       txOutValue inputReserveUtxo == txOutValue outputReserveUtxo
+
+    outputIlliquidCirculationSupplyUtxo :: TxOut
+    outputIlliquidCirculationSupplyUtxo =
+      Unsafe.decode $
+        Utils.fromSingleton "ERROR-RESERVE-16" $
+          info `getOutputsAt` illiquidCirculationSupplyAddress
+
+    vFunctionTotalAccrued' :: CurrencySymbol
+    vFunctionTotalAccrued' =
+      get @"vFunctionTotalAccrued" . get @"mutableSettings" $ inputDatum
+
+    numOfVtTokensMinted :: Integer
+    numOfVtTokensMinted =
+      valueOf minted vFunctionTotalAccrued' vFunctionTotalAccruedTokenName
+
+    vtTokensAreMinted :: Bool
+    vtTokensAreMinted = numOfVtTokensMinted > 0
+
+    -- this is valid only if `vtTokensAreMinted` is True
+    noOtherTokensButVtMinted :: Bool
+    noOtherTokensButVtMinted = (length . flattenValue $ minted) == 1
+
+    tokensTransferredUpUntilNow :: Integer
+    tokensTransferredUpUntilNow =
+      get @"tokenTotalAmountTransferred" . get @"stats" $ inputDatum
+
+    assetsChangeOnlyByNegativeAndCorrectAmountOfVtTokens :: Bool
+    assetsChangeOnlyByNegativeAndCorrectAmountOfVtTokens =
+      changeOfReserveTokens == Just (tokensTransferredUpUntilNow - numOfVtTokensMinted)
+
+    datumChangesOnlyByStats :: Bool
+    datumChangesOnlyByStats =
+      let updatedStats = ReserveStats numOfVtTokensMinted
+       in toBuiltinData inputDatum {stats = updatedStats}
+            == toBuiltinData outputDatum
+
+    reserveTokensGoToIlliquidCirculationSupply :: Bool
+    reserveTokensGoToIlliquidCirculationSupply =
+      let tokensOnICSUtxo =
+            uncurry
+              (valueOf . txOutValue $ outputIlliquidCirculationSupplyUtxo)
+              (unAssetClass tokenKind')
+       in tokensOnICSUtxo == numOfVtTokensMinted - tokensTransferredUpUntilNow
 
 mkReserveValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkReserveValidatorUntyped voc rd rr ctx =

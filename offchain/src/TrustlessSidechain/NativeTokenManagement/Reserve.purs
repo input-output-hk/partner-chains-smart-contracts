@@ -6,6 +6,7 @@ module TrustlessSidechain.NativeTokenManagement.Reserve
   , depositToReserve
   , extractReserveDatum
   , updateReserveUtxo
+  , transferToIlliquidCirculationSupply
   ) where
 
 import Contract.Prelude
@@ -16,9 +17,10 @@ import Contract.PlutusData
   , Redeemer(..)
   , fromData
   , toData
+  , unitDatum
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy(..), Validator)
+import Contract.Scripts (MintingPolicy(..), Validator(..))
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( ScriptRef(..)
@@ -28,16 +30,15 @@ import Contract.Transaction
   , mkTxUnspentOut
   , outputDatumDatum
   )
-import Contract.TxConstraints
-  ( DatumPresence(..)
-  , InputWithScriptRef(..)
-  )
+import Contract.TxConstraints (DatumPresence(..), InputWithScriptRef(..))
 import Contract.TxConstraints as TxConstraints
 import Contract.Utxos (UtxoMap)
 import Contract.Value
   ( CurrencySymbol
   , TokenName
   , mkTokenName
+  , mpsSymbol
+  , negation
   , valueOf
   )
 import Contract.Value as Value
@@ -94,6 +95,9 @@ emptyTokenName = unsafePartial $ fromJust $ mkTokenName mempty
 reserveAuthTokenName ∷ TokenName
 reserveAuthTokenName = emptyTokenName
 
+vFunctionTotalAccruedTokenName ∷ TokenName
+vFunctionTotalAccruedTokenName = emptyTokenName
+
 reserveVersionOracle ∷ VersionOracle
 reserveVersionOracle = VersionOracle
   { version: BigInt.fromInt 1, scriptId: ReserveValidator }
@@ -102,6 +106,11 @@ reserveAuthVersionOracle ∷ VersionOracle
 reserveAuthVersionOracle =
   VersionOracle
     { version: BigInt.fromInt 1, scriptId: ReserveAuthPolicy }
+
+illiquidCirculationSupplyVersionOracle ∷ VersionOracle
+illiquidCirculationSupplyVersionOracle =
+  VersionOracle
+    { version: BigInt.fromInt 1, scriptId: IlliquidCirculationSupplyValidator }
 
 governanceVersionOracle ∷ VersionOracle
 governanceVersionOracle = VersionOracle
@@ -162,6 +171,17 @@ getReserveAuthScriptRefUtxo sidechainParams =
     sidechainParams
     reserveAuthVersionOracle
 
+getIlliquidCirculationSupplyScriptRefUtxo ∷
+  ∀ r.
+  SidechainParams →
+  Run
+    (EXCEPT OffchainError + WALLET + TRANSACTION + r)
+    (TransactionInput /\ TransactionOutputWithRefScript)
+getIlliquidCirculationSupplyScriptRefUtxo sidechainParams =
+  Versioning.getVersionedScriptRefUtxo
+    sidechainParams
+    illiquidCirculationSupplyVersionOracle
+
 getGovernancePolicy ∷
   ∀ r.
   SidechainParams →
@@ -175,6 +195,20 @@ getGovernancePolicy sidechainParams = do
     Just (PlutusScriptRef s) → pure $ PlutusMintingPolicy s
     _ → throw $ GenericInternalError
       "Versioning system utxo does not carry governance script"
+
+getIlliquidCirculationSupplyValidator ∷
+  ∀ r.
+  SidechainParams →
+  Run
+    (EXCEPT OffchainError + WALLET + TRANSACTION + r)
+    Validator
+getIlliquidCirculationSupplyValidator sidechainParams = do
+  (_ /\ refTxOutput) ← getIlliquidCirculationSupplyScriptRefUtxo sidechainParams
+
+  case (unwrap refTxOutput).scriptRef of
+    Just (PlutusScriptRef s) → pure $ Validator s
+    _ → throw $ GenericInternalError
+      "Versioning system utxo does not carry ICS script"
 
 findReserveUtxos ∷
   ∀ r.
@@ -211,6 +245,25 @@ reserveAuthLookupsAndConstraints sp = do
         (Map.singleton reserveAuthRefTxInput reserveAuthRefTxOutput)
     , reserveAuthConstraints: TxConstraints.mustReferenceOutput
         reserveAuthRefTxInput
+    }
+
+illiquidCirculationSupplyLookupsAndConstraints ∷
+  ∀ r.
+  SidechainParams →
+  Run
+    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+    { icsLookups ∷ Lookups.ScriptLookups Void
+    , icsConstraints ∷ TxConstraints.TxConstraints Void Void
+    }
+illiquidCirculationSupplyLookupsAndConstraints sp = do
+  (icsRefTxInput /\ icsRefTxOutput) ←
+    getIlliquidCirculationSupplyScriptRefUtxo sp
+
+  pure
+    { icsLookups: Lookups.unspentOutputs
+        (Map.singleton icsRefTxInput icsRefTxOutput)
+    , icsConstraints: TxConstraints.mustReferenceOutput
+        icsRefTxInput
     }
 
 reserveLookupsAndConstraints ∷
@@ -376,6 +429,10 @@ depositToReserve sp ac amount = do
   , reserveAuthConstraints
   } ← reserveAuthLookupsAndConstraints sp
 
+  { icsLookups
+  , icsConstraints
+  } ← illiquidCirculationSupplyLookupsAndConstraints sp
+
   versionOracleConfig ← Versioning.getVersionOracleConfig sp
   reserveValidator' ← reserveValidator versionOracleConfig
 
@@ -396,12 +453,14 @@ depositToReserve sp ac amount = do
     lookups ∷ Lookups.ScriptLookups Void
     lookups =
       reserveAuthLookups
+        <> icsLookups
         <> governanceLookups
         <> Lookups.unspentOutputs (uncurry Map.singleton utxo)
         <> Lookups.validator reserveValidator'
 
     constraints =
       governanceConstraints
+        <> icsConstraints
         <> reserveAuthConstraints
         <> TxConstraints.mustPayToScript
           (Scripts.validatorHash reserveValidator')
@@ -434,6 +493,10 @@ updateReserveUtxo sp updatedMutableSettings utxo = do
   , reserveAuthConstraints
   } ← reserveAuthLookupsAndConstraints sp
 
+  { icsLookups
+  , icsConstraints
+  } ← illiquidCirculationSupplyLookupsAndConstraints sp
+
   versionOracleConfig ← Versioning.getVersionOracleConfig sp
   reserveValidator' ← reserveValidator versionOracleConfig
 
@@ -451,12 +514,14 @@ updateReserveUtxo sp updatedMutableSettings utxo = do
     lookups ∷ Lookups.ScriptLookups Void
     lookups =
       reserveAuthLookups
+        <> icsLookups
         <> governanceLookups
         <> Lookups.unspentOutputs (uncurry Map.singleton utxo)
         <> Lookups.validator reserveValidator'
 
     constraints =
       governanceConstraints
+        <> icsConstraints
         <> reserveAuthConstraints
         <> TxConstraints.mustPayToScript
           (Scripts.validatorHash reserveValidator')
@@ -468,4 +533,110 @@ updateReserveUtxo sp updatedMutableSettings utxo = do
 
   void $ balanceSignAndSubmit
     "Update reserve mutable settings"
+    { constraints, lookups }
+
+transferToIlliquidCirculationSupply ∷
+  ∀ r.
+  SidechainParams →
+  BigInt →
+  MintingPolicy →
+  (TransactionInput /\ TransactionOutputWithRefScript) →
+  Run
+    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+    Unit
+transferToIlliquidCirculationSupply
+  sp
+  totalAccruedTillNow
+  vFunctionTotalAccruedMintingPolicy
+  utxo = do
+  { reserveAuthLookups
+  , reserveAuthConstraints
+  } ← reserveAuthLookupsAndConstraints sp
+
+  { icsLookups
+  , icsConstraints
+  } ← illiquidCirculationSupplyLookupsAndConstraints sp
+
+  versionOracleConfig ← Versioning.getVersionOracleConfig sp
+  reserveValidator' ← reserveValidator versionOracleConfig
+
+  illiquidCirculationSupplyValidator ← getIlliquidCirculationSupplyValidator sp
+
+  datum ← fromMaybeThrow (InvalidData "Reserve does not carry inline datum")
+    $ pure
+    $ extractReserveDatum
+    $ (snd >>> unwrap >>> _.output)
+    $ utxo
+
+  let
+    tokenKind =
+      unwrap
+        >>> _.immutableSettings
+        >>> unwrap
+        >>> _.tokenKind
+        $ datum
+
+    tokenTotalAmountTransferred =
+      unwrap
+        >>> _.stats
+        >>> unwrap
+        >>> _.tokenTotalAmountTransferred
+        $ datum
+
+    vFunctionTotalAccruedCurrencySymbol =
+      unwrap
+        >>> _.mutableSettings
+        >>> unwrap
+        >>> _.vFunctionTotalAccrued
+        $ datum
+
+  unless
+    ( mpsSymbol (Scripts.mintingPolicyHash vFunctionTotalAccruedMintingPolicy) ==
+        Just vFunctionTotalAccruedCurrencySymbol
+    ) $ throw (InvalidData "Passed ICS minting policy is not correct")
+
+  let
+    toTransferAsInt = totalAccruedTillNow - tokenTotalAmountTransferred
+
+    toTransferAsValue =
+      Value.singleton (fst tokenKind) (snd tokenKind) toTransferAsInt
+
+    vtTokensAsValue = Value.singleton
+      vFunctionTotalAccruedCurrencySymbol
+      vFunctionTotalAccruedTokenName
+      toTransferAsInt
+
+    updatedDatum = ReserveDatum $ (unwrap datum)
+      { stats = ReserveStats { tokenTotalAmountTransferred: totalAccruedTillNow }
+      }
+    value = unwrap >>> _.output >>> unwrap >>> _.amount $ snd utxo
+    newValue = value <> negation toTransferAsValue
+
+    lookups ∷ Lookups.ScriptLookups Void
+    lookups =
+      reserveAuthLookups
+        <> icsLookups
+        <> Lookups.unspentOutputs (uncurry Map.singleton utxo)
+        <> Lookups.validator reserveValidator'
+        <> Lookups.mintingPolicy vFunctionTotalAccruedMintingPolicy
+
+    constraints =
+      reserveAuthConstraints
+        <> icsConstraints
+        <> TxConstraints.mustPayToScript
+          (Scripts.validatorHash reserveValidator')
+          (Datum $ toData updatedDatum)
+          DatumInline
+          newValue
+        <> TxConstraints.mustSpendScriptOutput (fst utxo)
+          (toData >>> Redeemer $ TransferToIlliquidCirculationSupply)
+        <> TxConstraints.mustMintValue vtTokensAsValue
+        <> TxConstraints.mustPayToScript
+          (Scripts.validatorHash illiquidCirculationSupplyValidator)
+          unitDatum
+          DatumInline
+          toTransferAsValue
+
+  void $ balanceSignAndSubmit
+    "Transfer to illiquid circulation supply"
     { constraints, lookups }

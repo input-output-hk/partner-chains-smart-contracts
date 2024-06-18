@@ -4,12 +4,21 @@ module Test.Reserve
 
 import Contract.Prelude
 
+import Contract.Address (NetworkId(..), validatorHashEnterpriseAddress)
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.ScriptLookups as Lookups
+import Contract.Scripts (Validator)
+import Contract.Scripts as Scripts
 import Contract.TxConstraints as TxConstraints
-import Contract.Value (adaSymbol, adaToken, mkCurrencySymbol, valueOf)
-import Contract.Value as Scripts
+import Contract.Value
+  ( adaSymbol
+  , adaToken
+  , mkCurrencySymbol
+  , mpsSymbol
+  , scriptCurrencySymbol
+  , valueOf
+  )
 import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Control.Monad.Error.Class (throwError)
@@ -22,7 +31,7 @@ import Mote.Monad as Mote.Monad
 import Partial.Unsafe (unsafePartial)
 import Run (EFFECT, Run)
 import Run.Except (EXCEPT)
-import Test.AlwaysPassingScripts (alwaysPassingPolicy)
+import Test.AlwaysPassingScripts (alwaysPassingPolicy, alwaysPassingValidator)
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
@@ -34,7 +43,7 @@ import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
 import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
-import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.Governance as Governance
@@ -44,6 +53,7 @@ import TrustlessSidechain.NativeTokenManagement.Reserve
   , extractReserveDatum
   , findReserveUtxos
   , initialiseReserveUtxo
+  , transferToIlliquidCirculationSupply
   , updateReserveUtxo
   )
 import TrustlessSidechain.NativeTokenManagement.Types
@@ -76,6 +86,7 @@ tests = plutipGroup "Reserve" $ do
   testScenario2
   testScenario3
   testScenario4
+  testScenario5
 
 insertFakeGovernancePolicy ∷
   ∀ r.
@@ -92,6 +103,29 @@ insertFakeGovernancePolicy sidechainParams =
         insertVersionLookupsAndConstraints sidechainParams 1
           (GovernancePolicy /\ governanceFakePolicy)
       >>= balanceSignAndSubmit "Insert governance policy"
+
+mkIcsFakeValidator ∷
+  ∀ r.
+  Run
+    (EXCEPT OffchainError + r)
+    Validator
+mkIcsFakeValidator = alwaysPassingValidator $ BigInt.fromInt 22
+
+insertFakeIlliquidCirculationSupplyValidator ∷
+  ∀ r.
+  SidechainParams →
+  Run
+    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+    Unit
+insertFakeIlliquidCirculationSupplyValidator sidechainParams =
+  do
+    icsFakeValidator ← mkIcsFakeValidator
+
+    void
+      $
+        insertVersionLookupsAndConstraints sidechainParams 1
+          (IlliquidCirculationSupplyValidator /\ icsFakeValidator)
+      >>= balanceSignAndSubmit "Insert illiquid circulation supply validator"
 
 invalidMutableSettings ∷ MutableReserveSettings
 invalidMutableSettings = MutableReserveSettings
@@ -142,7 +176,7 @@ mintNonAdaTokens numOfTokens = do
   policy ← alwaysPassingPolicy $ BigInt.fromInt 100
 
   let
-    cs = unsafePartial $ fromJust $ Scripts.scriptCurrencySymbol policy
+    cs = unsafePartial $ fromJust $ scriptCurrencySymbol policy
 
     lookups = Lookups.mintingPolicy policy
 
@@ -165,7 +199,6 @@ initialDistribution =
   , BigInt.fromInt 40_000_000
   ]
 
--- | 'testScenario1' updates the committee hash
 testScenario1 ∷ PlutipTest
 testScenario1 =
   Mote.Monad.test "Successful reserve initialization with ADA as reserve token"
@@ -230,6 +263,7 @@ testScenario3 =
         sidechainParams ← dummyInitialiseSidechain
 
         insertFakeGovernancePolicy sidechainParams
+        insertFakeIlliquidCirculationSupplyValidator sidechainParams
 
         let
           initialAmountOfNonAdaTokens = BigInt.fromInt 50
@@ -293,6 +327,7 @@ testScenario4 =
           sidechainParams ← dummyInitialiseSidechain
 
           insertFakeGovernancePolicy sidechainParams
+          insertFakeIlliquidCirculationSupplyValidator sidechainParams
 
           initialiseReserveUtxo
             sidechainParams
@@ -339,4 +374,87 @@ testScenario4 =
                 == unwrappedDatum utxoAfter
             )
             (liftContract $ throwError $ error "Update not sucessful")
+
+testScenario5 ∷ PlutipTest
+testScenario5 =
+  Mote.Monad.test
+    "Transfer to illiquid circulation supply with non-ADA as reserve token"
+    $ Test.PlutipTest.mkPlutipConfigTest initialDistribution
+    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+        sidechainParams ← dummyInitialiseSidechain
+
+        insertFakeGovernancePolicy sidechainParams
+        insertFakeIlliquidCirculationSupplyValidator sidechainParams
+
+        let
+          numOfNonAdaTokens = BigInt.fromInt 101
+          numOfTransferTokens = BigInt.fromInt 15
+        tokenKind ← mintNonAdaTokens numOfNonAdaTokens
+
+        fakeVt ← alwaysPassingPolicy $ BigInt.fromInt 11
+
+        let
+          mutableSettings = MutableReserveSettings
+            { vFunctionTotalAccrued:
+                unsafePartial
+                  $ fromJust
+                  $ mpsSymbol
+                  $ Scripts.mintingPolicyHash
+                  $ fakeVt
+            }
+
+          immutableSettings = ImmutableReserveSettings
+            { t0: zero
+            , tokenKind
+            }
+
+        initialiseReserveUtxo
+          sidechainParams
+          immutableSettings
+          mutableSettings
+          numOfNonAdaTokens
+
+        utxo ← fromMaybeTestError "Utxo after initialization not found"
+          $ Map.toUnfoldable
+          <$> findReserveUtxos sidechainParams
+
+        transferToIlliquidCirculationSupply
+          sidechainParams
+          numOfTransferTokens
+          fakeVt
+          utxo
+
+        let
+          totalAssets = foldMap
+            $ unwrap
+            >>> _.output
+            >>> unwrap
+            >>> _.amount
+
+          amountOfReserveTokens t = uncurry (valueOf t) tokenKind
+
+        reserveAfterTransfer ← totalAssets <$> findReserveUtxos sidechainParams
+        icsAfterTransfer ←
+          ( Scripts.validatorHash
+              >>> validatorHashEnterpriseAddress MainnetId
+              >>> unsafePartial fromJust
+              <$> mkIcsFakeValidator
+          ) >>= (map totalAssets <$> utxosAt)
+
+        unless
+          ( amountOfReserveTokens reserveAfterTransfer ==
+              (numOfNonAdaTokens - numOfTransferTokens)
+          )
+          ( liftContract $ throwError $ error
+              "Incorrect number of reserve tokens in reserve after transfer"
+          )
+
+        unless
+          ( amountOfReserveTokens icsAfterTransfer == numOfTransferTokens
+          )
+          ( liftContract $ throwError $ error
+              "Incorrect number of reserve tokens in ICS after transfer"
+          )
+
+        pure unit
 
