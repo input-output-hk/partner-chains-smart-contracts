@@ -34,6 +34,9 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 ## Changed
   * CTL updated to version which supports ogmios 6.0.3 and 6.4.0
+  * `committee-hash` now uses reference scripts, which should make the
+    transaction smaller and lower the fees
+    [831](https://github.com/input-output-hk/trustless-sidechain/pull/831)
   * implemented (iogx)(https://github.com/input-output-hk/iogx) nix framework
   * `init` now prints more human friendly message, when selected genesis utxo
     is not available at user's wallet address.

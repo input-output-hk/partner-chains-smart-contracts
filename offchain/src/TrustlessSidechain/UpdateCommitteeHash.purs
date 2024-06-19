@@ -11,6 +11,9 @@ import Cardano.Types.PlutusData (PlutusData)
 import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Types.TransactionInput (TransactionInput)
 import Cardano.Types.TransactionOutput (TransactionOutput)
+import Cardano.Types.TransactionUnspentOutput
+  ( TransactionUnspentOutput(TransactionUnspentOutput)
+  )
 import Cardano.Types.Value as Value
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
@@ -26,6 +29,7 @@ import Contract.Transaction
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
   , TxConstraints
+  , InputWithScriptRef(RefInput)
   )
 import Contract.TxConstraints as TxConstraints
 import Data.Map as Map
@@ -75,7 +79,7 @@ import TrustlessSidechain.UpdateCommitteeHash.Utils
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.Types
-  ( ScriptId(CommitteeOraclePolicy, MerkleRootTokenPolicy)
+  ( ScriptId(CommitteeOraclePolicy, MerkleRootTokenPolicy, CommitteeHashValidator)
   , VersionOracle(VersionOracle)
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
@@ -211,8 +215,7 @@ updateCommitteeHashLookupsAndConstraints
 
   -- Getting the validator / building the validator hash
   -------------------------------------------------------------
-  { validator: updateValidator
-  , validatorHash: updateValidatorHash
+  { validatorHash: updateValidatorHash
   } ← getUpdateCommitteeHashValidator sidechainParams
 
   -- if we have provided a new validator hash to upgrade to, then move
@@ -250,6 +253,13 @@ updateCommitteeHashLookupsAndConstraints
           { version: BigNum.fromInt 1, scriptId: MerkleRootTokenPolicy }
       )
 
+  (updateCommitteeHashValidatorRefTxInput /\ updateCommitteeHashValidatorRefTxOutput) ←
+    Versioning.getVersionedScriptRefUtxo
+      sidechainParams
+      ( VersionOracle
+          { version: BigNum.fromInt 1, scriptId: CommitteeHashValidator }
+      )
+
   -- Building the transaction.
   -------------------------------------------------------------
   let
@@ -276,14 +286,21 @@ updateCommitteeHashLookupsAndConstraints
     lookups ∷ Lookups.ScriptLookups
     lookups =
       Lookups.unspentOutputs (Map.singleton oref committeeOracleTxOut)
-        <> Lookups.validator updateValidator
         <> case maybePreviousMerkleRoot of
           Nothing → mempty
           Just { index: txORef, value: txOut } → Lookups.unspentOutputs
             (Map.singleton txORef txOut)
         <> Lookups.unspentOutputs
           (Map.singleton mrtPolicyRefTxInput mrtPolicyRefTxOutput)
-    constraints = TxConstraints.mustSpendScriptOutput oref redeemer
+    constraints =
+         TxConstraints.mustSpendScriptOutputUsingScriptRef
+           oref
+           redeemer
+           (RefInput $ TransactionUnspentOutput
+              { input: updateCommitteeHashValidatorRefTxInput
+              , output: updateCommitteeHashValidatorRefTxOutput
+              }
+           )
       <> TxConstraints.mustPayToScript newValidatorHash newDatum DatumInline value
       <> case maybePreviousMerkleRoot of
         Nothing → mempty
