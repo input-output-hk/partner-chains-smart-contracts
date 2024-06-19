@@ -155,20 +155,14 @@ instance ToData ReserveRedeemer where
 
 instance FromData ReserveRedeemer where
   fromData = case _ of
-    Constr tag args | tag == BigNum.fromInt 0 →
-      case args of
-        [ x ] -> do
-          governanceVersion <- fromData x
-          pure $ DepositToReserve { governanceVersion }
-        _ -> Nothing
+    Constr tag [arg] | tag == BigNum.fromInt 0 → do
+      governanceVersion <- fromData arg
+      pure $ DepositToReserve { governanceVersion }
     Constr tag [] | tag == BigNum.fromInt 1 → pure
       TransferToIlliquidCirculationSupply
-    Constr tag args | tag == BigNum.fromInt 2 →
-      case args of
-        [ x ] -> do
-          governanceVersion <- fromData x
-          pure $ UpdateReserve { governanceVersion }
-        _ -> Nothing
+    Constr tag [arg] | tag == BigNum.fromInt 2 → do
+      governanceVersion <- fromData arg
+      pure $ UpdateReserve { governanceVersion }
     Constr tag [arg] | tag == BigNum.fromInt 3 → do
       governanceVersion <- fromData arg
       pure $ Handover { governanceVersion }
