@@ -20,8 +20,8 @@ approvedByGovernance
   -> Unsafe.ScriptContext
   -> Bool
 approvedByGovernance voc version ctx =
-  flip (maybe False) ofGovernanceCs $ \case
-    [(_, amount)] | amount > 0 -> True -- must mint at least one token, any name
+  case ofGovernanceCs of
+    Just [(_, amount)] | amount > 0 -> True -- must mint at least one token, any name
     _ -> False
   where
     ofGovernanceCs :: Maybe [(TokenName, Integer)]
