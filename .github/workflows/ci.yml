@@ -32,7 +32,7 @@ jobs:
         run: echo "${{ secrets.NIX_SIGNING_KEY }}" > "${{ runner.temp }}/nix-key"
 
       - name: Run nixci to build/test all outputs
-        run: nixci -v > /tmp/outputs
+        run: nix run github:srid/nixci -- -v build > /tmp/outputs
 
       - name: Copy nix scopes to nix cache
         run: |
