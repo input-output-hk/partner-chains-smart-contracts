@@ -1,11 +1,12 @@
 name: 'Trustless Sidechain CI'
 on:
-  pull_request:
   push:
     branches:
       - master
       - develop
+      - test-810
   workflow_dispatch:
+  pull_request:
 
 env:
   AWS_DEFAULT_REGION: eu-central-1
