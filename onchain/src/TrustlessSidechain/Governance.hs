@@ -8,7 +8,11 @@ import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Versioning
 
--- | This function will be moved to a governance module in the future
+-- | Check whether a given transaction is approved by sidechain governance.  The
+-- actual check is delegated to a governance minting policy stored in the
+-- versioning system.  Caller specifies the requested governance version.  The
+-- transaction must mint at least one token of the governance minting policy to
+-- signify transaction approval.
 {-# INLINEABLE approvedByGovernance #-}
 approvedByGovernance
   :: VersionOracleConfig
