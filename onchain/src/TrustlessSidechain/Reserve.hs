@@ -1,5 +1,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Redundant if" #-}
 
 module TrustlessSidechain.Reserve (
   mkReserveValidator,
@@ -42,6 +45,7 @@ import TrustlessSidechain.Types (
   ReserveDatum (mutableSettings, stats),
   ReserveRedeemer (
     DepositToReserve,
+    Handover,
     TransferToIlliquidCirculationSupply,
     UpdateReserve
   ),
@@ -84,8 +88,13 @@ vFunctionTotalAccruedTokenName = adaToken
 --   ERROR-RESERVE-12: Other tokens than V(t) tokens are minted or burnt
 --   ERROR-RESERVE-13: Assets of a propagated reserve utxo don't decrease by reserve tokens in desired way
 --   ERROR-RESERVE-14: Datum of a propagated reserve utxo changes not only by stats in desired way
---   ERROR-RESERVE-15: Reserve tokens don't go into an illiquid circulation supply
+--   ERROR-RESERVE-15: Incorrect amount of reserve tokens goes into an illiquid circulation supply
 --   ERROR-RESERVE-16: No unique output utxo at the illiquid circulation supply address
+--   ERROR-RESERVE-17: An authentication token is not burnt
+--   ERROR-RESERVE-18: Other tokens than auth token and governance token are minted or burnt
+--   ERROR-RESERVE-19: Not all reserve tokens are transferred to illiquid circulation supply
+--   ERROR-RESERVE-20: Reserve utxo input exists without an authentication token
+--   ERROR-RESERVE-21: Reserve utxo output exists without an authentication token
 mkReserveValidator ::
   VersionOracleConfig ->
   ReserveDatum ->
@@ -106,10 +115,14 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
   TransferToIlliquidCirculationSupply ->
     traceIfFalse "ERROR-RESERVE-11" vtTokensAreMinted
       && traceIfFalse "ERROR-RESERVE-12" noOtherTokensButVtMinted
-      && traceIfFalse "ERROR-RESERVE-13" assetsChangeOnlyByNegativeAndCorrectAmountOfVtTokens
+      && traceIfFalse "ERROR-RESERVE-13" assetsChangeOnlyByCorrectAmountOfReserveTokens
       && traceIfFalse "ERROR-RESERVE-14" datumChangesOnlyByStats
-      && traceIfFalse "ERROR-RESERVE-15" reserveTokensGoToIlliquidCirculationSupply
-  _ -> error ()
+      && traceIfFalse "ERROR-RESERVE-15" correctAmountOfReserveTokensTransferredToICS
+  Handover ->
+    traceIfFalse "ERROR-RESERVE-01" isApprovedByGovernance
+      && traceIfFalse "ERROR-RESERVE-17" oneReserveAuthTokenBurnt
+      && traceIfFalse "ERROR-RESERVE-18" noOtherTokensButReserveAuthBurntAndGovernanceMinted
+      && traceIfFalse "ERROR-RESERVE-19" allReserveTokensTransferredToICS
   where
     info :: Unsafe.TxInfo
     info = Unsafe.scriptContextTxInfo ctx
@@ -156,14 +169,14 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
     inputReserveUtxo =
       Unsafe.decode $
         Utils.fromSingleton "ERROR-RESERVE-05" $
-          filter (carriesAuthToken . Unsafe.decode) $
+          filter (traceIfFalse "ERROR-RESERVE-20" . carriesAuthToken . Unsafe.decode) $
             Unsafe.txInInfoResolved <$> Unsafe.txInfoInputs info
 
     outputReserveUtxo :: TxOut
     outputReserveUtxo =
       Unsafe.decode $
         Utils.fromSingleton "ERROR-RESERVE-06" $
-          filter (carriesAuthToken . Unsafe.decode) $
+          filter (traceIfFalse "ERROR-RESERVE-21" . carriesAuthToken . Unsafe.decode) $
             getContinuingOutputs ctx
 
     inputDatum :: ReserveDatum
@@ -228,8 +241,8 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
     tokensTransferredUpUntilNow =
       get @"tokenTotalAmountTransferred" . get @"stats" $ inputDatum
 
-    assetsChangeOnlyByNegativeAndCorrectAmountOfVtTokens :: Bool
-    assetsChangeOnlyByNegativeAndCorrectAmountOfVtTokens =
+    assetsChangeOnlyByCorrectAmountOfReserveTokens :: Bool
+    assetsChangeOnlyByCorrectAmountOfReserveTokens =
       changeOfReserveTokens == Just (tokensTransferredUpUntilNow - numOfVtTokensMinted)
 
     datumChangesOnlyByStats :: Bool
@@ -238,13 +251,42 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
        in toBuiltinData inputDatum {stats = updatedStats}
             == toBuiltinData outputDatum
 
-    reserveTokensGoToIlliquidCirculationSupply :: Bool
-    reserveTokensGoToIlliquidCirculationSupply =
-      let tokensOnICSUtxo =
-            uncurry
-              (valueOf . txOutValue $ outputIlliquidCirculationSupplyUtxo)
-              (unAssetClass tokenKind')
-       in tokensOnICSUtxo == numOfVtTokensMinted - tokensTransferredUpUntilNow
+    reserveTokensOn :: TxOut -> Integer
+    reserveTokensOn txOut =
+      uncurry
+        (valueOf . txOutValue $ txOut)
+        (unAssetClass tokenKind')
+
+    correctAmountOfReserveTokensTransferredToICS :: Bool
+    correctAmountOfReserveTokensTransferredToICS =
+      reserveTokensOnOutputICSUtxo
+        == (numOfVtTokensMinted - tokensTransferredUpUntilNow) + reserveTokensOnICSInputUtxos
+
+    allReserveTokensTransferredToICS :: Bool
+    allReserveTokensTransferredToICS =
+      reserveTokensOnOutputICSUtxo == reserveTokensOn inputReserveUtxo + reserveTokensOnICSInputUtxos
+
+    reserveTokensOnOutputICSUtxo :: Integer
+    reserveTokensOnOutputICSUtxo =
+      reserveTokensOn outputIlliquidCirculationSupplyUtxo
+
+    reserveTokensOnICSInputUtxos :: Integer
+    reserveTokensOnICSInputUtxos =
+      sum $ reserveTokensOn . Unsafe.decode <$> getInputsAt info illiquidCirculationSupplyAddress
+
+    oneReserveAuthTokenBurnt ::
+      Bool
+    oneReserveAuthTokenBurnt =
+      valueOf
+        minted
+        reserveAuthCurrencySymbol
+        reserveAuthTokenTokenName
+        == -1
+
+    -- this is valid only if `oneReserveAuthTokenBurnt` is True
+    -- and if `isApprovedByGovernance` is True
+    noOtherTokensButReserveAuthBurntAndGovernanceMinted :: Bool
+    noOtherTokensButReserveAuthBurntAndGovernanceMinted = (length . flattenValue $ minted) == 2
 
 mkReserveValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkReserveValidatorUntyped voc rd rr ctx =
@@ -263,6 +305,12 @@ serialisableReserveValidator =
 getOutputsAt :: Unsafe.TxInfo -> Address -> [Unsafe.TxOut]
 getOutputsAt txInfo address =
   ((== address) . txOutAddress . Unsafe.decode) `filter` Unsafe.txInfoOutputs txInfo
+
+{-# INLINEABLE getInputsAt #-}
+getInputsAt :: Unsafe.TxInfo -> Address -> [Unsafe.TxOut]
+getInputsAt txInfo address =
+  ((== address) . txOutAddress . Unsafe.decode)
+    `filter` (Unsafe.txInInfoResolved <$> Unsafe.txInfoInputs txInfo)
 
 {-# INLINEABLE extractReserveUtxoDatum #-}
 extractReserveUtxoDatum :: TxOut -> Maybe ReserveDatum
@@ -304,11 +352,14 @@ approvedByGovernance voc ctx =
 {-# INLINEABLE mkReserveAuthPolicy #-}
 mkReserveAuthPolicy :: VersionOracleConfig -> BuiltinData -> Unsafe.ScriptContext -> Bool
 mkReserveAuthPolicy voc _ ctx =
-  traceIfFalse "ERROR-RESERVE-AUTH-01" isApprovedByGovernance
-    && traceIfFalse "ERROR-RESERVE-AUTH-02" oneReserveAuthTokenIsMinted
-    && traceIfFalse "ERROR-RESERVE-AUTH-03" reserveUtxoCarriesReserveAuthToken
-    && traceIfFalse "ERROR-RESERVE-AUTH-04" reserveUtxoCarriesCorrectInitialDatum
-    && traceIfFalse "ERROR-RESERVE-AUTH-05" reserveUtxoCarriesOnlyAdaTokenKindAndAuthToken
+  if valueOf minted ownCurrencySymbol reserveAuthTokenTokenName < 0
+    then True -- delegating to reserve validator
+    else
+      traceIfFalse "ERROR-RESERVE-AUTH-01" isApprovedByGovernance
+        && traceIfFalse "ERROR-RESERVE-AUTH-02" oneReserveAuthTokenIsMinted
+        && traceIfFalse "ERROR-RESERVE-AUTH-03" reserveUtxoCarriesReserveAuthToken
+        && traceIfFalse "ERROR-RESERVE-AUTH-04" reserveUtxoCarriesCorrectInitialDatum
+        && traceIfFalse "ERROR-RESERVE-AUTH-05" reserveUtxoCarriesOnlyAdaTokenKindAndAuthToken
   where
     info :: Unsafe.TxInfo
     info = Unsafe.scriptContextTxInfo ctx

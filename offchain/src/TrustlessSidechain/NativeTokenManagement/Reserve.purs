@@ -7,6 +7,7 @@ module TrustlessSidechain.NativeTokenManagement.Reserve
   , extractReserveDatum
   , updateReserveUtxo
   , transferToIlliquidCirculationSupply
+  , handover
   ) where
 
 import Contract.Prelude
@@ -639,4 +640,97 @@ transferToIlliquidCirculationSupply
 
   void $ balanceSignAndSubmit
     "Transfer to illiquid circulation supply"
+    { constraints, lookups }
+
+handover ∷
+  ∀ r.
+  SidechainParams →
+  (TransactionInput /\ TransactionOutputWithRefScript) →
+  Run
+    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+    Unit
+handover
+  sp
+  utxo = do
+  { reserveAuthLookups
+  , reserveAuthConstraints
+  } ← reserveAuthLookupsAndConstraints sp
+
+  { icsLookups
+  , icsConstraints
+  } ← illiquidCirculationSupplyLookupsAndConstraints sp
+
+  { governanceLookups
+  , governanceConstraints
+  } ← governanceLookupsAndConstraints sp
+
+  { reserveLookups
+  , reserveConstraints
+  } ← reserveLookupsAndConstraints sp
+
+  versionOracleConfig ← Versioning.getVersionOracleConfig sp
+  reserveAuthPolicy' ← reserveAuthPolicy versionOracleConfig
+
+  illiquidCirculationSupplyValidator ← getIlliquidCirculationSupplyValidator sp
+
+  datum ← fromMaybeThrow (InvalidData "Reserve does not carry inline datum")
+    $ pure
+    $ extractReserveDatum
+    $ (snd >>> unwrap >>> _.output)
+    $ utxo
+
+  (reserveAuthRefTxInput /\ reserveAuthRefTxOutput) ← getReserveAuthScriptRefUtxo
+    sp
+
+  (reserveRefTxInput /\ reserveRefTxOutput) ← getReserveScriptRefUtxo sp
+
+  let
+    tokenKind =
+      unwrap
+        >>> _.immutableSettings
+        >>> unwrap
+        >>> _.tokenKind
+        $ datum
+
+    value = unwrap >>> _.output >>> unwrap >>> _.amount $ snd utxo
+    toHandover =
+      Value.singleton (fst tokenKind) (snd tokenKind)
+        $ valueOf value (fst tokenKind) (snd tokenKind)
+
+    lookups ∷ Lookups.ScriptLookups Void
+    lookups =
+      reserveAuthLookups
+        <> icsLookups
+        <> governanceLookups
+        <> reserveLookups
+        <> Lookups.unspentOutputs (uncurry Map.singleton utxo)
+
+    constraints =
+      reserveAuthConstraints
+        <> icsConstraints
+        <> governanceConstraints
+        <> reserveConstraints
+        <> TxConstraints.mustPayToScript
+          (Scripts.validatorHash illiquidCirculationSupplyValidator)
+          unitDatum
+          DatumInline
+          toHandover
+        <> TxConstraints.mustSpendScriptOutputUsingScriptRef
+          (fst utxo)
+          (toData >>> Redeemer $ Handover)
+          ( RefInput $ mkTxUnspentOut
+              reserveRefTxInput
+              reserveRefTxOutput
+          )
+        <> TxConstraints.mustMintCurrencyUsingScriptRef
+          (Scripts.mintingPolicyHash reserveAuthPolicy')
+          emptyTokenName
+          (BigInt.fromInt (-1))
+          ( RefInput $ mkTxUnspentOut
+              reserveAuthRefTxInput
+              reserveAuthRefTxOutput
+          )
+
+  void $ balanceSignAndSubmit
+    "Handover to illiquid circulation supply"
     { constraints, lookups }
