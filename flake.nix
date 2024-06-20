@@ -15,7 +15,7 @@
     };
 
     cardano-transaction-lib = {
-      url = "github:Plutonomicon/cardano-transaction-lib/v8.0.0";
+      url = "github:Plutonomicon/cardano-transaction-lib/3279526b028c26a6ccb871b7bba4a0cc4a1f2299";
     };
     plutip.follows = "cardano-transaction-lib/plutip";
     iohk-nix.follows = "cardano-transaction-lib/plutip/iohk-nix";
