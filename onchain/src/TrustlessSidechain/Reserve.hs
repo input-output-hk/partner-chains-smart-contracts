@@ -40,6 +40,7 @@ import Plutus.V2.Ledger.Api (
 import PlutusTx qualified
 import PlutusTx.AssocMap (lookup, toList)
 import PlutusTx.Bool
+import TrustlessSidechain.HaskellPrelude (on)
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   ReserveDatum (mutableSettings, stats),
@@ -155,18 +156,38 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
     tokenKind' :: AssetClass
     tokenKind' = get @"tokenKind" . get @"immutableSettings" $ inputDatum
 
-    -- this function verifies that assets of a propagated unique reserve utxo
-    -- change only by reserve tokens and returns the difference wrapped in `Maybe`
-    -- otherwise it returns `Nothing`
+    -- This function verifies that assets of a propagated unique reserve utxo
+    -- change only by reserve tokens and returns the difference of reserve tokens
+    -- wrapped in `Just`. If ADA is not a reserve token then this function allows
+    -- arbitrary change of ADA on the propagated reserve utxo.
+    -- That's to account for `minAda` changes.
+    --
+    -- If other assets besides reserve tokens change it returns `Nothing`.
     changeOfReserveTokens :: Maybe Integer
     changeOfReserveTokens =
-      let diff = txOutValue outputReserveUtxo - txOutValue inputReserveUtxo
-       in case flattenValue diff of
-            [(cs, tn, num)] | AssetClass (cs, tn) == tokenKind' -> Just num
+      let nestedTuples (a, b, c) = (a, (b, c)) -- use lexicographical order
+          ord = compare `on` nestedTuples
+          isAda cs tn = cs == adaSymbol && tn == adaToken
+          isReserveToken cs tn = AssetClass (cs, tn) == tokenKind'
+          diff =
+            sortBy ord $ -- sorting to have ADA at the head of the list
+              flattenValue $
+                txOutValue outputReserveUtxo - txOutValue inputReserveUtxo
+          adaAsReserveToken = tokenKind' == AssetClass (adaSymbol, adaToken)
+       in case diff of
+            -- in two following cases reserve tokens do not change
+            [] -> Just 0
+            [(cs, tn, _)] | isAda cs tn && not adaAsReserveToken -> Just 0
+            -- in two following cases reserve tokens do change
+            [(cs1, tn1, _), (cs2, tn2, num2)]
+              | isAda cs1 tn1 && isReserveToken cs2 tn2 ->
+                Just num2
+            [(cs, tn, num)] | isReserveToken cs tn -> Just num
+            -- every other change is invalid
             _ -> Nothing
 
     inputReserveUtxo :: TxOut
-    inputReserveUtxo =
+    !inputReserveUtxo =
       Unsafe.decode $
         Utils.fromSingleton "ERROR-RESERVE-05" $
           filter (traceIfFalse "ERROR-RESERVE-20" . carriesAuthToken . Unsafe.decode) $
@@ -180,7 +201,7 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
             getContinuingOutputs ctx
 
     inputDatum :: ReserveDatum
-    inputDatum =
+    !inputDatum =
       case extractReserveUtxoDatum inputReserveUtxo of
         Just d -> d
         Nothing -> traceError "ERROR-RESERVE-07"
@@ -214,7 +235,7 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
 
     assetsDoNotChange :: Bool
     assetsDoNotChange =
-      txOutValue inputReserveUtxo == txOutValue outputReserveUtxo
+      changeOfReserveTokens == Just 0
 
     outputIlliquidCirculationSupplyUtxo :: TxOut
     outputIlliquidCirculationSupplyUtxo =
@@ -272,8 +293,8 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
     -- incentive is disallowed.
     allReserveTokensTransferredToICS :: Bool
     allReserveTokensTransferredToICS =
-      reserveTokensOnOutputICSUtxo ==
-        reserveTokensOn inputReserveUtxo + reserveTokensOnICSInputUtxos
+      reserveTokensOnOutputICSUtxo
+        == reserveTokensOn inputReserveUtxo + reserveTokensOnICSInputUtxos
 
     reserveTokensOnOutputICSUtxo :: Integer
     reserveTokensOnOutputICSUtxo =
