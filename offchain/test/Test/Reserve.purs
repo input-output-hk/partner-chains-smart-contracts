@@ -4,15 +4,12 @@ module Test.Reserve
 
 import Contract.Prelude
 
-import Contract.Address (NetworkId(..), validatorHashEnterpriseAddress)
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (Validator)
 import Contract.Scripts as Scripts
 import Contract.Transaction (TransactionOutputWithRefScript)
 import Contract.TxConstraints as TxConstraints
-import Contract.Utxos (UtxoMap)
 import Contract.Value
   ( Value
   , adaSymbol
@@ -34,7 +31,7 @@ import Mote.Monad as Mote.Monad
 import Partial.Unsafe (unsafePartial)
 import Run (EFFECT, Run)
 import Run.Except (EXCEPT)
-import Test.AlwaysPassingScripts (alwaysPassingPolicy, alwaysPassingValidator)
+import Test.AlwaysPassingScripts (alwaysPassingPolicy)
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Utils (WrappedTests, plutipGroup)
@@ -46,11 +43,14 @@ import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
 import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
-import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
+import TrustlessSidechain.NativeTokenManagement.IlliquidCirculationSupply
+  ( findIlliquidCirculationSupplyUtxos
+  )
 import TrustlessSidechain.NativeTokenManagement.Reserve
   ( depositToReserve
   , extractReserveDatum
@@ -95,18 +95,6 @@ tests = plutipGroup "Reserve" $ do
   testScenario6
   testScenario7
 
-findICSUtxos ∷
-  ∀ r.
-  Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
-    UtxoMap
-findICSUtxos =
-  ( Scripts.validatorHash
-      >>> validatorHashEnterpriseAddress MainnetId
-      >>> unsafePartial fromJust
-      <$> mkIcsFakeValidator
-  ) >>= utxosAt
-
 totalAssets ∷ ∀ f. Foldable f ⇒ f (TransactionOutputWithRefScript) → Value
 totalAssets = foldMap
   $ unwrap
@@ -129,29 +117,6 @@ insertFakeGovernancePolicy sidechainParams =
         insertVersionLookupsAndConstraints sidechainParams 1
           (GovernancePolicy /\ governanceFakePolicy)
       >>= balanceSignAndSubmit "Insert governance policy"
-
-mkIcsFakeValidator ∷
-  ∀ r.
-  Run
-    (EXCEPT OffchainError + r)
-    Validator
-mkIcsFakeValidator = alwaysPassingValidator $ BigInt.fromInt 22
-
-insertFakeIlliquidCirculationSupplyValidator ∷
-  ∀ r.
-  SidechainParams →
-  Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
-    Unit
-insertFakeIlliquidCirculationSupplyValidator sidechainParams =
-  do
-    icsFakeValidator ← mkIcsFakeValidator
-
-    void
-      $
-        insertVersionLookupsAndConstraints sidechainParams 1
-          (IlliquidCirculationSupplyValidator /\ icsFakeValidator)
-      >>= balanceSignAndSubmit "Insert illiquid circulation supply validator"
 
 invalidMutableSettings ∷ MutableReserveSettings
 invalidMutableSettings = MutableReserveSettings
@@ -290,7 +255,6 @@ testScenario3 =
         sidechainParams ← dummyInitialiseSidechain
 
         insertFakeGovernancePolicy sidechainParams
-        insertFakeIlliquidCirculationSupplyValidator sidechainParams
 
         let
           initialAmountOfNonAdaTokens = BigInt.fromInt 50
@@ -330,20 +294,6 @@ testScenario3 =
           )
           (liftContract $ throwError $ error "Deposit not sucessful")
 
-fromMaybeTestError ∷
-  ∀ r a.
-  String →
-  Run
-    (EXCEPT OffchainError + CONTRACT + r)
-    (Maybe a) →
-  Run
-    (EXCEPT OffchainError + CONTRACT + r)
-    a
-fromMaybeTestError msg = flip bind $ maybe
-  ( liftContract $ throwError $ error msg
-  )
-  pure
-
 testScenario4 ∷ PlutipTest
 testScenario4 =
   Mote.Monad.test
@@ -354,7 +304,6 @@ testScenario4 =
           sidechainParams ← dummyInitialiseSidechain
 
           insertFakeGovernancePolicy sidechainParams
-          insertFakeIlliquidCirculationSupplyValidator sidechainParams
 
           initialiseReserveUtxo
             sidechainParams
@@ -362,8 +311,9 @@ testScenario4 =
             invalidMutableSettings
             (BigInt.fromInt 2_000_000)
 
-          utxoBefore ← fromMaybeTestError "Utxo after initialization not found" $
-            (Map.toUnfoldable <$> findReserveUtxos sidechainParams)
+          utxoBefore ←
+            Test.Utils.fromMaybeTestError "Utxo after initialization not found" $
+              (Map.toUnfoldable <$> findReserveUtxos sidechainParams)
 
           let
             updatedMutableSettings = MutableReserveSettings
@@ -382,7 +332,7 @@ testScenario4 =
             utxoBefore
 
           utxoAfter ←
-            fromMaybeTestError "Utxo after update not found"
+            Test.Utils.fromMaybeTestError "Utxo after update not found"
               $ Map.toUnfoldable
               <$> findReserveUtxos sidechainParams
 
@@ -412,7 +362,6 @@ testScenario5 =
         sidechainParams ← dummyInitialiseSidechain
 
         insertFakeGovernancePolicy sidechainParams
-        insertFakeIlliquidCirculationSupplyValidator sidechainParams
 
         let
           numOfNonAdaTokens = BigInt.fromInt 101
@@ -445,7 +394,7 @@ testScenario5 =
           mutableSettings
           numOfNonAdaTokens
 
-        utxo ← fromMaybeTestError "Utxo after initialization not found"
+        utxo ← Test.Utils.fromMaybeTestError "Utxo after initialization not found"
           $ Map.toUnfoldable
           <$> findReserveUtxos sidechainParams
 
@@ -458,7 +407,8 @@ testScenario5 =
         let amountOfReserveTokens t = uncurry (valueOf t) tokenKind
 
         reserveAfterTransfer ← totalAssets <$> findReserveUtxos sidechainParams
-        icsAfterTransfer ← map totalAssets findICSUtxos
+        icsAfterTransfer ← map totalAssets $ findIlliquidCirculationSupplyUtxos
+          sidechainParams
 
         unless
           ( amountOfReserveTokens reserveAfterTransfer ==
@@ -489,7 +439,6 @@ testScenario8 =
         sidechainParams ← dummyInitialiseSidechain
 
         insertFakeGovernancePolicy sidechainParams
-        insertFakeIlliquidCirculationSupplyValidator sidechainParams
 
         fakeVt ← alwaysPassingPolicy $ BigInt.fromInt 11
 
@@ -513,7 +462,7 @@ testScenario8 =
           mutableSettings
           numOfAda
 
-        utxo ← fromMaybeTestError "Utxo after initialization not found"
+        utxo ← Test.Utils.fromMaybeTestError "Utxo after initialization not found"
           $ Map.toUnfoldable
           <$> findReserveUtxos sidechainParams
 
@@ -526,7 +475,8 @@ testScenario8 =
         let amountOfReserveTokens t = uncurry (valueOf t) (adaSymbol /\ adaToken)
 
         reserveAfterTransfer ← totalAssets <$> findReserveUtxos sidechainParams
-        icsAfterTransfer ← map totalAssets findICSUtxos
+        icsAfterTransfer ← map totalAssets $ findIlliquidCirculationSupplyUtxos
+          sidechainParams
 
         unless
           ( amountOfReserveTokens reserveAfterTransfer ==
@@ -554,7 +504,6 @@ testScenario6 =
         sidechainParams ← dummyInitialiseSidechain
 
         insertFakeGovernancePolicy sidechainParams
-        insertFakeIlliquidCirculationSupplyValidator sidechainParams
 
         let numOfNonAdaTokens = BigInt.fromInt 101
 
@@ -572,7 +521,7 @@ testScenario6 =
           invalidMutableSettings
           numOfNonAdaTokens
 
-        utxo ← fromMaybeTestError "Utxo after initialization not found"
+        utxo ← Test.Utils.fromMaybeTestError "Utxo after initialization not found"
           $ Map.toUnfoldable
           <$> findReserveUtxos sidechainParams
 
@@ -581,7 +530,8 @@ testScenario6 =
           utxo
 
         reserveUtxosAfterHandover ← findReserveUtxos sidechainParams
-        icsAfterTransfer ← map totalAssets findICSUtxos
+        icsAfterTransfer ← map totalAssets $ findIlliquidCirculationSupplyUtxos
+          sidechainParams
 
         unless (Map.isEmpty reserveUtxosAfterHandover)
           ( liftContract $ throwError $ error
@@ -605,7 +555,6 @@ testScenario7 =
         sidechainParams ← dummyInitialiseSidechain
 
         insertFakeGovernancePolicy sidechainParams
-        insertFakeIlliquidCirculationSupplyValidator sidechainParams
 
         let numOfAda = BigInt.fromInt 3_000_000
 
@@ -615,7 +564,7 @@ testScenario7 =
           invalidMutableSettings
           numOfAda
 
-        utxo ← fromMaybeTestError "Utxo after initialization not found"
+        utxo ← Test.Utils.fromMaybeTestError "Utxo after initialization not found"
           $ Map.toUnfoldable
           <$> findReserveUtxos sidechainParams
 
@@ -624,7 +573,8 @@ testScenario7 =
           utxo
 
         reserveUtxosAfterHandover ← findReserveUtxos sidechainParams
-        icsAfterTransfer ← map totalAssets findICSUtxos
+        icsAfterTransfer ← map totalAssets $ findIlliquidCirculationSupplyUtxos
+          sidechainParams
 
         unless (Map.isEmpty reserveUtxosAfterHandover)
           ( liftContract $ throwError $ error
@@ -638,4 +588,3 @@ testScenario7 =
           ( liftContract $ throwError $ error
               "Reserve tokens not transferred to illiquid circulation supply"
           )
-

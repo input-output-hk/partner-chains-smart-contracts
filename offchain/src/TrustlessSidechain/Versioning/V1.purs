@@ -34,6 +34,9 @@ import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.FUELBurningPolicy.V1 as FUELBurningPolicy.V1
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import TrustlessSidechain.MerkleRoot as MerkleRoot
+import TrustlessSidechain.NativeTokenManagement.IlliquidCirculationSupply
+  ( illiquidCirculationSupplyValidator
+  )
 import TrustlessSidechain.NativeTokenManagement.Reserve
   ( reserveAuthPolicy
   , reserveValidator
@@ -179,6 +182,8 @@ getNativeTokenManagementPoliciesAndValidators sp = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sp
   reserveAuthPolicy' ← reserveAuthPolicy versionOracleConfig
   reserveValidator' ← reserveValidator versionOracleConfig
+  illiquidCirculationSupplyValidator' ← illiquidCirculationSupplyValidator
+    versionOracleConfig
 
   let
     versionedPolicies = List.fromFoldable
@@ -186,6 +191,7 @@ getNativeTokenManagementPoliciesAndValidators sp = do
       ]
     versionedValidators = List.fromFoldable
       [ ReserveValidator /\ reserveValidator'
+      , IlliquidCirculationSupplyValidator /\ illiquidCirculationSupplyValidator'
       ]
 
   pure $ { versionedPolicies, versionedValidators }

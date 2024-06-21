@@ -35,9 +35,14 @@ module TrustlessSidechain.Types.Unsafe (
   getPubKeyCredential,
   getScriptCredential,
   CurrencySymbol (..),
+  Datum (..),
+  DatumHash (..),
   DCert (..),
   LedgerBytes (..),
   OutputDatum (..),
+  isNoOutputDatum,
+  getOutputDatumHash,
+  getOutputDatum,
   POSIXTimeRange (..),
   PubKeyHash (..),
   ScriptContext (..),
@@ -141,6 +146,8 @@ makeUnsafeNewtypes ''Types.UpdateCommitteeHashRedeemer
 makeUnsafeNewtypes ''V2.Address
 makeUnsafeNewtypes ''V2.Credential
 makeUnsafeNewtypes ''V2.CurrencySymbol
+makeUnsafeNewtypes ''V2.Datum
+makeUnsafeNewtypes ''V2.DatumHash
 makeUnsafeNewtypes ''V2.DCert
 makeUnsafeNewtypes ''V2.LedgerBytes
 makeUnsafeNewtypes ''V2.OutputDatum
@@ -164,6 +171,7 @@ makeUnsafeGetters ''Types.SidechainParams
 makeUnsafeGetters ''Types.UpdateCommitteeHashRedeemer
 makeUnsafeGetters ''V2.Address
 makeUnsafeGetters ''V2.Credential
+makeUnsafeGetters ''V2.OutputDatum
 makeUnsafeGetters ''V2.ScriptContext
 makeUnsafeGetters ''V2.ScriptPurpose
 makeUnsafeGetters ''V2.TxInfo
@@ -186,7 +194,7 @@ ownCurrencySymbol bd = case getMinting $ scriptContextPurpose bd of
 getContinuingOutputs :: ScriptContext -> [TxOut]
 getContinuingOutputs ctx
   | Just inInfo <- findOwnInput ctx =
-    filter (f (txOutAddress . txInInfoResolved $ inInfo)) (txInfoOutputs $ scriptContextTxInfo ctx)
+      filter (f (txOutAddress . txInInfoResolved $ inInfo)) (txInfoOutputs $ scriptContextTxInfo ctx)
   where
     f addr out = addr == txOutAddress out
 getContinuingOutputs _ = traceError "Lf" -- "Can't get any continuing outputs"
@@ -197,9 +205,9 @@ getContinuingOutputs _ = traceError "Lf" -- "Can't get any continuing outputs"
 findOwnInput :: ScriptContext -> Maybe TxInInfo
 findOwnInput sc
   | Just txOutRef <- getSpending $ scriptContextPurpose sc =
-    find
-      (\inInfo -> (unTxOutRef . txInInfoOutRef $ inInfo) == unTxOutRef txOutRef)
-      (txInfoInputs . scriptContextTxInfo $ sc)
+      find
+        (\inInfo -> (unTxOutRef . txInInfoOutRef $ inInfo) == unTxOutRef txOutRef)
+        (txInfoInputs . scriptContextTxInfo $ sc)
 findOwnInput _ = Nothing
 
 -- | Check if a transaction was signed by the given public key.

@@ -9,7 +9,6 @@ module TrustlessSidechain.NativeTokenManagement.Types
 
 import Contract.Prelude
 
-import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -155,11 +154,11 @@ instance Show IlliquidCirculationSupplyRedeemer where
   show = genericShow
 
 instance ToData IlliquidCirculationSupplyRedeemer where
-  toData DepositMoreToSupply = Constr (BigNum.fromInt 0) []
-  toData WithdrawFromSupply = Constr (BigNum.fromInt 1) []
+  toData DepositMoreToSupply = Integer (BigInt.fromInt 0)
+  toData WithdrawFromSupply = Integer (BigInt.fromInt 1)
 
 instance FromData IlliquidCirculationSupplyRedeemer where
   fromData = case _ of
-    Constr tag [] | tag == BigNum.fromInt 0 → pure DepositMoreToSupply
-    Constr tag [] | tag == BigNum.fromInt 1 → pure WithdrawFromSupply
+    Integer tag | tag == BigInt.fromInt 0 → pure DepositMoreToSupply
+    Integer tag | tag == BigInt.fromInt 1 → pure WithdrawFromSupply
     _ → Nothing

@@ -14,6 +14,7 @@ import Test.Data as Data
 import Test.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import Test.FUELProxyPolicy as FUELProxyPolicy
 import Test.GarbageCollector as GarbageCollector
+import Test.IlliquidCirculationSupply as IlliquidCirculationSupply
 import Test.InitSidechain as InitSidechain
 import Test.InitSidechain.CandidatePermissionToken as InitCandidatePermissionToken
 import Test.InitSidechain.Checkpoint as InitCheckpoint
@@ -60,6 +61,7 @@ main = do
           ConfigFile.tests
 
         group "Plutip integration tests" do
+          IlliquidCirculationSupply.tests
           Reserve.tests
           InitCandidatePermissionToken.tests
           InitSidechain.tests
