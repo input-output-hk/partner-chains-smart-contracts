@@ -156,6 +156,7 @@ insertFakeIlliquidCirculationSupplyValidator sidechainParams =
 invalidMutableSettings ∷ MutableReserveSettings
 invalidMutableSettings = MutableReserveSettings
   { vFunctionTotalAccrued: unsafePartial $ fromJust $ mkCurrencySymbol mempty
+  , incentiveAmount: BigInt.fromInt (-1)
   }
 
 dummyInitialiseSidechain ∷
@@ -372,6 +373,7 @@ testScenario4 =
                     $ mkCurrencySymbol
                     $ hexToByteArrayUnsafe
                         "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
+              , incentiveAmount: BigInt.fromInt 20
               }
 
           updateReserveUtxo
@@ -420,6 +422,8 @@ testScenario5 =
         fakeVt ← alwaysPassingPolicy $ BigInt.fromInt 11
 
         let
+          incentiveAmount = BigInt.fromInt 1
+
           mutableSettings = MutableReserveSettings
             { vFunctionTotalAccrued:
                 unsafePartial
@@ -427,6 +431,7 @@ testScenario5 =
                   $ mpsSymbol
                   $ Scripts.mintingPolicyHash
                   $ fakeVt
+            , incentiveAmount
             }
 
           immutableSettings = ImmutableReserveSettings
@@ -464,18 +469,21 @@ testScenario5 =
           )
 
         unless
-          ( amountOfReserveTokens icsAfterTransfer == numOfTransferTokens
+          ( amountOfReserveTokens icsAfterTransfer ==
+              (numOfTransferTokens - incentiveAmount)
           )
           ( liftContract $ throwError $ error
               "Incorrect number of reserve tokens in ICS after transfer"
           )
+
+        uncurry Test.Utils.assertIHaveOutputWithAsset tokenKind
 
         pure unit
 
 testScenario8 ∷ PlutipTest
 testScenario8 =
   Mote.Monad.test
-    "Transfer to illiquid circulation supply with non-ADA as reserve token"
+    "Transfer to illiquid circulation supply with ADA as reserve token"
     $ Test.PlutipTest.mkPlutipConfigTest initialDistribution
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         sidechainParams ← dummyInitialiseSidechain
@@ -488,6 +496,7 @@ testScenario8 =
         let
           numOfAda = BigInt.fromInt 5_000_000
           numOfTransferred = BigInt.fromInt 3_000_000
+          incentiveAmount = BigInt.fromInt 0
           mutableSettings = MutableReserveSettings
             { vFunctionTotalAccrued:
                 unsafePartial
@@ -495,6 +504,7 @@ testScenario8 =
                   $ mpsSymbol
                   $ Scripts.mintingPolicyHash
                   $ fakeVt
+            , incentiveAmount
             }
 
         initialiseReserveUtxo

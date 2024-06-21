@@ -539,7 +539,7 @@ updateReserveUtxo sp updatedMutableSettings utxo = do
 transferToIlliquidCirculationSupply ∷
   ∀ r.
   SidechainParams →
-  BigInt →
+  BigInt → -- total amount of assets paid out until now
   MintingPolicy →
   (TransactionInput /\ TransactionOutputWithRefScript) →
   Run
@@ -591,13 +591,24 @@ transferToIlliquidCirculationSupply
         >>> _.vFunctionTotalAccrued
         $ datum
 
+    incentiveAmount =
+      unwrap
+        >>> _.mutableSettings
+        >>> unwrap
+        >>> _.incentiveAmount
+        $ datum
+
   unless
     ( mpsSymbol (Scripts.mintingPolicyHash vFunctionTotalAccruedMintingPolicy) ==
         Just vFunctionTotalAccruedCurrencySymbol
     ) $ throw (InvalidData "Passed ICS minting policy is not correct")
 
   let
-    toTransferAsInt = totalAccruedTillNow - tokenTotalAmountTransferred
+    toTransferAsInt =
+      totalAccruedTillNow - tokenTotalAmountTransferred
+
+    incentiveAsValue =
+      Value.singleton (fst tokenKind) (snd tokenKind) incentiveAmount
 
     toTransferAsValue =
       Value.singleton (fst tokenKind) (snd tokenKind) toTransferAsInt
@@ -636,7 +647,7 @@ transferToIlliquidCirculationSupply
           (Scripts.validatorHash illiquidCirculationSupplyValidator)
           unitDatum
           DatumInline
-          toTransferAsValue
+          (toTransferAsValue <> negation incentiveAsValue)
 
   void $ balanceSignAndSubmit
     "Transfer to illiquid circulation supply"

@@ -355,12 +355,13 @@ genRD = do
   pt <- arbitrary
   ArbitraryCurrencySymbol cs1 <- arbitrary
   ArbitraryCurrencySymbol cs2 <- arbitrary
+  i <- arbitrary
   c <- arbitrary
 
   pure $
     ReserveDatum
       (ImmutableReserveSettings (POSIXTime pt) (AssetClass (cs1, "")))
-      (MutableReserveSettings cs2)
+      (MutableReserveSettings cs2 i)
       (ReserveStats c)
 
 genRR :: Gen ReserveRedeemer

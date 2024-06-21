@@ -226,6 +226,10 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
     vFunctionTotalAccrued' =
       get @"vFunctionTotalAccrued" . get @"mutableSettings" $ inputDatum
 
+    incentiveAmount :: Integer
+    incentiveAmount =
+      get @"incentiveAmount" . get @"mutableSettings" $ inputDatum
+
     numOfVtTokensMinted :: Integer
     numOfVtTokensMinted =
       valueOf minted vFunctionTotalAccrued' vFunctionTotalAccruedTokenName
@@ -257,14 +261,19 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
         (valueOf . txOutValue $ txOut)
         (unAssetClass tokenKind')
 
+    -- It is allowed to claim an incentiveAmount tokens when withdrawing assets
+    -- from reserve.  All the remaining funds must be sent to ICS.
     correctAmountOfReserveTokensTransferredToICS :: Bool
     correctAmountOfReserveTokensTransferredToICS =
-      reserveTokensOnOutputICSUtxo
+      reserveTokensOnOutputICSUtxo + incentiveAmount
         == (numOfVtTokensMinted - tokensTransferredUpUntilNow) + reserveTokensOnICSInputUtxos
 
+    -- This check is performed during handover.  At this point claiming any
+    -- incentive is disallowed.
     allReserveTokensTransferredToICS :: Bool
     allReserveTokensTransferredToICS =
-      reserveTokensOnOutputICSUtxo == reserveTokensOn inputReserveUtxo + reserveTokensOnICSInputUtxos
+      reserveTokensOnOutputICSUtxo ==
+        reserveTokensOn inputReserveUtxo + reserveTokensOnICSInputUtxos
 
     reserveTokensOnOutputICSUtxo :: Integer
     reserveTokensOnOutputICSUtxo =

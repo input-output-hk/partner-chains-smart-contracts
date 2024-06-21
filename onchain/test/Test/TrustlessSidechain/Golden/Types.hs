@@ -536,7 +536,7 @@ sampleReserveDatum =
           (POSIXTime 1234513245)
           (AssetClass ("0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d", "asdf"))
     , mutableSettings =
-        MutableReserveSettings "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
+        MutableReserveSettings "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d" 0
     , stats = ReserveStats 15
     }
 

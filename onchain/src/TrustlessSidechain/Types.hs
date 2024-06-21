@@ -963,18 +963,33 @@ instance UnsafeFromData ImmutableReserveSettings where
 
 makeHasField ''ImmutableReserveSettings
 
-newtype MutableReserveSettings = MutableReserveSettings
+data MutableReserveSettings = MutableReserveSettings
   { -- | `vFunctionTotalAccrued` is a currency symbol of a minting policy
     -- that dictates the upper bound on the number of `tokenKind` tokens that
     -- can be transferred from a reserve utxo to an illiquid circulation supply
     -- from `t0` till now
     vFunctionTotalAccrued :: CurrencySymbol
+  , -- | The amount of `tokenKind` the user is allowed to claim when releasing
+    -- money from the reserve
+    incentiveAmount :: Integer
   }
   deriving stock
     ( TSPrelude.Eq
     , TSPrelude.Show
     )
-  deriving newtype (ToData, FromData, UnsafeFromData)
+
+instance ToData MutableReserveSettings where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (MutableReserveSettings vt i) =
+    productToData2 vt i
+
+instance FromData MutableReserveSettings where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData2 MutableReserveSettings
+
+instance UnsafeFromData MutableReserveSettings where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData2 MutableReserveSettings
 
 makeHasField ''MutableReserveSettings
 

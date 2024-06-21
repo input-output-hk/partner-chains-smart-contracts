@@ -418,12 +418,14 @@ genReserveDatum = do
   ArbitraryCurrencySymbol cs ← arbitrary
   ArbitraryBigInt c ← arbitrary
   ArbitraryAssetClass ac ← arbitrary
+  ArbitraryBigInt i ← arbitrary
 
   pure $
     ReserveDatum
       { immutableSettings: ImmutableReserveSettings
           { t0: (POSIXTime pt), tokenKind: ac }
-      , mutableSettings: MutableReserveSettings { vFunctionTotalAccrued: cs }
+      , mutableSettings: MutableReserveSettings
+          { vFunctionTotalAccrued: cs, incentiveAmount: i }
       , stats: ReserveStats { tokenTotalAmountTransferred: c }
       }
 

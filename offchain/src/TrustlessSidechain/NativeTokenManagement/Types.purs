@@ -50,6 +50,7 @@ instance FromData ImmutableReserveSettings where
 
 newtype MutableReserveSettings = MutableReserveSettings
   { vFunctionTotalAccrued ∷ CurrencySymbol
+  , incentiveAmount :: BigInt.BigInt
   }
 
 derive newtype instance Eq MutableReserveSettings
@@ -62,13 +63,14 @@ instance Show MutableReserveSettings where
   show = genericShow
 
 instance ToData MutableReserveSettings where
-  toData (MutableReserveSettings { vFunctionTotalAccrued }) = toData
-    vFunctionTotalAccrued
+  toData (MutableReserveSettings { vFunctionTotalAccrued, incentiveAmount }) =
+    productToData2 vFunctionTotalAccrued incentiveAmount
 
 instance FromData MutableReserveSettings where
-  fromData dat = do
-    vFunctionTotalAccrued ← fromData dat
-    pure $ MutableReserveSettings { vFunctionTotalAccrued }
+  fromData = productFromData2
+    ( \x y →
+        MutableReserveSettings { vFunctionTotalAccrued: x, incentiveAmount: y }
+    )
 
 newtype ReserveStats = ReserveStats
   { tokenTotalAmountTransferred ∷ BigInt.BigInt
