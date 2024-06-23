@@ -48,7 +48,6 @@ import Contract.TxConstraints (InputWithScriptRef(RefInput), TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Data.Array as Array
 import Data.Map as Map
-import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT, throw)
 import Run.Except as Run
@@ -211,7 +210,7 @@ mustMintCommitteePlainSchnorrSecp256k1ATMSPolicy
       (unwrap committeeCertificateMint).thresholdNumerator
       (unwrap committeeCertificateMint).thresholdDenominator
       (curCommitteePubKeys /\ allCurCommitteeSignatures)
-    curCommitteeHash = unsafePartial $ Utils.Crypto.aggregateKeys $ map unwrap
+    curCommitteeHash = Utils.Crypto.aggregateKeys $ map unwrap
       curCommitteePubKeys
 
   -- Grabbing CommitteePlainSchnorrSecp256k1ATMSPolicy

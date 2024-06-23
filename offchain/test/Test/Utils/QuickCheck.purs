@@ -342,8 +342,6 @@ derive newtype instance Eq ArbitraryBigNum
 
 derive newtype instance Ord ArbitraryBigNum
 
--- derive newtype instance Semiring ArbitraryBigNum JANKUN
-
 -- derive newtype instance Ring ArbitraryBigNum
 
 derive instance Generic ArbitraryBigNum _
@@ -364,8 +362,6 @@ newtype ArbitraryBigInt = ArbitraryBigInt BigInt.BigInt
 derive newtype instance Eq ArbitraryBigInt
 
 derive newtype instance Ord ArbitraryBigInt
-
--- derive newtype instance Semiring ArbitraryBigInt JANKUN
 
 -- derive newtype instance Ring ArbitraryBigInt
 

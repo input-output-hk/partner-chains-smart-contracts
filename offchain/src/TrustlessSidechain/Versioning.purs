@@ -50,7 +50,6 @@ import TrustlessSidechain.InitSidechain.Utils (initTokenCurrencyInfo)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (toAddress)
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
-import TrustlessSidechain.Versioning.Types (toScriptHash)
 import TrustlessSidechain.Versioning.Types as Types
 import TrustlessSidechain.Versioning.Utils
   ( versionOracleInitTokenName
@@ -434,12 +433,12 @@ getActualVersionedPoliciesAndValidators { sidechainParams, atmsKind } version =
     let
       versionedPoliciesIndexedByHash =
         Map.fromFoldable
-          $ map (\t@(Tuple _ script) → toScriptHash script /\ t)
+          $ map (\t@(Tuple _ script) → PlutusScript.hash script /\ t)
           $ versionedPolicies
 
       versionedValidatorsIndexedByHash =
         Map.fromFoldable
-          $ map (\t@(Tuple _ script) → toScriptHash script /\ t)
+          $ map (\t@(Tuple _ script) → PlutusScript.hash script /\ t)
           $ versionedValidators
 
     -- Get script hashes of versioned scripts that are linked to the version

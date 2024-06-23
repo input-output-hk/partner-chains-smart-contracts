@@ -12,7 +12,6 @@ import Contract.Wallet as Wallet
 import Data.Array as Array
 import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
-import Partial.Unsafe (unsafePartial)
 import Run (liftEffect) as Run
 import Run.Except (note) as Run
 import Test.MerkleRoot as Test.MerkleRoot
@@ -88,7 +87,7 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
             , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
             , initAggregatedCommittee: toData
-                $ unsafePartial Utils.Crypto.aggregateKeys
+                $ Utils.Crypto.aggregateKeys
                 $ map unwrap
                 $ map
                     Utils.Crypto.toPubKeyUnsafe
@@ -242,7 +241,7 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
             , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
             , initAggregatedCommittee: toData
-                $ unsafePartial Utils.Crypto.aggregateKeys
+                $ Utils.Crypto.aggregateKeys
                 $ map unwrap
                 $ map
                     Utils.Crypto.toPubKeyUnsafe
@@ -299,7 +298,7 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
           $ UpdateCommitteeHash.serialiseUchmHash
           $ UpdateCommitteeHashMessage
               { sidechainParams: sidechainParams
-              , newAggregatePubKeys: unsafePartial Utils.Crypto.aggregateKeys $ map
+              , newAggregatePubKeys: Utils.Crypto.aggregateKeys $ map
                   unwrap
                   committee3PubKeys
               ,
@@ -317,7 +316,7 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
         $
           UpdateCommitteeHashParams
             { sidechainParams
-            , newAggregatePubKeys: unsafePartial Utils.Crypto.aggregateKeys $ map
+            , newAggregatePubKeys: Utils.Crypto.aggregateKeys $ map
                 unwrap
                 committee3PubKeys
             , aggregateSignature:

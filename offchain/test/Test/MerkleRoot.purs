@@ -24,7 +24,6 @@ import Data.Bifunctor (lmap)
 import Data.ByteArray (ByteArray)
 import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
-import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run (liftEffect) as Run
 import Run.Except (EXCEPT)
@@ -198,7 +197,7 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
           , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
           , initAggregatedCommittee: PlutusData.toData
-              $ unsafePartial Crypto.aggregateKeys
+              $ Crypto.aggregateKeys
               $ map unwrap
                   initCommitteePubKeys
           , initSidechainEpoch: zero
@@ -312,7 +311,7 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
           , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
           , initAggregatedCommittee: PlutusData.toData
-              $ unsafePartial Crypto.aggregateKeys
+              $ Crypto.aggregateKeys
               $ map unwrap
                   initCommitteePubKeys
           , initSidechainEpoch: zero
@@ -408,7 +407,7 @@ testScenario3 =
             , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
             , initAggregatedCommittee: PlutusData.toData
-                $ unsafePartial Crypto.aggregateKeys
+                $ Crypto.aggregateKeys
                 $ map unwrap
                     initCommitteePubKeys
             , initSidechainEpoch: zero

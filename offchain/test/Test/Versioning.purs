@@ -10,7 +10,6 @@ import Data.Array as Array
 import Data.List as List
 import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
-import Partial.Unsafe (unsafePartial)
 import Run (AFF, EFFECT, Run)
 import Run.Except (EXCEPT)
 import Test.PlutipTest (PlutipTest)
@@ -91,7 +90,7 @@ testInsertAndInvalidateSuccessScenario =
               { initChainId: BigInt.fromInt 1
               , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
               , initUtxo: genesisUtxo
-              , initAggregatedCommittee: toData $ unsafePartial aggregateKeys
+              , initAggregatedCommittee: toData $ aggregateKeys
                   $ map unwrap initCommitteePubKeys
               , initSidechainEpoch: zero
               , initThresholdNumerator: BigInt.fromInt 2
@@ -165,7 +164,7 @@ testInsertSameScriptTwiceSuccessScenario =
               { initChainId: BigInt.fromInt 1
               , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
               , initUtxo: genesisUtxo
-              , initAggregatedCommittee: toData $ unsafePartial aggregateKeys
+              , initAggregatedCommittee: toData $ aggregateKeys
                   $ map unwrap initCommitteePubKeys
               , initSidechainEpoch: zero
               , initThresholdNumerator: BigInt.fromInt 2
@@ -243,7 +242,7 @@ testInsertUnversionedScriptSuccessScenario =
               { initChainId: BigInt.fromInt 1
               , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
               , initUtxo: genesisUtxo
-              , initAggregatedCommittee: toData $ unsafePartial aggregateKeys
+              , initAggregatedCommittee: toData $ aggregateKeys
                   $ map unwrap initCommitteePubKeys
               , initSidechainEpoch: zero
               , initThresholdNumerator: BigInt.fromInt 2
@@ -305,7 +304,7 @@ testRemovingTwiceSameScriptFailScenario =
               { initChainId: BigInt.fromInt 1
               , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
               , initUtxo: genesisUtxo
-              , initAggregatedCommittee: toData $ unsafePartial aggregateKeys
+              , initAggregatedCommittee: toData $ aggregateKeys
                   $ map unwrap initCommitteePubKeys
               , initSidechainEpoch: zero
               , initThresholdNumerator: BigInt.fromInt 2
@@ -373,7 +372,7 @@ testRemovingScriptInsertedMultipleTimesSuccessScenario =
               { initChainId: BigInt.fromInt 1
               , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
               , initUtxo: genesisUtxo
-              , initAggregatedCommittee: toData $ unsafePartial aggregateKeys
+              , initAggregatedCommittee: toData $ aggregateKeys
                   $ map unwrap initCommitteePubKeys
               , initSidechainEpoch: zero
               , initThresholdNumerator: BigInt.fromInt 2
@@ -455,7 +454,7 @@ testInsertScriptsPresentInPreviousVersion =
               { initChainId: BigInt.fromInt 1
               , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
               , initUtxo: genesisUtxo
-              , initAggregatedCommittee: toData $ unsafePartial aggregateKeys
+              , initAggregatedCommittee: toData $ aggregateKeys
                   $ map unwrap initCommitteePubKeys
               , initSidechainEpoch: zero
               , initThresholdNumerator: BigInt.fromInt 2

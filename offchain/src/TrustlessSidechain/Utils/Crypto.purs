@@ -403,12 +403,12 @@ isSorted xss = case Array.tail xss of
 
 foreign import blake2b256 ∷ String → String
 
-blake2b256Hash ∷ Partial ⇒ ByteArray → ByteArray
-blake2b256Hash d = hexToByteArrayUnsafe $ blake2b256 $ byteArrayToHex d
+blake2b256Hash ∷ ByteArray → ByteArray
+blake2b256Hash d = Unsafe.unsafePartial $ hexToByteArrayUnsafe $ blake2b256 $ byteArrayToHex d
 
 -- | `aggregateKeys` aggregates a list of keys s.t. the resulting `ByteArray`
 -- | may be stored in the `UpdateCommitteeDatum` in an onchain compatible way.
 -- | Note: this sorts the input array
-aggregateKeys ∷ Partial ⇒ Array ByteArray → ByteArray
+aggregateKeys ∷ Array ByteArray → ByteArray
 aggregateKeys keys = blake2b256Hash $ mconcat $ Array.sort keys
 

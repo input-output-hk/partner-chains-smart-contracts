@@ -15,7 +15,6 @@ import Data.Array as Array
 import Data.Maybe as Maybe
 import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
-import Partial.Unsafe (unsafePartial)
 import Partial.Unsafe as Unsafe
 import Run as Run
 import Test.PlutipTest (PlutipTest)
@@ -107,7 +106,7 @@ testScenario1 =
             , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
             , initAggregatedCommittee: toData
-                $ unsafePartial Utils.Crypto.aggregateKeys
+                $ Utils.Crypto.aggregateKeys
                 $ map unwrap initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2

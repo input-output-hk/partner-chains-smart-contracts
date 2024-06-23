@@ -141,7 +141,7 @@ initializeSidechain = do
       { initChainId: BigInt.fromInt 1
       , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
       , initUtxo: genesisUtxo
-      , initAggregatedCommittee: PlutusData.toData $ unsafePartial aggregateKeys
+      , initAggregatedCommittee: PlutusData.toData $ aggregateKeys
           $ map unwrap
               initCommitteePubKeys
       , initSidechainEpoch: zero

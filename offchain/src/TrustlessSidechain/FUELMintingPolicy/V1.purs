@@ -312,7 +312,7 @@ mkMintFuelLookupAndConstraints
 
     let
       entryBytes = unwrap $ encodeCbor $ toData merkleTreeEntry
-      cborMteHashed = unsafePartial $ blake2b256Hash entryBytes
+      cborMteHashed = blake2b256Hash entryBytes
       rootHash = rootMp entryBytes merkleProof
 
     cborMteHashedTn ←

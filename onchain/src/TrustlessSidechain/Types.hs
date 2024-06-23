@@ -13,7 +13,6 @@ module TrustlessSidechain.Types (
   CheckpointDatum (..),
   CheckpointMessage (..),
   CheckpointParameter (..),
-  CustomAssetClass(..),
   CombinedMerkleProof (..),
   CommitteeCertificateMint (..),
   DParameterValidatorDatum (..),
@@ -54,6 +53,7 @@ import Plutus.V2.Ledger.Api (
   TxOutRef,
   ValidatorHash,
  )
+import Plutus.V1.Ledger.Value (AssetClass)
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
@@ -634,36 +634,6 @@ data ATMSRedeemer
 PlutusTx.makeIsDataIndexed ''ATMSRedeemer [('ATMSMint, 0), ('ATMSBurn, 1)]
 
 
-
-data CustomAssetClass = CustomAssetClass
-  { customCurrencySymbol :: CurrencySymbol
-  , customTokenName :: TokenName
-  }
-  deriving stock
-    ( TSPrelude.Show
-    , TSPrelude.Eq
-    )
-
-PlutusTx.makeLift ''CustomAssetClass
-makeHasField ''CustomAssetClass
-
--- | @since Unreleased
-instance ToData CustomAssetClass where
-  {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData (CustomAssetClass {..}) =
-    productToData2 customCurrencySymbol customTokenName
-
--- | @since Unreleased
-instance FromData CustomAssetClass where
-  {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData2 CustomAssetClass
-
--- | @since Unreleased
-instance UnsafeFromData CustomAssetClass where
-  {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData = productUnsafeFromData2 CustomAssetClass
-
-
 -- | 'Checkpoint' is used as the parameter for the validator.
 --
 -- @since v4.0.0
@@ -674,7 +644,7 @@ data CheckpointParameter = CheckpointParameter
     -- identify the transaction.
     --
     -- @since v4.0.0
-    assetClass :: CustomAssetClass
+    assetClass :: AssetClass
   }
   deriving stock
     ( -- | @since v4.0.0

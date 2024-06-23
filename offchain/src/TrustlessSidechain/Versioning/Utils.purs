@@ -81,8 +81,7 @@ import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(VersionOracleValidator, VersionOraclePolicy)
   )
 import TrustlessSidechain.Versioning.Types
-  ( class Versionable
-  , ScriptId
+  ( ScriptId
   , VersionOracle(VersionOracle)
   , VersionOracleConfig(VersionOracleConfig)
   , VersionOracleDatum(VersionOracleDatum)
@@ -91,8 +90,6 @@ import TrustlessSidechain.Versioning.Types
       , InitializeVersionOracle
       , BurnVersionOracle
       )
-  , toPlutusScript
-  , toScriptHash
   )
 import Type.Row (type (+))
 
@@ -181,22 +178,16 @@ getVersionOracleConfig sp = do
 -- | reference script.  Additionally, equip minted token with a VersionOracle
 -- | datum.  Requires burning one init token.
 initializeVersionLookupsAndConstraints ∷
-  ∀ a r.
-  Versionable a ⇒
+  ∀ r.
   SidechainParams →
   Int → -- ^ Script version
-  Tuple ScriptId a → -- ^ Script ID and the script itself
+  Tuple ScriptId PlutusScript → -- ^ Script ID and the script itself
   Run (APP + r)
     { lookups ∷ ScriptLookups
     , constraints ∷ TxConstraints
     }
-initializeVersionLookupsAndConstraints sp ver (Tuple scriptId script) =
-  case toPlutusScript script of
-    Nothing → -- Special case for minting policies that use NativeScript.
-
-      pure { lookups: mempty, constraints: mempty }
-    Just versionedScript → do
-
+initializeVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
+  do
       burnVersionInitToken ← burnOneVersionInitToken sp
 
       -- Preparing versioning scripts and tokens
@@ -208,7 +199,7 @@ initializeVersionLookupsAndConstraints sp ver (Tuple scriptId script) =
       -- Prepare datum and other boilerplate
       -----------------------------------
       let
-        versionedScriptHash = toScriptHash script
+        versionedScriptHash = PlutusScript.hash versionedScript
         versionOracle = VersionOracle
           { version: BigNum.fromInt ver
           , scriptId
@@ -261,22 +252,16 @@ initializeVersionLookupsAndConstraints sp ver (Tuple scriptId script) =
 -- | reference script.  Additionally, equip minted token with a VersionOracle
 -- | datum.  Requires governance approval
 insertVersionLookupsAndConstraints ∷
-  ∀ a r.
-  Versionable a ⇒
+  ∀ r.
   SidechainParams →
   Int → -- ^ Script version
-  Tuple ScriptId a → -- ^ Script ID and the script itself
+  Tuple ScriptId PlutusScript → -- ^ Script ID and the script itself
   Run (APP + r)
     { lookups ∷ ScriptLookups
     , constraints ∷ TxConstraints
     }
-insertVersionLookupsAndConstraints sp ver (Tuple scriptId script) =
-  case toPlutusScript script of
-    Nothing → -- Special case for minting policies that use NativeScript.
-
-      pure { lookups: mempty, constraints: mempty }
-    Just versionedScript → do
-
+insertVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
+  do
       -- Preparing versioning scripts and tokens
       -----------------------------------
       { versionOracleMintingPolicy, versionOracleCurrencySymbol } ←
@@ -286,7 +271,7 @@ insertVersionLookupsAndConstraints sp ver (Tuple scriptId script) =
       -- Prepare datum and other boilerplate
       -----------------------------------
       let
-        versionedScriptHash = toScriptHash script
+        versionedScriptHash = PlutusScript.hash versionedScript
         versionOracle = VersionOracle
           { version: BigNum.fromInt ver
           , scriptId

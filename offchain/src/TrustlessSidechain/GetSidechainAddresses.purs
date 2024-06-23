@@ -46,6 +46,9 @@ import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address
   ( toAddress
   )
+import TrustlessSidechain.Utils.Asset
+  ( currencySymbolToHex
+  )
 import TrustlessSidechain.Versioning as Versioning
 import TrustlessSidechain.Versioning.Types
   ( ScriptId
@@ -138,7 +141,7 @@ getSidechainAddresses
   { mintingPolicy: dsConfPolicy } ← DistributedSet.dsConfCurrencyInfo
     sidechainParams
   let
-    dsConfPolicyId = byteArrayToHex $ unwrap $ encodeCbor $ PlutusScript.hash
+    dsConfPolicyId = currencySymbolToHex $ PlutusScript.hash
       dsConfPolicy
 
   mCandidatePermissionPolicyId ←
@@ -146,7 +149,7 @@ getSidechainAddresses
       { mintingPolicy: candidatePermissionPolicy } ←
         CandidatePermissionToken.candidatePermissionCurrencyInfo sidechainParams
       let
-        candidatePermissionPolicyId = byteArrayToHex $ unwrap $ encodeCbor $
+        candidatePermissionPolicyId = currencySymbolToHex $
           PlutusScript.hash candidatePermissionPolicy
       pure $ Just candidatePermissionPolicyId
     else pure Nothing
@@ -154,17 +157,17 @@ getSidechainAddresses
   { currencySymbol: checkpointCurrencySymbol } ← do
     Checkpoint.checkpointCurrencyInfo sidechainParams
   let
-    checkpointPolicyId = byteArrayToHex $ unwrap $ encodeCbor
+    checkpointPolicyId = currencySymbolToHex
       checkpointCurrencySymbol
 
   { versionOracleCurrencySymbol } ← getVersionOraclePolicy sidechainParams
   let
-    versionOraclePolicyId = byteArrayToHex $ unwrap $ encodeCbor
+    versionOraclePolicyId = currencySymbolToHex
       versionOracleCurrencySymbol
 
   { fuelProxyCurrencySymbol } ← getFuelProxyMintingPolicy sidechainParams
   let
-    fuelProxyPolicyId = byteArrayToHex $ unwrap $ encodeCbor
+    fuelProxyPolicyId = currencySymbolToHex
       fuelProxyCurrencySymbol
 
   { permissionedCandidatesCurrencySymbol } ←
@@ -172,19 +175,19 @@ getSidechainAddresses
       sidechainParams
   let
     permissionedCandidatesPolicyId =
-      byteArrayToHex $ unwrap $ encodeCbor permissionedCandidatesCurrencySymbol
+      currencySymbolToHex permissionedCandidatesCurrencySymbol
 
   { dParameterCurrencySymbol } ←
     DParameter.getDParameterMintingPolicyAndCurrencySymbol
       sidechainParams
   let
-    dParameterPolicyId = byteArrayToHex $ unwrap $ encodeCbor
+    dParameterPolicyId = currencySymbolToHex
       dParameterCurrencySymbol
 
   { currencySymbol: initTokenCurrencySymbol } ←
     InitSidechain.initTokenCurrencyInfo sidechainParams
   let
-    initTokenPolicyId = byteArrayToHex $ unwrap $ encodeCbor
+    initTokenPolicyId = currencySymbolToHex
       initTokenCurrencySymbol
 
   -- Validators
@@ -204,7 +207,7 @@ getSidechainAddresses
   let
     versionedCurrencySymbols = Array.fromFoldable $ map
       ( \(Tuple scriptId mps) →
-          (Tuple scriptId (byteArrayToHex $ unwrap $ encodeCbor mps))
+          (Tuple scriptId (currencySymbolToHex $ PlutusScript.hash mps))
       )
       versionedPolicies
 

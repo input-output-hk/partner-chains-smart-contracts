@@ -39,14 +39,13 @@ import Contract.Utxos (UtxoMap)
 import Control.Alternative (guard)
 import Data.Array (catMaybes)
 import Data.Map as Map
-import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT, throw)
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Transaction (utxosAt) as Effect
 import TrustlessSidechain.Error
-  ( OffchainError(InvalidCLIParams, NotFoundInputUtxo)
+  ( OffchainError(InvalidCLIParams, NotFoundInputUtxo, GenericInternalError)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
@@ -293,13 +292,18 @@ register
   } ← CandidatePermissionToken.candidatePermissionCurrencyInfo sidechainParams
 
   let
-    val = Value.lovelaceValueOf (BigNum.fromInt 1)
+    mVal = Value.lovelaceValueOf (BigNum.fromInt 1)
       `Value.add`
         if usePermissionToken then Value.singleton candidateCurrencySymbol
           CandidatePermissionToken.candidatePermissionTokenName
           (BigNum.fromInt 1)
-        else unsafePartial mempty
+        else Value.empty
 
+  val <- case mVal of
+    Just x -> pure x
+    Nothing -> throw (GenericInternalError "Invalid value")
+
+  let
     lookups ∷ Lookups.ScriptLookups
     lookups = Lookups.unspentOutputs ownUtxos
       <> Lookups.validator validator
@@ -315,7 +319,7 @@ register
       Constraints.mustSpendPubKeyOutput inputUtxo
         <> Constraints.mustPayToScript valHash (toData datum)
           Constraints.DatumInline
-          (unsafePartial $ fromJust val)
+          val
 
         -- Consuming old registration UTxOs
         <> Constraints.mustBeSignedBy ownPkh

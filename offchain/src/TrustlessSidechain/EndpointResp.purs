@@ -15,6 +15,7 @@ import Cardano.ToData (toData)
 import Cardano.Types.AssetName (AssetName)
 import Cardano.Types.BigNum (BigNum)
 import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.PlutusData
@@ -43,6 +44,7 @@ import TrustlessSidechain.MerkleTree
   , unRootHash
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Asset (currencySymbolToHex)
 import TrustlessSidechain.Utils.Codecs
   ( encodeInitTokenStatusData
   , scParamsCodec
@@ -225,8 +227,7 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
         , "candidatePermissionCurrencySymbol"
             /\ J.fromString
-              ( byteArrayToHex $ unwrap $ encodeCbor
-                  candidatePermissionCurrencySymbol
+              ( currencySymbolToHex candidatePermissionCurrencySymbol
               )
         ]
     GetAddrsResp { sidechainAddresses } →
@@ -518,8 +519,8 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
       -- We encode in JSON the versioned script ids along with their hashes
       let
         (versionedScriptIdsWithHashes ∷ List (Tuple ScriptId ScriptHash)) =
-          (map (map Types.toScriptHash) versionedPolicies)
-            <> (map (map Types.toScriptHash) versionedValidators)
+          (map (map PlutusScript.hash) versionedPolicies)
+            <> (map (map PlutusScript.hash) versionedValidators)
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "ListVersionedScripts"
         , "versionedScripts" /\ toStringifiedNumbersJson

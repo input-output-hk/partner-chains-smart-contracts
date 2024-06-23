@@ -64,7 +64,7 @@ instance ToData CheckpointParameter where
         }
     ) = productToData2
     sidechainParams
-    (productToData2 cs an)
+    (Constr (BigNum.fromInt 0) $ [toData cs, toData an])
 
 instance FromData CheckpointParameter where
   fromData d = do

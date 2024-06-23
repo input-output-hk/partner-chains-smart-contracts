@@ -21,7 +21,6 @@ import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.TxConstraints (TxConstraints)
-import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT, throw)
 import TrustlessSidechain.CommitteeATMSSchemes.Types
@@ -82,7 +81,7 @@ atmsSchemeLookupsAndConstraints ∷
   ∀ r.
   SidechainParams →
   CommitteeATMSParams ATMSAggregateSignatures →
-  Run (EXCEPT OffchainError + LOG + WALLET + TRANSACTION + r)
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     { constraints ∷ TxConstraints
     , lookups ∷ ScriptLookups
     }
@@ -231,7 +230,7 @@ aggregateATMSPublicKeys { atmsKind, committeePubKeys } =
   case atmsKind of
     ATMSPlainEcdsaSecp256k1 →
       map
-        ( PlutusData.toData <<< (unsafePartial Utils.Crypto.aggregateKeys) <<< map
+        ( PlutusData.toData <<< Utils.Crypto.aggregateKeys <<< map
             unwrap
         )
         $ flip traverse committeePubKeys
@@ -247,7 +246,7 @@ aggregateATMSPublicKeys { atmsKind, committeePubKeys } =
             pure $ pk'
     ATMSPlainSchnorrSecp256k1 →
       map
-        ( PlutusData.toData <<< (unsafePartial Utils.Crypto.aggregateKeys) <<< map
+        ( PlutusData.toData <<< Utils.Crypto.aggregateKeys <<< map
             unwrap
         )
         $ flip traverse committeePubKeys

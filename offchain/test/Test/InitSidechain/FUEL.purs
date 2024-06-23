@@ -12,7 +12,6 @@ import Data.List as List
 import Data.Map as Map
 import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
-import Partial.Unsafe (unsafePartial)
 import Run (liftEffect) as Run
 import Test.InitSidechain.Utils (expectedInitTokens, failMsg, unorderedEq)
 import Test.PlutipTest (PlutipTest)
@@ -92,7 +91,7 @@ initFuelSucceeds =
             initATMSKind = ATMSPlainEcdsaSecp256k1
             initSidechainEpoch = zero
             initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
-            initAggregatedCommittee = toData $ unsafePartial Crypto.aggregateKeys $
+            initAggregatedCommittee = toData $ Crypto.aggregateKeys $
               map
                 unwrap
                 initCommittee
@@ -221,7 +220,7 @@ initFuelIdempotent =
             version = 1
             initSidechainEpoch = zero
             initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
-            initAggregatedCommittee = toData $ unsafePartial Crypto.aggregateKeys $
+            initAggregatedCommittee = toData $ Crypto.aggregateKeys $
               map
                 unwrap
                 initCommittee

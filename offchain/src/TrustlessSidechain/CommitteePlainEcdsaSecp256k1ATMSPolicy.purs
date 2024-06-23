@@ -47,7 +47,6 @@ import Contract.TxConstraints (InputWithScriptRef(RefInput), TxConstraints)
 import Contract.TxConstraints as TxConstraints
 import Data.Array as Array
 import Data.Map as Map
-import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT, throw)
 import Run.Except as Run
@@ -56,8 +55,6 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.Effects.App (APP)
-import TrustlessSidechain.Effects.Log (LOG)
-import TrustlessSidechain.Effects.Log (logInfo') as Effect
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Transaction (utxosAt) as Effect
 import TrustlessSidechain.Effects.Util (fromMaybeThrow) as Effect
@@ -184,7 +181,7 @@ mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy ∷
   SidechainParams →
   CommitteeATMSParams
     (Array (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature)) →
-  Run (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     { lookups ∷ ScriptLookups, constraints ∷ TxConstraints }
 mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
   sidechainParams
@@ -210,7 +207,7 @@ mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
       (unwrap committeeCertificateMint).thresholdNumerator
       (unwrap committeeCertificateMint).thresholdDenominator
       (curCommitteePubKeys /\ allCurCommitteeSignatures)
-    curCommitteeHash = unsafePartial $ Utils.Crypto.aggregateKeys $ map unwrap
+    curCommitteeHash = Utils.Crypto.aggregateKeys $ map unwrap
       curCommitteePubKeys
 
   -- Grabbing CommitteePlainEcdsaSecp256k1ATMSPolicy
@@ -242,7 +239,6 @@ mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy
     (fromData comitteeHashDatum)
 
   -- quickly verify that the committee hash matches
-  Effect.logInfo' (show curCommitteeHash)
   when (datum.aggregatePubKeys /= curCommitteeHash)
     $ throw
     $ VerificationError "Incorrect committee provided"
@@ -384,10 +380,6 @@ runCommitteePlainEcdsaSecp256k1ATMSPolicy ∷
 runCommitteePlainEcdsaSecp256k1ATMSPolicy sidechainParams params = do
   mustMintCommitteeATMSPolicyLookupsAndConstraints ←
     mustMintCommitteePlainEcdsaSecp256k1ATMSPolicy sidechainParams params
-  Effect.logInfo'
-    ( show
-        (unwrap params).currentCommitteeUtxo.value
-    )
   let
     extraLookupsAndContraints =
       { lookups: mempty

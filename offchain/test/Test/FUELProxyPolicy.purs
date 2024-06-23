@@ -85,7 +85,7 @@ testScenarioSuccess =
             { initChainId: BigInt.fromInt 1
             , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys
+            , initAggregatedCommittee: toData $ aggregateKeys
                 $ map unwrap initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
@@ -202,7 +202,7 @@ testScenarioSuccess2 =
             { initChainId: BigInt.fromInt 1
             , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys
+            , initAggregatedCommittee: toData $ aggregateKeys
                 $ map unwrap initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
@@ -315,7 +315,7 @@ testScenarioFailure =
               { initChainId: BigInt.fromInt 1
               , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
               , initUtxo: genesisUtxo
-              , initAggregatedCommittee: toData $ unsafePartial aggregateKeys
+              , initAggregatedCommittee: toData $ aggregateKeys
                   $ map unwrap initCommitteePubKeys
               , initSidechainEpoch: zero
               , initThresholdNumerator: BigInt.fromInt 2

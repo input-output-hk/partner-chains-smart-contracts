@@ -18,7 +18,6 @@ import Effect.Class (liftEffect)
 import Effect.Exception (error)
 import JS.BigInt as BigInt
 import Options.Applicative (execParser)
-import Partial.Unsafe (unsafePartial)
 import Run (EFFECT, Run)
 import TrustlessSidechain.CLIVersion (versionString)
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
@@ -703,7 +702,6 @@ runUtilsEndpoint = case _ of
           "Message invalid (should be 32 bytes)"
       else pure
         $ Utils.Crypto.byteArrayToEcdsaSecp256k1MessageUnsafe
-        $ unsafePartial
         $ Utils.Crypto.blake2b256Hash message
 
     let signature = Utils.Crypto.sign realMessage privateKey
@@ -720,7 +718,7 @@ runUtilsEndpoint = case _ of
     let
       realMessage =
         if noHashMessage then message
-        else unsafePartial $ Utils.Crypto.blake2b256Hash message
+        else Utils.Crypto.blake2b256Hash message
 
     let signature = Utils.SchnorrSecp256k1.sign realMessage privateKey
     pure $
@@ -820,8 +818,7 @@ runUtilsEndpoint = case _ of
       publicKeysArray = List.toUnfoldable $ Data.List.Types.toList $ publicKeys
 
       aggregatedPublicKeys ∷ ByteArray
-      aggregatedPublicKeys = unsafePartial $ Utils.Crypto.aggregateKeys
-        publicKeysArray
+      aggregatedPublicKeys = Utils.Crypto.aggregateKeys publicKeysArray
     in
       pure $
         CborPlainAggregatePublicKeysResp

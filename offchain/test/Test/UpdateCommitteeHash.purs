@@ -90,7 +90,7 @@ generateUchmSignatures
         $ Array.sortWith fst
         $ map (\prvKey → toPubKeyUnsafe prvKey /\ prvKey) currentCommitteePrvKeys
 
-    newAggregatePubKeys = unsafePartial aggregateKeys $ map unwrap $ Array.sort $
+    newAggregatePubKeys = aggregateKeys $ map unwrap $ Array.sort $
       map
         toPubKeyUnsafe
         newCommitteePrvKeys
@@ -164,7 +164,7 @@ updateCommitteeHashWith params f = void do
   committeeSignatures ← generateUchmSignatures params
 
   let
-    newAggregatePubKeys = unsafePartial aggregateKeys $ map unwrap $ Array.sort
+    newAggregatePubKeys = aggregateKeys $ map unwrap $ Array.sort
       $ map toPubKeyUnsafe
       $
         params.newCommitteePrvKeys
@@ -219,7 +219,7 @@ testScenario1 = Mote.Monad.test "Simple update committee hash"
           { initChainId: BigInt.fromInt 1
           , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
-          , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map
+          , initAggregatedCommittee: toData $ aggregateKeys $ map
               unwrap
               initCommitteePubKeys
           , initSidechainEpoch: zero
@@ -276,7 +276,7 @@ testScenario2 =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $
+            , initAggregatedCommittee: toData $ aggregateKeys $
                 map unwrap
                   initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 1
@@ -305,7 +305,7 @@ testScenario2 =
                 $ UpdateCommitteeHashParams
                 $ params
                     { aggregateSignature =
-                        ( Unsafe.unsafePartial $
+                          unsafePartial $
                             case params.aggregateSignature of
                               PlainEcdsaSecp256k1
                                 [ c1 /\ _s1, c2 /\ s2 ] →
@@ -313,7 +313,6 @@ testScenario2 =
                                   [ c1 /\ Nothing
                                   , c2 /\ s2
                                   ]
-                        )
                     }
 
 -- | `testScenario3` initialises the committee with an out of order committee
@@ -345,7 +344,7 @@ testScenario3 =
             { initChainId: BigInt.fromInt 6
             , initGenesisHash: hexToByteArrayUnsafe "aabbccdd"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys
+            , initAggregatedCommittee: toData $ aggregateKeys
                 $ map unwrap
                 $
                   case Array.uncons initCommitteePubKeys of
@@ -451,7 +450,7 @@ testScenario4 =
             , initGenesisHash: hexToByteArrayUnsafe
                 "d8063cc6e907f497360ca50238af5c2e2a95a8869a2ce74ab3e75fe6c9dcabd0"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys
+            , initAggregatedCommittee: toData $ aggregateKeys
                 $ map unwrap
                 $
                   [ byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
@@ -481,7 +480,7 @@ testScenario4 =
           }
           \uchp →
             pure $ wrap $ (unwrap uchp)
-              { newAggregatePubKeys = toData $ unsafePartial aggregateKeys
+              { newAggregatePubKeys = toData $ aggregateKeys
                   $ map unwrap
                   $
                     [ byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
@@ -529,7 +528,7 @@ testScenario5 =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map
+            , initAggregatedCommittee: toData $ aggregateKeys $ map
                 unwrap
                 initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 1

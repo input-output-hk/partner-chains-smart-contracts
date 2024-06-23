@@ -1,8 +1,5 @@
 module TrustlessSidechain.Versioning.Types
   ( module ScriptId
-  , class Versionable
-  , toScriptHash
-  , toPlutusScript
   , VersionOracle(..)
   , VersionOracleDatum(..)
   , VersionOracleConfig(..)
@@ -127,14 +124,3 @@ instance ToData VersionOracleConfig where
   toData
     ( VersionOracleConfig { versionOracleCurrencySymbol }
     ) = toData versionOracleCurrencySymbol
-
--- | Class of types that can be versioned.  Allows uniform handling of
--- | validators and minting policies when building lookups and constraints for
--- | versioning purposes.
-class Versionable a where
-  toPlutusScript ∷ a → Maybe PlutusScript
-  toScriptHash ∷ a → ScriptHash
-
-instance Versionable PlutusScript where
-  toPlutusScript = Just
-  toScriptHash = hash

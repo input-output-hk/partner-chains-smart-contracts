@@ -9,7 +9,6 @@ import Contract.Wallet as Wallet
 import Data.Array as Array
 import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
-import Partial.Unsafe (unsafePartial)
 import Run as Run
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
@@ -67,7 +66,7 @@ testScenarioSuccess =
             { initChainId: BigInt.fromInt 1
             , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys
+            , initAggregatedCommittee: toData $ aggregateKeys
                 $ map unwrap initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
@@ -166,7 +165,7 @@ testScenarioFailure =
             { initChainId: BigInt.fromInt 1
             , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys
+            , initAggregatedCommittee: toData $ aggregateKeys
                 $ map unwrap initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2

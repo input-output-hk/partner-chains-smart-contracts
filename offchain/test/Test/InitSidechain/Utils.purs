@@ -31,8 +31,7 @@ unorderedEq ∷
   Boolean
 unorderedEq m1 m2 =
   let
-    kvs m = Array.sort $ Array.zip (Array.fromFoldable $ Map.keys m)
-      (Array.fromFoldable $ Map.values m)
+    kvs m = Array.sort $ Map.toUnfoldable m
   in
     kvs m1 == kvs m2
 

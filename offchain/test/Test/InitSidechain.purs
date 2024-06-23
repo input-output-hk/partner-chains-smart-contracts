@@ -16,7 +16,6 @@ import Data.Map as Map
 import Data.Set as Set
 import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
-import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run (liftEffect) as Run
 import Run.Except (note) as Run
@@ -91,7 +90,7 @@ testScenario1 = Mote.Monad.test "Calling `initSidechain`"
             { initChainId: BigInt.fromInt 69
             , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial Crypto.aggregateKeys
+            , initAggregatedCommittee: toData $ Crypto.aggregateKeys
                 $ map unwrap
                     (map Crypto.toPubKeyUnsafe committeePrvKeys)
             , initATMSKind: ATMSPlainEcdsaSecp256k1
@@ -148,7 +147,7 @@ testScenario2 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
             { initChainId: BigInt.fromInt 69
             , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial Crypto.aggregateKeys
+            , initAggregatedCommittee: toData $ Crypto.aggregateKeys
                 $ map unwrap
                     initCommittee
             , initSidechainEpoch: zero
@@ -201,7 +200,7 @@ testScenario3 =
               , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
               , initUtxo: genesisUtxo
               , initAggregatedCommittee: toData
-                  $ unsafePartial Crypto.aggregateKeys
+                  $ Crypto.aggregateKeys
                   $ map unwrap initCommittee
               , initSidechainEpoch: zero
               , initThresholdNumerator: BigInt.fromInt 2
@@ -239,7 +238,7 @@ initSimpleSidechain amt = do
       { initChainId: BigInt.fromInt 69
       , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
       , initUtxo: genesisUtxo
-      , initAggregatedCommittee: toData $ unsafePartial Crypto.aggregateKeys $ map
+      , initAggregatedCommittee: toData $ Crypto.aggregateKeys $ map
           unwrap
           initCommittee
       , initATMSKind: ATMSPlainEcdsaSecp256k1

@@ -51,11 +51,11 @@ import TrustlessSidechain.PermissionedCandidates.Types
   )
 import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
+import TrustlessSidechain.Utils.Asset (emptyAssetName)
 import Type.Row (type (+))
 
 permissionedCandidatesTokenName ∷ TokenName
-permissionedCandidatesTokenName = unsafeMkAssetName ""
+permissionedCandidatesTokenName = emptyAssetName
 
 mkUpdatePermissionedCandidatesLookupsAndConstraints ∷
   ∀ r.
@@ -85,9 +85,6 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
   { permissionedCandidatesCurrencySymbol, permissionedCandidatesMintingPolicy } ←
     PermissionedCandidates.getPermissionedCandidatesMintingPolicyAndCurrencySymbol
       sidechainParams
-  let
-    permissionedCandidatesMintingPolicyHash =
-      permissionedCandidatesCurrencySymbol
 
   { permissionedCandidatesValidatorAddress, permissionedCandidatesValidator } ←
     PermissionedCandidates.getPermissionedCandidatesValidatorAndAddress
@@ -193,7 +190,7 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
     mintTokenConstraint = case maybePermissionedCandidatesUTxO of
       Just _ → mempty
       Nothing → Constraints.mustMintCurrencyWithRedeemer
-        permissionedCandidatesMintingPolicyHash
+        permissionedCandidatesCurrencySymbol
         (RedeemerDatum $ toData PermissionedCandidatesMint)
         permissionedCandidatesTokenName
         (Int.fromInt 1)

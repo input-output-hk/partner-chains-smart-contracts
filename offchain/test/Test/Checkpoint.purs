@@ -20,7 +20,6 @@ import Data.Array as Array
 import JS.BigInt (BigInt)
 import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
-import Partial.Unsafe (unsafePartial)
 import Run (liftEffect) as Run
 import Run.Except (note) as Run
 import Test.PlutipTest (PlutipTest)
@@ -126,7 +125,7 @@ saveCheckpointTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map
+            , initAggregatedCommittee: toData $ aggregateKeys $ map
                 unwrap
                 initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
@@ -197,7 +196,7 @@ notEnoughSignaturesTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map
+            , initAggregatedCommittee: toData $ aggregateKeys $ map
                 unwrap
                 initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
@@ -277,7 +276,7 @@ outOfOrderCheckpointTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map
+            , initAggregatedCommittee: toData $ aggregateKeys $ map
                 unwrap
                 initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
@@ -350,7 +349,7 @@ invalidCheckpointBlockHashTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map
+            , initAggregatedCommittee: toData $ aggregateKeys $ map
                 unwrap
                 initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
@@ -426,7 +425,7 @@ signedByUnknownCommitteeTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map
+            , initAggregatedCommittee: toData $ aggregateKeys $ map
                 unwrap
                 initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2
@@ -504,7 +503,7 @@ committeeChangeCheckpointTest =
             , initGenesisHash: hexToByteArrayUnsafe
                 "aabbccddeeffgghhiijjkkllmmnnoo"
             , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ unsafePartial aggregateKeys $ map
+            , initAggregatedCommittee: toData $ aggregateKeys $ map
                 unwrap
                 initCommitteePubKeys
             , initThresholdNumerator: BigInt.fromInt 2

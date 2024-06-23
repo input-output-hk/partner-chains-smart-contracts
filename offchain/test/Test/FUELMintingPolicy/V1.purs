@@ -99,7 +99,7 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
           , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
           , initUtxo: genesisUtxo
           , initAggregatedCommittee: PlutusData.toData
-              $ unsafePartial aggregateKeys
+              $ aggregateKeys
               $ map unwrap
                   initCommitteePubKeys
           , initSidechainEpoch: zero
@@ -181,7 +181,7 @@ testScenarioSuccess2 =
             , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
             , initAggregatedCommittee: PlutusData.toData
-                $ unsafePartial aggregateKeys
+                $ aggregateKeys
                 $ map unwrap initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2
@@ -206,7 +206,7 @@ testScenarioSuccess2 =
               }
 
           ownEntryBytes = unwrap $ encodeCbor $ toData ownEntry
-          ownEntryHash = unsafePartial blake2b256Hash $ ownEntryBytes
+          ownEntryHash = blake2b256Hash $ ownEntryBytes
 
           ownEntryHashTn = unsafePartial $ fromJust $ AssetName.mkAssetName
             ownEntryHash
@@ -319,7 +319,7 @@ testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
             , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
             , initUtxo: genesisUtxo
             , initAggregatedCommittee: PlutusData.toData
-                $ unsafePartial aggregateKeys
+                $ aggregateKeys
                 $ map unwrap initCommitteePubKeys
             , initSidechainEpoch: zero
             , initThresholdNumerator: BigInt.fromInt 2

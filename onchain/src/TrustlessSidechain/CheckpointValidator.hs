@@ -24,8 +24,6 @@ import Plutus.V2.Ledger.Api (
   Value (getValue),
   fromCompiledCode,
  )
-
-import Plutus.V1.Ledger.Value (AssetClass(AssetClass))
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
@@ -33,7 +31,6 @@ import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   ATMSPlainAggregatePubKey,
-  CustomAssetClass(..),
   CheckpointDatum,
   CheckpointMessage (
     CheckpointMessage,
@@ -154,7 +151,7 @@ mkCheckpointValidator checkpointParam versioningConfig datum _red ctx =
 
     -- TODO: query currency symbol from versioning system (https://github.com/input-output-hk/trustless-sidechain/issues/681)
 
-    assetClass = AssetClass (customCurrencySymbol $ get @"assetClass" checkpointParam, customTokenName $ get @"assetClass" checkpointParam)
+    assetClass = get @"assetClass" checkpointParam
 
     outputContainsCheckpointNft :: Bool
     outputContainsCheckpointNft = Value.assetClassValueOf (Unsafe.decode $ Unsafe.txOutValue ownOutput) assetClass == 1

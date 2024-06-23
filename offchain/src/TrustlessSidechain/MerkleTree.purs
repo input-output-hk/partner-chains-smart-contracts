@@ -32,7 +32,6 @@ import Data.Function as Function
 import Data.List (List(Cons, Nil), (:))
 import Data.String.Common as String
 import Data.Unfoldable as Unfoldable
-import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.Utils.Crypto as Crypto
 
 -- * Merkle tree data types
@@ -183,7 +182,7 @@ hashLeaf = hash <<< (ByteArray.byteArrayFromIntArrayUnsafe [ 0 ] <> _)
 
 --  | Wrapper around the internal hashing function (this uses blake2b256Hash)
 hash ∷ ByteArray → RootHash
-hash = RootHash <<< unsafePartial Crypto.blake2b256Hash
+hash = RootHash <<< Crypto.blake2b256Hash
 
 -- | `listToArray` converts a `List` to an `Array`
 listToArray ∷ ∀ (a ∷ Type). List a → Array a
