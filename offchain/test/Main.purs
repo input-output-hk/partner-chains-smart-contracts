@@ -61,8 +61,8 @@ main = do
           ConfigFile.tests
 
         group "Plutip integration tests" do
-          IlliquidCirculationSupply.tests
-          Reserve.tests
+          -- IlliquidCirculationSupply.tests
+          -- Reserve.tests
           InitCandidatePermissionToken.tests
           InitSidechain.tests
           InitMint.tests

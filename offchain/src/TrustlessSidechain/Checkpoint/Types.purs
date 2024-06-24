@@ -8,7 +8,7 @@ module TrustlessSidechain.Checkpoint.Types
 import Contract.Prelude
 
 import Cardano.Types.AssetClass (AssetClass(AssetClass))
-import Cardano.Types.PlutusData (PlutusData(Constr))
+import Cardano.Types.PlutusData (PlutusData(Constr, List))
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
   ( class FromData
@@ -67,16 +67,13 @@ instance ToData CheckpointParameter where
     (Constr (BigNum.fromInt 0) $ [toData cs, toData an])
 
 instance FromData CheckpointParameter where
-  fromData d = do
-    { sidechainParams, checkpointAssetClassData } ← productFromData2
-      ( \sidechainParams checkpointAssetClassData →
-          { sidechainParams
-          , checkpointAssetClassData
-          }
-      )
-      d
-    checkpointAssetClass ← productFromData2 AssetClass checkpointAssetClassData
+  fromData (List [sp', Constr _ [cs', an']]) = do
+    sidechainParams <- fromData sp'
+    cs <- fromData cs'
+    an <- fromData an'
+    let checkpointAssetClass = AssetClass cs an
     pure $ CheckpointParameter { sidechainParams, checkpointAssetClass }
+  fromData _ = Nothing
 
 derive newtype instance Show CheckpointParameter
 

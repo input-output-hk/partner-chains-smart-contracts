@@ -8,6 +8,7 @@ module Test.CandidatePermissionToken
 import Contract.Prelude
 
 import Cardano.Types.BigNum as BigNum
+import Cardano.Types.Asset (Asset(Asset))
 import Cardano.Types.PlutusScript as PlutusScript
 import Contract.Wallet as Wallet
 import JS.BigInt as BigInt
@@ -107,7 +108,7 @@ testScenarioSuccess1 =
         -----------------------------
         _ ← Test.CommitteeCandidateValidator.runDeregister sidechainParams
 
-        Test.Utils.assertIHaveOutputWithAsset
+        Test.Utils.assertIHaveOutputWithAsset $ Asset
           candidatePermissionInfo.currencySymbol
           CandidatePermissionToken.candidatePermissionTokenName
 
@@ -124,7 +125,7 @@ assertIHaveCandidatePermissionToken sidechainParams = do
     CandidatePermissionToken.candidatePermissionCurrencyInfo
       sidechainParams
 
-  Test.Utils.assertIHaveOutputWithAsset
+  Test.Utils.assertIHaveOutputWithAsset $ Asset
     candidatePermissionInfo.currencySymbol
     CandidatePermissionToken.candidatePermissionTokenName
 

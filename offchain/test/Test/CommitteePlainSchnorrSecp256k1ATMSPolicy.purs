@@ -8,6 +8,7 @@ module Test.CommitteePlainSchnorrSecp256k1ATMSPolicy
 import Contract.Prelude
 
 import Cardano.Types.AssetName (mkAssetName)
+import Cardano.Types.Asset (Asset(Asset))
 import Cardano.Types.BigNum as BigNum
 import Contract.Log (logInfo')
 import Contract.PlutusData (toData)
@@ -183,8 +184,8 @@ testScenario1 =
                 }
 
           Test.Utils.assertIHaveOutputWithAsset
-            committeePlainSchnorrSecp256k1ATMSCurrencySymbol
-            sidechainMessageTokenName
+            (Asset committeePlainSchnorrSecp256k1ATMSCurrencySymbol
+            sidechainMessageTokenName)
 
         -- the following test cases are mostly duplicated code with slight
         -- variations for the testing
@@ -237,8 +238,8 @@ testScenario1 =
                 }
 
           Test.Utils.assertIHaveOutputWithAsset
-            committeePlainSchnorrSecp256k1ATMSCurrencySymbol
-            sidechainMessageTokenName
+            (Asset committeePlainSchnorrSecp256k1ATMSCurrencySymbol
+              sidechainMessageTokenName)
 
         liftContract $ logInfo'
           "CommitteePlainSchnorrSecp256k1ATMSPolicy a successful mint from the committee where the public keys / signatures are not sorted"
@@ -284,8 +285,8 @@ testScenario1 =
                 }
 
           Test.Utils.assertIHaveOutputWithAsset
-            committeePlainSchnorrSecp256k1ATMSCurrencySymbol
-            sidechainMessageTokenName
+            (Asset committeePlainSchnorrSecp256k1ATMSCurrencySymbol
+              sidechainMessageTokenName)
 
         liftContract $ logInfo'
           "CommitteePlainSchnorrSecp256k1ATMSPolicy an unsuccessful mint where the committee signs all 3s, but we try to mint all 4s"

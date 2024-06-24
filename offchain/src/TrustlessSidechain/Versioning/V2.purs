@@ -107,8 +107,8 @@ getNativeTokenManagementPoliciesAndValidators ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + r)
-    { versionedPolicies ∷ (List (Tuple Types.ScriptId MintingPolicy))
-    , versionedValidators ∷ (List (Tuple Types.ScriptId Validator))
+    { versionedPolicies ∷ (List (Tuple Types.ScriptId PlutusScript))
+    , versionedValidators ∷ (List (Tuple Types.ScriptId PlutusScript))
     }
 getNativeTokenManagementPoliciesAndValidators _ =
   let

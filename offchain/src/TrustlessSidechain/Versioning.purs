@@ -390,8 +390,8 @@ getNativeTokenManagementPoliciesAndValidators ∷
   SidechainParams →
   Int →
   Run (EXCEPT OffchainError + WALLET + r)
-    { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
+    { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }
 getNativeTokenManagementPoliciesAndValidators sidechainParams version = do
   case version of

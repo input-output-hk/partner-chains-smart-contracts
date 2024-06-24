@@ -8,6 +8,8 @@ import Contract.Prelude
 import Cardano.Plutus.Types.PaymentPubKeyHash
   ( PaymentPubKeyHash(PaymentPubKeyHash)
   )
+import Cardano.Types.AssetClass (AssetClass(AssetClass))
+import Cardano.Types.Asset (Asset(Asset))
 import Contract.Numeric.BigNum as BigNum
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromIntArrayUnsafe)
 import Control.Alt ((<|>))
@@ -416,17 +418,18 @@ genReserveDatum ∷ Gen ReserveDatum
 genReserveDatum = do
   ArbitraryBigInt pt ← arbitrary
   ArbitraryScriptHash cs ← arbitrary
-  ArbitraryBigInt c ← arbitrary
-  ArbitraryAssetClass ac ← arbitrary
-  ArbitraryBigInt i ← arbitrary
+  c ← arbitrary
+  ArbitraryScriptHash sh ← arbitrary
+  ArbitraryAssetName an <- arbitrary
+  i ← arbitrary
 
   pure $
     ReserveDatum
       { immutableSettings: ImmutableReserveSettings
-          { t0: (POSIXTime pt), tokenKind: ac }
+          { t0: (POSIXTime pt), tokenKind: Asset sh an }
       , mutableSettings: MutableReserveSettings
-          { vFunctionTotalAccrued: cs, incentiveAmount: i }
-      , stats: ReserveStats { tokenTotalAmountTransferred: c }
+          { vFunctionTotalAccrued: cs, incentiveAmount: BigInt.fromInt i }
+      , stats: ReserveStats { tokenTotalAmountTransferred: BigInt.fromInt c }
       }
 
 genReserveRedeemer ∷ Gen ReserveRedeemer

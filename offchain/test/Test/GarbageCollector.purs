@@ -5,6 +5,7 @@ import Contract.Prelude
 import Cardano.AsCbor (encodeCbor)
 import Cardano.ToData (toData)
 import Cardano.Types.AssetName (mkAssetName)
+import Cardano.Types.Asset (Asset(Asset))
 import Cardano.Types.BigNum as BigNum
 import Cardano.Types.NetworkId (NetworkId(TestnetId))
 import Contract.Log (logInfo')
@@ -108,18 +109,18 @@ testScenarioSuccess =
           sidechainParams
 
         Test.Utils.assertIHaveOutputWithAsset
-          fuelMintingCurrencySymbol
-          MintingV1.fuelAssetName
+          (Asset fuelMintingCurrencySymbol
+            MintingV1.fuelAssetName)
           # withUnliftApp fails
 
         Test.Utils.assertIHaveOutputWithAsset
-          fuelBurningCurrencySymbol
-          BurningV1.fuelAssetName
+          (Asset fuelBurningCurrencySymbol
+            BurningV1.fuelAssetName)
           # withUnliftApp fails
 
         Test.Utils.assertIHaveOutputWithAsset
-          committeePlainEcdsaSecp256k1ATMSCurrencySymbol
-          atmsTokenName
+          (Asset committeePlainEcdsaSecp256k1ATMSCurrencySymbol
+            atmsTokenName)
           # withUnliftApp fails
 
 initializeSidechain ∷
@@ -217,7 +218,7 @@ mintATMSTokens { sidechainParams, initCommitteePrvKeys } = do
           , message: sidechainMessageTokenName
           }
 
-  Test.Utils.assertIHaveOutputWithAsset
+  Test.Utils.assertIHaveOutputWithAsset $ Asset
     committeePlainEcdsaSecp256k1ATMSCurrencySymbol
     sidechainMessageTokenName
 
@@ -308,18 +309,18 @@ mintFuelMintingAndFuelBurningTokens { sidechainParams, initCommitteePrvKeys } =
     { fuelBurningCurrencySymbol: fuelBurningCurrencySymbol2
     } ← BurningV2.getFuelBurningPolicy sidechainParams
 
-    Test.Utils.assertIHaveOutputWithAsset
+    Test.Utils.assertIHaveOutputWithAsset $ Asset
       fuelMintingCurrencySymbol
       MintingV1.fuelAssetName
 
-    Test.Utils.assertIHaveOutputWithAsset
+    Test.Utils.assertIHaveOutputWithAsset $ Asset
       fuelBurningCurrencySymbol
       BurningV1.fuelAssetName
 
-    Test.Utils.assertIHaveOutputWithAsset
+    Test.Utils.assertIHaveOutputWithAsset $ Asset
       fuelMintingCurrencySymbol2
       MintingV2.dummyTokenName
 
-    Test.Utils.assertIHaveOutputWithAsset
+    Test.Utils.assertIHaveOutputWithAsset $ Asset
       fuelBurningCurrencySymbol2
       BurningV2.dummyTokenName

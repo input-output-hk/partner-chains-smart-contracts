@@ -7,19 +7,24 @@ import Contract.Prelude
 import Contract.PlutusData (Datum(..), toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts (MintingPolicy, MintingPolicyHash)
-import Contract.Scripts (mintingPolicyHash, validatorHash) as Scripts
-import Contract.Transaction (TransactionInput, TransactionOutputWithRefScript)
+import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.BigNum as BigNum
+import Cardano.Types.BigNum (BigNum)
+import Cardano.Types.Mint as Mint
+import Cardano.Types.Int as Int
+import Cardano.Types.MultiAsset as MultiAsset
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
+import Contract.Transaction (TransactionInput, TransactionOutput)
 import Contract.TxConstraints (DatumPresence(DatumInline))
 import Contract.TxConstraints as TxConstraints
-import Contract.Value (adaSymbol, adaToken, valueOf)
-import Contract.Value (scriptCurrencySymbol) as Scripts
+import Cardano.Types.Value (valueOf)
 import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Control.Monad.Error.Class (throwError)
 import Data.Array as Array
-import Data.BigInt (BigInt)
-import Data.BigInt as BigInt
+import JS.BigInt (BigInt)
+import JS.BigInt as BigInt
 import Data.Map as Map
 import Effect.Exception (error)
 import Mote.Monad as Mote.Monad
@@ -51,13 +56,15 @@ import TrustlessSidechain.NativeTokenManagement.IlliquidCirculationSupply
   , withdrawFromSupply
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Types (AssetClass)
+import Cardano.Types.AssetClass (AssetClass(AssetClass))
+import Cardano.Types.Asset (fromAssetClass)
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Crypto
   ( aggregateKeys
   , generatePrivKey
   , toPubKeyUnsafe
   )
+import TrustlessSidechain.Utils.Asset (emptyAssetName, singletonFromAsset)
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.ScriptId (ScriptId(..))
 import TrustlessSidechain.Versioning.Utils (insertVersionLookupsAndConstraints)
@@ -97,7 +104,7 @@ dummyInitialiseSidechain = do
       , initThresholdDenominator: BigInt.fromInt 3
       , initCandidatePermissionTokenMintInfo: Nothing
       , initATMSKind: ATMSPlainEcdsaSecp256k1
-      , initGovernanceAuthority: Governance.mkGovernanceAuthority $ unwrap pkh
+      , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
       }
 
   { sidechainParams } ← initSidechain initScParams 1
@@ -106,7 +113,7 @@ dummyInitialiseSidechain = do
 
 mintNonAdaTokens ∷
   ∀ r.
-  BigInt →
+  Int →
   Run
     (EXCEPT OffchainError + LOG + TRANSACTION + r)
     AssetClass
@@ -114,27 +121,27 @@ mintNonAdaTokens numOfTokens = do
   policy ← alwaysPassingPolicy $ BigInt.fromInt 100
 
   let
-    cs = unsafePartial $ fromJust $ Scripts.scriptCurrencySymbol policy
+    cs = PlutusScript.hash policy
 
-    lookups = Lookups.mintingPolicy policy
+    lookups = Lookups.plutusMintingPolicy policy
 
     constraints =
       TxConstraints.mustMintValue
-        (Value.singleton cs adaToken numOfTokens)
+        (Mint.singleton cs emptyAssetName $ Int.fromInt numOfTokens)
 
   void $ balanceSignAndSubmit
     "mintNonAdaTokens transaction"
     { constraints, lookups }
 
-  pure $ cs /\ adaToken
+  pure $ AssetClass cs emptyAssetName
 
-initialDistribution ∷ Array BigInt
+initialDistribution ∷ Array BigNum
 initialDistribution =
-  [ BigInt.fromInt 50_000_000
-  , BigInt.fromInt 50_000_000
-  , BigInt.fromInt 50_000_000
-  , BigInt.fromInt 40_000_000
-  , BigInt.fromInt 40_000_000
+  [ BigNum.fromInt 50_000_000
+  , BigNum.fromInt 50_000_000
+  , BigNum.fromInt 50_000_000
+  , BigNum.fromInt 40_000_000
+  , BigNum.fromInt 40_000_000
   ]
 
 initialiseICSUtxo ∷
@@ -148,21 +155,21 @@ initialiseICSUtxo
   do
     versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
 
-    illiquidCirculationSupplyValidator' ← Scripts.validatorHash <$>
+    illiquidCirculationSupplyValidator' ← PlutusScript.hash <$>
       illiquidCirculationSupplyValidator
         versionOracleConfig
 
     let
-      lookups ∷ Lookups.ScriptLookups Void
+      lookups ∷ Lookups.ScriptLookups
       lookups =
         mempty
 
       constraints =
         TxConstraints.mustPayToScript
           illiquidCirculationSupplyValidator'
-          (Datum $ toData unit)
+          (toData unit)
           DatumInline
-          (Value.singleton adaSymbol adaToken (BigInt.fromInt 1))
+          (Value.mkValue (wrap (BigNum.fromInt 1)) MultiAsset.empty)
 
     void $ balanceSignAndSubmit
       "ICS initialization transaction"
@@ -172,7 +179,7 @@ mkIcsFakePolicy ∷
   ∀ r.
   Run
     (EXCEPT OffchainError + r)
-    MintingPolicy
+    PlutusScript
 mkIcsFakePolicy = alwaysPassingPolicy $ BigInt.fromInt 43
 
 insertFakeIcsWithdrawalPolicy ∷
@@ -180,7 +187,7 @@ insertFakeIcsWithdrawalPolicy ∷
   SidechainParams →
   Run
     (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
-    MintingPolicyHash
+    ScriptHash
 insertFakeIcsWithdrawalPolicy sidechainParams =
   do
     icsFakePolicy ← mkIcsFakePolicy
@@ -192,14 +199,14 @@ insertFakeIcsWithdrawalPolicy sidechainParams =
       >>= balanceSignAndSubmit
         "Insert illiquid circulation withdrawal minting policy"
 
-    pure $ Scripts.mintingPolicyHash icsFakePolicy
+    pure $ PlutusScript.hash icsFakePolicy
 
 findICSUtxo ∷
   ∀ r.
   SidechainParams →
   Run
     (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
-    (TransactionInput /\ TransactionOutputWithRefScript)
+    (TransactionInput /\ TransactionOutput)
 findICSUtxo
   sidechainParams =
   fromMaybeThrow
@@ -220,13 +227,13 @@ testScenario1 =
         utxo ← findICSUtxo sidechainParams
 
         let
-          depositAmountOfNonAdaTokens = BigInt.fromInt 51
+          depositAmountOfNonAdaTokens = 51
 
         tokenKind ← mintNonAdaTokens depositAmountOfNonAdaTokens
 
         let
-          addedValue = Value.singleton (fst tokenKind) (snd tokenKind)
-            depositAmountOfNonAdaTokens
+          addedValue = singletonFromAsset (fromAssetClass tokenKind)
+            $ BigNum.fromInt depositAmountOfNonAdaTokens
 
         depositMoreToSupply
           sidechainParams
@@ -237,11 +244,11 @@ testScenario1 =
           <$> findIlliquidCirculationSupplyUtxos sidechainParams
 
         let
-          extractValue = snd >>> unwrap >>> _.output >>> unwrap >>> _.amount
-          isExpectedAmount = \v → valueOf v (fst tokenKind) (snd tokenKind)
+          extractValue = snd >>> unwrap >>> _.amount
+          isExpectedAmount = valueOf (fromAssetClass tokenKind)
 
         unless
-          ( Just depositAmountOfNonAdaTokens ==
+          ( Just (BigNum.fromInt depositAmountOfNonAdaTokens) ==
               (extractValue >>> isExpectedAmount <$> maybeUtxo)
           )
           (liftContract $ throwError $ error "Deposit not sucessful")
@@ -259,16 +266,16 @@ testScenario2 =
         utxo1 ← findICSUtxo sidechainParams
 
         let
-          depositAmountOfNonAdaTokens = BigInt.fromInt 51
-          withdrawAmountOfNonAdaTokens = BigInt.fromInt 42
+          depositAmountOfNonAdaTokens = 51
+          withdrawAmountOfNonAdaTokens = 42
           finalAmountOfNonAdaTokens = depositAmountOfNonAdaTokens -
             withdrawAmountOfNonAdaTokens
 
         tokenKind ← mintNonAdaTokens depositAmountOfNonAdaTokens
 
         let
-          addedValue = Value.singleton (fst tokenKind) (snd tokenKind)
-            depositAmountOfNonAdaTokens
+          addedValue = singletonFromAsset (fromAssetClass tokenKind)
+            $ BigNum.fromInt depositAmountOfNonAdaTokens
 
         depositMoreToSupply
           sidechainParams
@@ -278,8 +285,8 @@ testScenario2 =
         utxo2 ← findICSUtxo sidechainParams
 
         let
-          withdrawnValue = Value.singleton (fst tokenKind) (snd tokenKind)
-            withdrawAmountOfNonAdaTokens
+          withdrawnValue = singletonFromAsset (fromAssetClass tokenKind)
+            $ BigNum.fromInt withdrawAmountOfNonAdaTokens
 
         withdrawFromSupply
           sidechainParams
@@ -291,11 +298,11 @@ testScenario2 =
           <$> findIlliquidCirculationSupplyUtxos sidechainParams
 
         let
-          extractValue = snd >>> unwrap >>> _.output >>> unwrap >>> _.amount
-          isExpectedAmount = \v → valueOf v (fst tokenKind) (snd tokenKind)
+          extractValue = snd >>> unwrap >>> _.amount
+          isExpectedAmount = valueOf (fromAssetClass tokenKind)
 
         unless
-          ( Just finalAmountOfNonAdaTokens ==
+          ( Just (BigNum.fromInt finalAmountOfNonAdaTokens) ==
               (extractValue >>> isExpectedAmount <$> maybeUtxo)
           )
           (liftContract $ throwError $ error "Withdrawal not sucessful")

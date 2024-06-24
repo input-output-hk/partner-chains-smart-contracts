@@ -175,8 +175,8 @@ getNativeTokenManagementPoliciesAndValidators ∷
   ∀ r.
   SidechainParams →
   Run (EXCEPT OffchainError + WALLET + r)
-    { versionedPolicies ∷ List (Tuple ScriptId MintingPolicy)
-    , versionedValidators ∷ List (Tuple ScriptId Validator)
+    { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
     }
 getNativeTokenManagementPoliciesAndValidators sp = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sp

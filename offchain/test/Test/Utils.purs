@@ -230,10 +230,9 @@ pureGroup label tests =
 -- | exists a UTxO with at least one of the given asset.
 assertIHaveOutputWithAsset ∷
   ∀ r.
-  CurrencySymbol →
-  TokenName →
+  Asset →
   Run (EXCEPT OffchainError + CONTRACT + r) Unit
-assertIHaveOutputWithAsset cs tn = do
+assertIHaveOutputWithAsset asset = do
   ownUtxos ← map (Map.values) $ Effect.fromMaybeThrow
     (GenericInternalError "Failed to query wallet utxos")
     (liftContract getWalletUtxos)
@@ -243,17 +242,15 @@ assertIHaveOutputWithAsset cs tn = do
         go input = case List.uncons input of
           Nothing → false
           Just { head: TransactionOutput { amount }, tail } →
-            if Value.valueOf (Asset cs tn) amount > BigNum.zero then true
+            if Value.valueOf asset amount > BigNum.zero then true
             else go tail
       in
         go ownUtxos
 
   unless iHaveCurrencySymbolAndTokenName $ throw
     ( GenericInternalError
-        $ "Expected me to have at least one asset with currency symbol `"
-        <> show cs
-        <> "` and token name `"
-        <> show tn
+        $ "Expected me to have at least one asset "
+        <> show asset
         <> "`."
     )
 
