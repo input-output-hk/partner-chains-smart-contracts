@@ -49,7 +49,7 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
       , ATMSMultisignature
       )
   )
-import TrustlessSidechain.Governance
+import TrustlessSidechain.Governance.Admin
   ( GovernanceAuthority
   , mkGovernanceAuthority
   )

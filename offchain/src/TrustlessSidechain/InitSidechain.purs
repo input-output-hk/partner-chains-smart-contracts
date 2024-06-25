@@ -22,7 +22,7 @@ import TrustlessSidechain.GetSidechainAddresses
   , SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
   )
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
-import TrustlessSidechain.Governance as Governance
+import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain.CandidatePermissionToken
   ( initCandidatePermissionToken
   )

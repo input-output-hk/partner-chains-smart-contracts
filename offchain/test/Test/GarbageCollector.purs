@@ -48,7 +48,7 @@ import TrustlessSidechain.FUELMintingPolicy.V1
 import TrustlessSidechain.FUELMintingPolicy.V1 as MintingV1
 import TrustlessSidechain.FUELMintingPolicy.V2 as MintingV2
 import TrustlessSidechain.GarbageCollector as GarbageCollector
-import TrustlessSidechain.Governance as Governance
+import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
   , initSidechain

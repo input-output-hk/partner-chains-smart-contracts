@@ -21,7 +21,7 @@ import TrustlessSidechain.Effects.Contract (liftContract)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow) as Effect
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
-import TrustlessSidechain.Governance as Governance
+import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain.CandidatePermissionToken as InitCandidatePermission
 import TrustlessSidechain.InitSidechain.TokensMint as InitMint
 import TrustlessSidechain.SidechainParams as SidechainParams

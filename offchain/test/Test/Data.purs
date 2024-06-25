@@ -71,7 +71,7 @@ import TrustlessSidechain.FUELMintingPolicy.V1
   , FUELMintingRedeemer(FUELMintingRedeemer, FUELBurningRedeemer)
   , MerkleTreeEntry(MerkleTreeEntry)
   )
-import TrustlessSidechain.Governance (GovernanceAuthority(GovernanceAuthority))
+import TrustlessSidechain.Governance.Admin (GovernanceAuthority(GovernanceAuthority))
 import TrustlessSidechain.InitSidechain.Types
   ( InitTokenAssetClass(InitTokenAssetClass)
   )

@@ -57,7 +57,7 @@ import TrustlessSidechain.CommitteeCandidateValidator
 import TrustlessSidechain.FUELMintingPolicy.V1
   ( MerkleTreeEntry(MerkleTreeEntry)
   )
-import TrustlessSidechain.Governance as Governance
+import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   )

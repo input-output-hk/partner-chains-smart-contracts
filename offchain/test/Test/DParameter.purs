@@ -21,7 +21,7 @@ import TrustlessSidechain.CommitteeATMSSchemes
 import TrustlessSidechain.DParameter as DParameter
 import TrustlessSidechain.Effects.Contract (liftContract)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
-import TrustlessSidechain.Governance as Governance
+import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
   , initSidechain

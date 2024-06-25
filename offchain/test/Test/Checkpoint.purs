@@ -35,7 +35,7 @@ import TrustlessSidechain.CommitteeATMSSchemes
 import TrustlessSidechain.Effects.Contract (liftContract)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
-import TrustlessSidechain.Governance as Governance
+import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
   , initSidechain

@@ -29,7 +29,7 @@ import TrustlessSidechain.FUELProxyPolicy
   , mkFuelProxyBurnLookupsAndConstraints
   , mkFuelProxyMintLookupsAndConstraints
   )
-import TrustlessSidechain.Governance as Governance
+import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
   , initSidechain

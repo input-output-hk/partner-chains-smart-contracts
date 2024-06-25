@@ -45,7 +45,7 @@ import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
-import TrustlessSidechain.Governance as Governance
+import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
 import TrustlessSidechain.NativeTokenManagement.IlliquidCirculationSupply
   ( findIlliquidCirculationSupplyUtxos
