@@ -46,7 +46,7 @@ import TrustlessSidechain.FUELMintingPolicy.V1
   ( CombinedMerkleProof(CombinedMerkleProof)
   , MerkleTreeEntry(MerkleTreeEntry)
   )
-import TrustlessSidechain.Governance as Governance
+import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain as InitSidechain
 import TrustlessSidechain.MerkleRoot
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)

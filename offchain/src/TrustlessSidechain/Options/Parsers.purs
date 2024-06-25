@@ -73,7 +73,7 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
       )
   )
 import TrustlessSidechain.FUELMintingPolicy.V1 (CombinedMerkleProof)
-import TrustlessSidechain.Governance as Governance
+import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.MerkleTree (RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.Utils.Crypto

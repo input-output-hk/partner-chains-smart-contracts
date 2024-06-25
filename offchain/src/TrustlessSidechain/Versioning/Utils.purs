@@ -60,7 +60,7 @@ import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
   ( OffchainError(NotFoundReferenceScript, NotFoundUtxo, InvalidAddress)
   )
-import TrustlessSidechain.Governance as Governance
+import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain.Types
   ( InitTokenAssetClass(InitTokenAssetClass)
   )

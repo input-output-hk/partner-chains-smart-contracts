@@ -40,7 +40,7 @@ import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
   ( OffchainError(NotFoundUtxo, InvalidCLIParams, GenericInternalError)
   )
-import TrustlessSidechain.Governance as Governance
+import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Asset (emptyAssetName)
 import Type.Row (type (+))

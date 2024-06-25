@@ -1,4 +1,4 @@
-module TrustlessSidechain.Governance
+module TrustlessSidechain.Governance.Admin
   ( GovernanceAuthority(GovernanceAuthority)
   , mkGovernanceAuthority
   , governanceAuthorityLookupsAndConstraints

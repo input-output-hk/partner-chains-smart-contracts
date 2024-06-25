@@ -38,7 +38,7 @@ import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
   ( OffchainError(InvalidData, InvalidCLIParams)
   )
-import TrustlessSidechain.Governance as Governance
+import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.PermissionedCandidates.Types
   ( PermissionedCandidateKeys(PermissionedCandidateKeys)
   , PermissionedCandidatesPolicyRedeemer
