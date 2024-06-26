@@ -23,7 +23,6 @@ import Cardano.Types.Asset (Asset(..))
 import Cardano.Types.ScriptHash (ScriptHash)
 import Ctl.Internal.Types.Interval (POSIXTime)
 import Cardano.Types.BigInt as BigInt
-import Cardano.Types.AssetClass (AssetClass(AssetClass))
 import TrustlessSidechain.Utils.Data
   ( productFromData2
   , productFromData3

@@ -4,7 +4,6 @@ module Test.Reserve
 
 import Contract.Prelude
 
-import Aeson (decodeJsonString)
 import Cardano.Serialization.Lib (fromBytes)
 import Cardano.Types.AssetClass (AssetClass(AssetClass))
 import Cardano.Types.Asset (Asset(..), fromAssetClass)
@@ -15,7 +14,6 @@ import Cardano.Types.BigNum as BigNum
 import Cardano.Types.BigNum (BigNum)
 import Cardano.Types.Mint as Mint
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts as Scripts
 import Contract.Transaction (TransactionOutput)
 import Contract.TxConstraints as TxConstraints
 import Cardano.Types.Value as Value
@@ -24,8 +22,6 @@ import Contract.Wallet as Wallet
 import Cardano.Types.PlutusScript as PlutusScript
 import Control.Monad.Error.Class (throwError)
 import Data.Array as Array
-import Data.Either (fromRight)
-import JS.BigInt (BigInt)
 import JS.BigInt as BigInt
 import Cardano.Types.Int as Int
 import Data.Map as Map
@@ -48,8 +44,7 @@ import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
-import TrustlessSidechain.Effects.Util (fromMaybeThrow)
-import TrustlessSidechain.Error (OffchainError(GenericInternalError))
+import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.Governance as Governance
 import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
 import TrustlessSidechain.NativeTokenManagement.IlliquidCirculationSupply
@@ -70,8 +65,6 @@ import TrustlessSidechain.NativeTokenManagement.Types
   )
 import TrustlessSidechain.Utils.Asset (emptyAssetName)
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import Cardano.Types.AssetClass (AssetClass)
-import Cardano.Types.Asset (Asset(Asset))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Crypto
   ( aggregateKeys

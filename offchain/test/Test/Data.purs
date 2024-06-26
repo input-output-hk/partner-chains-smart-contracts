@@ -8,7 +8,6 @@ import Contract.Prelude
 import Cardano.Plutus.Types.PaymentPubKeyHash
   ( PaymentPubKeyHash(PaymentPubKeyHash)
   )
-import Cardano.Types.AssetClass (AssetClass(AssetClass))
 import Cardano.Types.Asset (Asset(Asset))
 import Contract.Numeric.BigNum as BigNum
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromIntArrayUnsafe)

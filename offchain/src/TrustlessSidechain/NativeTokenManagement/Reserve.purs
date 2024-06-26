@@ -18,27 +18,21 @@ import Cardano.Types.Mint as Mint
 import Cardano.Types.BigNum as BigNum
 import Cardano.Types.BigNum (BigNum)
 import Cardano.Types.Int as Int
-import Cardano.Types.AssetClass (AssetClass(AssetClass))
-import Cardano.Types.Asset (Asset(Asset, AdaAsset))
-import Cardano.Types.MultiAsset as MultiAsset
-import Cardano.Types.OutputDatum (OutputDatum(OutputDatum), outputDatumDatum)
+import Cardano.Types.Asset (Asset(Asset))
+import Cardano.Types.OutputDatum (outputDatumDatum)
 import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Types.AssetName (AssetName)
 import Cardano.Types.Value (valueOf)
-import Cardano.Types.Value as Value
 import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
 import Contract.PlutusData
-  ( Datum(..)
-  , Redeemer(..)
-  , RedeemerDatum(RedeemerDatum)
+  ( RedeemerDatum(RedeemerDatum)
   , fromData
   , toData
   , unitDatum
   )
 import Contract.ScriptLookups as Lookups
-import Contract.Scripts as Scripts
 import Contract.Transaction
   ( ScriptRef(..)
   , TransactionInput
@@ -47,11 +41,9 @@ import Contract.Transaction
 import Contract.TxConstraints (DatumPresence(..), InputWithScriptRef(..))
 import Contract.TxConstraints as TxConstraints
 import Contract.Utxos (UtxoMap)
-import Contract.Value as Value
-import JS.BigInt (BigInt)
+import Contract.Value (add, getMultiAsset, minus, singleton) as Value
 import JS.BigInt as BigInt
 import Data.Map as Map
-import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT, throw)
 import TrustlessSidechain.Effects.Log (LOG)

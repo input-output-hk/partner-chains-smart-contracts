@@ -12,7 +12,7 @@ import Contract.Address (Address)
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.AssetName (AssetName)
 import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(..))
-import Contract.PlutusData (Redeemer(..), RedeemerDatum(..), toData, unitDatum, unitRedeemer)
+import Contract.PlutusData (RedeemerDatum(..), toData, unitDatum, unitRedeemer)
 import Contract.ScriptLookups as Lookups
 import Cardano.Types.Int as Int
 import Cardano.Types.Value as Value
@@ -26,10 +26,8 @@ import Contract.TxConstraints
 import Contract.TxConstraints as TxConstraints
 import Contract.Utxos (UtxoMap)
 import Cardano.Types.Value (Value)
-import Cardano.Types.AssetName (AssetName)
 import Cardano.Types.BigNum as BigNum
 import Data.Map as Map
-import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.Effects.Log (LOG)

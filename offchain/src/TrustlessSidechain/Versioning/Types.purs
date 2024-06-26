@@ -9,7 +9,6 @@ module TrustlessSidechain.Versioning.Types
 import Contract.Prelude
 
 import Cardano.Types.BigNum (BigNum)
-import Cardano.Types.PlutusScript (PlutusScript, hash)
 import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData

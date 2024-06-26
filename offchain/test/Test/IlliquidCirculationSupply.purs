@@ -4,7 +4,7 @@ module Test.IlliquidCirculationSupply
 
 import Contract.Prelude
 
-import Contract.PlutusData (Datum(..), toData)
+import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.ScriptLookups as Lookups
 import Cardano.Types.ScriptHash (ScriptHash)
@@ -23,12 +23,10 @@ import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Control.Monad.Error.Class (throwError)
 import Data.Array as Array
-import JS.BigInt (BigInt)
 import JS.BigInt as BigInt
 import Data.Map as Map
 import Effect.Exception (error)
 import Mote.Monad as Mote.Monad
-import Partial.Unsafe (unsafePartial)
 import Run (EFFECT, Run)
 import Run.Except (EXCEPT)
 import Test.AlwaysPassingScripts (alwaysPassingPolicy)
