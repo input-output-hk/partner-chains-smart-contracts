@@ -44,6 +44,7 @@ module TrustlessSidechain.Types (
 ) where
 
 import Plutus.V1.Ledger.Crypto (PubKeyHash)
+import Plutus.V1.Ledger.Value (AssetClass)
 import Plutus.V2.Ledger.Api (
   BuiltinData (BuiltinData),
   CurrencySymbol,
@@ -53,7 +54,6 @@ import Plutus.V2.Ledger.Api (
   TxOutRef,
   ValidatorHash,
  )
-import Plutus.V1.Ledger.Value (AssetClass)
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
@@ -632,7 +632,6 @@ data ATMSRedeemer
     )
 
 PlutusTx.makeIsDataIndexed ''ATMSRedeemer [('ATMSMint, 0), ('ATMSBurn, 1)]
-
 
 -- | 'Checkpoint' is used as the parameter for the validator.
 --

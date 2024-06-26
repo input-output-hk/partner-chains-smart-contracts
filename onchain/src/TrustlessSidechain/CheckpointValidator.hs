@@ -150,11 +150,8 @@ mkCheckpointValidator checkpointParam versioningConfig datum _red ctx =
       _ -> traceError "ERROR-CHECKPOINT-VALIDATOR-07"
 
     -- TODO: query currency symbol from versioning system (https://github.com/input-output-hk/trustless-sidechain/issues/681)
-
-    assetClass = get @"assetClass" checkpointParam
-
     outputContainsCheckpointNft :: Bool
-    outputContainsCheckpointNft = Value.assetClassValueOf (Unsafe.decode $ Unsafe.txOutValue ownOutput) assetClass == 1
+    outputContainsCheckpointNft = Value.assetClassValueOf (Unsafe.decode $ Unsafe.txOutValue ownOutput) (get @"assetClass" checkpointParam) == 1
 
     signedByCurrentCommittee :: Bool
     signedByCurrentCommittee =
