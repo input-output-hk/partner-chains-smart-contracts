@@ -6,6 +6,8 @@ module TrustlessSidechain.Options.Types
   , SidechainEndpointParams(..)
   , TxEndpoint(..)
   , UtilsEndpoint(..)
+  , TokenAmount (..)
+  , IncentiveAmount (..)
   ) where
 
 import Contract.Prelude
@@ -16,7 +18,6 @@ import Contract.PlutusData (PlutusData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Scripts (ValidatorHash)
 import Contract.Transaction (TransactionInput)
-import Contract.Value (CurrencySymbol, TokenName)
 import Data.BigInt (BigInt)
 import Data.List (List)
 import Data.List.NonEmpty (NonEmptyList)
@@ -31,10 +32,11 @@ import TrustlessSidechain.GetSidechainAddresses (SidechainAddressesExtra)
 import TrustlessSidechain.MerkleRoot.Types (MerkleRootInsertionMessage)
 import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree, RootHash)
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Types (PubKey)
+import TrustlessSidechain.Types (PubKey, AssetClass)
 import TrustlessSidechain.UpdateCommitteeHash.Types (UpdateCommitteeHashMessage)
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1PrivateKey)
 import TrustlessSidechain.Utils.SchnorrSecp256k1 (SchnorrSecp256k1PrivateKey)
+import Ctl.Internal.Types.Interval (POSIXTime)
 
 -- | `SidechainEndpointParams` is an offchain type for grabbing information
 -- | related to the sidechain.
@@ -265,12 +267,15 @@ data TxEndpoint
       }
   | BurnNFTs
   | InitTokenStatus
-  -- | reserve initialization for an asset class
-  | InitReserveAssetClass
-      { tokenName ∷ TokenName
-      , currencySymbol ∷ CurrencySymbol
+  -- | reserve initialization for an asset class and deposit amount
+  | InitReserve
+      { assetClass :: AssetClass
+      , depositAmount :: TokenAmount
+      , incentiveAmount :: IncentiveAmount
       }
-
+newtype TokenAmount = TokenAmount {unAmount :: BigInt}
+newtype IncentiveAmount = IncentiveAmount {unAmount :: BigInt}
+derive newtype instance showIncentiveAmount :: Show IncentiveAmount
 -- | `InputArgOrFile` represents that we may either allow an option as input
 -- | via a CLI argument or a filepath of a JSON file
 data InputArgOrFile (a ∷ Type)

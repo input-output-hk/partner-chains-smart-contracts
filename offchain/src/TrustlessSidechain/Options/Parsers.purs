@@ -10,13 +10,16 @@ module TrustlessSidechain.Options.Parsers
   , combinedMerkleProofParser
   , combinedMerkleProofParserWithPkh
   , committeeSignature
+  , currencySymbol
   , denominator
   , ecdsaSecp256k1PrivateKey
   , ecdsaSecp256k1PublicKey
   , epoch
   , governanceAuthority
+  , incentiveAmount
   , numerator
   , parseATMSKind
+  , parseCurrencySymbol
   , parsePubKeyAndSignature
   , parsePubKeyBytesAndSignatureBytes
   , parseTokenName
@@ -33,6 +36,7 @@ module TrustlessSidechain.Options.Parsers
   , sidechainAddress
   , sidechainSignature
   , tokenName
+  , tokenAmount
   , transactionInput
   , uint
   , validatorHashParser
@@ -54,7 +58,7 @@ import Contract.Transaction
   ( TransactionHash(TransactionHash)
   , TransactionInput(TransactionInput)
   )
-import Contract.Value (TokenName)
+import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Value as Value
 import Ctl.Internal.Plutus.Conversion.Address as Conversion.Address
 import Ctl.Internal.Serialization.Address as Serialization.Address
@@ -97,6 +101,7 @@ import TrustlessSidechain.Utils.SchnorrSecp256k1
   ( SchnorrSecp256k1PrivateKey
   )
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
+import TrustlessSidechain.Options.Types (TokenAmount (..), IncentiveAmount (..))
 
 hexToByteArray ∷ String → Maybe ByteArray
 hexToByteArray s = ByteArray.hexToByteArray $ fromMaybe s $ stripPrefix
@@ -495,3 +500,24 @@ parseTokenName hexStr = do
 -- | `tokenName` wraps `parseTokenName`.
 tokenName ∷ ReadM TokenName
 tokenName = maybeReader parseTokenName
+
+-- | `parseCurrencySymbol` is a thin wrapper around `Contract.Value.mkCurrencySymbol` for
+-- | converting hex encoded strings to token names
+parseCurrencySymbol ∷ String → Maybe (CurrencySymbol)
+parseCurrencySymbol hexStr = do
+  ba ← hexToByteArray hexStr
+  Value.mkCurrencySymbol ba
+
+-- | `currencySymbol` wraps `parseCurrencySymbol`.
+currencySymbol ∷ ReadM CurrencySymbol
+currencySymbol = maybeReader parseCurrencySymbol
+
+tokenAmount :: ReadM TokenAmount
+tokenAmount = do
+  unAmount <- bigInt
+  pure (TokenAmount {unAmount})
+
+incentiveAmount :: ReadM IncentiveAmount
+incentiveAmount = do
+  unAmount <- bigInt
+  pure (IncentiveAmount {unAmount})

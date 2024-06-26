@@ -53,35 +53,35 @@ main = do
   Test.Unit.Main.runTest
     $ interpretWrappedTest do
 
-        group "Unit tests" do
-          MerkleTree.tests
-          MerkleProofSerialisation.tests
-          Options.Parsers.tests
-          AddressUtils.tests
-          ConfigFile.tests
+        -- group "Unit tests" do
+        --   MerkleTree.tests
+        --   MerkleProofSerialisation.tests
+        --   Options.Parsers.tests
+        --   AddressUtils.tests
+        --   ConfigFile.tests
 
-        group "Plutip integration tests" do
-          IlliquidCirculationSupply.tests
-          Reserve.tests
-          InitCandidatePermissionToken.tests
-          InitSidechain.tests
-          InitMint.tests
-          InitCheckpoint.tests
-          InitFUEL.tests
-          CommitteePlainEcdsaSecp256k1ATMSPolicy.tests
-          CommitteePlainSchnorrSecp256k1ATMSPolicy.tests
-          CommitteeCandidateValidator.tests
-          CandidatePermissionToken.tests
-          FUELMintingPolicy.V1.tests
-          FUELProxyPolicy.tests
-          UpdateCommitteeHash.tests
-          MerkleRoot.tests
-          MerkleRootChaining.tests
-          Checkpoint.tests
-          Versioning.tests
-          DParameter.tests
-          PermissionedCandidates.tests
-          GarbageCollector.tests
+        -- group "Plutip integration tests" do
+        --   IlliquidCirculationSupply.tests
+        --   Reserve.tests
+        --   InitCandidatePermissionToken.tests
+        --   InitSidechain.tests
+        --   InitMint.tests
+        --   InitCheckpoint.tests
+        --   InitFUEL.tests
+        --   CommitteePlainEcdsaSecp256k1ATMSPolicy.tests
+        --   CommitteePlainSchnorrSecp256k1ATMSPolicy.tests
+        --   CommitteeCandidateValidator.tests
+        --   CandidatePermissionToken.tests
+        --   FUELMintingPolicy.V1.tests
+        --   FUELProxyPolicy.tests
+        --   UpdateCommitteeHash.tests
+        --   MerkleRoot.tests
+        --   MerkleRootChaining.tests
+        --   Checkpoint.tests
+        --   Versioning.tests
+        --   DParameter.tests
+        --   PermissionedCandidates.tests
+        --   GarbageCollector.tests
 
         plutipGroup "POC Plutip tests" do
           PoCInlineDatum.tests

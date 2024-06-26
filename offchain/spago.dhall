@@ -20,6 +20,7 @@
   , "foreign-object"
   , "integers"
   , "lists"
+  , "math"
   , "maybe"
   , "monad-logger"
   , "mote"

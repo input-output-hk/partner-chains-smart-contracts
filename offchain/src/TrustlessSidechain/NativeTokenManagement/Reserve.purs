@@ -25,6 +25,7 @@ import Contract.Scripts (MintingPolicy(..), Validator(..))
 import Contract.Scripts as Scripts
 import Contract.Transaction
   ( ScriptRef(..)
+  , TransactionHash(..)
   , TransactionInput
   , TransactionOutput
   , TransactionOutputWithRefScript
@@ -49,6 +50,7 @@ import Data.Map as Map
 import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT, throw)
+import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow)
@@ -321,9 +323,7 @@ initialiseReserveUtxo ∷
   ImmutableReserveSettings →
   MutableReserveSettings →
   BigInt →
-  Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
-    Unit
+  Run (APP r) TransactionHash
 initialiseReserveUtxo
   sidechainParams
   immutableSettings
@@ -374,7 +374,7 @@ initialiseReserveUtxo
                 <> reserveAuthTokenValue
             )
 
-    void $ balanceSignAndSubmit
+    balanceSignAndSubmit
       "Reserve initialization transaction"
       { constraints, lookups }
 

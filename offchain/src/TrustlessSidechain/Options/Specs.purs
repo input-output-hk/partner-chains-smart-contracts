@@ -12,6 +12,7 @@ import Contract.Config
   )
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Scripts (ValidatorHash)
+import Contract.Value (CurrencySymbol, TokenName)
 import Contract.Wallet
   ( PrivatePaymentKeySource(PrivatePaymentKeyFile)
   , WalletSpec(UseKeys)
@@ -123,7 +124,7 @@ import TrustlessSidechain.Options.Types
       , BurnNFTs
       , InitTokenStatus
       , ListVersionedScripts
-      , InitReserveAssetClass
+      , InitReserve
       )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
@@ -138,13 +139,23 @@ import TrustlessSidechain.Options.Types
       , CborMerkleRootInsertionMessageAct
       , CborPlainAggregatePublicKeysAct
       )
+  ,  TokenAmount
+  ,  IncentiveAmount (..)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   )
 import TrustlessSidechain.Utils.Logging (environment, fileLogger)
-import Unsafe.Coerce (unsafeCoerce)
+
+import Data.Int (floor)
+import Data.Enum(fromEnum)
+import Effect.Now (nowDate, nowTime)
+import Data.DateTime.Instant (fromDate, unInstant)
+import Data.Newtype (unwrap)
+
+
+
 
 -- | Argument option parser for sidechain-main-cli
 options ∷ Maybe Config → ParserInfo Options
@@ -246,7 +257,7 @@ optSpec maybeConfig =
             )
         )
     , command "init-reserve-assetclass"
-        ( info (withCommonOpts maybeConfig initReserveAssetClassSpec)
+        ( info (withCommonOpts maybeConfig initReserveSpec)
             ( progDesc
                 "Initialize Reserve AssetClass"
             )
@@ -883,8 +894,67 @@ parseCommittee longflag hdesc filelongflag filehdesc =
 
 -- `parseReserveInit` parsed the reserve initialization for an asset class
 --
-initReserveAssetClassSpec ∷ Parser TxEndpoint
-initReserveAssetClassSpec = unsafeCoerce unit
+initReserveSpec ∷ Parser TxEndpoint
+initReserveSpec = ado
+  -- let t0 :: POSIXTime
+  tokenName ← tokenNameParser
+  currencySymbol ← currencySymbolParser
+  depositAmount <- depositAmountParser
+  incentiveAmount <- incentiveAmountParser
+  -- epoc <- floor <<< unwrap <<< unInstant <<< fromDate <$> nowDate
+  in
+   InitReserve
+      { assetClass : (currencySymbol /\ tokenName)
+      , depositAmount
+      , incentiveAmount
+      }
+
+depositAmountParser :: Parser TokenAmount
+depositAmountParser = option Parsers.tokenAmount
+  ( fold
+      [ long "initial-deposit-amount"
+      , metavar "DEPOSITAMOUNT"
+      , help "inital amount of tokens to deposit"
+      ]
+  )
+
+incentiveAmountParser :: Parser IncentiveAmount
+incentiveAmountParser = option Parsers.incentiveAmount
+  ( fold
+      [ long "initial-deposit-amount"
+      , metavar "DEPOSITAMOUNT"
+      , help "inital amount of tokens to deposit"
+      , (value (IncentiveAmount {unAmount: (BigInt.fromInt 0) }) )
+      , showDefault
+      ]
+  )
+
+currencySymbolParser ∷ Parser CurrencySymbol
+currencySymbolParser = option Parsers.currencySymbol
+  ( fold
+      [ long "currency-symbol"
+      , metavar "CURRENCYSYMBOL"
+      , help "currency symbol"
+      ]
+  )
+
+tokenNameParser ∷ Parser TokenName
+tokenNameParser = option Parsers.tokenName
+  ( fold
+      [ long "token-name"
+      , metavar "TOKENNAME"
+      , help "token name"
+      ]
+  )
+-- `parsePOSIXTime`
+-- t0Parser :: Parser POSIXTime
+-- t0Parser = options Parsers.bigInt
+--   ( fold
+--       [ long "token-name"
+--       , metavar "TOKENNAME"
+--       , help "token name"
+--       ]
+--   )
 
 -- `parseNewCommitteePubKeys` wraps `parseCommittee` with sensible defaults.
 parseNewCommitteePubKeys ∷ Parser (InputArgOrFile (NonEmptyList ByteArray))

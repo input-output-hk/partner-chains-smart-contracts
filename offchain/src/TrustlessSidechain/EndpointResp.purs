@@ -30,6 +30,7 @@ import Contract.Value
   ( CurrencySymbol
   , TokenName
   )
+import Contract.Transaction ( TransactionHash(..))
 import Data.Argonaut (Json)
 import Data.Argonaut.Core as J
 import Data.Bifunctor (rmap)
@@ -166,7 +167,7 @@ data EndpointResp
       { versionedPolicies ∷ List (Tuple Types.ScriptId MintingPolicy)
       , versionedValidators ∷ List (Tuple Types.ScriptId Validator)
       }
-  | InitReserveAssetClassResp { transactionId ∷ ByteArray }
+  | InitReserveAssetClassResp { transactionHash ∷ ByteArray}
 
 -- | `serialisePlutusDataToHex` serialises plutus data to CBOR, and shows the
 -- | hex encoded CBOR.
@@ -531,9 +532,9 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
             (encodeAeson $ map show $ versionedScriptIdsWithHashes)
         ]
 
-    InitReserveAssetClassResp { transactionId } →
+    InitReserveAssetClassResp { transactionHash } →
       J.fromObject $ Object.fromFoldable
-        [ "transactionId" /\ J.fromString (byteArrayToHex transactionId) ]
+      [ "transactionHash" /\ J.fromString (byteArrayToHex transactionHash) ]
 
 -- | Encode the endpoint response to a json object
 encodeEndpointResp ∷ EndpointResp → J.Json

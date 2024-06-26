@@ -200,7 +200,7 @@ testScenario1 =
 
         insertFakeGovernancePolicy sidechainParams
 
-        initialiseReserveUtxo
+        void $ initialiseReserveUtxo
           sidechainParams
           immutableAdaSettings
           invalidMutableSettings
@@ -233,7 +233,7 @@ testScenario2 =
             , tokenKind
             }
 
-        initialiseReserveUtxo
+        void $ initialiseReserveUtxo
           sidechainParams
           immutableSettings
           invalidMutableSettings
@@ -270,7 +270,7 @@ testScenario3 =
             , tokenKind
             }
 
-        initialiseReserveUtxo
+        void $ initialiseReserveUtxo
           sidechainParams
           immutableSettings
           invalidMutableSettings
@@ -305,7 +305,7 @@ testScenario4 =
 
           insertFakeGovernancePolicy sidechainParams
 
-          initialiseReserveUtxo
+          void $ initialiseReserveUtxo
             sidechainParams
             immutableAdaSettings
             invalidMutableSettings
@@ -388,7 +388,7 @@ testScenario5 =
             , tokenKind
             }
 
-        initialiseReserveUtxo
+        void $ initialiseReserveUtxo
           sidechainParams
           immutableSettings
           mutableSettings
@@ -456,7 +456,7 @@ testScenario8 =
             , incentiveAmount
             }
 
-        initialiseReserveUtxo
+        void $ initialiseReserveUtxo
           sidechainParams
           immutableAdaSettings
           mutableSettings
@@ -515,7 +515,7 @@ testScenario6 =
             , tokenKind
             }
 
-        initialiseReserveUtxo
+        void $ initialiseReserveUtxo
           sidechainParams
           immutableSettings
           invalidMutableSettings
@@ -558,7 +558,7 @@ testScenario7 =
 
         let numOfAda = BigInt.fromInt 3_000_000
 
-        initialiseReserveUtxo
+        void $ initialiseReserveUtxo
           sidechainParams
           immutableAdaSettings
           invalidMutableSettings
