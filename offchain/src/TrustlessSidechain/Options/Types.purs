@@ -16,6 +16,7 @@ import Contract.PlutusData (PlutusData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Scripts (ValidatorHash)
 import Contract.Transaction (TransactionInput)
+import Contract.Value (CurrencySymbol, TokenName)
 import Data.BigInt (BigInt)
 import Data.List (List)
 import Data.List.NonEmpty (NonEmptyList)
@@ -264,6 +265,11 @@ data TxEndpoint
       }
   | BurnNFTs
   | InitTokenStatus
+  -- | reserve initialization for an asset class
+  | InitReserveAssetClass
+      { tokenName ∷ TokenName
+      , currencySymbol ∷ CurrencySymbol
+      }
 
 -- | `InputArgOrFile` represents that we may either allow an option as input
 -- | via a CLI argument or a filepath of a JSON file

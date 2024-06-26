@@ -49,7 +49,7 @@ instance FromData ImmutableReserveSettings where
 
 newtype MutableReserveSettings = MutableReserveSettings
   { vFunctionTotalAccrued ∷ CurrencySymbol
-  , incentiveAmount :: BigInt.BigInt
+  , incentiveAmount ∷ BigInt.BigInt
   }
 
 derive newtype instance Eq MutableReserveSettings

@@ -8,6 +8,7 @@ import Contract.Monad (launchAff_)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Control.Monad.Error.Class (throwError)
+import Ctl.Internal.Types.Interval (POSIXTime(..))
 import Data.Array as Array
 import Data.BigInt as BigInt
 import Data.List as List
@@ -26,7 +27,7 @@ import TrustlessSidechain.ConfigFile as ConfigFile
 import TrustlessSidechain.DParameter as DParameter
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Run (runAppLive)
-import TrustlessSidechain.EndpointResp
+import TrustlessSidechain.EndpointResp 
   ( EndpointResp
       ( ClaimActRespV1
       , BurnActRespV1
@@ -41,8 +42,7 @@ import TrustlessSidechain.EndpointResp
       , InitCheckpointResp
       , InitResp
       , InitCandidatePermissionTokenResp
-      , InitTokensMintResp
-      , InitFuelResp
+      , InitTokensMintResp, InitFuelResp
       , CommitteeHandoverResp
       , SaveCheckpointResp
       , InsertVersionResp
@@ -66,20 +66,15 @@ import TrustlessSidechain.EndpointResp
       , InitTokenStatusResp
       , ListVersionedScriptsResp
       )
-  , stringifyEndpointResp
-  )
+  , stringifyEndpointResp)
 import TrustlessSidechain.FUELMintingPolicy.V1 as Mint.V1
 import TrustlessSidechain.FUELMintingPolicy.V2 as Mint.V2
 import TrustlessSidechain.FUELProxyPolicy as FUELProxyPolicy
 import TrustlessSidechain.GarbageCollector as GarbageCollector
-import TrustlessSidechain.GetSidechainAddresses
-  ( SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
-  )
+import TrustlessSidechain.GetSidechainAddresses (SidechainAddressesEndpointParams(SidechainAddressesEndpointParams))
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.InitSidechain (initSidechain, toSidechainParams)
-import TrustlessSidechain.InitSidechain.CandidatePermissionToken
-  ( initCandidatePermissionToken
-  )
+import TrustlessSidechain.InitSidechain.CandidatePermissionToken (initCandidatePermissionToken)
 import TrustlessSidechain.InitSidechain.Checkpoint (initCheckpoint)
 import TrustlessSidechain.InitSidechain.FUEL (initFuel)
 import TrustlessSidechain.InitSidechain.Init (getInitTokenStatus)
@@ -87,65 +82,19 @@ import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
 import TrustlessSidechain.MerkleRoot (SaveRootParams(SaveRootParams))
 import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.MerkleTree as MerkleTree
+import TrustlessSidechain.NativeTokenManagement.Reserve (initialiseReserveUtxo)
+import TrustlessSidechain.NativeTokenManagement.Types (ImmutableReserveSettings(..), MutableReserveSettings(..))
 import TrustlessSidechain.Options.Specs (options)
-import TrustlessSidechain.Options.Types
-  ( Options(TxOptions, UtilsOptions, CLIVersion)
-  , SidechainEndpointParams
-  , TxEndpoint
-      ( BurnActV1
-      , BurnActV2
-      , ClaimActV1
-      , ClaimActV2
-      , GetAddrs
-      , CommitteeCandidateReg
-      , CandidiatePermissionTokenAct
-      , CommitteeCandidateDereg
-      , CommitteeHash
-      , SaveRoot
-      , InitCheckpoint
-      , Init
-      , InitCandidatePermissionToken
-      , InitTokensMint
-      , InitFuel
-      , CommitteeHandover
-      , SaveCheckpoint
-      , InsertVersion2
-      , UpdateVersion
-      , InvalidateVersion
-      , InsertDParameter
-      , UpdateDParameter
-      , UpdatePermissionedCandidates
-      , BurnNFTs
-      , InitTokenStatus
-      , ListVersionedScripts
-      )
-  , UtilsEndpoint
-      ( EcdsaSecp256k1KeyGenAct
-      , SchnorrSecp256k1KeyGenAct
-      , EcdsaSecp256k1SignAct
-      , SchnorrSecp256k1SignAct
-      , CborUpdateCommitteeMessageAct
-      , CborBlockProducerRegistrationMessageAct
-      , CborMerkleRootInsertionMessageAct
-      , CborMerkleTreeEntryAct
-      , CborMerkleTreeAct
-      , CborCombinedMerkleProofAct
-      , CborPlainAggregatePublicKeysAct
-      )
-  )
+import TrustlessSidechain.Options.Types (Options(TxOptions, UtilsOptions, CLIVersion), SidechainEndpointParams, TxEndpoint(BurnActV1, BurnActV2, ClaimActV1, ClaimActV2, GetAddrs, CommitteeCandidateReg, CandidiatePermissionTokenAct, CommitteeCandidateDereg, CommitteeHash, SaveRoot, InitCheckpoint, Init, InitCandidatePermissionToken, InitTokensMint, InitFuel, CommitteeHandover, SaveCheckpoint, InsertVersion2, UpdateVersion, InvalidateVersion, InsertDParameter, UpdateDParameter, UpdatePermissionedCandidates, BurnNFTs, InitTokenStatus, ListVersionedScripts, InitReserveAssetClass), UtilsEndpoint(EcdsaSecp256k1KeyGenAct, SchnorrSecp256k1KeyGenAct, EcdsaSecp256k1SignAct, SchnorrSecp256k1SignAct, CborUpdateCommitteeMessageAct, CborBlockProducerRegistrationMessageAct, CborMerkleRootInsertionMessageAct, CborMerkleTreeEntryAct, CborMerkleTreeAct, CborCombinedMerkleProofAct, CborPlainAggregatePublicKeysAct))
 import TrustlessSidechain.PermissionedCandidates as PermissionedCandidates
-import TrustlessSidechain.UpdateCommitteeHash
-  ( UpdateCommitteeHashParams(UpdateCommitteeHashParams)
-  )
+import TrustlessSidechain.UpdateCommitteeHash (UpdateCommitteeHashParams(UpdateCommitteeHashParams))
 import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
-import TrustlessSidechain.Utils.Transaction
-  ( balanceSignAndSubmit
-  , balanceSignAndSubmitWithoutSpendingUtxo
-  )
+import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit, balanceSignAndSubmitWithoutSpendingUtxo)
 import TrustlessSidechain.Versioning as Versioning
 import Type.Row (type (+))
+import TrustlessSidechain.Types (AssetClass)
 
 -- | Main entrypoint for the CTL CLI
 main ∷ Effect Unit
@@ -669,6 +618,22 @@ runTxEndpoint sidechainEndpointParams endpoint =
               { sidechainParams: scParams, atmsKind }
               version
           )
+
+      InitReserveAssetClass { tokenName, currencySymbol } →
+        let assetClass :: AssetClass
+            assetClass = currencySymbol /\ tokenName
+        in initialiseReserveUtxo
+          scParams
+          (ImmutableReserveSettings 
+            { t0: zero
+            , tokenKind: assetClass
+            })
+          (MutableReserveSettings 
+            { vFunctionTotalAccrued : currencySymbol
+            , incentiveAmount : zero
+            })
+          zero
+
 
 -- | Executes an endpoint for the `utils` subcommand. Note that this does _not_
 -- | need to be in the Contract monad.

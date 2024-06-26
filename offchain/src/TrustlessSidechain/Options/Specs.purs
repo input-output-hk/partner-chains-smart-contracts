@@ -123,6 +123,7 @@ import TrustlessSidechain.Options.Types
       , BurnNFTs
       , InitTokenStatus
       , ListVersionedScripts
+      , InitReserveAssetClass
       )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
@@ -143,6 +144,7 @@ import TrustlessSidechain.UpdateCommitteeHash.Types
   ( UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   )
 import TrustlessSidechain.Utils.Logging (environment, fileLogger)
+import Unsafe.Coerce (unsafeCoerce)
 
 -- | Argument option parser for sidechain-main-cli
 options ∷ Maybe Config → ParserInfo Options
@@ -241,6 +243,12 @@ optSpec maybeConfig =
         ( info (withCommonOpts maybeConfig listVersionedScriptsSpec)
             ( progDesc
                 "Get scripts (validators and minting policies) that are currently being versioned"
+            )
+        )
+    , command "init-reserve-assetclass"
+        ( info (withCommonOpts maybeConfig initReserveAssetClassSpec)
+            ( progDesc
+                "Initialize Reserve AssetClass"
             )
         )
 
@@ -872,6 +880,11 @@ parseCommittee longflag hdesc filelongflag filehdesc =
                 ]
             )
         )
+
+-- `parseReserveInit` parsed the reserve initialization for an asset class
+--
+initReserveAssetClassSpec ∷ Parser TxEndpoint
+initReserveAssetClassSpec = unsafeCoerce unit
 
 -- `parseNewCommitteePubKeys` wraps `parseCommittee` with sensible defaults.
 parseNewCommitteePubKeys ∷ Parser (InputArgOrFile (NonEmptyList ByteArray))
