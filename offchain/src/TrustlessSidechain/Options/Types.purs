@@ -56,6 +56,7 @@ data Options
       { sidechainEndpointParams ∷ SidechainEndpointParams
       , endpoint ∷ TxEndpoint
       , contractParams ∷ ContractParams
+      , outputTransactionFilePath ∷ Maybe String
       }
   |
     -- | `UtilsOptions` are the options for endpoints for functionality

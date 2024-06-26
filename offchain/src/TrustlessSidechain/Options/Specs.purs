@@ -387,6 +387,13 @@ withCommonOpts maybeConfig endpointParser = ado
     fromMaybe defaultKupoServerConfig
       (maybeConfig >>= _.runtimeConfig >>= _.kupo)
 
+  outputTransactionFilePath ← optional $ option str $ fold
+    [ long "output-transaction-file-path"
+    , metavar "TX-FILE"
+    , help
+        "Output transaction file path"
+    ]
+
   in
     TxOptions
       { sidechainEndpointParams
@@ -401,6 +408,7 @@ withCommonOpts maybeConfig endpointParser = ado
               (PrivateStakeKeyFile <$> stSkey)
           , backendParams = mkCtlBackendParams { kupoConfig, ogmiosConfig }
           }
+      , outputTransactionFilePath: outputTransactionFilePath
       }
   where
   -- the default server config upstream is different than Kupo's defaults

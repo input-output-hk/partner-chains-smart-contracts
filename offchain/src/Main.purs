@@ -18,7 +18,7 @@ import Effect.Class (liftEffect)
 import Effect.Exception (error)
 import JS.BigInt as BigInt
 import Options.Applicative (execParser)
-import Run (EFFECT, Run)
+import Run (AFF, EFFECT, Run)
 import TrustlessSidechain.CLIVersion (versionString)
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint as Checkpoint
@@ -143,7 +143,8 @@ import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
 import TrustlessSidechain.Utils.Transaction
-  ( balanceSignAndSubmit
+  ( balanceAndWriteWithoutSpendingUtxo
+  , balanceSignAndSubmit
   , balanceSignAndSubmitWithoutSpendingUtxo
   , txHashToByteArray
   )
@@ -185,6 +186,7 @@ main = do
           $ runTxEndpoint
               opts.sidechainEndpointParams
               opts.endpoint
+              opts.outputTransactionFilePath
 
         case endpointResp of
           Right resp → liftEffect $ printEndpointResp resp
@@ -205,8 +207,12 @@ getOptions = do
 
 -- | Executes an transaction endpoint and returns a response object
 runTxEndpoint ∷
-  ∀ r. SidechainEndpointParams → TxEndpoint → Run (APP + EFFECT + r) EndpointResp
-runTxEndpoint sidechainEndpointParams endpoint =
+  ∀ r.
+  SidechainEndpointParams →
+  TxEndpoint →
+  Maybe String →
+  Run (APP + EFFECT + AFF + r) EndpointResp
+runTxEndpoint sidechainEndpointParams endpoint outputTransactionFilePath =
   let
     scParams = (unwrap sidechainEndpointParams).sidechainParams
     atmsKind = (unwrap sidechainEndpointParams).atmsKind
@@ -642,20 +648,32 @@ runTxEndpoint sidechainEndpointParams endpoint =
           >>> UpdateDParameterResp
 
       UpdatePermissionedCandidates
-        { permissionedCandidatesToAdd, permissionedCandidatesToRemove } →
-        PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
-          scParams
-          { permissionedCandidatesToAdd: Array.fromFoldable
-              permissionedCandidatesToAdd
-          , permissionedCandidatesToRemove: Array.fromFoldable <$>
-              permissionedCandidatesToRemove
-          }
-          >>= balanceSignAndSubmitWithoutSpendingUtxo
-            (unwrap scParams).genesisUtxo
-            "UpdatePermissionedCandidates"
-          <#> txHashToByteArray
-          >>> { transactionId: _ }
-          >>> UpdatePermissionedCandidatesResp
+        { permissionedCandidatesToAdd, permissionedCandidatesToRemove } → do
+
+        lookupsAndConstraints ←
+          PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
+            scParams
+            { permissionedCandidatesToAdd: Array.fromFoldable
+                permissionedCandidatesToAdd
+            , permissionedCandidatesToRemove: Array.fromFoldable <$>
+                permissionedCandidatesToRemove
+            }
+        case outputTransactionFilePath of
+          Just outputFile → do
+            balanceAndWriteWithoutSpendingUtxo (unwrap scParams).genesisUtxo
+              lookupsAndConstraints
+              outputFile
+            pure $ UpdatePermissionedCandidatesResp
+              (Right { outputFile: outputFile })
+          Nothing → do
+            balanceSignAndSubmitWithoutSpendingUtxo
+              (unwrap scParams).genesisUtxo
+              "UpdatePermissionedCandidates"
+              lookupsAndConstraints
+              <#> txHashToByteArray
+              >>> { transactionId: _ }
+              >>> Left
+              >>> UpdatePermissionedCandidatesResp
 
       BurnNFTs →
         GarbageCollector.mkBurnNFTsLookupsAndConstraints scParams

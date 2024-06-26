@@ -2,17 +2,28 @@ module TrustlessSidechain.Utils.Transaction
   ( balanceSignAndSubmit
   , balanceSignAndSubmitWithoutSpendingUtxo
   , txHashToByteArray
+  , balanceAndWriteWithoutSpendingUtxo
   ) where
 
 import Contract.Prelude
 
 import Cardano.AsCbor (encodeCbor)
+import Cardano.Types.Transaction (Transaction)
 import Contract.BalanceTxConstraints (mustNotSpendUtxoWithOutRef)
+import Contract.CborBytes (cborBytesToHex)
 import Contract.ScriptLookups (ScriptLookups)
-import Contract.Transaction (TransactionHash, TransactionInput)
+import Contract.Transaction
+  ( TransactionHash
+  , TransactionInput
+  )
 import Contract.TxConstraints (TxConstraints)
+import Data.Argonaut.Core as J
 import Data.ByteArray (ByteArray)
-import Run (Run)
+import Foreign.Object as Object
+import Node.Encoding (Encoding(..))
+import Node.FS.Aff (writeTextFile)
+import Run (AFF, EFFECT, Run)
+import Run as Run
 import Run.Except (EXCEPT)
 import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Log (logInfo') as Effect
@@ -76,6 +87,38 @@ balanceSignAndSubmitWithoutSpendingUtxo
   Effect.logInfo' $ txName <> " Tx confirmed!"
 
   pure txId
+
+balanceAndWriteWithoutSpendingUtxo ∷
+  ∀ r.
+  TransactionInput →
+  { lookups ∷ ScriptLookups
+  , constraints ∷ TxConstraints
+  } →
+  String →
+  Run (EXCEPT OffchainError + EFFECT + TRANSACTION + AFF + LOG + r) Unit
+balanceAndWriteWithoutSpendingUtxo
+  forbiddenUtxo
+  { lookups, constraints }
+  outputFile = do
+  ubTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups constraints
+  let balanceTxConstraints = mustNotSpendUtxoWithOutRef forbiddenUtxo
+
+  tx ← mapError BalanceTxError $
+    Effect.balanceTxWithConstraints ubTx
+      balanceTxConstraints
+
+  Run.liftAff $ writeTextFile UTF8 outputFile
+    $ J.stringifyWithIndent 4
+    $ J.fromObject
+    $ Object.fromFoldable
+        [ "type" /\ J.fromString "Unwitnessed Tx BabbageEra"
+        , "description" /\ J.fromString "Ledger Cddl Format"
+        , "cborHex" /\ J.fromString (serialiseTx tx)
+        ]
+
+  where
+  serialiseTx ∷ Transaction → String
+  serialiseTx = encodeCbor >>> cborBytesToHex
 
 txHashToByteArray ∷ TransactionHash → ByteArray
 txHashToByteArray txHash = unwrap $ encodeCbor txHash

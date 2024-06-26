@@ -153,7 +153,7 @@ data EndpointResp
   | UpdateDParameterResp
       { transactionId ∷ ByteArray }
   | UpdatePermissionedCandidatesResp
-      { transactionId ∷ ByteArray }
+      (Either { transactionId ∷ ByteArray } { outputFile ∷ String })
   | BurnNFTsResp
       { transactionId ∷ ByteArray }
   | InitTokenStatusResp
@@ -494,10 +494,17 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         ]
 
     UpdatePermissionedCandidatesResp
-      { transactionId } →
+      (Left { transactionId }) →
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "UpdatePermissionedCandidates"
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
+        ]
+
+    UpdatePermissionedCandidatesResp
+      (Right { outputFile }) →
+      J.fromObject $ Object.fromFoldable
+        [ "endpoint" /\ J.fromString "UpdatePermissionedCandidates"
+        , "outputFile" /\ J.fromString outputFile
         ]
 
     BurnNFTsResp
