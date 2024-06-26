@@ -83,7 +83,7 @@
     # Unfortunately the original did not accept a modified project
     runPursTest = {
       project,
-      pkgs ? pkgs,
+      _pkgs ? pkgs,
       testMain ? "Test.Main",
       name ? "trustless-sidechain-ctl-check",
       nodeModules ? project.nodeModules,
