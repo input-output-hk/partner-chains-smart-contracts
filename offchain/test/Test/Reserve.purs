@@ -5,6 +5,7 @@ module Test.Reserve
 import Contract.Prelude
 
 import Aeson (decodeJsonString)
+import Cardano.Serialization.Lib (fromBytes)
 import Cardano.Types.AssetClass (AssetClass(AssetClass))
 import Cardano.Types.Asset (Asset(..), fromAssetClass)
 import Cardano.Types.ScriptHash (ScriptHash)
@@ -23,6 +24,7 @@ import Contract.Wallet as Wallet
 import Cardano.Types.PlutusScript as PlutusScript
 import Control.Monad.Error.Class (throwError)
 import Data.Array as Array
+import Data.Either (fromRight)
 import JS.BigInt (BigInt)
 import JS.BigInt as BigInt
 import Cardano.Types.Int as Int
@@ -80,12 +82,11 @@ import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.ScriptId (ScriptId(..))
 import TrustlessSidechain.Versioning.Utils (insertVersionLookupsAndConstraints)
 import Type.Row (type (+))
-import Data.Either (fromRight)
 
 invalidScriptHash :: ScriptHash
-invalidScriptHash = unsafePartial (case decodeJsonString "00000000000000000000000000000000000000000000000000000000" of
-    Right b -> b
-  )
+invalidScriptHash =
+  wrap $ unsafePartial $ fromJust $ fromBytes $ hexToByteArrayUnsafe
+    "00000000000000000000000000000000000000000000000000000000"
 
 immutableAdaSettings ∷ ImmutableReserveSettings
 immutableAdaSettings = ImmutableReserveSettings
@@ -326,9 +327,9 @@ testScenario4 =
           let
             updatedMutableSettings = MutableReserveSettings
               { vFunctionTotalAccrued:
-                  unsafePartial $ (case decodeJsonString
-                        "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d" of
-                          Right r -> r)
+                  wrap $ unsafePartial $ fromJust $ fromBytes $
+                    hexToByteArrayUnsafe $
+                      "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
               , incentiveAmount: BigInt.fromInt 20
               }
 
