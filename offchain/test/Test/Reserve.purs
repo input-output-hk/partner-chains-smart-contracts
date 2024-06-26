@@ -6,7 +6,7 @@ import Contract.Prelude
 
 import Cardano.Serialization.Lib (fromBytes)
 import Cardano.Types.AssetClass (AssetClass(AssetClass))
-import Cardano.Types.Asset (Asset(..), fromAssetClass)
+import Cardano.Types.Asset (Asset(AdaAsset), fromAssetClass)
 import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)

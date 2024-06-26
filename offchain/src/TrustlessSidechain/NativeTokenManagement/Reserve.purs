@@ -20,6 +20,7 @@ import Cardano.Types.BigNum (BigNum)
 import Cardano.Types.Int as Int
 import Cardano.Types.Asset (Asset(Asset))
 import Cardano.Types.OutputDatum (outputDatumDatum)
+import Cardano.Types.PlutusData (unit) as PlutusData
 import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.ScriptHash (ScriptHash)
@@ -30,7 +31,6 @@ import Contract.PlutusData
   ( RedeemerDatum(RedeemerDatum)
   , fromData
   , toData
-  , unitDatum
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction
@@ -652,7 +652,7 @@ transferToIlliquidCirculationSupply
               (Mint.fromMultiAsset $ Value.getMultiAsset vtTokensAsValue)
         <> TxConstraints.mustPayToScript
           (PlutusScript.hash illiquidCirculationSupplyValidator)
-          unitDatum
+          PlutusData.unit
           DatumInline
           illiquidCirculationNewValue
 
@@ -729,7 +729,7 @@ handover
         <> reserveConstraints
         <> TxConstraints.mustPayToScript
           (PlutusScript.hash illiquidCirculationSupplyValidator)
-          unitDatum
+          PlutusData.unit
           DatumInline
           toHandover
         <> TxConstraints.mustSpendScriptOutputUsingScriptRef

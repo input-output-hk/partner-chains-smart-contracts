@@ -9,14 +9,18 @@ import Contract.Prelude
 
 import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.Address (Address)
-import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.AssetName (AssetName)
+import Cardano.Types.PlutusData (unit) as PlutusData
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(..))
-import Contract.PlutusData (RedeemerDatum(..), toData, unitDatum, unitRedeemer)
+import Contract.PlutusData
+  ( RedeemerDatum(..)
+  , toData
+  )
 import Contract.ScriptLookups as Lookups
 import Cardano.Types.Int as Int
 import Cardano.Types.Value as Value
-import Contract.Scripts as Scripts
 import Cardano.Types.TransactionOutput (TransactionOutput)
 import Cardano.Types.TransactionInput (TransactionInput)
 import Contract.TxConstraints
@@ -138,7 +142,7 @@ depositMoreToSupply sp depositedValue utxo = do
     versionOracleConfig
 
   let
-    icsValidatorHash = Scripts.validatorHash illiquidCirculationSupplyValidator'
+    icsValidatorHash = PlutusScript.hash illiquidCirculationSupplyValidator'
 
     value = unwrap >>> _.amount $ snd utxo
 
@@ -155,7 +159,7 @@ depositMoreToSupply sp depositedValue utxo = do
     constraints =
       TxConstraints.mustPayToScript
         icsValidatorHash
-        unitDatum
+        PlutusData.unit
         DatumInline
         newValue
         <> TxConstraints.mustSpendScriptOutput (fst utxo)
@@ -189,7 +193,7 @@ withdrawFromSupply sp mintingPolicyHash withdrawnValue utxo = do
       sp
       icsWithdrawalPolicyVersionOracle
   let
-    icsValidatorHash = Scripts.validatorHash illiquidCirculationSupplyValidator'
+    icsValidatorHash = PlutusScript.hash illiquidCirculationSupplyValidator'
 
     value = unwrap >>> _.amount $ snd utxo
 
@@ -207,14 +211,14 @@ withdrawFromSupply sp mintingPolicyHash withdrawnValue utxo = do
     constraints =
       TxConstraints.mustPayToScript
         icsValidatorHash
-        unitDatum
+        PlutusData.unit
         DatumInline
         newValue
         <> TxConstraints.mustSpendScriptOutput (fst utxo)
           (RedeemerDatum $ toData WithdrawFromSupply)
         <> TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
           mintingPolicyHash
-          unitRedeemer
+          (RedeemerDatum PlutusData.unit)
           icsWithdrawalTokenName
           (Int.fromInt 1)
           ( RefInput $ TransactionUnspentOutput
