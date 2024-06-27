@@ -100,9 +100,11 @@
         // env
       )
       ''
-        cd ${project.compiled}
-        ${pkgs.nodejs}/bin/node --enable-source-maps -e 'require("./output/${testMain}").main()'
-        touch $out
+        mkdir -p $out
+        cp -R ${project.compiled}/* $out
+        chmod -R u+rw $out/output
+        ln -s $NODE_PATH $out/output/node_modules
+        ${pkgs.nodejs}/bin/node $out/output/${testMain}
       '';
     runPlutipTest = args:
       runPursTest (
