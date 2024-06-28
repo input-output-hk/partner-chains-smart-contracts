@@ -8,18 +8,22 @@
 }: rec {
   sidechain-main-cli = let
     project = repoRoot.nix.lib.mkPurescriptProject;
+
+    bundled = pkgs.runCommand "sidechain-bundled" {}
+    ''
+      mkdir -p $out
+      cp -R ${project.compiled}/* $out
+      chmod -R u+rw $out/output
+      ln -s ${project.nodeModules}/lib/node_modules $out/output/node_modules
+    '';
   in
     pkgs.writeShellApplication {
       name = "sidechain-main-cli";
-      runtimeInputs = [project.nodejs];
-      # Node's `process.argv` always contains the executable name as the
-      # first argument, hence passing `sidechain-main-cli "$@"` rather than just
-      # `"$@"`
       text = ''
-        export NODE_PATH="${project.nodeModules}/lib/node_modules"
-        node --enable-source-maps -e 'require("${project.compiled}/output/Main").main()' sidechain-main-cli "$@"
+      ${project.nodejs}/bin/node -e 'import("${bundled}/output/Main/index.js").then(m => m.main())' sidechain-main-cli "$@"
       '';
     };
+
   sidechain-main-cli-image = inputs.n2c.packages.nix2container.buildImage {
     name = "sidechain-main-cli-docker";
     tag = "${inputs.self.shortRev or inputs.self.dirtyShortRev}";
