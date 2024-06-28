@@ -9,18 +9,19 @@
   sidechain-main-cli = let
     project = repoRoot.nix.lib.mkPurescriptProject;
 
-    bundled = pkgs.runCommand "sidechain-bundled" {}
-    ''
-      mkdir -p $out
-      cp -R ${project.compiled}/* $out
-      chmod -R u+rw $out/output
-      ln -s ${project.nodeModules}/lib/node_modules $out/output/node_modules
-    '';
+    bundled =
+      pkgs.runCommand "sidechain-bundled" {}
+      ''
+        mkdir -p $out
+        cp -R ${project.compiled}/* $out
+        chmod -R u+rw $out/output
+        ln -s ${project.nodeModules}/lib/node_modules $out/output/node_modules
+      '';
   in
     pkgs.writeShellApplication {
       name = "sidechain-main-cli";
       text = ''
-      ${project.nodejs}/bin/node -e 'import("${bundled}/output/Main/index.js").then(m => m.main())' sidechain-main-cli "$@"
+        ${project.nodejs}/bin/node -e 'import("${bundled}/output/Main/index.js").then(m => m.main())' sidechain-main-cli "$@"
       '';
     };
 
