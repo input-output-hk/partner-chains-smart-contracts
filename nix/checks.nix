@@ -85,6 +85,7 @@
       project,
       _pkgs ? pkgs,
       testMain ? "Test.Main",
+      psEntryPoint ? "main",
       name ? "trustless-sidechain-ctl-check",
       nodeModules ? project.nodeModules,
       env ? {},
@@ -104,7 +105,9 @@
         cp -R ${project.compiled}/* $out
         chmod -R u+rw $out/output
         ln -s $NODE_PATH $out/output/node_modules
-        ${pkgs.nodejs}/bin/node $out/output/${testMain}
+        ${pkgs.nodejs}/bin/node --enable-source-maps -e "
+          import('$out/output/${testMain}/index.js').then(m => m.${psEntryPoint}())
+        "
       '';
     runPlutipTest = args:
       runPursTest (
