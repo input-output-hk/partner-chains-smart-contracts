@@ -9,6 +9,9 @@ module TrustlessSidechain.Utils.Address
   , getPlutusScriptHex
   , fromPaymentPubKeyHash
   , addressFromBech32Bytes
+    -- * pubkeyhash from/to address conversion
+  , toPaymentPubKeyHash
+  , toStakePubKeyHash
   ) where
 
 import Contract.Prelude hiding (note)
@@ -17,17 +20,21 @@ import Cardano.AsCbor (decodeCbor)
 import Cardano.Serialization.Lib
   ( toBytes
   )
-import Cardano.Types.Address (Address)
 import Cardano.Types.Address as Address
 import Cardano.Types.Credential
   ( Credential(PubKeyHashCredential, ScriptHashCredential)
+    , asPubKeyHash
   )
 import Cardano.Types.NetworkId (NetworkId)
 import Cardano.Types.PaymentCredential (PaymentCredential(PaymentCredential))
-import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash)
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.ScriptHash (ScriptHash)
+import Contract.Address
+  ( Address
+  , PaymentPubKeyHash
+  , StakePubKeyHash
+  )
 import Contract.PlutusData (PlutusData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
@@ -120,3 +127,12 @@ fromPaymentPubKeyHash networkId pkh = Address.mkPaymentAddress networkId
 addressFromBech32Bytes ∷ ByteArray → Maybe Address
 addressFromBech32Bytes = decodeCbor <<< wrap
 
+-- | Derive the public key hash from a public key address
+toPaymentPubKeyHash ∷ Address → Maybe PaymentPubKeyHash
+toPaymentPubKeyHash addr = wrap <$>
+  ((asPubKeyHash <<< unwrap) =<< Address.getPaymentCredential addr)
+
+-- | Derive the stake key hash from a public key address
+toStakePubKeyHash ∷ Address → Maybe StakePubKeyHash
+toStakePubKeyHash addr = wrap <$>
+  ((asPubKeyHash <<< unwrap) =<< Address.getStakeCredential addr)

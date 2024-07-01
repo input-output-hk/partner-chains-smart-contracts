@@ -12,9 +12,7 @@ module TrustlessSidechain.FUELMintingPolicy.V1
 import Contract.Prelude
 
 import Cardano.AsCbor (encodeCbor)
-import Cardano.Types.Address (getPaymentCredential, getStakeCredential)
 import Cardano.Types.AssetName (AssetName, mkAssetName, unAssetName)
-import Cardano.Types.Credential (asPubKeyHash)
 import Cardano.Types.Int as Int
 import Cardano.Types.PlutusData (PlutusData(Constr))
 import Cardano.Types.PlutusData as PlutusData
@@ -83,6 +81,8 @@ import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address
   ( addressFromBech32Bytes
   , getOwnPaymentPubKeyHash
+  , toPaymentPubKeyHash
+  , toStakePubKeyHash
   )
 import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
 import TrustlessSidechain.Utils.Crypto (blake2b256Hash)
@@ -487,16 +487,6 @@ findMerkleRootTokenUtxoByRootHash sidechainParams rootHash = do
       $ mkAssetName
       $ unRootHash rootHash
   findMerkleRootTokenUtxo merkleRootTokenName sidechainParams
-
--- | Derive the public key hash from a public key address
-toPaymentPubKeyHash ∷ Address → Maybe PaymentPubKeyHash
-toPaymentPubKeyHash addr = wrap <$>
-  ((asPubKeyHash <<< unwrap) =<< getPaymentCredential addr)
-
--- | Derive the stake key hash from a public key address
-toStakePubKeyHash ∷ Address → Maybe StakePubKeyHash
-toStakePubKeyHash addr = wrap <$>
-  ((asPubKeyHash <<< unwrap) =<< getStakeCredential addr)
 
 -- | Pay values to a public key address (with optional staking key)
 mustPayToPubKeyAddress' ∷
