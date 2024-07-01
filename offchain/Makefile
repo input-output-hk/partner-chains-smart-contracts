@@ -30,22 +30,9 @@ build:
 test: src/TrustlessSidechain/RawScripts.purs
 	@spago test ${spago-args} -m ${ps-test-entrypoint}
 
-
-dev: output.js
-	@BROWSER_RUNTIME=${BROWSER_RUNTIME} webpack-dev-server --progress
-
 create-bundle-entrypoint:
 	@mkdir -p dist/
 	@echo 'import("../output/Main/index.js").then(m => m.${ps-entrypoint-function}());' > ./dist/entrypoint.js
-
-create-html-entrypoint:
-	@mkdir -p dist/
-	@cat << EOF > dist/index.html
-	<!DOCTYPE html>
-	<html>
-	  <body><script type="module" src="./index.js"></script></body>
-	</html>
-	EOF
 
 delete-bundle-entrypoint:
 	@rm -f ./dist/entrypoint.js
@@ -54,9 +41,6 @@ esbuild-bundle: build create-bundle-entrypoint
 	@mkdir -p dist/
 	BROWSER_RUNTIME=${browser-runtime} node esbuild/bundle.js ./dist/entrypoint.js dist/index.js
 	@make delete-bundle-entrypoint
-
-esbuild-serve: build create-bundle-entrypoint create-html-entrypoint
-	BROWSER_RUNTIME=1 node esbuild/serve.js ./dist/entrypoint.js dist/index.js dist/ ${serve-port}
 
 version: package.json
 	./set_version.sh
