@@ -9,7 +9,7 @@ SHELL := bash
 ps-sources := $(shell fd --no-ignore-parent -epurs)
 nix-sources := $(shell fd --no-ignore-parent -enix --exclude='spago*')
 js-sources := $(shell fd --no-ignore-parent -ejs -ecjs)
-purs-args := "--stash --censor-lib --censor-codes=UserDefinedWarning,ImplicitImport,ImplicitQualifiedImport,ImplicitQualifiedImportReExport"
+purs-args := "--censor-lib --stash --strict --censor-codes=UserDefinedWarning"
 
 ### Serialization of Plutus on-chain scripts to PureScript
 
