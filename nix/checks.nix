@@ -79,52 +79,10 @@
       touch $out
     '';
   trustless-sidechain-ctl = let
-    # This is almost a direct copy of the function from the CTL library
-    # Unfortunately the original did not accept a modified project
-    runPursTest = {
-      project,
-      _pkgs ? pkgs,
-      testMain ? "Test.Main",
-      psEntryPoint ? "main",
-      name ? "trustless-sidechain-ctl-check",
-      nodeModules ? project.nodeModules,
-      env ? {},
-      buildInputs ? [],
-      ...
-    }:
-      pkgs.runCommand "${name}"
-      (
-        {
-          buildInputs = [project.compiled nodeModules] ++ buildInputs;
-          NODE_PATH = "${nodeModules}/lib/node_modules";
-        }
-        // env
-      )
-      ''
-        mkdir -p $out
-        cp -R ${project.compiled}/* $out
-        chmod -R u+rw $out/output
-        ln -s $NODE_PATH $out/output/node_modules
-        ${pkgs.nodejs}/bin/node --enable-source-maps -e "
-          import('$out/output/${testMain}/index.js').then(m => m.${psEntryPoint}())
-        "
-      '';
-    runPlutipTest = args:
-      runPursTest (
-        args
-        // {
-          buildInputs = with pkgs;
-            [
-              ogmios
-              plutip-server
-              kupo
-            ]
-            ++ (args.buildInputs or []);
-        }
-      );
+    project = repoRoot.nix.lib.mkPurescriptProject;
   in
-    runPlutipTest {
-      project = repoRoot.nix.lib.mkPurescriptProject;
+    project.runPlutipTest {
       testMain = "Test.Main";
+      builtProject = project.compiled;
     };
 }
