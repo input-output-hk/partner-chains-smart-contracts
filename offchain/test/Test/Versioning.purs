@@ -112,7 +112,7 @@ testInsertAndInvalidateSuccessScenario =
 
         -- Insert all initial versioned scripts
         void $ initSidechain initScParams 1
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 7 5
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 7 6
         assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
 
         -- We assume that the FUELMintingPolicy was already inserted in the `initSidechain` call.
@@ -122,7 +122,7 @@ testInsertAndInvalidateSuccessScenario =
               1
               FUELMintingPolicy
           >>= balanceSignAndSubmit "Test: invalidate policy version"
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 6 5
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 6 6
         assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
 
         fuelMintingPolicyV2 ← FUELMintingPolicy.V2.getFuelMintingPolicy
@@ -134,7 +134,7 @@ testInsertAndInvalidateSuccessScenario =
               (FUELMintingPolicy /\ fuelMintingPolicyV2.fuelMintingPolicy)
           >>=
             balanceSignAndSubmit "Test: insert new policy version"
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 6 5
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 6 6
         assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 1 0
 
 -- | We insert the same script (same ScriptId and same version) twice. That should work.
@@ -180,7 +180,7 @@ testInsertSameScriptTwiceSuccessScenario =
             }
 
         void $ initSidechain initScParams 1
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 7 5
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 7 6
         assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
 
         { mintingPolicy: merkleRootTokenMintingPolicy } ←
@@ -194,7 +194,7 @@ testInsertSameScriptTwiceSuccessScenario =
               (MerkleRootTokenPolicy /\ merkleRootTokenMintingPolicy)
           >>=
             balanceSignAndSubmit "Test: insert already versioned policy version"
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 8 5
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 8 6
         assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
 
         void
@@ -203,7 +203,7 @@ testInsertSameScriptTwiceSuccessScenario =
               1
               MerkleRootTokenPolicy
           >>= balanceSignAndSubmit "Test: invalidate policy version 1"
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 7 5
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 7 6
         assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
 
         void
@@ -212,7 +212,7 @@ testInsertSameScriptTwiceSuccessScenario =
               1
               MerkleRootTokenPolicy
           >>= balanceSignAndSubmit "Test: invalidate policy version 2"
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 6 5
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 6 6
         assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
 
 -- | We insert an script that is not part of the initial versioned scripts.
@@ -258,7 +258,7 @@ testInsertUnversionedScriptSuccessScenario =
             }
 
         void $ initSidechain initScParams 1
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 7 5
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 7 6
         assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
 
         committeeCandidateValidator ← getCommitteeCandidateValidator
@@ -273,7 +273,7 @@ testInsertUnversionedScriptSuccessScenario =
               (CommitteeCandidateValidator /\ committeeCandidateValidator)
           >>=
             balanceSignAndSubmit "Test: insert non-versioned validator version"
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 7 6
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 7 7
         assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
 
 -- | After inserting a versioned script, invalidating it twice should fail in the second
@@ -320,7 +320,7 @@ testRemovingTwiceSameScriptFailScenario =
             }
 
         void $ initSidechain initScParams 1
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 7 5
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 7 6
         assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
 
         -- We assume this policy was already inserted by 'initSidechain', and thus try to invalidate
@@ -331,7 +331,7 @@ testRemovingTwiceSameScriptFailScenario =
               1
               MerkleRootTokenPolicy
           >>= balanceSignAndSubmit "Test: invalidate policy version"
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 6 5
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 6 6
         assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
 
         -- We already invalidated that script. Re-invalidating it should fail.
@@ -388,7 +388,7 @@ testRemovingScriptInsertedMultipleTimesSuccessScenario =
             }
 
         void $ initSidechain initScParams 1
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 7 5
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 7 6
         assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
 
         { mintingPolicy: merkleRootTokenMintingPolicy } ←
@@ -402,7 +402,7 @@ testRemovingScriptInsertedMultipleTimesSuccessScenario =
               (MerkleRootTokenPolicy /\ merkleRootTokenMintingPolicy)
           >>=
             balanceSignAndSubmit "Test: insert already versioned policy version"
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 8 5
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 8 6
         assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
 
         -- We assume this policy was already inserted by 'initSidechain', and thus try to invalidate
@@ -413,7 +413,7 @@ testRemovingScriptInsertedMultipleTimesSuccessScenario =
               1
               MerkleRootTokenPolicy
           >>= balanceSignAndSubmit "Test: invalidate policy version"
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 7 5
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 7 6
         assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
 
         -- Now, we invalidate the duplicated policy.
@@ -423,7 +423,7 @@ testRemovingScriptInsertedMultipleTimesSuccessScenario =
               1
               MerkleRootTokenPolicy
           >>= balanceSignAndSubmit "Test: invalidate policy version"
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 6 5
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 6 6
         assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
 
 -- | `insertVersion` only inserts a script with `version` for elements with
@@ -472,7 +472,7 @@ testInsertScriptsPresentInPreviousVersion =
         -- Insert all initial versioned scripts
         void $ initSidechain initScParams 1
 
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 7 5
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 7 6
         assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
 
         -- Invalidate FUELMintingPolicy. It should not get updated.
@@ -483,7 +483,7 @@ testInsertScriptsPresentInPreviousVersion =
               FUELMintingPolicy
           >>= balanceSignAndSubmit
             "Test: invalidate fuel minting policy version 1"
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 6 5
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 6 6
         assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
 
         -- Update all possible scripts to V2.
@@ -491,7 +491,7 @@ testInsertScriptsPresentInPreviousVersion =
         -- so without the minting policy this should insert only one V2 script.
         void $ Versioning.insertVersion sidechainParamsWithATMSKind 2
 
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 6 5
+        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 6 6
         assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 1 0
 
 assertNumberOfActualVersionedScripts ∷
