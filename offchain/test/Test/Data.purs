@@ -14,7 +14,6 @@ import Contract.Prim.ByteArray (ByteArray, byteArrayFromIntArrayUnsafe)
 import Control.Alt ((<|>))
 import Ctl.Internal.Types.Interval (POSIXTime(..))
 import Data.Array.NonEmpty as NE
-import Data.BigInt as RegularBigInt
 import Data.String.CodeUnits (fromCharArray)
 import JS.BigInt (BigInt)
 import JS.BigInt as BigInt
@@ -642,8 +641,8 @@ genByteArrayLen len =
 -- Instead, we generate a binary string of required size, then convert it.
 genBigIntBits ∷ Int → Gen BigInt
 genBigIntBits bitSize = suchThatMap mkChars
-  ( ( (BigInt.fromString <<< RegularBigInt.toString) <=<
-        (RegularBigInt.fromBase 2 <<< fromCharArray)
+  ( ( (BigInt.fromString <<< BigInt.toString) <=<
+        ((BigInt.fromStringAs BigInt.binary) <<< fromCharArray)
     )
   )
   where

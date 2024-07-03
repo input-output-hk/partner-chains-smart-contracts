@@ -6,7 +6,6 @@
   , "argonaut-core"
   , "arrays"
   , "bifunctors"
-  , "bigints"
   , "bytearrays"
   , "cardano-serialization-lib"
   , "cardano-transaction-lib"
