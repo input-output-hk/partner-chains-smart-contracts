@@ -5,26 +5,61 @@
   lib,
   system,
   ...
-}: rec {
-  sidechain-main-cli = let
-    project = repoRoot.nix.lib.mkPurescriptProject;
-
-    bundled =
-      pkgs.runCommand "sidechain-bundled" {}
-      ''
-        mkdir -p $out
-        cp -R ${project.compiled}/* $out
-        chmod -R u+rw $out/output
-        ln -s ${project.nodeModules}/lib/node_modules $out/output/node_modules
-      '';
-  in
-    pkgs.writeShellApplication {
+}: let
+  project = repoRoot.nix.offchain;
+  bundled =
+    pkgs.runCommand "sidechain-bundled" {}
+    ''
+      mkdir -p $out
+      cp -R ${project.compiled}/* $out
+      chmod -R u+rw $out/output
+      ln -s ${project.nodeModules}/lib/node_modules $out/node_modules
+    '';
+in rec {
+  sidechain-main-cli = pkgs.writeShellApplication {
       name = "sidechain-main-cli";
+      runtimeInputs = [project.nodejs];
+      # Node's `process.argv` always contains the executable name as the
+      # first argument, hence passing `sidechain-main-cli "$@"` rather than just
+      # `"$@"`
       text = ''
-        ${project.nodejs}/bin/node -e 'import("${bundled}/output/Main/index.js").then(m => m.main())' sidechain-main-cli "$@"
+        ${project.nodejs}/bin/node --enable-source-maps -e 'import("${bundled}/output/Main/index.js").then(m => m.main())' sidechain-main-cli "$@"
       '';
     };
 
+  sidechain-main-cli-bundle = let
+    name = "trustless-sidechain-cli-bundle";
+    version = "5.0.0";
+    src = ../offchain;
+    project = repoRoot.nix.lib.patchedProject {
+      inherit src pkgs;
+      projectName = name;
+      withRuntime = false;
+    };
+  in
+    pkgs.stdenv.mkDerivation rec {
+      inherit name src version;
+      buildInputs = [
+        #project.purs # this (commonjs ffi) instead of pkgs.purescript (esmodules ffi)
+      ];
+      runtimeInputs = [project.nodejs];
+      unpackPhase = ''
+        ln -s ${project.compiled}/* .
+        ln -s ${project.nodeModules}/lib/node_modules node_modules
+      '';
+      buildPhase = ''
+        purs bundle "output/*/*.js" -m Main --main Main -o main.js
+      '';
+      installPhase = ''
+        mkdir -p $out
+        tar chf $out/${name}-${version}.tar main.js node_modules
+      '';
+    };
+  sidechain-main-cli-bundle-esbuild = project.bundlePursProjectEsbuild {
+    main = "Main";
+    builtProject = project.compiled;
+    browserRuntime = false;
+  };
   sidechain-main-cli-image = inputs.n2c.packages.nix2container.buildImage {
     name = "sidechain-main-cli-docker";
     tag = "${inputs.self.shortRev or inputs.self.dirtyShortRev}";

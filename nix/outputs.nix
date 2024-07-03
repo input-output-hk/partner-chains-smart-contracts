@@ -6,10 +6,10 @@
   system,
   ...
 }: let
-  project = repoRoot.nix.project;
+  onchain = repoRoot.nix.onchain;
 in [
   (
-    project.flake
+    onchain.flake
   )
   {
     apps = rec {
@@ -42,10 +42,10 @@ in [
           ${ps.shellHook}
         '';
       };
-      profiled = project.variants.profiled.devShell;
+      profiled = onchain.variants.profiled.devShell;
       hs = inputs.self.devShell;
       ps = let
-        shell = repoRoot.nix.lib.mkPurescriptProject.devShell;
+        shell = repoRoot.nix.offchain.devShell;
       in
         pkgs.mkShell {
           inputsFrom = [shell];

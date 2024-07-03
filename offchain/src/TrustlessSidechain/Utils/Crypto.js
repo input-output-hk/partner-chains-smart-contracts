@@ -1,6 +1,6 @@
 import secp from "secp256k1";
 import crypto from "crypto";
-import blake2 from "blake2";
+import blake2 from "blakejs";
 
 export const verifyEcdsaSecp256k1Signature =
   (ecdsa_pub_key) => (data) => (ecdsa_der_sig) =>

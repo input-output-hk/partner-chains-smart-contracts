@@ -54,9 +54,9 @@
 
   cabalProject = cabalProject';
 
-  project = lib.iogx.mkHaskellProject {
+  onchain = lib.iogx.mkHaskellProject {
     inherit cabalProject;
     shellArgs = repoRoot.nix.shell;
   };
 in
-  project
+  onchain # haskell

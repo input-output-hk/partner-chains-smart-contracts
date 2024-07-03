@@ -79,7 +79,7 @@
       touch $out
     '';
   trustless-sidechain-ctl = let
-    project = repoRoot.nix.lib.mkPurescriptProject;
+    project = repoRoot.nix.offchain;
   in
     project.runPlutipTest {
       testMain = "Test.Main";
