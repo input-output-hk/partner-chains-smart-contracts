@@ -18,6 +18,9 @@ module Test.PlutipTest
 
 import Contract.Prelude
 
+
+import Effect.Aff (delay)
+
 import Contract.Test.Plutip
   ( class UtxoDistribution
   , PlutipConfig
@@ -39,6 +42,7 @@ import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
 import Type.Row (type (+))
+import Ctl.Internal.Plutip.PortCheck as PortCheck
 
 -- | `PlutipTest` is a convenient alias for a `Mote` type of
 -- | `PlutipConfigTest`s which require no bracketting (i.e., setup)
@@ -55,13 +59,39 @@ interpretPlutipTest = go <<< Mote.Monad.plan
   where
   go =
     Mote.Plan.foldPlan
-      ( \{ label, value } → Test.Unit.test label $ runPlutipConfigTest
-          Test.Config.config
-          value
+      ( \{ label, value } → do
+
+
+          Test.Unit.test label $ do
+
+            _ <- whileM (do
+
+              isPlutipAvailable <- liftAff $ PortCheck.isPortAvailable
+                Test.Config.config.port
+
+              isKupoAvailable <- liftAff $ PortCheck.isPortAvailable
+                Test.Config.config.kupoConfig.port
+
+              isOgmiosAvailable <- liftAff $ PortCheck.isPortAvailable
+                Test.Config.config.ogmiosConfig.port
+
+              pure $ (not isPlutipAvailable || not isKupoAvailable || not isOgmiosAvailable))
+               (liftAff $ delay $ wrap 1000.0)
+
+            runPlutipConfigTest
+              Test.Config.config
+              value
       )
       (\label → Test.Unit.testSkip label (pure unit))
       (\{ label, value } → Test.Unit.suite label (go value))
       sequence_
+
+whileM ∷ forall m a. Monad m ⇒ m Boolean → m a → m Unit
+whileM p m = do
+  b <- p
+  if b
+    then m *> whileM p m
+    else pure unit
 
 -- | `mkPlutipConfigTest` provides a mechanism to create a `PlutipConfigTest`
 mkPlutipConfigTest ∷
