@@ -55,11 +55,44 @@ in rec {
         tar chf $out/${name}-${version}.tar main.js node_modules
       '';
     };
+
   sidechain-main-cli-bundle-esbuild = project.bundlePursProjectEsbuild {
     main = "Main";
     builtProject = project.compiled;
     browserRuntime = false;
   };
+
+  sidechain-release-bundle = let
+    project = repoRoot.nix.offchain;
+    jsContents = builtins.readFile "${sidechain-main-cli-bundle-esbuild}/index.js";
+    wrappedNodeScript =  pkgs.writeScript "sidechain-main-cli"
+    ''
+    #!/usr/bin/env bash
+    CLI_TMP="./.index.mjs"
+    cat << 'EOFCLI' > "$CLI_TMP"
+    ${jsContents}
+    EOFCLI
+
+    NODE_PATH=$PWD/node_modules node  $CLI_TMP $@
+  '';
+  in
+    pkgs.runCommand "bundled-cli" 
+    {
+      buildInputs = [ pkgs.zip ];
+    }
+    ''
+    cp -R ${project.nodeModules}/lib/node_modules .
+    chmod -R u+rw ./node_modules
+    cp ${wrappedNodeScript} ./sidechain-cli 
+    mkdir -p $out
+    zip -r $out/release.zip  ./node_modules ./sidechain-cli
+    '';
+#    ''
+#    mkdir -p $out
+#    cp -R ${project.nodeModules}/lib/node_modules $out/node_modules
+#    cp ${wrappedNodeScript} $out/sidechain-cli
+#    '';
+
   sidechain-main-cli-image = inputs.n2c.packages.nix2container.buildImage {
     name = "sidechain-main-cli-docker";
     tag = "${inputs.self.shortRev or inputs.self.dirtyShortRev}";
