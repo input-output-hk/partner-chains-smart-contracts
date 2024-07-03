@@ -92,12 +92,12 @@ generateCheckpointSignatures
 
 tests ∷ WrappedTests
 tests = plutipGroup "Checkpointing" $ do
+  signedByUnknownCommitteeTest
+  committeeChangeCheckpointTest
   saveCheckpointTest
   notEnoughSignaturesTest
   outOfOrderCheckpointTest
   invalidCheckpointBlockHashTest
-  signedByUnknownCommitteeTest
-  committeeChangeCheckpointTest
 
 saveCheckpointTest ∷ PlutipTest
 saveCheckpointTest =

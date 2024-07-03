@@ -77,7 +77,7 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
         "'Test.MerkleRootChaining.testScenario1': 1. Initializing the sidechain"
       genesisUtxo ← Test.Utils.getOwnTransactionInput
 
-      let keyCount = 70
+      let keyCount = 68
       committee1PrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
         Utils.Crypto.generatePrivKey
       let
