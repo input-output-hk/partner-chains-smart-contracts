@@ -36,7 +36,7 @@
       mkdir $out
     '';
   upToDatePlutusScriptCheck = let
-    hsProject = repoRoot.nix.project.flake;
+    hsProject = repoRoot.nix.onchain.flake;
   in
     pkgs.runCommand "up-to-date-plutus-scripts-check"
     {
