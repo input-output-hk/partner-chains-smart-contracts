@@ -276,7 +276,6 @@ runTxEndpoint sidechainEndpointParams endpoint =
         , usePermissionToken
         , auraKey
         , grandpaKey
-        , spoTokenInfo
         } →
         let
           params = CommitteeCandidateValidator.RegisterParams
@@ -288,7 +287,6 @@ runTxEndpoint sidechainEndpointParams endpoint =
             , usePermissionToken
             , auraKey
             , grandpaKey
-            , spoTokenInfo
             }
         in
           CommitteeCandidateValidator.register params

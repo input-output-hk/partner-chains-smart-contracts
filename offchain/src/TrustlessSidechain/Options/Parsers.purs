@@ -21,7 +21,6 @@ module TrustlessSidechain.Options.Parsers
   , parsePubKeyBytesAndSignatureBytes
   , parseAssetName
   , registrationSidechainKeys
-  , registrationSpoDatum
   , permissionedCandidateKeys
   , permissionedCandidatesCount
   , plutusDataParser
@@ -398,14 +397,6 @@ parsePubKeyBytesAndSignatureBytes str =
       l' ← hexToByteArray $ l
       in l' /\ Nothing
     _ → Nothing
-
-registrationSpoDatum ∷ ReadM ByteArray
-registrationSpoDatum = eitherReader parseRegistrationSpoDatum
-
-parseRegistrationSpoDatum ∷ String → Either String ByteArray
-parseRegistrationSpoDatum =
-  Either.note "sidechain-collected-spo-token-info must be a valid hex string" <<<
-    hexToByteArray
 
 registrationSidechainKeys ∷
   ReadM

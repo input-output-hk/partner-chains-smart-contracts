@@ -160,7 +160,6 @@ data TxEndpoint
       , usePermissionToken ∷ Boolean
       , auraKey ∷ ByteArray
       , grandpaKey ∷ ByteArray
-      , spoTokenInfo ∷ ByteArray -- contains partnerchain spo_fixed_fee and spo_poll_margin
       }
   | CandidiatePermissionTokenAct
       { candidatePermissionTokenAmount ∷ BigInt }
