@@ -386,7 +386,7 @@ testScenario3 =
         -- 1. Setting up the sidechain
         ---------------------------
         let
-          committeeSize = 70
+          committeeSize = 60
         genesisUtxo ← Test.Utils.getOwnTransactionInput
         pkh ← getOwnPaymentPubKeyHash
 
