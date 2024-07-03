@@ -27,35 +27,6 @@ in rec {
     '';
   };
 
-  sidechain-main-cli-bundle = let
-    name = "trustless-sidechain-cli-bundle";
-    version = "5.0.0";
-    src = ../offchain;
-    project = repoRoot.nix.lib.patchedProject {
-      inherit src pkgs;
-      projectName = name;
-      withRuntime = false;
-    };
-  in
-    pkgs.stdenv.mkDerivation rec {
-      inherit name src version;
-      buildInputs = [
-        #project.purs # this (commonjs ffi) instead of pkgs.purescript (esmodules ffi)
-      ];
-      runtimeInputs = [project.nodejs];
-      unpackPhase = ''
-        ln -s ${project.compiled}/* .
-        ln -s ${project.nodeModules}/lib/node_modules node_modules
-      '';
-      buildPhase = ''
-        purs bundle "output/*/*.js" -m Main --main Main -o main.js
-      '';
-      installPhase = ''
-        mkdir -p $out
-        tar chf $out/${name}-${version}.tar main.js node_modules
-      '';
-    };
-
   sidechain-main-cli-bundle-esbuild = project.bundlePursProjectEsbuild {
     main = "Main";
     builtProject = project.compiled;
@@ -88,11 +59,6 @@ in rec {
       mkdir -p $out
       zip -r $out/release.zip  ./node_modules ./sidechain-cli
     '';
-  #    ''
-  #    mkdir -p $out
-  #    cp -R ${project.nodeModules}/lib/node_modules $out/node_modules
-  #    cp ${wrappedNodeScript} $out/sidechain-cli
-  #    '';
 
   sidechain-main-cli-image = inputs.n2c.packages.nix2container.buildImage {
     name = "sidechain-main-cli-docker";
