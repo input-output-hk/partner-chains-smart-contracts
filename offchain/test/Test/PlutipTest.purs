@@ -20,7 +20,7 @@ import Contract.Prelude
 
 
 import Effect.Aff (delay)
-
+import Effect.Console as Console
 import Contract.Test.Plutip
   ( class UtxoDistribution
   , PlutipConfig
@@ -64,7 +64,7 @@ interpretPlutipTest = go <<< Mote.Monad.plan
 
           Test.Unit.test label $ do
 
-            _ <- whileM (do
+            _ <- whileMMax 10 (do
 
               isPlutipAvailable <- liftAff $ PortCheck.isPortAvailable
                 Test.Config.config.port
@@ -76,7 +76,9 @@ interpretPlutipTest = go <<< Mote.Monad.plan
                 Test.Config.config.ogmiosConfig.port
 
               pure $ (not isPlutipAvailable || not isKupoAvailable || not isOgmiosAvailable))
-               (liftAff $ delay $ wrap 1000.0)
+               (do
+                  liftEffect $ Console.log "Waiting for services to be available"
+                  liftAff $ delay $ wrap 3000.0)
 
             runPlutipConfigTest
               Test.Config.config
@@ -86,12 +88,14 @@ interpretPlutipTest = go <<< Mote.Monad.plan
       (\{ label, value } → Test.Unit.suite label (go value))
       sequence_
 
-whileM ∷ forall m a. Monad m ⇒ m Boolean → m a → m Unit
-whileM p m = do
+whileMMax ∷ forall m a. Monad m ⇒ Int -> m Boolean → m a → m Unit
+whileMMax 0 _ _ = pure unit
+whileMMax n p m | n > 0 = do
   b <- p
   if b
-    then m *> whileM p m
+    then m *> whileMMax (n-1) p m
     else pure unit
+whileMMax _ _ _ = pure unit
 
 -- | `mkPlutipConfigTest` provides a mechanism to create a `PlutipConfigTest`
 mkPlutipConfigTest ∷
