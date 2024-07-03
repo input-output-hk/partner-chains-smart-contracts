@@ -124,7 +124,7 @@
       );
   in
     runPlutipTest {
-      project = repoRoot.nix.lib.mkPurescriptProject;
+      project = repoRoot.nix.offchain;
       testMain = "Test.Main";
     };
 }

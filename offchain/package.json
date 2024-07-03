@@ -22,7 +22,6 @@
     "@noble/secp256k1": "^1.7.0",
     "base64-js": "^1.5.1",
     "bignumber.js": "^9.1.1",
-    "blake2": "^5.0.0",
     "blakejs": "^1.2.1",
     "bip39": "^3.1.0",
     "bufferutil": "4.0.5",
@@ -47,6 +46,6 @@
     "node-polyfill-webpack-plugin": "2.0.1",
     "webpack": "5.88.1",
     "webpack-cli": "5.1.4",
-    "webpack-dev-server": "4.15.1"   
+    "webpack-dev-server": "4.15.1"
   }
 }
