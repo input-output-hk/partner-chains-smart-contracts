@@ -23,9 +23,9 @@
         pushd src
         ${pkgs.bash}/bin/bash set_version.sh
         popd
-    '';
+      '';
     });
   in
-    project //
-    { compiled = project'; };
+    project
+    // {compiled = project';};
 }

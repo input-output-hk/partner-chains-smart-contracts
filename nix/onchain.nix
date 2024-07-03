@@ -59,4 +59,6 @@
     shellArgs = repoRoot.nix.shell;
   };
 in
-  onchain # haskell
+  onchain
+# haskell
+
