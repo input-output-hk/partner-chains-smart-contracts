@@ -43,7 +43,6 @@ import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Value (AssetName)
 import Data.Array as Array
-import Data.ByteArray (byteArrayToHex, hexToByteArrayUnsafe)
 import Data.Function (on)
 import Data.Maybe as Maybe
 import Data.Ord as Ord
@@ -403,8 +402,7 @@ isSorted xss = case Array.tail xss of
 
 foreign import blake2b256 ∷ String → String
 
-blake2b256Hash ∷ ByteArray → ByteArray
-blake2b256Hash d = Unsafe.unsafePartial $ hexToByteArrayUnsafe $ blake2b256 $ byteArrayToHex d
+foreign import blake2b256Hash :: ByteArray -> ByteArray
 
 -- | `aggregateKeys` aggregates a list of keys s.t. the resulting `ByteArray`
 -- | may be stored in the `UpdateCommitteeDatum` in an onchain compatible way.

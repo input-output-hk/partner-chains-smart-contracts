@@ -1,6 +1,6 @@
 import secp from "secp256k1";
 import crypto from "crypto";
-import blake2 from "blakejs";
+import blake2b from "blakejs";
 
 export const verifyEcdsaSecp256k1Signature =
   (ecdsa_pub_key) => (data) => (ecdsa_der_sig) =>
@@ -58,7 +58,9 @@ export const secKeyVerify = (secretKey) =>
   secp.privateKeyVerify(secretKey);
 
 export const blake2b256 = (data) => {
-  const hash = blake2.createHash('blake2b', {digestLength: 32});
-  hash.update(Buffer.from(data, 'hex'));
-  return hash.digest('hex');
+  return blake2b.blake2bHex(data, null, 32);
+}
+
+export const blake2b256Hash = (data) => {
+  return blake2b.blake2b(data, null, 32);
 }
