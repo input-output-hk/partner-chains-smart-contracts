@@ -4,6 +4,7 @@ module Test.PoCReferenceScript (tests, testScenario1, testScenario2) where
 import Contract.Prelude
 
 import Cardano.ToData as ToData
+import Cardano.Types.PlutusData as PlutusData
 import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.TransactionUnspentOutput
   ( TransactionUnspentOutput(TransactionUnspentOutput)
@@ -101,7 +102,7 @@ testScenario1 = Mote.Monad.test "PoCReferenceScript: testScenario1"
         toReferenceScript
       let
         toReferenceScriptHash = PlutusScript.hash toReferenceValidator
-        toReferenceValidatorDat = ToData.toData $ unit
+        toReferenceValidatorDat = PlutusData.unit
       toReferenceValidatorAddress ← toAddress toReferenceScriptHash
 
       let
@@ -114,7 +115,7 @@ testScenario1 = Mote.Monad.test "PoCReferenceScript: testScenario1"
 
       let
         referenceScriptHash = PlutusScript.hash referenceValidator
-        referenceValidatorDat = ToData.toData $ unit
+        referenceValidatorDat = PlutusData.unit
 
       referenceValidatorAddress ← toAddress referenceScriptHash
 
@@ -217,7 +218,7 @@ testScenario2 = Mote.Monad.test "PoCReferenceScript: testScenario2"
         toReferenceScript
       let
         toReferenceScriptHash = PlutusScript.hash toReferenceValidator
-        toReferenceValidatorDat = ToData.toData $ unit
+        toReferenceValidatorDat = PlutusData.unit
       toReferenceValidatorAddress ← toAddress toReferenceScriptHash
 
       let
@@ -230,7 +231,7 @@ testScenario2 = Mote.Monad.test "PoCReferenceScript: testScenario2"
 
       let
         referenceScriptHash = PlutusScript.hash referenceValidator
-        referenceValidatorDat = ToData.toData $ unit
+        referenceValidatorDat = PlutusData.unit
 
       referenceValidatorAddress ← toAddress referenceScriptHash
 
@@ -275,7 +276,7 @@ testScenario2 = Mote.Monad.test "PoCReferenceScript: testScenario2"
           referenceValidatorAddress
 
         let
-          toReferenceValidatorRedeemer = RedeemerDatum $ ToData.toData $ unit
+          toReferenceValidatorRedeemer = RedeemerDatum $ PlutusData.unit
           referenceValidatorRedeemer = RedeemerDatum $ ToData.toData $
             referenceScriptHash
 

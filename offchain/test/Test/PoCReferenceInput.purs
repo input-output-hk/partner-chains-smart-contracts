@@ -5,6 +5,7 @@ import Contract.Prelude
 
 import Cardano.Plutus.Types.Address as PlutusAddress
 import Cardano.ToData as ToData
+import Cardano.Types.PlutusData as PlutusData
 import Cardano.Types.PlutusScript as PlutusScript
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData (RedeemerDatum(RedeemerDatum))
@@ -101,7 +102,7 @@ testScenario1 = Mote.Monad.test "PoCReferenceInput: testScenario1"
         [ toReferenceValidatorAddressData ]
       let
         referenceScriptHash = PlutusScript.hash referenceValidator
-        referenceValidatorDat = ToData.toData $ unit
+        referenceValidatorDat = PlutusData.unit
       referenceValidatorAddress ← toAddress referenceScriptHash
 
       -- 2.
@@ -219,7 +220,7 @@ testScenario2 = Mote.Monad.test "PoCReferenceInput: testScenario2"
         [ toReferenceValidatorAddressData ]
       let
         referenceScriptHash = PlutusScript.hash referenceValidator
-        referenceValidatorDat = ToData.toData $ unit
+        referenceValidatorDat = PlutusData.unit
       referenceValidatorAddress ← toAddress referenceScriptHash
 
       -- 2.

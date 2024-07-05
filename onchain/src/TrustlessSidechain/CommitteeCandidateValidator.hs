@@ -47,9 +47,9 @@ committeeCandidateValidatorUntyped sidechainParams datum red ctx =
   check $
     mkCommitteeCandidateValidator
       sidechainParams
-      (Unsafe.BlockProducerRegistration datum)
+      (Unsafe.wrap datum)
       red
-      (Unsafe.ScriptContext ctx)
+      (Unsafe.wrap ctx)
 
 serialisableValidator :: Script
 serialisableValidator =
