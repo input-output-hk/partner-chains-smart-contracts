@@ -5,6 +5,8 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 # Unreleased
 
+# v6.0.0
+
 ## Added
 
   * Added new CLI parameter `sidechain-collected-spo-token-info` to the `register` command in the offchain code. This field takes an input blob of data in the datum of the UTXO registration.
