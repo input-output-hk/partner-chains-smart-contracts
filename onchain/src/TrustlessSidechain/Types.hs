@@ -15,6 +15,7 @@ module TrustlessSidechain.Types (
   CheckpointParameter (..),
   CombinedMerkleProof (..),
   CommitteeCertificateMint (..),
+  DelegatorWalletEntry (..),
   DParameterValidatorDatum (..),
   EcdsaSecp256k1PubKey (..),
   FUELMintingRedeemer (..),
@@ -1101,3 +1102,12 @@ instance UnsafeFromData IlliquidCirculationSupplyRedeemer where
           0 -> DepositMoreToSupply
           1 -> WithdrawFromSupply
           _ -> error ()
+
+data DelegatorWalletEntry = DelegatorWalletEntry
+  { stakePubKeyHash :: PubKeyHash
+  , partnerChainWallet :: LedgerBytes
+  }
+  deriving stock (TSPrelude.Show, TSPrelude.Eq)
+
+PlutusTx.makeLift ''DelegatorWalletEntry
+makeIsDataIndexed ''DelegatorWalletEntry [('DelegatorWalletEntry, 0)]

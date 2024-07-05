@@ -11,7 +11,7 @@ module TrustlessSidechain.Options.Types
 import Contract.Prelude
 
 import Cardano.Types.NetworkId (NetworkId)
-import Contract.Address (Address)
+import Contract.Address (Address, StakePubKeyHash)
 import Contract.Config (ContractParams, ServerConfig)
 import Contract.PlutusData (PlutusData)
 import Contract.Prim.ByteArray (ByteArray)
@@ -265,6 +265,10 @@ data TxEndpoint
       }
   | BurnNFTs
   | InitTokenStatus
+  | DelegationRegistration
+      { stakePubKeyHash ∷ StakePubKeyHash
+      , partnerChainWallet ∷ ByteArray
+      }
 
 -- | `InputArgOrFile` represents that we may either allow an option as input
 -- | via a CLI argument or a filepath of a JSON file

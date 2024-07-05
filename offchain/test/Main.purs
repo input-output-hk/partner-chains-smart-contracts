@@ -11,6 +11,7 @@ import Test.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSec
 import Test.ConfigFile as ConfigFile
 import Test.DParameter as DParameter
 import Test.Data as Data
+import Test.DelegationRegistration as DelegationRegistration
 import Test.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import Test.FUELProxyPolicy as FUELProxyPolicy
 import Test.GarbageCollector as GarbageCollector
@@ -63,6 +64,7 @@ main = do
         group "Plutip integration tests" do
           IlliquidCirculationSupply.tests
           Reserve.tests
+          DelegationRegistration.tests
           InitCandidatePermissionToken.tests
           InitSidechain.tests
           InitMint.tests

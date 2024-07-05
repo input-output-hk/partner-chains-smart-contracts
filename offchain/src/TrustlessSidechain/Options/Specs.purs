@@ -81,6 +81,7 @@ import TrustlessSidechain.Options.Parsers
   , rootHash
   , schnorrSecp256k1PrivateKey
   , sidechainAddress
+  , stakePubKeyHash
   , transactionInput
   , uint
   , validatorHashParser
@@ -121,6 +122,7 @@ import TrustlessSidechain.Options.Types
       , UpdatePermissionedCandidates
       , BurnNFTs
       , InitTokenStatus
+      , DelegationRegistration
       , ListVersionedScripts
       )
   , UtilsEndpoint
@@ -269,6 +271,12 @@ optSpec maybeConfig =
     , command "init-token-status"
         ( info (withCommonOpts maybeConfig initTokenStatusSpec)
             (progDesc "List the number of each init token the wallet still holds")
+        )
+    , command "delegation-registration"
+        ( info (withCommonOpts maybeConfig delegationRegistrationSpec)
+            ( progDesc
+                "Registers the partner chain address wallet of an ADA delegator"
+            )
         )
     , command "cli-version"
         ( info (pure CLIVersion)
@@ -498,7 +506,7 @@ sidechainParamsSpec maybeConfig = ado
   governanceAuthority ← option governanceAuthority $ fold
     [ short 'g'
     , long "governance-authority"
-    , metavar "PUB_KEY_HASH"
+    , metavar "PUB_KEY_HASH"---
     , help "Public key hash of governance authority"
     , maybe mempty value
         ( maybeConfig >>= _.sidechainParameters >>= _.governanceAuthority >>=
@@ -1257,6 +1265,24 @@ burnNFTsSpec = pure BurnNFTs
 
 initTokenStatusSpec ∷ Parser TxEndpoint
 initTokenStatusSpec = pure InitTokenStatus
+
+delegationRegistrationSpec ∷ Parser TxEndpoint
+delegationRegistrationSpec = ado
+  stakePubKeyHash ← option stakePubKeyHash $ fold
+    [ long "public-key"
+    , metavar "PUB_KEY_HASH"
+    , help "Hex encoded CBOR stake public key hash"
+    ]
+  partnerChainWallet ← option sidechainAddress $ fold
+    [ long "wallet"
+    , metavar "ADDRESS"
+    , help "Hex encoded raw bytes of a partner chain wallet"
+    ]
+  in
+    DelegationRegistration
+      { stakePubKeyHash
+      , partnerChainWallet
+      }
 
 -- | Parse all parameters for the `candidiate-permission-token` endpoint
 candidatePermissionTokenSpec ∷ Parser TxEndpoint
