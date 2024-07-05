@@ -74,6 +74,8 @@ import TrustlessSidechain.Options.Parsers
   , permissionedCandidateKeys
   , registrationSidechainKeys
   , schnorrSecp256k1PrivateKey
+  , sidechainAddress
+  , stakePubKeyHash
   , uint
   , validatorHashParser
   )
@@ -97,6 +99,7 @@ import TrustlessSidechain.Options.Types
       , UpdateDParameter
       , UpdatePermissionedCandidates
       , InitTokenStatus
+      , DelegatorRegistration
       , ListVersionedScripts
       , CreateReserve
       , DepositReserve
@@ -205,7 +208,12 @@ optSpec maybeConfig =
         ( info (withCommonOpts maybeConfig initTokenStatusSpec)
             (progDesc "List the number of each init token the wallet still holds")
         )
-
+    , command "delegator-registration"
+        ( info (withCommonOpts maybeConfig delegatorRegistrationSpec)
+            ( progDesc
+                "Registers the partner chain address wallet of an ADA delegator"
+            )
+        )
     , command "cli-version"
         ( info (pure CLIVersion)
             ( progDesc
@@ -762,6 +770,24 @@ updatePermissionedCandidatesSpec = ado
 
 initTokenStatusSpec ∷ Parser TxEndpoint
 initTokenStatusSpec = pure InitTokenStatus
+
+delegatorRegistrationSpec ∷ Parser TxEndpoint
+delegatorRegistrationSpec = ado
+  stakePubKeyHash ← option stakePubKeyHash $ fold
+    [ long "public-key"
+    , metavar "PUB_KEY_HASH"
+    , help "Hex encoded CBOR stake public key hash"
+    ]
+  partnerChainWallet ← option sidechainAddress $ fold
+    [ long "wallet"
+    , metavar "ADDRESS"
+    , help "Hex encoded raw bytes of a partner chain wallet"
+    ]
+  in
+    DelegatorRegistration
+      { stakePubKeyHash
+      , partnerChainWallet
+      }
 
 -- | Parse all parameters for the `candidiate-permission-token` endpoint
 candidatePermissionTokenSpec ∷ Parser TxEndpoint

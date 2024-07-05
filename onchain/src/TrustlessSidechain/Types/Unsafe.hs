@@ -17,6 +17,9 @@ module TrustlessSidechain.Types.Unsafe (
   sidechainPubKey,
   sidechainSignature,
   stakeOwnership,
+  DelegatorWalletEntry (..),
+  stakePubKeyHash,
+  partnerChainWallet,
   GovernanceAuthority (..),
   SidechainParams (..),
   chainId,
@@ -137,6 +140,7 @@ unsafeDataAsMaybe bd = case Builtins.unsafeDataAsConstr bd of
   _ -> traceError "unsafeDataAsMaybe: unreachable"
 
 makeUnsafeNewtypes ''Types.BlockProducerRegistration
+makeUnsafeNewtypes ''Types.DelegatorWalletEntry
 makeUnsafeNewtypes ''Types.GovernanceAuthority
 makeUnsafeNewtypes ''Types.SidechainParams
 makeUnsafeNewtypes ''Types.Signature
@@ -164,6 +168,7 @@ makeUnsafeNewtypes ''V2.Value
 makeUnsafeNewtypes ''PTPrelude.Integer
 
 makeUnsafeGetters ''Types.BlockProducerRegistration
+makeUnsafeGetters ''Types.DelegatorWalletEntry
 makeUnsafeGetters ''Types.SidechainParams
 makeUnsafeGetters ''V2.Address
 makeUnsafeGetters ''V2.Credential

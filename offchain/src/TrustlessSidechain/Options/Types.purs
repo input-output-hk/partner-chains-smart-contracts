@@ -13,6 +13,7 @@ import Contract.Prelude
 import Cardano.Types.Asset (Asset)
 import Cardano.Types.BigNum (BigNum)
 import Cardano.Types.NetworkId (NetworkId)
+import Contract.Address (StakePubKeyHash)
 import Contract.Config (ContractParams, ServerConfig)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Transaction (TransactionInput)
@@ -180,6 +181,10 @@ data TxEndpoint
 
   -- | reserve initialization for an asset class
   | InitTokenStatus
+  | DelegatorRegistration
+      { stakePubKeyHash ∷ StakePubKeyHash
+      , partnerChainWallet ∷ ByteArray
+      }
 
   -- | CLI entpoints for reserve initialization for an asset class
   | CreateReserve

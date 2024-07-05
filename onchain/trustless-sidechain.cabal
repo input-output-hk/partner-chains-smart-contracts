@@ -86,6 +86,7 @@ library
     TrustlessSidechain.AlwaysPassingScripts
     TrustlessSidechain.CandidatePermissionMintingPolicy
     TrustlessSidechain.CommitteeCandidateValidator
+    TrustlessSidechain.DelegatorRegistration
     TrustlessSidechain.DParameter
     TrustlessSidechain.Governance
     TrustlessSidechain.Governance.Admin

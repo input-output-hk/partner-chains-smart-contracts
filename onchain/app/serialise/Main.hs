@@ -34,6 +34,7 @@ import TrustlessSidechain.AlwaysPassingScripts qualified as AlwaysPassing
 import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as CandidatePermissionMintingPolicy
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.DParameter qualified as DParameter
+import TrustlessSidechain.DelegatorRegistration qualified as DelegatorRegistration
 import TrustlessSidechain.Governance.MultiSig qualified as MultiSig
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.IlliquidCirculationSupply qualified as IlliquidCirculationSupply
@@ -266,6 +267,7 @@ main =
           , ("OnlyMintMintingPolicy", OnlyMintMintingPolicy.serialisableOnlyMintMintingPolicy)
           , ("AlwaysPassingValidator", AlwaysPassing.serialisableAlwaysPassingValidator)
           , ("AlwaysPassingPolicy", AlwaysPassing.serialisableAlwaysPassingPolicy)
+          , ("DelegatorRegistrationValidator", DelegatorRegistration.serialisableValidator)
           ]
 
         plutusScriptsDotPlutus =
