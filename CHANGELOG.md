@@ -5,6 +5,8 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 # Unreleased
 
+# v6.0.0
+
 ## Added
 
   * Added `use-candidate-permission-token` switch to `register` and `addresses`

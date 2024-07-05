@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               trustless-sidechain
-version:            5.0.0
+version:            6.0.0
 synopsis:           TODO
 description:        TODO
 homepage:           https://github.com/mlabs-haskell/trustless-sidechain
