@@ -16,10 +16,13 @@ module Test.Utils
   , assertIHaveOutputWithAsset
   , dummySidechainParams
   , fromMaybeTestError
+  , withSingleMultiSig
   ) where
 
 import Contract.Prelude
 
+
+import Cardano.Types.Ed25519KeyHash (Ed25519KeyHash)
 import Cardano.AsCbor (encodeCbor)
 import Cardano.Serialization.Lib as CSL
 import Cardano.Types.Asset (Asset(Asset))
@@ -66,6 +69,10 @@ import Test.Unit as Test.Unit
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow)
 import TrustlessSidechain.Effects.Util as Effect
+import TrustlessSidechain.Effects.Env (READER, Env)
+import Run.Reader (local)
+import TrustlessSidechain.Governance.Governance(Governance(MultiSig))
+import TrustlessSidechain.Governance.MultiSig (MultiSigGovParams(MultiSigGovParams))
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import Type.Row (type (+))
@@ -206,7 +213,10 @@ interpretWrappedTest = go <<< Mote.Monad.plan
     Mote.Plan.foldPlan
       ( \{ label, value } → Test.Unit.suite label $
           case value of
-            WithPlutipRunner testCase → interpretPlutipTest testCase
+            WithPlutipRunner testCase → do
+
+
+              interpretPlutipTest testCase
             PureRunner testCase → interpretConstVoidTest testCase
 
       )
@@ -315,3 +325,12 @@ fromMaybeTestError msg = flip bind $ maybe
   ( liftContract $ MonadError.throwError $ Exception.error msg
   )
   pure
+
+
+withSingleMultiSig ∷ forall r a. Ed25519KeyHash → Run (READER Env + r) a -> Run (READER Env + r) a
+withSingleMultiSig wallet = local $ const
+    { governance: Just $ MultiSig $ MultiSigGovParams
+      { governanceMembers: [wallet]
+      , requiredSignatures: BigInt.fromInt 1
+      }
+    }

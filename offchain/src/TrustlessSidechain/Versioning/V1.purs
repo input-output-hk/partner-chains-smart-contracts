@@ -30,6 +30,11 @@ import TrustlessSidechain.CommitteeCandidateValidator
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Effects.Env (Env, READER, ask)
+import TrustlessSidechain.Governance.MultiSig
+  ( MultiSigGovParams
+  , multisigGovPolicy
+  )
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.FUELBurningPolicy.V1 as FUELBurningPolicy.V1
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
@@ -47,6 +52,7 @@ import TrustlessSidechain.UpdateCommitteeHash.Utils
   )
 import TrustlessSidechain.Versioning.Types (ScriptId(..))
 import TrustlessSidechain.Versioning.Utils as Versioning
+import TrustlessSidechain.Governance.Governance(Governance(MultiSig))
 import Type.Row (type (+))
 
 getVersionedPoliciesAndValidators ∷
@@ -54,7 +60,7 @@ getVersionedPoliciesAndValidators ∷
   { sidechainParams ∷ SidechainParams
   , atmsKind ∷ ATMSKinds
   } →
-  Run (EXCEPT OffchainError + WALLET + r)
+  Run (READER Env + EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
     }
@@ -64,6 +70,8 @@ getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   fuelScripts ← getFuelPoliciesAndValidators sp
   dsScripts ← getDsPoliciesAndValidators sp
   merkleRootScripts ← getMerkleRootPoliciesAndValidators sp
+  -- The native token management system can only be used if the user specified
+  -- parameters for the multisignature governance
   nativeTokenManagementScripts ← getNativeTokenManagementPoliciesAndValidators sp
 
   pure $ committeeScripts
@@ -174,20 +182,39 @@ getCheckpointPoliciesAndValidators sp = do
 getNativeTokenManagementPoliciesAndValidators ∷
   ∀ r.
   SidechainParams →
-  Run (EXCEPT OffchainError + WALLET + r)
+  Run (READER Env + EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
     }
 getNativeTokenManagementPoliciesAndValidators sp = do
+  governance <- (_.governance) <$> ask
+  case governance of
+    Just (MultiSig msgp') -> getMultiSigPoliciesAndValidators sp msgp'
+    _ -> pure { versionedPolicies: mempty, versionedValidators: mempty }
+
+
+
+getMultiSigPoliciesAndValidators ::
+  ∀ r.
+  SidechainParams →
+  MultiSigGovParams ->
+  Run (EXCEPT OffchainError + WALLET + r)
+    { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
+    }
+getMultiSigPoliciesAndValidators sp msgp = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sp
   reserveAuthPolicy' ← reserveAuthPolicy versionOracleConfig
   reserveValidator' ← reserveValidator versionOracleConfig
   illiquidCirculationSupplyValidator' ← illiquidCirculationSupplyValidator
     versionOracleConfig
 
+  governancePolicy ← multisigGovPolicy msgp
+
   let
     versionedPolicies = List.fromFoldable
       [ ReserveAuthPolicy /\ reserveAuthPolicy'
+      , GovernancePolicy /\ governancePolicy
       ]
     versionedValidators = List.fromFoldable
       [ ReserveValidator /\ reserveValidator'

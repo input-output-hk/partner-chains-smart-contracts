@@ -40,6 +40,7 @@ import Run (Run)
 import Run.Except (EXCEPT, throw)
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
 import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Env (Env, READER)
 import TrustlessSidechain.Effects.Log (logDebug', logInfo')
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Transaction as Effect
@@ -68,13 +69,14 @@ mintVersionInitTokens ∷
   , atmsKind ∷ ATMSKinds
   } →
   Int →
-  Run (EXCEPT OffchainError + WALLET + r)
+  Run (READER Env + EXCEPT OffchainError + WALLET + r)
     { lookups ∷ ScriptLookups
     , constraints ∷ TxConstraints
     }
 mintVersionInitTokens { sidechainParams, atmsKind } version = do
   { versionedPolicies, versionedValidators } ←
-    getExpectedVersionedPoliciesAndValidators { sidechainParams, atmsKind }
+    getExpectedVersionedPoliciesAndValidators
+      { sidechainParams, atmsKind }
       version
 
   let
@@ -291,12 +293,14 @@ updateVersion ∷
 updateVersion { sidechainParams, atmsKind } oldVersion newVersion = do
   { versionedPolicies: oldVersionedPolicies
   , versionedValidators: oldVersionedValidators
-  } ← getExpectedVersionedPoliciesAndValidators { sidechainParams, atmsKind }
+  } ← getExpectedVersionedPoliciesAndValidators
+    { sidechainParams, atmsKind }
     oldVersion
 
   { versionedPolicies: newVersionedPolicies
   , versionedValidators: newVersionedValidators
-  } ← getExpectedVersionedPoliciesAndValidators { sidechainParams, atmsKind }
+  } ← getExpectedVersionedPoliciesAndValidators
+    { sidechainParams, atmsKind }
     newVersion
 
   newValidatorsTxIds ←
@@ -346,7 +350,7 @@ getExpectedVersionedPoliciesAndValidators ∷
   , atmsKind ∷ ATMSKinds
   } →
   Int →
-  Run (EXCEPT OffchainError + WALLET + r)
+  Run (READER Env + EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }
@@ -389,7 +393,7 @@ getNativeTokenManagementPoliciesAndValidators ∷
   ∀ r.
   SidechainParams →
   Int →
-  Run (EXCEPT OffchainError + WALLET + r)
+  Run (READER Env + EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }
@@ -410,12 +414,13 @@ getActualVersionedPoliciesAndValidators ∷
   , atmsKind ∷ ATMSKinds
   } →
   Int →
-  Run (EXCEPT OffchainError + TRANSACTION + WALLET + r)
+  Run (READER Env + EXCEPT OffchainError + TRANSACTION + WALLET + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }
 
-getActualVersionedPoliciesAndValidators { sidechainParams, atmsKind } version =
+getActualVersionedPoliciesAndValidators { sidechainParams, atmsKind }
+                                        version =
   do
     vValidator ← versionOracleValidator sidechainParams
 
@@ -425,7 +430,8 @@ getActualVersionedPoliciesAndValidators { sidechainParams, atmsKind } version =
 
     -- Get scripts that should be versioned
     { versionedPolicies, versionedValidators } ←
-      getExpectedVersionedPoliciesAndValidators { sidechainParams, atmsKind }
+      getExpectedVersionedPoliciesAndValidators
+        { sidechainParams, atmsKind }
         version
 
     -- Create Map of type 'Map ScriptHash (ScriptId, Script)' for fast retrieval

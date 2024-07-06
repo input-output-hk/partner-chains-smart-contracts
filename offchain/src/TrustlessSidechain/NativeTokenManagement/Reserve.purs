@@ -749,8 +749,9 @@ handover
               , output: reserveRefTxOutput
               }
           )
-        <> TxConstraints.mustMintCurrencyUsingScriptRef
+        <> TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
           (PlutusScript.hash reserveAuthPolicy')
+          (RedeemerDatum $ toData $ ReserveAuthPolicyRedeemer { governanceVersion: BigInt.fromInt 1 })
           emptyAssetName
           (Int.fromInt (-1))
           ( RefInput $ TransactionUnspentOutput

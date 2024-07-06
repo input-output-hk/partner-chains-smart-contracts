@@ -64,6 +64,7 @@ data ScriptId
   | IlliquidCirculationSupplyValidator
   | IlliquidCirculationSupplyWithdrawalPolicy
   | GovernancePolicy
+  | MultiSigPolicy
 
 derive instance Eq ScriptId
 derive instance Ord ScriptId
@@ -134,6 +135,8 @@ instance FromData ScriptId where
     Just IlliquidCirculationSupplyWithdrawalPolicy
   fromData (Integer i) | i == BigInt.fromInt 32 =
     Just GovernancePolicy
+  fromData (Integer i) | i == BigInt.fromInt 33 =
+    Just MultiSigPolicy
   fromData _ = Nothing
 
 instance ToData ScriptId where
@@ -168,3 +171,4 @@ instance ToData ScriptId where
   toData IlliquidCirculationSupplyValidator = Integer (BigInt.fromInt 30)
   toData IlliquidCirculationSupplyWithdrawalPolicy = Integer (BigInt.fromInt 31)
   toData GovernancePolicy = Integer (BigInt.fromInt 32)
+  toData MultiSigPolicy = Integer (BigInt.fromInt 33)

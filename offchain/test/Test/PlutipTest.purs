@@ -40,6 +40,7 @@ import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Run (unliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Effects.Env (Env, READER, emptyEnv)
 import TrustlessSidechain.Error (OffchainError)
 import Type.Row (type (+))
 import Ctl.Internal.Plutip.PortCheck as PortCheck
@@ -63,7 +64,7 @@ interpretPlutipTest = go <<< Mote.Monad.plan
 
 
           Test.Unit.test label $ do
-
+            liftAff $ delay $ wrap 3000.0
             _ <- whileMMax 10 (do
 
               isPlutipAvailable <- liftAff $ PortCheck.isPortAvailable
@@ -98,13 +99,14 @@ whileMMax n p m | n > 0 = do
 whileMMax _ _ _ = pure unit
 
 -- | `mkPlutipConfigTest` provides a mechanism to create a `PlutipConfigTest`
+-- It sets up Env as empty value, that has to be later udpated with `Run.Reader.local`
 mkPlutipConfigTest ∷
   ∀ (distr ∷ Type) (wallets ∷ Type).
   UtxoDistribution distr wallets ⇒
   distr →
   ( wallets →
     Run
-      ( EXCEPT OffchainError + WALLET + TRANSACTION + LOG + AFF + EFFECT
+      ( EXCEPT OffchainError + WALLET + TRANSACTION + LOG + READER Env + AFF + EFFECT
           + CONTRACT
           + ()
       )
@@ -112,7 +114,7 @@ mkPlutipConfigTest ∷
   ) →
   PlutipConfigTest
 mkPlutipConfigTest d t = PlutipConfigTest \c → runPlutipContract c d
-  (unliftApp <<< t)
+  (unliftApp emptyEnv <<< t)
 
 -- | `runPlutipConfigTest` provides a mechanism to turn a `PlutipConfigTest` into a `Test`
 runPlutipConfigTest ∷

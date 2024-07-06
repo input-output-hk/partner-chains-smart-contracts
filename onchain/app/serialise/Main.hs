@@ -50,6 +50,7 @@ import TrustlessSidechain.ScriptCache qualified as ScriptCache
 import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import TrustlessSidechain.Utils (scriptToPlutusScript)
 import TrustlessSidechain.Versioning qualified as Versioning
+import TrustlessSidechain.Governance.MultiSig qualified as MultiSig
 
 -- * CLI parsing
 
@@ -343,6 +344,9 @@ main =
           ,
             ( "CommitteePlainSchnorrSecp256k1ATMSPolicy"
             , CommitteePlainSchnorrSecp256k1ATMSPolicy.serialisableMintingPolicy
+            )
+          , ( "MultiSigPolicy"
+            , MultiSig.serialisableGovernanceMultiSigPolicy
             )
           , -- Distributed set validators / minting policies
             ("DsInsertValidator", DistributedSet.serialisableInsertValidator)
