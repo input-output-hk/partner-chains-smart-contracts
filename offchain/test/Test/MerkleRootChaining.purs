@@ -26,6 +26,7 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   )
 import TrustlessSidechain.Effects.Contract (liftContract)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Env (ask)
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.FUELMintingPolicy.V1
   ( MerkleTreeEntry(MerkleTreeEntry)
@@ -126,12 +127,14 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
         "'Test.MerkleRootChaining.testScenario1': 3. updating the committee hash"
       committee3PrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
         Utils.Crypto.generatePrivKey
+      env <- ask
       liftContract $ Test.UpdateCommitteeHash.updateCommitteeHash
         { sidechainParams
         , currentCommitteePrvKeys: committee1PrvKeys
         , newCommitteePrvKeys: committee3PrvKeys
         , previousMerkleRoot: Just merkleRoot2
         , sidechainEpoch: BigInt.fromInt 1
+        , env
         }
 
       -- 4. Updating the committee hash
@@ -147,6 +150,7 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
         , -- Note: this is the same merkle root as the last committee update.
           previousMerkleRoot: Just merkleRoot2
         , sidechainEpoch: BigInt.fromInt 2
+        , env
         }
 
       -- 5. Saving a merkle root
@@ -202,6 +206,7 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
         , newCommitteePrvKeys: committee7PrvKeys
         , previousMerkleRoot: Just merkleRoot6
         , sidechainEpoch: BigInt.fromInt 3
+        , env
         }
 
       pure unit

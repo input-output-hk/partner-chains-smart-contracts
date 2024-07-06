@@ -34,6 +34,7 @@ import TrustlessSidechain.CommitteeATMSSchemes
   )
 import TrustlessSidechain.Effects.Contract (liftContract)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Env (ask)
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain
@@ -519,12 +520,15 @@ committeeChangeCheckpointTest =
         newCommitteeKeys ← Run.liftEffect $ sequence $ Array.replicate 5
           generatePrivKey
 
+        env <- ask
+
         liftContract $ updateCommitteeHash
           { sidechainParams
           , currentCommitteePrvKeys: initCommitteePrvKeys
           , newCommitteePrvKeys: newCommitteeKeys
           , previousMerkleRoot: Nothing
           , sidechainEpoch: BigInt.fromInt 1
+          , env
           }
 
         let

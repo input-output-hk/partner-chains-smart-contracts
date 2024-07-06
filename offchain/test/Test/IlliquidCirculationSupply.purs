@@ -3,7 +3,6 @@ module Test.IlliquidCirculationSupply
   ) where
 
 import Contract.Prelude
-
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.ScriptLookups as Lookups
@@ -15,6 +14,7 @@ import Cardano.Types.Int as Int
 import Cardano.Types.MultiAsset as MultiAsset
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash)
 import Contract.Transaction (TransactionInput, TransactionOutput)
 import Contract.TxConstraints (DatumPresence(DatumInline))
 import Contract.TxConstraints as TxConstraints
@@ -44,6 +44,7 @@ import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow)
 import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Effects.Env (Env, READER)
 import TrustlessSidechain.Error (OffchainError(..))
 import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
@@ -77,13 +78,13 @@ tests = plutipGroup "IlliquidCirculationSupply" $ do
 
 dummyInitialiseSidechain ∷
   ∀ r.
+  PaymentPubKeyHash ->
   Run
     (APP + EFFECT + CONTRACT + r)
     SidechainParams
-dummyInitialiseSidechain = do
+dummyInitialiseSidechain pkh = do
   genesisUtxo ← Test.Utils.getOwnTransactionInput
 
-  pkh ← getOwnPaymentPubKeyHash
   initCommitteePrvKeys ←
     liftEffect
       $ sequence
@@ -184,7 +185,7 @@ insertFakeIcsWithdrawalPolicy ∷
   ∀ r.
   SidechainParams →
   Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+    (READER Env + EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
     ScriptHash
 insertFakeIcsWithdrawalPolicy sidechainParams =
   do
@@ -219,37 +220,41 @@ testScenario1 =
     "Deposit to ICS"
     $ Test.PlutipTest.mkPlutipConfigTest initialDistribution
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-        sidechainParams ← dummyInitialiseSidechain
+        pkh <- getOwnPaymentPubKeyHash
+        Test.Utils.withSingleMultiSig (unwrap pkh) $ do
 
-        initialiseICSUtxo sidechainParams
-        utxo ← findICSUtxo sidechainParams
+          sidechainParams ← dummyInitialiseSidechain pkh
 
-        let
-          depositAmountOfNonAdaTokens = 51
+          initialiseICSUtxo sidechainParams
 
-        tokenKind ← mintNonAdaTokens depositAmountOfNonAdaTokens
+          utxo ← findICSUtxo sidechainParams
 
-        let
-          addedValue = singletonFromAsset (fromAssetClass tokenKind)
-            $ BigNum.fromInt depositAmountOfNonAdaTokens
+          let
+            depositAmountOfNonAdaTokens = 51
 
-        depositMoreToSupply
-          sidechainParams
-          addedValue
-          utxo
+          tokenKind ← mintNonAdaTokens depositAmountOfNonAdaTokens
 
-        maybeUtxo ← Map.toUnfoldable
-          <$> findIlliquidCirculationSupplyUtxos sidechainParams
+          let
+            addedValue = singletonFromAsset (fromAssetClass tokenKind)
+              $ BigNum.fromInt depositAmountOfNonAdaTokens
 
-        let
-          extractValue = snd >>> unwrap >>> _.amount
-          isExpectedAmount = valueOf (fromAssetClass tokenKind)
+          depositMoreToSupply
+            sidechainParams
+            addedValue
+            utxo
 
-        unless
-          ( Just (BigNum.fromInt depositAmountOfNonAdaTokens) ==
-              (extractValue >>> isExpectedAmount <$> maybeUtxo)
-          )
-          (liftContract $ throwError $ error "Deposit not sucessful")
+          maybeUtxo ← Map.toUnfoldable
+            <$> findIlliquidCirculationSupplyUtxos sidechainParams
+
+          let
+            extractValue = snd >>> unwrap >>> _.amount
+            isExpectedAmount = valueOf (fromAssetClass tokenKind)
+
+          unless
+            ( Just (BigNum.fromInt depositAmountOfNonAdaTokens) ==
+                (extractValue >>> isExpectedAmount <$> maybeUtxo)
+            )
+            (liftContract $ throwError $ error "Deposit not sucessful")
 
 testScenario2 ∷ PlutipTest
 testScenario2 =
@@ -257,50 +262,53 @@ testScenario2 =
     "Withdraw from ICS"
     $ Test.PlutipTest.mkPlutipConfigTest initialDistribution
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-        sidechainParams ← dummyInitialiseSidechain
-        mintingPolicyHash ← insertFakeIcsWithdrawalPolicy sidechainParams
+        pkh <- getOwnPaymentPubKeyHash
+        Test.Utils.withSingleMultiSig (unwrap pkh) $ do
 
-        initialiseICSUtxo sidechainParams
-        utxo1 ← findICSUtxo sidechainParams
+          sidechainParams ← dummyInitialiseSidechain pkh
+          mintingPolicyHash ← insertFakeIcsWithdrawalPolicy sidechainParams
 
-        let
-          depositAmountOfNonAdaTokens = 51
-          withdrawAmountOfNonAdaTokens = 42
-          finalAmountOfNonAdaTokens = depositAmountOfNonAdaTokens -
-            withdrawAmountOfNonAdaTokens
+          initialiseICSUtxo sidechainParams
+          utxo1 ← findICSUtxo sidechainParams
 
-        tokenKind ← mintNonAdaTokens depositAmountOfNonAdaTokens
+          let
+            depositAmountOfNonAdaTokens = 51
+            withdrawAmountOfNonAdaTokens = 42
+            finalAmountOfNonAdaTokens = depositAmountOfNonAdaTokens -
+              withdrawAmountOfNonAdaTokens
 
-        let
-          addedValue = singletonFromAsset (fromAssetClass tokenKind)
-            $ BigNum.fromInt depositAmountOfNonAdaTokens
+          tokenKind ← mintNonAdaTokens depositAmountOfNonAdaTokens
 
-        depositMoreToSupply
-          sidechainParams
-          addedValue
-          utxo1
+          let
+            addedValue = singletonFromAsset (fromAssetClass tokenKind)
+              $ BigNum.fromInt depositAmountOfNonAdaTokens
 
-        utxo2 ← findICSUtxo sidechainParams
+          depositMoreToSupply
+            sidechainParams
+            addedValue
+            utxo1
 
-        let
-          withdrawnValue = singletonFromAsset (fromAssetClass tokenKind)
-            $ BigNum.fromInt withdrawAmountOfNonAdaTokens
+          utxo2 ← findICSUtxo sidechainParams
 
-        withdrawFromSupply
-          sidechainParams
-          mintingPolicyHash
-          withdrawnValue
-          utxo2
+          let
+            withdrawnValue = singletonFromAsset (fromAssetClass tokenKind)
+              $ BigNum.fromInt withdrawAmountOfNonAdaTokens
 
-        maybeUtxo ← Map.toUnfoldable
-          <$> findIlliquidCirculationSupplyUtxos sidechainParams
+          withdrawFromSupply
+            sidechainParams
+            mintingPolicyHash
+            withdrawnValue
+            utxo2
 
-        let
-          extractValue = snd >>> unwrap >>> _.amount
-          isExpectedAmount = valueOf (fromAssetClass tokenKind)
+          maybeUtxo ← Map.toUnfoldable
+            <$> findIlliquidCirculationSupplyUtxos sidechainParams
 
-        unless
-          ( Just (BigNum.fromInt finalAmountOfNonAdaTokens) ==
-              (extractValue >>> isExpectedAmount <$> maybeUtxo)
-          )
-          (liftContract $ throwError $ error "Withdrawal not sucessful")
+          let
+            extractValue = snd >>> unwrap >>> _.amount
+            isExpectedAmount = valueOf (fromAssetClass tokenKind)
+
+          unless
+            ( Just (BigNum.fromInt finalAmountOfNonAdaTokens) ==
+                (extractValue >>> isExpectedAmount <$> maybeUtxo)
+            )
+            (liftContract $ throwError $ error "Withdrawal not sucessful")

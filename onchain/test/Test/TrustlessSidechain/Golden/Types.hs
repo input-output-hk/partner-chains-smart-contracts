@@ -14,6 +14,13 @@ import Test.Tasty (TestTree, testGroup)
 import Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest)
 import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CommitteePlainATMSPolicy
 import TrustlessSidechain.Governance.Admin (mkGovernanceAuthority)
+import TrustlessSidechain.Governance.MultiSig (
+  MultiSigGovParams(..),
+  MultiSigGovRedeemer (
+    MultiSignatureCheck,
+    MultiSigTokenGC
+  )
+ )
 import TrustlessSidechain.MerkleTree (MerkleProof (MerkleProof), MerkleTree (Bin, Tip), RootHash (RootHash), Side (L, R), Up (Up), sibling, siblingSide)
 import TrustlessSidechain.Types (
   ATMSPlainAggregatePubKey,
@@ -218,6 +225,9 @@ tests =
     , dataEncoderGoldenTest "ReserveAuthPolicyRedeemer" sampleReserveAuthPolicyRedeemer
     , dataEncoderGoldenTest "IlliquidCirculationSupplyRedeemer1" sampleIlliquidCirculationSupplyRedeemer1
     , dataEncoderGoldenTest "IlliquidCirculationSupplyRedeemer2" sampleIlliquidCirculationSupplyRedeemer2
+    , dataEncoderGoldenTest "MultiSigGovParams" sampleMultiSigGovParams
+    , dataEncoderGoldenTest "MultiSigGovRedeemer1" sampleMultiSigGovRedeemer1
+    , dataEncoderGoldenTest "MultiSigGovRedeemer2" sampleMultiSigGovRedeemer2
     ]
 
 -- * Sample data - building blocks
@@ -561,6 +571,22 @@ sampleIlliquidCirculationSupplyRedeemer1 = DepositMoreToSupply
 
 sampleIlliquidCirculationSupplyRedeemer2 :: IlliquidCirculationSupplyRedeemer
 sampleIlliquidCirculationSupplyRedeemer2 = WithdrawFromSupply
+
+sampleMultiSigGovParams :: MultiSigGovParams
+sampleMultiSigGovParams = MultiSigGovParams
+  { governanceMembers =
+    [ "0f45aaf1b2959db6e5ff94dbb1f823bf257680c3c723ac2d49f97546"
+    , "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
+    , "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
+    ]
+  , requiredSignatures = 2
+  }
+
+sampleMultiSigGovRedeemer1 :: MultiSigGovRedeemer
+sampleMultiSigGovRedeemer1 = MultiSignatureCheck
+
+sampleMultiSigGovRedeemer2 :: MultiSigGovRedeemer
+sampleMultiSigGovRedeemer2 = MultiSigTokenGC
 
 -- Function to convert hex encoded Text to BuiltinByteString
 hexTextToBuiltinByteString :: Text.Text -> Builtins.BuiltinByteString

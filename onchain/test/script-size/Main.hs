@@ -133,11 +133,11 @@ main =
         , scriptFitsInto
             "mkReserveValidator (Reserve) serialized"
             Reserve.serialisableReserveValidator
-            5_059
+            5_154
         , scriptFitsInto
             "mkReserveAuthPolicy (Reserve) serialized"
             Reserve.serialisableReserveAuthPolicy
-            2_545
+            2_530
         , scriptFitsInto
             "mkIlliquidCirculationSupplyValidator (IlliquidCirculationSupply) serialized"
             IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyValidator

@@ -51,6 +51,10 @@ import TrustlessSidechain.DistributedSet (
  )
 import TrustlessSidechain.FUELProxyPolicy (FuelProxyRedeemer (FuelProxyBurn, FuelProxyMint))
 import TrustlessSidechain.Governance.Admin (GovernanceAuthority (GovernanceAuthority))
+import TrustlessSidechain.Governance.MultiSig (
+  MultiSigGovParams(MultiSigGovParams),
+  MultiSigGovRedeemer(MultiSignatureCheck, MultiSigTokenGC)
+ )
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleTree (
   MerkleProof (MerkleProof),
@@ -248,6 +252,10 @@ main =
     , testProperty "ReserveAuthPolicyRedeemer (unsafe)" . toDataUnsafeLaws' genRAPR shrinkRAPR $ show
     , testProperty "IlliquidCirculationSupplyRedeemer (safe)" . toDataSafeLaws' genICSR shrinkICSR $ show
     , testProperty "IlliquidCirculationSupplyRedeemer (unsafe)" . toDataUnsafeLaws' genICSR shrinkICSR $ show
+    , testProperty "MultiSigGovParams (safe)" . toDataSafeLaws' genMSGP shrinkMSGP $ show
+    , testProperty "MultiSigGovParams (unsafe)" . toDataUnsafeLaws' genMSGP shrinkMSGP $ show
+    , testProperty "MultiSigGovRedeemer (safe)" . toDataSafeLaws' genMSGR shrinkMSGR $ show
+    , testProperty "MultiSigGovRedeemer (unsafe)" . toDataUnsafeLaws' genMSGR shrinkMSGR $ show
     ]
   where
     go :: QuickCheckTests -> QuickCheckTests
@@ -387,6 +395,21 @@ genICSR =
   oneof
     [ pure DepositMoreToSupply
     , pure WithdrawFromSupply
+    ]
+
+genMSGP :: Gen MultiSigGovParams
+genMSGP = do
+  pkhs <- liftArbitrary $ do
+            ArbitraryPubKeyHash pkh <- arbitrary
+            pure pkh
+  a <- chooseInteger (1, fromIntegral $ length pkhs)
+  pure $ MultiSigGovParams pkhs a
+
+genMSGR :: Gen MultiSigGovRedeemer
+genMSGR =
+  oneof
+    [ pure MultiSignatureCheck
+    , pure MultiSigTokenGC
     ]
 
 genCP :: Gen CheckpointParameter
@@ -665,6 +688,17 @@ shrinkRAPR = const []
 
 shrinkICSR :: IlliquidCirculationSupplyRedeemer -> [IlliquidCirculationSupplyRedeemer]
 shrinkICSR = const []
+
+shrinkMSGP :: MultiSigGovParams -> [MultiSigGovParams]
+shrinkMSGP (MultiSigGovParams pkhs a) = do
+  pkhs' <- flip liftShrink pkhs $ \pkh -> do
+             ArbitraryPubKeyHash pkh' <- shrink (ArbitraryPubKeyHash pkh)
+             pure pkh'
+  a' <- shrink a
+  pure $ MultiSigGovParams pkhs' a'
+
+shrinkMSGR :: MultiSigGovRedeemer -> [MultiSigGovRedeemer]
+shrinkMSGR = const []
 
 shrinkCP :: CheckpointParameter -> [CheckpointParameter]
 shrinkCP (CheckpointParameter {..}) = do

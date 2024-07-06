@@ -39,6 +39,7 @@ import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Effects.Env (Env, READER)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.FUELBurningPolicy.V1 as BurningV1
 import TrustlessSidechain.FUELBurningPolicy.V2 as BurningV2
@@ -125,7 +126,7 @@ testScenarioSuccess =
 
 initializeSidechain ∷
   ∀ r.
-  Run (EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + EFFECT + r)
+  Run (READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + EFFECT + r)
     { sidechainParams ∷ SidechainParams
     , initCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
     }
@@ -166,7 +167,7 @@ mintATMSTokens ∷
   { sidechainParams ∷ SidechainParams
   , initCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
   } →
-  Run (EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + r)
+  Run (READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + r)
     TokenName
 mintATMSTokens { sidechainParams, initCommitteePrvKeys } = do
   -- Grabbing the CommitteePlainEcdsaSecp256k1ATMSPolicy on chain parameters / minting policy
@@ -229,7 +230,7 @@ mintFuelMintingAndFuelBurningTokens ∷
   { sidechainParams ∷ SidechainParams
   , initCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
   } →
-  Run (EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + r) Unit
+  Run (READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + r) Unit
 mintFuelMintingAndFuelBurningTokens { sidechainParams, initCommitteePrvKeys } =
   do
     pkh ← getOwnPaymentPubKeyHash

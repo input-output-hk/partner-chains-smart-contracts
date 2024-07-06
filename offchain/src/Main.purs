@@ -78,6 +78,8 @@ import TrustlessSidechain.GetSidechainAddresses
   ( SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
   )
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
+import TrustlessSidechain.Governance(Governance(MultiSig))
+import TrustlessSidechain.Governance.MultiSig (MultiSigGovParams(MultiSigGovParams))
 import TrustlessSidechain.InitSidechain (initSidechain, toSidechainParams)
 import TrustlessSidechain.InitSidechain.CandidatePermissionToken
   ( initCandidatePermissionToken
@@ -178,10 +180,12 @@ main = do
         <> "\nDenominator: "
         <> BigInt.toString denominator
 
+      let governance = Just $ MultiSig $ MultiSigGovParams { governanceMembers: [unwrap $ unwrap $ (unwrap scParams).governanceAuthority], requiredSignatures: BigInt.fromInt 1 }
+
       -- Running the program
       -----------------------
       launchAff_ $ do
-        endpointResp ← runAppLive opts.contractParams
+        endpointResp ← runAppLive opts.contractParams {governance}
           $ runTxEndpoint
               opts.sidechainEndpointParams
               opts.endpoint

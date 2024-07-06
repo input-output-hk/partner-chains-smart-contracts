@@ -46,11 +46,15 @@ import JS.BigInt as BigInt
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT, throw)
+import Run.Reader (READER)
+import TrustlessSidechain.Effects.Env (Env, ask)
 import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError(..))
+import TrustlessSidechain.Governance(Governance(MultiSig))
+import TrustlessSidechain.Governance.MultiSig (MultiSigGovRedeemer(..))
 import TrustlessSidechain.NativeTokenManagement.Types
   ( ImmutableReserveSettings
   , MutableReserveSettings
@@ -283,7 +287,7 @@ governanceLookupsAndConstraints ∷
   ∀ r.
   SidechainParams →
   Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + READER Env + r)
     { governanceLookups ∷ Lookups.ScriptLookups
     , governanceConstraints ∷ TxConstraints.TxConstraints
     }
@@ -293,13 +297,18 @@ governanceLookupsAndConstraints sp = do
 
   governancePolicy ← getGovernancePolicy sp
 
+  env <- ask
+
+  let members = maybe [] (\(MultiSig x) -> (unwrap x).governanceMembers) env.governance
+
   pure
     { governanceLookups: Lookups.unspentOutputs
         (Map.singleton governanceRefTxInput governanceRefTxOutput)
     , governanceConstraints:
         TxConstraints.mustReferenceOutput governanceRefTxInput
-          <> TxConstraints.mustMintCurrencyUsingScriptRef
+          <> TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
             (PlutusScript.hash governancePolicy)
+            (RedeemerDatum $ toData MultiSignatureCheck)
             emptyAssetName
             (Int.fromInt 1)
             ( RefInput $ TransactionUnspentOutput
@@ -307,6 +316,7 @@ governanceLookupsAndConstraints sp = do
                 , output: governanceRefTxOutput
                 }
             )
+          <> (foldMap (\x -> TxConstraints.mustBeSignedBy $ wrap x) members)
     }
 
 initialiseReserveUtxo ∷
@@ -316,7 +326,7 @@ initialiseReserveUtxo ∷
   MutableReserveSettings →
   BigNum →
   Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + READER Env + r)
     Unit
 initialiseReserveUtxo
   sidechainParams
@@ -419,7 +429,7 @@ depositToReserve ∷
   Asset →
   BigNum →
   Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + READER Env + r)
     Unit
 depositToReserve sp asset amount = do
   utxo ← fromMaybeThrow (NotFoundUtxo "Reserve UTxO for asset class not found")
@@ -483,7 +493,7 @@ updateReserveUtxo ∷
   MutableReserveSettings →
   (TransactionInput /\ TransactionOutput) →
   Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + READER Env + r)
     Unit
 updateReserveUtxo sp updatedMutableSettings utxo = do
   { governanceLookups
@@ -674,7 +684,7 @@ handover ∷
   SidechainParams →
   (TransactionInput /\ TransactionOutput) →
   Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + READER Env + r)
     Unit
 handover
   sp
@@ -749,8 +759,9 @@ handover
               , output: reserveRefTxOutput
               }
           )
-        <> TxConstraints.mustMintCurrencyUsingScriptRef
+        <> TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
           (PlutusScript.hash reserveAuthPolicy')
+          (RedeemerDatum $ toData $ ReserveAuthPolicyRedeemer { governanceVersion: BigInt.fromInt 1 })
           emptyAssetName
           (Int.fromInt (-1))
           ( RefInput $ TransactionUnspentOutput

@@ -33,6 +33,7 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   )
 import TrustlessSidechain.Effects.Contract (liftContract)
 import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
+import TrustlessSidechain.Effects.Env (Env, ask)
 import TrustlessSidechain.GarbageCollector as GarbageCollector
 import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
@@ -73,6 +74,8 @@ generateUchmSignatures ∷
     previousMerkleRoot ∷ Maybe RootHash
   , -- the sidechain epoch
     sidechainEpoch ∷ BigInt
+  , -- the Reader Env
+    env :: Env
   } →
   Contract (Array (Tuple EcdsaSecp256k1PubKey EcdsaSecp256k1Signature))
 generateUchmSignatures
@@ -81,6 +84,7 @@ generateUchmSignatures
   , newCommitteePrvKeys
   , previousMerkleRoot
   , sidechainEpoch
+  , env
   } = do
   let
     -- Order the private keys by lexicographical ordering of the signatures, so
@@ -99,7 +103,7 @@ generateUchmSignatures
   -- committee oracle back to the same address)
   ---------------------------
   { validatorHash: updateCommitteeHashValidatorHash } ←
-    unliftApp $ getUpdateCommitteeHashValidator sidechainParams
+    unliftApp env $ getUpdateCommitteeHashValidator sidechainParams
 
   -- Building the message to sign
   ---------------------------
@@ -134,6 +138,8 @@ updateCommitteeHash ∷
     previousMerkleRoot ∷ Maybe RootHash
   , -- sidechain epoch of the new committee
     sidechainEpoch ∷ BigInt
+  , -- the Reader Env
+    env :: Env
   } →
   Contract Unit
 updateCommitteeHash params = updateCommitteeHashWith params pure
@@ -155,6 +161,7 @@ updateCommitteeHashWith ∷
     previousMerkleRoot ∷ Maybe RootHash
   , -- sidechain epoch of the new committee
     sidechainEpoch ∷ BigInt
+  , env :: Env
   } →
   ( UpdateCommitteeHashParams PlutusData →
     Contract (UpdateCommitteeHashParams PlutusData)
@@ -183,7 +190,7 @@ updateCommitteeHashWith params f = void do
 
   uchp' ← f uchp
 
-  unliftApp $ UpdateCommitteeHash.updateCommitteeHash uchp'
+  unliftApp params.env $ UpdateCommitteeHash.updateCommitteeHash uchp'
 
 -- | `tests` aggregates all UpdateCommitteeHash the tests.
 tests ∷ WrappedTests
@@ -234,12 +241,14 @@ testScenario1 = Mote.Monad.test "Simple update committee hash"
       nextCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
         generatePrivKey
 
+      env <- ask
       liftContract $ updateCommitteeHash
         { sidechainParams
         , currentCommitteePrvKeys: initCommitteePrvKeys
         , newCommitteePrvKeys: nextCommitteePrvKeys
         , previousMerkleRoot: Nothing
         , sidechainEpoch: BigInt.fromInt 1
+        , env
         }
 
       void
@@ -292,6 +301,7 @@ testScenario2 =
         nextCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
           generatePrivKey
 
+        env <- ask
         liftContract $ Test.Utils.fails
           $ updateCommitteeHashWith
               { sidechainParams: scParams
@@ -299,6 +309,7 @@ testScenario2 =
               , newCommitteePrvKeys: nextCommitteePrvKeys
               , previousMerkleRoot: Nothing
               , sidechainEpoch: BigInt.fromInt 1
+              , env
               }
           $ \(UpdateCommitteeHashParams params) →
               pure
@@ -384,7 +395,7 @@ testScenario3 =
                               Array.reverse sigs
                   }
               )
-
+        env <- ask
         -- the first update
         liftContract $ updateCommitteeHashWith
           { sidechainParams
@@ -392,6 +403,7 @@ testScenario3 =
           , newCommitteePrvKeys: nextCommitteePrvKeys
           , previousMerkleRoot: Nothing
           , sidechainEpoch: BigInt.fromInt 1
+          , env
           }
           (pure <<< reverseSignaturesAndNewCommittee)
 
@@ -402,6 +414,7 @@ testScenario3 =
           , newCommitteePrvKeys: nextNextCommitteePrvKeys
           , previousMerkleRoot: Nothing
           , sidechainEpoch: BigInt.fromInt 2
+          , env
           }
 
         void
@@ -471,12 +484,14 @@ testScenario4 =
 
         { sidechainParams } ← initSidechain initScParams 1
 
+        env <- ask
         liftContract $ updateCommitteeHashWith
           { sidechainParams
           , currentCommitteePrvKeys: initCommitteePrvKeys
           , newCommitteePrvKeys: nextCommitteePrvKeys
           , previousMerkleRoot: Nothing
           , sidechainEpoch: BigInt.fromInt 2
+          , env
           }
           \uchp →
             pure $ wrap $ (unwrap uchp)
@@ -545,6 +560,7 @@ testScenario5 =
           $ sequence
           $ Array.replicate keyCount generatePrivKey
 
+        env <- ask
         liftContract
           $ updateCommitteeHashWith
               { sidechainParams: scParams
@@ -552,6 +568,7 @@ testScenario5 =
               , newCommitteePrvKeys: nextCommitteePrvKeys
               , previousMerkleRoot: Nothing
               , sidechainEpoch: BigInt.fromInt 1
+              , env
               }
           $ \(UpdateCommitteeHashParams params) →
               pure

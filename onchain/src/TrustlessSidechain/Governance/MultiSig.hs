@@ -4,11 +4,14 @@
 -- | Implement a security mechanism that requires n out of m signatures on the
 -- transaction.
 module TrustlessSidechain.Governance.MultiSig
-  ( serialisableGovernanceMultiSigPolicy
+  ( MultiSigGovParams(..)
+  , MultiSigGovRedeemer(..)
+  , serialisableGovernanceMultiSigPolicy
   ) where
 
 import PlutusTx
 import Plutus.V2.Ledger.Api
+import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Utils (currencySymbolValueOf)
@@ -17,11 +20,16 @@ import TrustlessSidechain.Utils (currencySymbolValueOf)
 -- `requiredSignatures` to a value greater than `length governanceMembers` will
 -- result in governance that can never approve anything.
 --
+-- NOTE: the order of entries in the `governanceMembers` matters!  Since
+-- `MultiSigGovParams` is used to parameterize the multi-sognature governance
+-- minting policy, changing the order of elements will change the hash of the
+-- policy.
+--
 -- @since Unreleased
 data MultiSigGovParams = MultiSigGovParams
   { governanceMembers :: [PubKeyHash] -- ^ Members of the governance
   , requiredSignatures :: Integer     -- ^ Minimal required number of signatures
-  }
+  } deriving (TSPrelude.Show, TSPrelude.Eq)
 
 -- | @since Unreleased
 instance ToData MultiSigGovParams where
@@ -48,12 +56,32 @@ makeHasField ''MultiSigGovParams
 --
 -- @since Unreleased
 data MultiSigGovRedeemer = MultiSignatureCheck | MultiSigTokenGC
+  deriving (TSPrelude.Show, TSPrelude.Eq)
 
-PlutusTx.makeIsDataIndexed
-  ''MultiSigGovRedeemer
-  [ ('MultiSignatureCheck, 0)
-  , ('MultiSigTokenGC, 1)
-  ]
+-- | @since Unreleased
+instance ToData MultiSigGovRedeemer where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData MultiSignatureCheck = BuiltinData $ PlutusTx.I 0
+  toBuiltinData MultiSigTokenGC = BuiltinData $ PlutusTx.I 1
+
+-- | @since Unreleased
+instance FromData MultiSigGovRedeemer where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData x = do
+    integerValue <- fromBuiltinData x
+    case integerValue :: Integer of
+      0 -> Just MultiSignatureCheck
+      1 -> Just MultiSigTokenGC
+      _ -> Nothing
+
+-- | @since Unreleased
+instance UnsafeFromData MultiSigGovRedeemer where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData x =
+    case unsafeFromBuiltinData x :: Integer of
+      0 -> MultiSignatureCheck
+      1 -> MultiSigTokenGC
+      _ -> error ()
 
 -- | N-out-of-M multisignature governance check.
 --

@@ -40,6 +40,7 @@ import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Effects.Env (READER, Env)
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (getOwnWalletAddress)
@@ -63,7 +64,7 @@ tests = plutipGroup "Committe candidate registration/deregistration" $ do
 runRegister ∷
   ∀ r.
   SidechainParams →
-  Run (EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + EFFECT + r)
+  Run (READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + EFFECT + r)
     TransactionHash
 runRegister = runRegisterWithCandidatePermissionInfo false
 
@@ -72,7 +73,7 @@ runRegister = runRegisterWithCandidatePermissionInfo false
 runRegisterWithFixedKeys ∷
   ∀ r.
   SidechainParams →
-  Run (EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + r)
+  Run (READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + r)
     TransactionHash
 runRegisterWithFixedKeys =
   runRegisterWithCandidatePermissionInfoWithFixedKeys false
@@ -81,7 +82,7 @@ runRegisterWithCandidatePermissionInfoWithFixedKeys ∷
   ∀ r.
   Boolean →
   SidechainParams →
-  Run (EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + r)
+  Run (READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + r)
     TransactionHash
 runRegisterWithCandidatePermissionInfoWithFixedKeys usePermissionToken scParams =
   do
@@ -110,7 +111,7 @@ runRegisterWithCandidatePermissionInfo ∷
   ∀ r.
   Boolean →
   SidechainParams →
-  Run (EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + EFFECT + r)
+  Run (READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + EFFECT + r)
     TransactionHash
 runRegisterWithCandidatePermissionInfo usePermissionToken scParams = do
   let
@@ -145,7 +146,7 @@ runRegisterWithCandidatePermissionInfo usePermissionToken scParams = do
 runDeregister ∷
   ∀ r.
   SidechainParams →
-  Run (EXCEPT OffchainError + WALLET + TRANSACTION + LOG + r) Unit
+  Run (READER Env + EXCEPT OffchainError + WALLET + TRANSACTION + LOG + r) Unit
 runDeregister scParams =
   void $ deregister $ DeregisterParams
     { sidechainParams: scParams, spoPubKey: Just mockSpoPubKey }

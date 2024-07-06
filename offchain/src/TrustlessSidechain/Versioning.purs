@@ -40,6 +40,7 @@ import Run (Run)
 import Run.Except (EXCEPT, throw)
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
 import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Env (Env, READER)
 import TrustlessSidechain.Effects.Log (logDebug', logInfo')
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Transaction as Effect
@@ -68,7 +69,7 @@ mintVersionInitTokens ∷
   , atmsKind ∷ ATMSKinds
   } →
   Int →
-  Run (EXCEPT OffchainError + WALLET + r)
+  Run (READER Env + EXCEPT OffchainError + WALLET + r)
     { lookups ∷ ScriptLookups
     , constraints ∷ TxConstraints
     }
@@ -101,8 +102,7 @@ initializeVersion ∷
     (Array TransactionHash)
 initializeVersion { sidechainParams, atmsKind } version = do
   { versionedPolicies, versionedValidators } ←
-    getExpectedVersionedPoliciesAndValidators
-      { sidechainParams, atmsKind }
+    getExpectedVersionedPoliciesAndValidators { sidechainParams, atmsKind }
       version
 
   validatorsTxIds ←
@@ -346,7 +346,7 @@ getExpectedVersionedPoliciesAndValidators ∷
   , atmsKind ∷ ATMSKinds
   } →
   Int →
-  Run (EXCEPT OffchainError + WALLET + r)
+  Run (READER Env + EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }
@@ -389,7 +389,7 @@ getNativeTokenManagementPoliciesAndValidators ∷
   ∀ r.
   SidechainParams →
   Int →
-  Run (EXCEPT OffchainError + WALLET + r)
+  Run (READER Env + EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }
@@ -410,7 +410,7 @@ getActualVersionedPoliciesAndValidators ∷
   , atmsKind ∷ ATMSKinds
   } →
   Int →
-  Run (EXCEPT OffchainError + TRANSACTION + WALLET + r)
+  Run (READER Env + EXCEPT OffchainError + TRANSACTION + WALLET + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }

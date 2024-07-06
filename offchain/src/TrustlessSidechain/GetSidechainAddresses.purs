@@ -38,6 +38,7 @@ import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteeP
 import TrustlessSidechain.DParameter.Utils as DParameter
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Effects.Wallet (WALLET)
+import TrustlessSidechain.Effects.Env (READER, Env)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.FUELProxyPolicy (getFuelProxyMintingPolicy)
 import TrustlessSidechain.InitSidechain.Utils as InitSidechain
@@ -118,7 +119,7 @@ newtype SidechainAddressesEndpointParams = SidechainAddressesEndpointParams
 getSidechainAddresses ∷
   ∀ r.
   SidechainAddressesEndpointParams →
-  Run (EXCEPT OffchainError + WALLET + r) SidechainAddresses
+  Run (EXCEPT OffchainError + WALLET + READER Env + r) SidechainAddresses
 getSidechainAddresses
   ( SidechainAddressesEndpointParams
       { sidechainParams
