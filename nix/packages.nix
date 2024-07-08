@@ -7,23 +7,12 @@
   ...
 }: let
   project = repoRoot.nix.offchain;
-  bundled =
-    pkgs.runCommand "sidechain-bundled" {}
-    ''
-      mkdir -p $out
-      cp -R ${project.compiled}/* $out
-      chmod -R u+rw $out/output
-      ln -s ${project.nodeModules}/lib/node_modules $out/node_modules
-    '';
 in rec {
   sidechain-main-cli = pkgs.writeShellApplication {
     name = "sidechain-main-cli";
     runtimeInputs = [project.nodejs];
-    # Node's `process.argv` always contains the executable name as the
-    # first argument, hence passing `sidechain-main-cli "$@"` rather than just
-    # `"$@"`
     text = ''
-      ${project.nodejs}/bin/node --enable-source-maps -e 'import("${bundled}/output/Main/index.js").then(m => m.main())' sidechain-main-cli "$@"
+      ${project.nodejs}/bin/node --enable-source-maps -e 'import("${project.compiled}/output/Main/index.js").then(m => m.main())' sidechain-main-cli "$@"
     '';
   };
 
@@ -34,18 +23,22 @@ in rec {
   };
 
   sidechain-release-bundle = let
-    project = repoRoot.nix.offchain;
     jsContents = builtins.readFile "${sidechain-main-cli-bundle-esbuild}/index.js";
     wrappedNodeScript =
       pkgs.writeScript "sidechain-main-cli"
       ''
         #!/usr/bin/env bash
-        CLI_TMP="./.index.mjs"
+
+        SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+        CLI_TMP="$SCRIPT_DIR/.index.mjs"
+
         cat << 'EOFCLI' > "$CLI_TMP"
         ${jsContents}
         EOFCLI
 
-        NODE_PATH=$PWD/node_modules node  $CLI_TMP $@
+        export NODE_PATH="$SCRIPT_DIR/node_modules"
+
+        node "$CLI_TMP" "$@"
       '';
   in
     pkgs.runCommand "bundled-cli"

@@ -8,8 +8,9 @@
 }: {
   patchedProject = args: let
     project = pkgs.purescriptProject args;
-    project' = project.compiled.overrideAttrs (old: {
+    compiled' = project.compiled.overrideAttrs (old: {
       # Add a patchPhase for patching in the CLI version from a script
+      # TODO: make this non-project specific
       patchPhase = let
         rev =
           if builtins.hasAttr "rev" inputs.self
@@ -24,8 +25,20 @@
         ${pkgs.bash}/bin/bash set_version.sh
         popd
       '';
+      fixupPhase = ''
+        ln -s ${project.nodeModules}/lib/node_modules $out/node_modules
+      '';
+    });
+    prunedNodeModules = project.nodeModules.overrideAttrs (old: {
+      fixupPhase = ''
+        echo "Pruning node modules for production..."
+        cd $out/lib && npm prune --omit=dev
+      '';
     });
   in
     project
-    // {compiled = project';};
+    // {
+      compiled = compiled';
+      nodeModules = prunedNodeModules;
+    };
 }
