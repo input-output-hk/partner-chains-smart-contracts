@@ -201,31 +201,31 @@ instance Eq VersionOracle where
 -- 'VersionOracleValidator' script.
 data VersionOracleDatum = VersionOracleDatum
   { -- | VersionOracle which identifies the script.
-    -- @since Unreleased
+    -- @since v6.0.0
     versionOracle :: VersionOracle
   , -- | Currency Symbol of the VersioningOraclePolicy tokens.
-    -- @since Unreleased
+    -- @since v6.0.0
     currencySymbol :: CurrencySymbol
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
--- | @since Unreleased
+-- | @since v6.0.0
 instance ToData VersionOracleDatum where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData VersionOracleDatum {versionOracle, currencySymbol} =
     productToData2 versionOracle currencySymbol
 
--- | @since Unreleased
+-- | @since v6.0.0
 instance FromData VersionOracleDatum where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData = productFromData2 VersionOracleDatum
 
--- | @since Unreleased
+-- | @since v6.0.0
 instance UnsafeFromData VersionOracleDatum where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 VersionOracleDatum
 
--- | @since Unreleased
+-- | @since v6.0.0
 instance Eq VersionOracleDatum where
   VersionOracleDatum vO c == VersionOracleDatum vO' c' = vO == vO' && c == c'
 
@@ -268,7 +268,7 @@ versionOracleTokenName = TokenName "Version oracle"
 data VersionOraclePolicyRedeemer
   = -- | Mint versioning tokens from init tokens.  Used during sidechain
     -- initialization.
-    -- @since Unreleased
+    -- @since v6.0.0
     InitializeVersionOracle VersionOracle ScriptHash
   | -- | Mint a new versioning token ensuring it contains correct datum and
     -- reference script.

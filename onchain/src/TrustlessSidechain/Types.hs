@@ -870,22 +870,22 @@ instance UnsafeFromData PermissionedCandidatesValidatorRedeemer where
 -- | 'InitTokenRedeemer' signals whether the init tokens should be minted
 -- (possible only in transaction that initializes the sidechain) or burned.
 data InitTokenRedeemer
-  = -- | @since Unreleased
+  = -- | @since v6.0.0
     MintInitToken
-  | -- | @since Unreleased
+  | -- | @since v6.0.0
     BurnInitToken
   deriving stock
     ( TSPrelude.Eq
     , TSPrelude.Show
     )
 
--- | @since Unreleased
+-- | @since v6.0.0
 instance ToData InitTokenRedeemer where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData MintInitToken = BuiltinData $ PlutusTx.I 0
   toBuiltinData BurnInitToken = BuiltinData $ PlutusTx.I 1
 
--- | @since Unreleased
+-- | @since v6.0.0
 instance FromData InitTokenRedeemer where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData x = do
@@ -895,7 +895,7 @@ instance FromData InitTokenRedeemer where
       1 -> Just BurnInitToken
       _ -> Nothing
 
--- | @since Unreleased
+-- | @since v6.0.0
 instance UnsafeFromData InitTokenRedeemer where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData x =
@@ -920,18 +920,18 @@ data InitTokenAssetClass = InitTokenAssetClass
 PlutusTx.makeLift ''InitTokenAssetClass
 makeHasField ''InitTokenAssetClass
 
--- | @since Unreleased
+-- | @since v6.0.0
 instance ToData InitTokenAssetClass where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (InitTokenAssetClass {..}) =
     productToData2 initTokenCurrencySymbol initTokenName
 
--- | @since Unreleased
+-- | @since v6.0.0
 instance FromData InitTokenAssetClass where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData = productFromData2 InitTokenAssetClass
 
--- | @since Unreleased
+-- | @since v6.0.0
 instance UnsafeFromData InitTokenAssetClass where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 InitTokenAssetClass
