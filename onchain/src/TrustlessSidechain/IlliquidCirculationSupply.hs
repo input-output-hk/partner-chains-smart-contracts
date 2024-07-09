@@ -33,8 +33,8 @@ import TrustlessSidechain.Versioning (
   illiquidCirculationSupplyWithdrawalPolicyId,
  )
 
-illiquidCirculationSupplyWithdrawalMintingPolicyTokenTokenName :: TokenName
-illiquidCirculationSupplyWithdrawalMintingPolicyTokenTokenName = TokenName emptyByteString
+icsWithdrawalMintingPolicyTokenName :: TokenName
+icsWithdrawalMintingPolicyTokenName = TokenName emptyByteString
 
 {-# INLINEABLE getInputsAt #-}
 getInputsAt :: Unsafe.TxInfo -> Address -> [Unsafe.TxOut]
@@ -53,7 +53,7 @@ getInputsAt txInfo address =
 --   ERROR-ILLIQUID-CIRCULATION-SUPPLY-06: No unique output UTxO at the supply address
 mkIlliquidCirculationSupplyValidator ::
   VersionOracleConfig ->
-  () ->
+  BuiltinData ->
   IlliquidCirculationSupplyRedeemer ->
   Unsafe.ScriptContext ->
   Bool
@@ -63,7 +63,7 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
       && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-02" (isDatumUnit supplyOutputUtxo)
       && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-03" assetsIncrease
   WithdrawFromSupply ->
-    traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-04" oneIlliquidCirculationSupplyWithdrawalMintingPolicyTokenIsMinted
+    traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-04" oneIcsWithdrawalMintingPolicyTokenIsMinted
   where
     info :: Unsafe.TxInfo
     info = Unsafe.scriptContextTxInfo ctx
@@ -92,17 +92,24 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
         Unsafe.getContinuingOutputs ctx
 
     assetsIncrease :: Bool
-    assetsIncrease = (Unsafe.decode . Unsafe.txOutValue $ supplyInputUtxo) `lt` (Unsafe.decode . Unsafe.txOutValue $ supplyOutputUtxo)
+    assetsIncrease =
+      (Unsafe.decode . Unsafe.txOutValue $ supplyInputUtxo)
+      `lt`
+      (Unsafe.decode . Unsafe.txOutValue $ supplyOutputUtxo)
 
-    oneIlliquidCirculationSupplyWithdrawalMintingPolicyTokenIsMinted :: Bool
-    oneIlliquidCirculationSupplyWithdrawalMintingPolicyTokenIsMinted =
+    oneIcsWithdrawalMintingPolicyTokenIsMinted :: Bool
+    oneIcsWithdrawalMintingPolicyTokenIsMinted =
       oneTokenMinted
         minted
         icsWithdrawalPolicyCurrencySymbol
-        illiquidCirculationSupplyWithdrawalMintingPolicyTokenTokenName
+        icsWithdrawalMintingPolicyTokenName
 
     isDatumUnit :: Unsafe.TxOut -> Bool
-    isDatumUnit txOut = isJust (getDatum . Unsafe.decode <$> (Unsafe.getOutputDatum . Unsafe.txOutDatum) txOut >>= PlutusTx.fromBuiltinData @())
+    isDatumUnit txOut =
+      isJust
+        (getDatum . Unsafe.decode
+          <$> (Unsafe.getOutputDatum . Unsafe.txOutDatum) txOut
+          >>= PlutusTx.fromBuiltinData @())
 
 mkIlliquidCirculationSupplyValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkIlliquidCirculationSupplyValidatorUntyped voc rd rr ctx =
@@ -111,7 +118,7 @@ mkIlliquidCirculationSupplyValidatorUntyped voc rd rr ctx =
       (PlutusTx.unsafeFromBuiltinData voc)
       (PlutusTx.unsafeFromBuiltinData rd)
       (PlutusTx.unsafeFromBuiltinData rr)
-      (Unsafe.ScriptContext ctx)
+      (Unsafe.wrap ctx)
 
 serialisableIlliquidCirculationSupplyValidator :: Script
 serialisableIlliquidCirculationSupplyValidator =

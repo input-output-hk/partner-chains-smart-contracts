@@ -70,6 +70,7 @@ import TrustlessSidechain.Types (
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Utils (
   oneTokenBurned,
+  fromJust,
  )
 
 -- | Distributed Set (abbr. 'Ds') is the type which parameterizes the validator
@@ -407,9 +408,8 @@ mkInsertValidator ds _dat _red ctx =
                 && traceIfFalse "ERROR-DS-INSERT-VALIDATOR-02" (totalKeys == lengthIb nNodes)
                 && traceIfFalse "ERROR-DS-INSERT-VALIDATOR-03" (AssocMap.member (get @"fuelPolicy" conf) minted)
       )
-        ( fromMaybe
-            (traceError "ERROR-DS-INSERT-VALIDATOR-04")
-            (insertNode nStr $ getTxOutNodeInfo (txInInfoResolved ownInput))
+        ( fromJust "ERROR-DS-INSERT-VALIDATOR-04" $
+          insertNode nStr $ getTxOutNodeInfo (txInInfoResolved ownInput)
         )
   )
     ( case AssocMap.lookup keyCurrencySymbol minted of

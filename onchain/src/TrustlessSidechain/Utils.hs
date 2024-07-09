@@ -2,6 +2,7 @@
 
 module TrustlessSidechain.Utils (
   fromSingleton,
+  fromJust,
   currencySymbolValueOf,
   oneTokenBurned,
   oneTokenMinted,
@@ -38,6 +39,14 @@ import PlutusTx.AssocMap qualified as Map
 fromSingleton :: BuiltinString -> [a] -> a
 fromSingleton _ [x] = x
 fromSingleton msg _ = traceError msg
+
+-- | Unwrap a Just ctor, or produce an error if not possible.
+{-# INLINEABLE fromJust #-}
+fromJust :: forall a. BuiltinString -> Maybe a -> a
+fromJust err m =
+  case m of
+    Just d -> d
+    Nothing -> traceError err
 
 -- | Get amount of given currency in a value, ignoring token names.
 {-# INLINEABLE currencySymbolValueOf #-}

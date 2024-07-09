@@ -180,7 +180,7 @@ data VersionOracle = VersionOracle
 -- | @since v5.0.0
 instance ToData VersionOracle where
   {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData (VersionOracle {..}) =
+  toBuiltinData VersionOracle {version, scriptId} =
     productToData2 version scriptId
 
 -- | @since v5.0.0
@@ -212,7 +212,7 @@ data VersionOracleDatum = VersionOracleDatum
 -- | @since Unreleased
 instance ToData VersionOracleDatum where
   {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData (VersionOracleDatum {..}) =
+  toBuiltinData VersionOracleDatum {versionOracle, currencySymbol} =
     productToData2 versionOracle currencySymbol
 
 -- | @since Unreleased
@@ -243,7 +243,7 @@ newtype VersionOracleConfig = VersionOracleConfig
 -- | @since v5.0.0
 instance ToData VersionOracleConfig where
   {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData (VersionOracleConfig {..}) =
+  toBuiltinData VersionOracleConfig {versionOracleCurrencySymbol} =
     toBuiltinData versionOracleCurrencySymbol
 
 -- | @since v5.0.0
@@ -595,7 +595,7 @@ getVersionedScriptHash ::
   ScriptContext ->
   BuiltinByteString
 getVersionedScriptHash
-  (VersionOracleConfig {..})
+  VersionOracleConfig {versionOracleCurrencySymbol}
   versionOracle
   (ScriptContext txInfo _) =
     fromSingleton "ERROR-VERSION-CURRENCY-01" $
@@ -624,7 +624,7 @@ getVersionedScriptHashUnsafe ::
   Unsafe.ScriptContext ->
   BuiltinByteString
 getVersionedScriptHashUnsafe
-  (VersionOracleConfig {..})
+  VersionOracleConfig {versionOracleCurrencySymbol}
   versionOracle
   sc =
     fromSingleton "ERROR-VERSION-CURRENCY-01" $

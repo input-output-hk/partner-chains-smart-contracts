@@ -31,7 +31,6 @@ import Plutus.V2.Ledger.Api (
   OutputDatum (OutputDatum),
   Script,
   TxOut (
-    txOutAddress,
     txOutDatum,
     txOutValue
   ),
@@ -52,9 +51,7 @@ import TrustlessSidechain.Types (
   ),
   ReserveStats (ReserveStats),
  )
-import TrustlessSidechain.Types.Unsafe (getContinuingOutputs)
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
-import TrustlessSidechain.Utils (oneTokenMinted)
 import TrustlessSidechain.Utils qualified as Utils
 import TrustlessSidechain.Versioning (
   VersionOracle (VersionOracle, scriptId, version),
@@ -94,11 +91,10 @@ vFunctionTotalAccruedTokenName = adaToken
 --   ERROR-RESERVE-17: An authentication token is not burnt
 --   ERROR-RESERVE-18: Other tokens than auth token and governance token are minted or burnt
 --   ERROR-RESERVE-19: Not all reserve tokens are transferred to illiquid circulation supply
---   ERROR-RESERVE-20: Reserve utxo input exists without an authentication token
---   ERROR-RESERVE-21: Reserve utxo output exists without an authentication token
+--   ERROR-RESERVE-20: Continuing output exists without an authentication token
 mkReserveValidator ::
   VersionOracleConfig ->
-  ReserveDatum ->
+  BuiltinData ->
   ReserveRedeemer ->
   Unsafe.ScriptContext ->
   Bool
@@ -139,22 +135,22 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
         ctx
 
     illiquidCirculationSupplyAddress :: Address
-    illiquidCirculationSupplyAddress =
+    !illiquidCirculationSupplyAddress =
       getVersionedValidatorAddressUnsafe
         voc
         (VersionOracle {version = 1, scriptId = illiquidCirculationSupplyValidatorId})
         ctx
 
-    carriesAuthToken :: TxOut -> Bool
+    carriesAuthToken :: Unsafe.TxOut -> Bool
     carriesAuthToken txOut =
       valueOf
-        (txOutValue txOut)
+        (Unsafe.decode . Unsafe.txOutValue $ txOut)
         reserveAuthCurrencySymbol
         reserveAuthTokenTokenName
         == 1
 
     tokenKind' :: AssetClass
-    tokenKind' = get @"tokenKind" . get @"immutableSettings" $ inputDatum
+    !tokenKind' = get @"tokenKind" . get @"immutableSettings" $ inputDatum
 
     -- This function verifies that assets of a propagated unique reserve utxo
     -- change only by reserve tokens and returns the difference of reserve tokens
@@ -172,7 +168,7 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
           diff =
             sortBy ord $ -- sorting to have ADA at the head of the list
               flattenValue $
-                txOutValue outputReserveUtxo - txOutValue inputReserveUtxo
+                (Unsafe.decode . Unsafe.txOutValue $ outputReserveUtxo) - (Unsafe.decode . Unsafe.txOutValue $ inputReserveUtxo)
           adaAsReserveToken = tokenKind' == AssetClass (adaSymbol, adaToken)
        in case diff of
             -- in two following cases reserve tokens do not change
@@ -186,42 +182,40 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
             -- every other change is invalid
             _ -> Nothing
 
-    inputReserveUtxo :: TxOut
+    inputReserveUtxo :: Unsafe.TxOut
     !inputReserveUtxo =
-      Unsafe.decode $
-        Utils.fromSingleton "ERROR-RESERVE-05" $
-          filter (traceIfFalse "ERROR-RESERVE-20" . carriesAuthToken . Unsafe.decode) $
-            Unsafe.txInInfoResolved <$> Unsafe.txInfoInputs info
+      Utils.fromSingleton "ERROR-RESERVE-05" $
+        filter carriesAuthToken $
+          Unsafe.txInInfoResolved <$> Unsafe.txInfoInputs info
 
-    outputReserveUtxo :: TxOut
+    outputReserveUtxo :: Unsafe.TxOut
     outputReserveUtxo =
-      Unsafe.decode $
-        Utils.fromSingleton "ERROR-RESERVE-06" $
-          filter (traceIfFalse "ERROR-RESERVE-21" . carriesAuthToken . Unsafe.decode) $
-            getContinuingOutputs ctx
+      case Unsafe.getContinuingOutputs ctx of
+        [out] | carriesAuthToken out -> out
+        [_] -> traceError "ERROR-RESERVE-20"
+        _ -> traceError "ERROR-RESERVE-06"
 
     inputDatum :: ReserveDatum
-    !inputDatum =
-      case extractReserveUtxoDatum inputReserveUtxo of
-        Just d -> d
-        Nothing -> traceError "ERROR-RESERVE-07"
+    !inputDatum = Utils.fromJust "ERROR-RESERVE-07" (extractReserveUtxoDatumUnsafe inputReserveUtxo)
 
     outputDatum :: ReserveDatum
-    outputDatum =
-      case extractReserveUtxoDatum outputReserveUtxo of
-        Just d -> d
-        Nothing -> traceError "ERROR-RESERVE-08"
+    outputDatum = Utils.fromJust "ERROR-RESERVE-08" (extractReserveUtxoDatumUnsafe outputReserveUtxo)
 
+    {-# INLINEABLE isApprovedByGovernance #-}
     isApprovedByGovernance :: Bool
     isApprovedByGovernance = approvedByGovernance voc ctx
 
+    {-# INLINEABLE kindsOfTokenMinted #-}
+    kindsOfTokenMinted :: Integer -> Bool
+    kindsOfTokenMinted n = (length . flattenValue $ minted) == n
+
     -- this is valid only if `isApprovedByGovernance` is True
     noOtherTokensButGovernanceMinted :: Bool
-    noOtherTokensButGovernanceMinted = (length . flattenValue $ minted) == 1
+    !noOtherTokensButGovernanceMinted = kindsOfTokenMinted 1
 
     datumDoesNotChange :: Bool
     datumDoesNotChange =
-      txOutDatum inputReserveUtxo == txOutDatum outputReserveUtxo
+      Unsafe.txOutDatum inputReserveUtxo == Unsafe.txOutDatum outputReserveUtxo
 
     assetsChangeOnlyByPositiveAmountOfReserveTokens :: Bool
     assetsChangeOnlyByPositiveAmountOfReserveTokens =
@@ -237,11 +231,10 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
     assetsDoNotChange =
       changeOfReserveTokens == Just 0
 
-    outputIlliquidCirculationSupplyUtxo :: TxOut
+    outputIlliquidCirculationSupplyUtxo :: Unsafe.TxOut
     outputIlliquidCirculationSupplyUtxo =
-      Unsafe.decode $
-        Utils.fromSingleton "ERROR-RESERVE-16" $
-          info `getOutputsAt` illiquidCirculationSupplyAddress
+      Utils.fromSingleton "ERROR-RESERVE-16" $
+        Unsafe.getOutputsAt info illiquidCirculationSupplyAddress
 
     vFunctionTotalAccrued' :: CurrencySymbol
     vFunctionTotalAccrued' =
@@ -260,7 +253,7 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
 
     -- this is valid only if `vtTokensAreMinted` is True
     noOtherTokensButVtMinted :: Bool
-    noOtherTokensButVtMinted = (length . flattenValue $ minted) == 1
+    noOtherTokensButVtMinted = kindsOfTokenMinted 1
 
     tokensTransferredUpUntilNow :: Integer
     tokensTransferredUpUntilNow =
@@ -276,10 +269,10 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
        in toBuiltinData inputDatum {stats = updatedStats}
             == toBuiltinData outputDatum
 
-    reserveTokensOn :: TxOut -> Integer
+    reserveTokensOn :: Unsafe.TxOut -> Integer
     reserveTokensOn txOut =
       uncurry
-        (valueOf . txOutValue $ txOut)
+        (valueOf . Unsafe.decode . Unsafe.txOutValue $ txOut)
         (unAssetClass tokenKind')
 
     -- It is allowed to claim an incentiveAmount tokens when withdrawing assets
@@ -302,7 +295,7 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
 
     reserveTokensOnICSInputUtxos :: Integer
     reserveTokensOnICSInputUtxos =
-      sum $ reserveTokensOn . Unsafe.decode <$> getInputsAt info illiquidCirculationSupplyAddress
+      sum $ reserveTokensOn <$> Unsafe.getInputsAt info illiquidCirculationSupplyAddress
 
     oneReserveAuthTokenBurnt ::
       Bool
@@ -316,14 +309,14 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
     -- this is valid only if `oneReserveAuthTokenBurnt` is True
     -- and if `isApprovedByGovernance` is True
     noOtherTokensButReserveAuthBurntAndGovernanceMinted :: Bool
-    noOtherTokensButReserveAuthBurntAndGovernanceMinted = (length . flattenValue $ minted) == 2
+    noOtherTokensButReserveAuthBurntAndGovernanceMinted = kindsOfTokenMinted 2
 
 mkReserveValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkReserveValidatorUntyped voc rd rr ctx =
   check $
     mkReserveValidator
       (PlutusTx.unsafeFromBuiltinData voc)
-      (PlutusTx.unsafeFromBuiltinData rd)
+      rd
       (PlutusTx.unsafeFromBuiltinData rr)
       (Unsafe.ScriptContext ctx)
 
@@ -331,29 +324,23 @@ serialisableReserveValidator :: Script
 serialisableReserveValidator =
   fromCompiledCode $$(PlutusTx.compile [||mkReserveValidatorUntyped||])
 
-{-# INLINEABLE getOutputsAt #-}
-getOutputsAt :: Unsafe.TxInfo -> Address -> [Unsafe.TxOut]
-getOutputsAt txInfo address =
-  ((== address) . txOutAddress . Unsafe.decode) `filter` Unsafe.txInfoOutputs txInfo
-
-{-# INLINEABLE getInputsAt #-}
-getInputsAt :: Unsafe.TxInfo -> Address -> [Unsafe.TxOut]
-getInputsAt txInfo address =
-  ((== address) . txOutAddress . Unsafe.decode)
-    `filter` (Unsafe.txInInfoResolved <$> Unsafe.txInfoInputs txInfo)
-
 {-# INLINEABLE extractReserveUtxoDatum #-}
 extractReserveUtxoDatum :: TxOut -> Maybe ReserveDatum
 extractReserveUtxoDatum txOut = case txOutDatum txOut of
   OutputDatum datum -> PlutusTx.fromBuiltinData . getDatum $ datum
   _ -> Nothing
 
+{-# INLINEABLE extractReserveUtxoDatumUnsafe #-}
+extractReserveUtxoDatumUnsafe :: Unsafe.TxOut -> Maybe ReserveDatum
+extractReserveUtxoDatumUnsafe txOut =
+  (PlutusTx.fromBuiltinData . getDatum . Unsafe.decode) =<< (Unsafe.getOutputDatum . Unsafe.txOutDatum $ txOut)
+
 -- | This function will be moved to a governance module in the future
 {-# INLINEABLE approvedByGovernance #-}
 approvedByGovernance :: VersionOracleConfig -> Unsafe.ScriptContext -> Bool
 approvedByGovernance voc ctx =
-  flip (maybe False) ofGovernanceCs $ \case
-    [(_, 1)] -> True -- any token name is allowed
+  case ofGovernanceCs of
+    Just [(_, 1)] -> True -- any token name is allowed
     _ -> False
   where
     ofGovernanceCs :: Maybe [(TokenName, Integer)]
@@ -411,7 +398,7 @@ mkReserveAuthPolicy voc _ ctx =
     reserveUtxo =
       Unsafe.decode $
         Utils.fromSingleton "ERROR-RESERVE-AUTH-06" $
-          info `getOutputsAt` reserveAddress
+          Unsafe.getOutputsAt info reserveAddress
 
     reserveUtxoValue :: Value
     reserveUtxoValue = txOutValue reserveUtxo
@@ -427,7 +414,7 @@ mkReserveAuthPolicy voc _ ctx =
 
     oneReserveAuthTokenIsMinted :: Bool
     oneReserveAuthTokenIsMinted =
-      oneTokenMinted
+      Utils.oneTokenMinted
         minted
         ownCurrencySymbol
         reserveAuthTokenTokenName
@@ -457,8 +444,8 @@ mkReserveAuthPolicyUntyped voc red ctx =
   check $
     mkReserveAuthPolicy
       (PlutusTx.unsafeFromBuiltinData voc)
-      (PlutusTx.unsafeFromBuiltinData red)
-      (Unsafe.ScriptContext ctx)
+      red
+      (Unsafe.wrap ctx)
 
 serialisableReserveAuthPolicy :: Script
 serialisableReserveAuthPolicy =

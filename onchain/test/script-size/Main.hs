@@ -15,9 +15,11 @@ import TrustlessSidechain.DistributedSet qualified as DS
 import TrustlessSidechain.FUELMintingPolicy qualified as FUEL
 import TrustlessSidechain.FUELProxyPolicy qualified as FUELProxyPolicy
 import TrustlessSidechain.HaskellPrelude
+import TrustlessSidechain.IlliquidCirculationSupply qualified as IlliquidCirculationSupply
 import TrustlessSidechain.InitToken qualified as InitToken
 import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRoot
 import TrustlessSidechain.PermissionedCandidates qualified as PermissionedCandidates
+import TrustlessSidechain.Reserve qualified as Reserve
 import TrustlessSidechain.UpdateCommitteeHash qualified as UCH
 import TrustlessSidechain.Versioning qualified as Versioning
 
@@ -128,6 +130,18 @@ main =
             "mkInitTokenPolicy (InitToken) serialized"
             InitToken.serialisableInitTokenPolicy
             735
+        , scriptFitsInto
+            "mkReserveValidator (Reserve) serialized"
+            Reserve.serialisableReserveValidator
+            5_059
+        , scriptFitsInto
+            "mkReserveAuthPolicy (Reserve) serialized"
+            Reserve.serialisableReserveAuthPolicy
+            2_545
+        , scriptFitsInto
+            "mkIlliquidCirculationSupplyValidator (IlliquidCirculationSupply) serialized"
+            IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyValidator
+            2_611
         ]
     , testGroup
         "Distributed set"

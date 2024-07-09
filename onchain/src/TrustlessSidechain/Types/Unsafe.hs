@@ -81,6 +81,8 @@ module TrustlessSidechain.Types.Unsafe (
   getContinuingOutputs,
   findOwnInput,
   txSignedBy,
+  getOutputsAt,
+  getInputsAt,
 ) where
 
 -- This module is intended to be imported qualified as `Unsafe`.
@@ -218,3 +220,14 @@ txSignedBy :: TxInfo -> V2.PubKeyHash -> Bool
 txSignedBy info k = case find ((k ==) . decode) (txInfoSignatories info) of
   Just _ -> True
   Nothing -> False
+
+{-# INLINEABLE getOutputsAt #-}
+getOutputsAt :: TxInfo -> V2.Address -> [TxOut]
+getOutputsAt txInfo address =
+  ((== address) . decode . txOutAddress) `filter` txInfoOutputs txInfo
+
+{-# INLINEABLE getInputsAt #-}
+getInputsAt :: TxInfo -> V2.Address -> [TxOut]
+getInputsAt txInfo address =
+  ((== address) . decode . txOutAddress)
+    `filter` (txInInfoResolved <$> txInfoInputs txInfo)
