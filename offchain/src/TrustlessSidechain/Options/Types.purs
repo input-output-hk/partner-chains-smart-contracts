@@ -10,7 +10,10 @@ module TrustlessSidechain.Options.Types
 
 import Contract.Prelude
 
+import Cardano.Types.Asset (Asset(Asset))
+import Cardano.Types.BigNum (BigNum)
 import Cardano.Types.NetworkId (NetworkId)
+import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.Address (Address)
 import Contract.Config (ContractParams, ServerConfig)
 import Contract.PlutusData (PlutusData)
@@ -30,6 +33,11 @@ import TrustlessSidechain.FUELMintingPolicy.V1 (MerkleTreeEntry)
 import TrustlessSidechain.GetSidechainAddresses (SidechainAddressesExtra)
 import TrustlessSidechain.MerkleRoot.Types (MerkleRootInsertionMessage)
 import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree, RootHash)
+import TrustlessSidechain.NativeTokenManagement.Types
+  ( ImmutableReserveSettings(..)
+  , MutableReserveSettings(..)
+  , TokenAmount(..)
+  )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey)
 import TrustlessSidechain.UpdateCommitteeHash.Types (UpdateCommitteeHashMessage)
@@ -264,6 +272,22 @@ data TxEndpoint
       }
   | BurnNFTs
   | InitTokenStatus
+
+  -- | CLI entpoints for reserve initialization for an asset class
+  | InitReserve
+      { mutableReserveSettings ∷ MutableReserveSettings
+      , immutableReserveSettings ∷ ImmutableReserveSettings
+      , depositAmount ∷ BigNum
+      }
+  | DepositReserve
+      { asset ∷ Asset
+      , depositAmount ∷ BigNum
+      }
+  | TransferReserve
+      { vFunctionTotalAccrued ∷ ScriptHash
+      , totalAccruedTillNow :: Int
+      }
+  | HandOverReserve
 
 -- | `InputArgOrFile` represents that we may either allow an option as input
 -- | via a CLI argument or a filepath of a JSON file

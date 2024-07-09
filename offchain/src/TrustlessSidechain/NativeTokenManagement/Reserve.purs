@@ -35,6 +35,7 @@ import Contract.PlutusData
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction
   ( ScriptRef(..)
+  , TransactionHash
   , TransactionInput
   , TransactionOutput
   )
@@ -46,6 +47,7 @@ import JS.BigInt as BigInt
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT, throw)
+import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow)
@@ -57,6 +59,7 @@ import TrustlessSidechain.NativeTokenManagement.Types
   , ReserveDatum(..)
   , ReserveRedeemer(..)
   , ReserveStats(..)
+  , TokenAmount
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Scripts
@@ -207,9 +210,7 @@ getIlliquidCirculationSupplyValidator sidechainParams = do
 findReserveUtxos ∷
   ∀ r.
   SidechainParams →
-  Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
-    UtxoMap
+  Run (APP r) UtxoMap
 findReserveUtxos sidechainParams = do
   reserveAuthCurrencySymbol ← getReserveAuthCurrencySymbol sidechainParams
 
@@ -313,10 +314,8 @@ initialiseReserveUtxo ∷
   SidechainParams →
   ImmutableReserveSettings →
   MutableReserveSettings →
-  BigNum →
-  Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
-    Unit
+  TokenAmount →
+  Run (APP r) TransactionHash
 initialiseReserveUtxo
   sidechainParams
   immutableSettings
@@ -348,7 +347,7 @@ initialiseReserveUtxo
           reserveAuthTokenName
           (BigNum.fromInt 1)
 
-    totalValueToPay <- fromMaybeThrow
+    totalValueToPay ← fromMaybeThrow
       (GenericInternalError "Could not calculate total value to pay")
       (pure (valueToPay `Value.add` reserveAuthTokenValue))
 
@@ -369,7 +368,7 @@ initialiseReserveUtxo
             DatumInline
             totalValueToPay
 
-    void $ balanceSignAndSubmit
+    balanceSignAndSubmit
       "Reserve initialization transaction"
       { constraints, lookups }
 
@@ -389,9 +388,7 @@ findReserveUtxoForAssetClass ∷
   ∀ r.
   SidechainParams →
   Asset →
-  Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
-    UtxoMap
+  Run (APP r) UtxoMap
 findReserveUtxoForAssetClass sp ac = do
   utxos ← findReserveUtxos sp
 
@@ -409,9 +406,7 @@ depositToReserve ∷
   SidechainParams →
   Asset →
   BigNum →
-  Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
-    Unit
+  Run (APP r) TransactionHash
 depositToReserve sp asset amount = do
   utxo ← fromMaybeThrow (NotFoundUtxo "Reserve UTxO for asset class not found")
     $ (Map.toUnfoldable <$> findReserveUtxoForAssetClass sp asset)
@@ -437,7 +432,7 @@ depositToReserve sp asset amount = do
   let
     value = unwrap >>> _.amount $ snd utxo
 
-  newValue <- fromMaybeThrow
+  newValue ← fromMaybeThrow
       (GenericInternalError "Could not calculate new reserve value")
       $ pure (value `Value.add` singletonFromAsset asset amount)
 
@@ -462,7 +457,7 @@ depositToReserve sp asset amount = do
         <> TxConstraints.mustSpendScriptOutput (fst utxo)
           (RedeemerDatum $ toData DepositToReserve)
 
-  void $ balanceSignAndSubmit
+  balanceSignAndSubmit
     "Deposit to a reserve utxo"
     { constraints, lookups }
 
@@ -533,9 +528,7 @@ transferToIlliquidCirculationSupply ∷
   Int → -- total amount of assets paid out until now
   PlutusScript →
   (TransactionInput /\ TransactionOutput) →
-  Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
-    Unit
+  Run (APP r) TransactionHash
 transferToIlliquidCirculationSupply
   sp
   totalAccruedTillNow
@@ -568,7 +561,7 @@ transferToIlliquidCirculationSupply
         >>> _.tokenKind
         $ datum
 
-  tokenTotalAmountTransferred <- fromMaybeThrow
+  tokenTotalAmountTransferred ← fromMaybeThrow
     (GenericInternalError "Could not calculate total amount transferred")
     (unwrap
         >>> _.stats
@@ -585,7 +578,7 @@ transferToIlliquidCirculationSupply
         >>> _.vFunctionTotalAccrued
         $ datum
 
-  incentiveAmount <- fromMaybeThrow
+  incentiveAmount ← fromMaybeThrow
     (GenericInternalError "Could not calculate incentive amount")
     $ pure
       (unwrap
@@ -625,7 +618,7 @@ transferToIlliquidCirculationSupply
   newValue ← fromMaybeThrow (GenericInternalError "Could not calculate new reserve value")
     (pure (value `Value.minus` toTransferAsValue))
 
-  illiquidCirculationNewValue <- fromMaybeThrow
+  illiquidCirculationNewValue ← fromMaybeThrow
     (GenericInternalError "Could not calculate new ICS value")
     (pure (toTransferAsValue `Value.minus` incentiveAsValue))
 
@@ -649,14 +642,14 @@ transferToIlliquidCirculationSupply
         <> TxConstraints.mustSpendScriptOutput (fst utxo)
           (RedeemerDatum $ toData TransferToIlliquidCirculationSupply)
         <> TxConstraints.mustMintValue
-              (Mint.fromMultiAsset $ Value.getMultiAsset vtTokensAsValue)
+          (Mint.fromMultiAsset $ Value.getMultiAsset vtTokensAsValue)
         <> TxConstraints.mustPayToScript
           (PlutusScript.hash illiquidCirculationSupplyValidator)
           PlutusData.unit
           DatumInline
           illiquidCirculationNewValue
 
-  void $ balanceSignAndSubmit
+  balanceSignAndSubmit
     "Transfer to illiquid circulation supply"
     { constraints, lookups }
 
@@ -664,9 +657,7 @@ handover ∷
   ∀ r.
   SidechainParams →
   (TransactionInput /\ TransactionOutput) →
-  Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
-    Unit
+  Run (APP r) TransactionHash
 handover
   sp
   utxo = do
@@ -750,6 +741,6 @@ handover
               }
           )
 
-  void $ balanceSignAndSubmit
+  balanceSignAndSubmit
     "Handover to illiquid circulation supply"
     { constraints, lookups }

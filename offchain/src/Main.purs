@@ -5,6 +5,8 @@ import Contract.Prelude
 import Cardano.AsCbor (encodeCbor)
 import Cardano.ToData (toData)
 import Cardano.Types.BigNum as BigNum
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Monad (launchAff_)
 import Contract.PlutusData as PlutusData
@@ -14,6 +16,7 @@ import Data.Array as Array
 import Data.List as List
 import Data.List.NonEmpty as NonEmpty
 import Data.List.Types as Data.List.Types
+import Data.Map as Map
 import Effect.Class (liftEffect)
 import Effect.Exception (error)
 import JS.BigInt as BigInt
@@ -28,6 +31,7 @@ import TrustlessSidechain.ConfigFile as ConfigFile
 import TrustlessSidechain.DParameter as DParameter
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Run (runAppLive)
+import TrustlessSidechain.Effects.Util as Effect
 import TrustlessSidechain.EndpointResp
   ( EndpointResp
       ( ClaimActRespV1
@@ -67,21 +71,19 @@ import TrustlessSidechain.EndpointResp
       , BurnNFTsResp
       , InitTokenStatusResp
       , ListVersionedScriptsResp
+      , ReserveResp
       )
   , stringifyEndpointResp
   )
+import TrustlessSidechain.Error (OffchainError(..))
 import TrustlessSidechain.FUELMintingPolicy.V1 as Mint.V1
 import TrustlessSidechain.FUELMintingPolicy.V2 as Mint.V2
 import TrustlessSidechain.FUELProxyPolicy as FUELProxyPolicy
 import TrustlessSidechain.GarbageCollector as GarbageCollector
-import TrustlessSidechain.GetSidechainAddresses
-  ( SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
-  )
+import TrustlessSidechain.GetSidechainAddresses (SidechainAddressesEndpointParams(SidechainAddressesEndpointParams))
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.InitSidechain (initSidechain, toSidechainParams)
-import TrustlessSidechain.InitSidechain.CandidatePermissionToken
-  ( initCandidatePermissionToken
-  )
+import TrustlessSidechain.InitSidechain.CandidatePermissionToken (initCandidatePermissionToken)
 import TrustlessSidechain.InitSidechain.Checkpoint (initCheckpoint)
 import TrustlessSidechain.InitSidechain.FUEL (initFuel)
 import TrustlessSidechain.InitSidechain.Init (getInitTokenStatus)
@@ -89,9 +91,14 @@ import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
 import TrustlessSidechain.MerkleRoot (SaveRootParams(SaveRootParams))
 import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.MerkleTree as MerkleTree
+import TrustlessSidechain.NativeTokenManagement.Reserve (depositToReserve, handover, findReserveUtxos, initialiseReserveUtxo, transferToIlliquidCirculationSupply)
 import TrustlessSidechain.Options.Specs (options)
 import TrustlessSidechain.Options.Types
-  ( Options(TxOptions, UtilsOptions, CLIVersion)
+  ( Options
+      ( TxOptions
+      , UtilsOptions
+      , CLIVersion
+      )
   , SidechainEndpointParams
   , TxEndpoint
       ( BurnActV1
@@ -120,6 +127,10 @@ import TrustlessSidechain.Options.Types
       , BurnNFTs
       , InitTokenStatus
       , ListVersionedScripts
+      , InitReserve
+      , DepositReserve
+      , TransferReserve
+      , HandOverReserve
       )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
@@ -149,6 +160,7 @@ import TrustlessSidechain.Utils.Transaction
   )
 import TrustlessSidechain.Versioning as Versioning
 import Type.Row (type (+))
+import Unsafe.Coerce (unsafeCoerce)
 
 -- | Main entrypoint for the CTL CLI
 main ∷ Effect Unit
@@ -671,6 +683,45 @@ runTxEndpoint sidechainEndpointParams endpoint =
               { sidechainParams: scParams, atmsKind }
               version
           )
+      InitReserve
+        { mutableReserveSettings
+        , immutableReserveSettings
+        , depositAmount
+        } → do
+        txHash ← initialiseReserveUtxo
+          scParams
+          immutableReserveSettings
+          mutableReserveSettings
+          (depositAmount)
+        pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
+
+      DepositReserve { asset, depositAmount } -> do
+        txHash <- depositToReserve scParams asset depositAmount
+        pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
+
+      TransferReserve { vFunctionTotalAccrued, totalAccruedTillNow } -> do
+        utxo <- Effect.fromMaybeThrow (NotFoundUtxo "No Reserved Utxo existes for the given asset")
+          $ Map.toUnfoldable
+          <$> findReserveUtxos scParams
+        txHash <- transferToIlliquidCirculationSupply
+          scParams
+          totalAccruedTillNow
+          (scriptHashToPlutusScript vFunctionTotalAccrued)
+          utxo
+        pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
+
+      HandOverReserve -> do
+        utxo <- Effect.fromMaybeThrow (NotFoundUtxo "No Reserved Utxo existes for the given asset")
+          $ Map.toUnfoldable
+          <$> findReserveUtxos scParams
+        txHash <- handover
+          scParams
+          utxo
+        pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
+-- utxo ← $ Map.toUnfoldable <$> findReserveUtxos sidechainParams
+-- @TODO need to resolve this
+scriptHashToPlutusScript :: ScriptHash -> PlutusScript
+scriptHashToPlutusScript = unsafeCoerce
 
 -- | Executes an endpoint for the `utils` subcommand. Note that this does _not_
 -- | need to be in the Contract monad.

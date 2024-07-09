@@ -162,6 +162,7 @@ data EndpointResp
       { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
       , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
       }
+  | ReserveResp { transactionHash ∷ ByteArray }
 
 -- | `serialisePlutusDataToHex` serialises plutus data to CBOR, and shows the
 -- | hex encoded CBOR.
@@ -526,6 +527,10 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         , "versionedScripts" /\ toStringifiedNumbersJson
             (encodeAeson $ map show $ versionedScriptIdsWithHashes)
         ]
+
+    ReserveResp { transactionHash } →
+      J.fromObject $ Object.fromFoldable
+        [ "transactionHash" /\ J.fromString (byteArrayToHex transactionHash) ]
 
 -- | Encode the endpoint response to a json object
 encodeEndpointResp ∷ EndpointResp → J.Json

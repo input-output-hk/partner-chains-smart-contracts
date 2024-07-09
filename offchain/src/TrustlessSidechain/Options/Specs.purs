@@ -1,8 +1,12 @@
-module TrustlessSidechain.Options.Specs (options) where
+module TrustlessSidechain.Options.Specs
+  ( parseAssetName
+  , options
+  ) where
 
 import Contract.Prelude
 
 import Cardano.AsCbor (decodeCbor)
+import Cardano.Types.Asset (Asset(..))
 import Contract.Config
   ( PrivateStakeKeySource(PrivateStakeKeyFile)
   , ServerConfig
@@ -11,13 +15,15 @@ import Contract.Config
   , testnetConfig
   )
 import Contract.Prim.ByteArray (ByteArray)
-import Contract.Scripts (ValidatorHash)
+import Contract.Scripts (ScriptHash, ValidatorHash)
+import Contract.Value (AssetName)
 import Contract.Wallet
   ( PrivatePaymentKeySource(PrivatePaymentKeyFile)
   , WalletSpec(UseKeys)
   )
 import Control.Alternative ((<|>))
 import Ctl.Internal.Helpers (logWithLevel)
+import Ctl.Internal.Types.Interval (POSIXTime)
 import Data.List (List)
 import Data.List.Types (NonEmptyList)
 import Data.UInt (UInt)
@@ -62,6 +68,12 @@ import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   )
 import TrustlessSidechain.MerkleTree (MerkleTree, RootHash)
+import TrustlessSidechain.NativeTokenManagement.Types
+  ( ImmutableReserveSettings(..)
+  , IncentiveAmount
+  , MutableReserveSettings(..)
+  , TokenAmount
+  )
 import TrustlessSidechain.Options.Parsers
   ( bech32BytesParser
   , bech32ValidatorHashParser
@@ -121,6 +133,10 @@ import TrustlessSidechain.Options.Types
       , BurnNFTs
       , InitTokenStatus
       , ListVersionedScripts
+      , InitReserve
+      , DepositReserve
+      , TransferReserve
+      , HandOverReserve
       )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
@@ -273,6 +289,30 @@ optSpec maybeConfig =
         ( info (pure CLIVersion)
             ( progDesc
                 "Display semantic version of the CLI and its git hash"
+            )
+        )
+    , command "init-reserve-assetclass"
+        ( info (withCommonOpts maybeConfig initReserveSpec)
+            ( progDesc
+                "Initialize Reserve AssetClass"
+            )
+        )
+    , command "hand-over-reserve-assetclass"
+        ( info (withCommonOpts maybeConfig handOverReserveSpec)
+            ( progDesc
+                "Handover Reserve AssetClass"
+            )
+        )
+    , command "deposit-reserve-assetclass"
+        ( info (withCommonOpts maybeConfig depositReserveSpec)
+            ( progDesc
+                "Deposit Reserve AssetClass"
+            )
+        )
+    , command "transfer-reserve-assetclass"
+        ( info (withCommonOpts maybeConfig transferReserveSpec)
+            ( progDesc
+                "transfer Reserve AssetClass"
             )
         )
     ]
@@ -835,6 +875,7 @@ saveCheckpointSpec = ado
       , newCheckpointBlockHash
       , newCheckpointBlockNumber
       , sidechainEpoch
+
       }
 
 -- `parseCommittee` parses the committee public keys and takes the long
@@ -1486,3 +1527,130 @@ cborCombinedMerkleProofSpec = ado
   in
     UtilsOptions
       { utilsOptions: CborCombinedMerkleProofAct { merkleTree, merkleTreeEntry } }
+
+parseDepositAmount ∷ Parser TokenAmount
+parseDepositAmount = option Parsers.tokenAmount
+  ( fold
+      [ long "initial-deposit-amount"
+      , metavar "DEPOSITAMOUNT"
+      , help "inital amount of tokens to deposit"
+      ]
+  )
+
+parseIncentiveAmount ∷ Parser IncentiveAmount
+parseIncentiveAmount = option Parsers.incentiveAmount
+  ( fold
+      [ long "initial-deposit-amount"
+      , metavar "DEPOSITAMOUNT"
+      , help "inital amount of tokens to deposit"
+      , (value (BigInt.fromInt 0))
+      , showDefault
+      ]
+  )
+
+-- `parsePOSIXTime`
+parserT0 ∷ Parser POSIXTime
+parserT0 = option Parsers.posixTime
+  ( fold
+      [ long "posixtime-t0"
+      , metavar "POSIXTIME"
+      , help
+          "Partner chain Epoc POSIX timestamp of the moment the reserve is launched"
+      ]
+  )
+
+parseScriptHash ∷ Parser ScriptHash
+parseScriptHash =
+  ( option
+      validatorHashParser
+      ( fold
+          [ long "asset-script-hash"
+          , metavar "RESERVE_SCRIPT_HASH"
+          , help
+              "Hex encoded script hash for the reserve native-token kind"
+          ]
+      )
+  )
+
+parseAssetName ∷ Parser AssetName
+parseAssetName =
+  ( option
+      Parsers.assetNameParser
+      ( fold
+          [ long "asset-name"
+          , metavar "RESERVE_ASSET_HASH"
+          , help
+              "Reserve native token assetName"
+          ]
+      )
+  )
+
+handOverReserveSpec :: Parser TxEndpoint
+handOverReserveSpec = flag' HandOverReserve $ fold
+  [ long "hand-over"
+  , help "Hand Over Reserve Tokens"
+  ]
+
+parseAdaAsset ∷ Parser Asset
+parseAdaAsset = flag' AdaAsset $ fold
+  [ long "ada-asset"
+  , help "use Ada for reserve token"
+  ]
+
+parseAsset ∷ Parser Asset
+parseAsset =
+  (Asset <$> parseScriptHash <*> parseAssetName)
+    <|>
+      parseAdaAsset
+
+parseImmutableReserveSettings ∷ Parser ImmutableReserveSettings
+parseImmutableReserveSettings = ado
+  t0 ← parserT0
+  tokenKind ← parseAsset
+  in ImmutableReserveSettings { t0, tokenKind }
+
+parseMutableReserveSettings ∷ Parser MutableReserveSettings
+parseMutableReserveSettings = ado
+  vFunctionTotalAccrued ← parseScriptHash
+  incentiveAmount ← parseIncentiveAmount
+  in MutableReserveSettings { vFunctionTotalAccrued, incentiveAmount }
+
+initReserveSpec ∷ Parser TxEndpoint
+initReserveSpec = ado
+  depositAmount ← parseDepositAmount
+  immutableReserveSettings ← parseImmutableReserveSettings
+  mutableReserveSettings ← parseMutableReserveSettings
+  in
+    InitReserve
+      { mutableReserveSettings
+      , immutableReserveSettings
+      , depositAmount
+      }
+
+depositReserveSpec :: Parser TxEndpoint
+depositReserveSpec = ado
+  asset ← parseAsset
+  depositAmount ← parseDepositAmount
+  in
+    DepositReserve
+      { asset
+      , depositAmount
+      }
+
+parseUnit :: Parser UInt
+parseUnit = option uint $ fold
+  [ long "total-accrued-till-now"
+  , metavar "INT"
+  , help "computerd integer for the v(t)"
+  ]
+
+
+transferReserveSpec :: Parser TxEndpoint
+transferReserveSpec = ado
+  totalAccruedTillNow ← UInt.toInt <$> parseUnit
+  vFunctionTotalAccrued ← parseScriptHash
+  in
+    TransferReserve
+      { vFunctionTotalAccrued
+      , totalAccruedTillNow
+      }
