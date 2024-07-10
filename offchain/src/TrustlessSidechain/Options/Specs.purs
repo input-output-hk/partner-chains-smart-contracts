@@ -310,6 +310,7 @@ optSpec maybeConfig =
         )
     ]
 
+
 -- | `utilsSpec` provides CLI options for utilities in the sidechain that do
 -- | not submit a tx to the blockchain
 utilsSpec ∷ Maybe Config → Parser Options
@@ -1552,15 +1553,15 @@ parserT0 = option Parsers.posixTime
       ]
   )
 
-parseScriptHash ∷ Parser ScriptHash
-parseScriptHash =
+parseScriptHash ∷ String -> String -> Parser ScriptHash
+parseScriptHash long' metavar' =
   ( option
       validatorHashParser
       ( fold
-          [ long "reserve-asset-script-hash"
-          , metavar "RESERVE_SCRIPT_HASH"
+          [ long long' -- "reserve-asset-script-hash"
+          , metavar metavar' -- "RESERVE_SCRIPT_HASH"
           , help
-              "Hex encoded script hash for the reserve native-token kind"
+              "Hex encoded hash sting"
           ]
       )
   )
@@ -1590,21 +1591,21 @@ parseAdaAsset = flag' AdaAsset $ fold
   , help "use Ada for reserve asset"
   ]
 
-parseAsset ∷ Parser Asset
-parseAsset =
-  (Asset <$> parseScriptHash <*> parseAssetName)
+parseAsset ∷ String -> String -> Parser Asset
+parseAsset long' metavar' =
+  (Asset <$> (parseScriptHash long' metavar') <*> parseAssetName)
     <|>
       parseAdaAsset
 
 parseImmutableReserveSettings ∷ Parser ImmutableReserveSettings
 parseImmutableReserveSettings = ado
   t0 ← parserT0
-  tokenKind ← parseAsset
+  tokenKind ← parseAsset "reserve-asset-script-hash" "ASSET-SCRIPT-HASH"
   in ImmutableReserveSettings { t0, tokenKind }
 
 parseMutableReserveSettings ∷ Parser MutableReserveSettings
 parseMutableReserveSettings = ado
-  vFunctionTotalAccrued ← parseScriptHash
+  vFunctionTotalAccrued ← parseScriptHash "total-accrued-function-script-hash" "SCRIPT-HASH"
   incentiveAmount ← parseIncentiveAmount
   in MutableReserveSettings { vFunctionTotalAccrued, incentiveAmount }
 
@@ -1622,7 +1623,7 @@ initReserveSpec = ado
 
 depositReserveSpec :: Parser TxEndpoint
 depositReserveSpec = ado
-  asset <- parseAsset
+  asset <- parseAsset "deposit-reserve-asset" "ASSET-SCRIPT-HASH"
   depositAmount <- parseDepositAmount
   in
     DepositReserve { asset, depositAmount }
