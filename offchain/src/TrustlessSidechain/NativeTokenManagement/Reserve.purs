@@ -3,6 +3,7 @@ module TrustlessSidechain.NativeTokenManagement.Reserve
   , reserveAuthPolicy
   , initialiseReserveUtxo
   , findReserveUtxos
+  , findOneReserveUtxo
   , depositToReserve
   , extractReserveDatum
   , updateReserveUtxo
@@ -220,6 +221,15 @@ findReserveUtxos sidechainParams = do
   pure $ flip Map.filter utxos $ \o → BigNum.one ==
     valueOf (Asset reserveAuthCurrencySymbol reserveAuthTokenName)
       (unwrap o).amount
+
+findOneReserveUtxo ∷
+  ∀ r.
+  SidechainParams →
+  Run (APP r) (TransactionInput /\ TransactionOutput)
+findOneReserveUtxo scParams =
+  fromMaybeThrow (NotFoundUtxo "No Reserved UTxO existes for the given asset")
+  $ Map.toUnfoldable
+  <$> findReserveUtxos scParams
 
 reserveAuthLookupsAndConstraints ∷
   ∀ r.

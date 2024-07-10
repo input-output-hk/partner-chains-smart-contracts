@@ -13,7 +13,7 @@ import Contract.Config
   , testnetConfig
   )
 import Contract.Prim.ByteArray (ByteArray)
-import Contract.Scripts (ScriptHash, ValidatorHash)
+import Contract.Scripts (ValidatorHash)
 import Contract.Value (AssetName)
 import Contract.Wallet
   ( PrivatePaymentKeySource(PrivatePaymentKeyFile)
@@ -284,13 +284,13 @@ optSpec maybeConfig =
                 "Display semantic version of the CLI and its git hash"
             )
         )
-    , command "init-reserve-assetclass"
+    , command "initialize-native-token-management-system"
         ( info (withCommonOpts maybeConfig initReserveSpec)
             ( progDesc
                 "Initialize Reserve AssetClass"
             )
         )
-    , command "hand-over-reserve-assetclass"
+    , command "hand-over-reserve-asset-class"
         ( info (withCommonOpts maybeConfig handOverReserveSpec)
             ( progDesc
                 "Handover Reserve AssetClass"
@@ -1527,7 +1527,7 @@ parseDepositAmount = option Parsers.tokenAmount
   ( fold
       [ long "reserve-initial-deposit-amount"
       , metavar "RESERVE-DEPOSIT-AMOUNT"
-      , help "inital amount of tokens to deposit"
+      , help "Inital amount of tokens to deposit"
       ]
   )
 
@@ -1536,7 +1536,7 @@ parseIncentiveAmount = option Parsers.incentiveAmount
   ( fold
       [ long "reserve-initial-incentive-amount"
       , metavar "RESERVE-INCENTIVE-AMOUNT"
-      , help "incentive amount of tokens"
+      , help "Incentive amount of tokens"
       , (value (BigInt.fromInt 0))
       , showDefault
       ]
@@ -1549,21 +1549,8 @@ parserT0 = option Parsers.posixTime
       [ long "reserve-posixtime-t0"
       , metavar "POSIXTIME"
       , help
-          "Partner chain Epoc POSIX timestamp of the moment the reserve is launched"
+          "Partner chain POSIX timestamp of the moment the reserve is launched"
       ]
-  )
-
-parseScriptHash ∷ String -> String -> Parser ScriptHash
-parseScriptHash long' metavar' =
-  ( option
-      validatorHashParser
-      ( fold
-          [ long long' -- "reserve-asset-script-hash"
-          , metavar metavar' -- "RESERVE_SCRIPT_HASH"
-          , help
-              "Hex encoded hash sting"
-          ]
-      )
   )
 
 parseAssetName ∷ Parser AssetName
@@ -1588,14 +1575,27 @@ handOverReserveSpec = flag' HandOverReserve $ fold
 parseAdaAsset ∷ Parser Asset
 parseAdaAsset = flag' AdaAsset $ fold
   [ long "reserve-ada-asset"
-  , help "use Ada for reserve asset"
+  , help "Use Ada for reserve asset"
   ]
 
 parseAsset ∷ String -> String -> Parser Asset
 parseAsset long' metavar' =
-  (Asset <$> (parseScriptHash long' metavar') <*> parseAssetName)
-    <|>
-      parseAdaAsset
+  (
+    Asset
+    <$>
+    ( option validatorHashParser
+      ( fold
+        [ long long'
+        , metavar metavar'
+        , help "Hex encoded hash string"
+        ]
+      )
+    )
+    <*> parseAssetName
+  )
+  <|>
+  parseAdaAsset
+
 
 parseImmutableReserveSettings ∷ Parser ImmutableReserveSettings
 parseImmutableReserveSettings = ado
@@ -1605,7 +1605,14 @@ parseImmutableReserveSettings = ado
 
 parseMutableReserveSettings ∷ Parser MutableReserveSettings
 parseMutableReserveSettings = ado
-  vFunctionTotalAccrued ← parseScriptHash "total-accrued-function-script-hash" "SCRIPT-HASH"
+  vFunctionTotalAccrued ← (option validatorHashParser
+                            (fold
+                              [ long "total-accrued-function-script-hash"
+                              , metavar "SCRIPT-HASH"
+                              , help "Hex encoded hash string"
+                              ]
+                            ))
+
   incentiveAmount ← parseIncentiveAmount
   in MutableReserveSettings { vFunctionTotalAccrued, incentiveAmount }
 
@@ -1632,7 +1639,7 @@ parseUnit :: Parser UInt
 parseUnit = option uint $ fold
   [ long "total-accrued-till-now"
   , metavar "INT"
-  , help "computerd integer for the v(t)"
+  , help "Computerd integer for the v(t)"
   ]
 
 transferReserveSpec :: Parser TxEndpoint
@@ -1650,5 +1657,5 @@ parseTransactionInput =
   option Parsers.transactionInput $ fold
     [ long "reserve-transaction-input"
     , metavar "RESERVE-TRANSACTION-INPUT"
-    , help "transaction input of the policy script for to transfer illiquid circulation"
+    , help "Transaction input of the policy script for to transfer illiquid circulation"
     ]

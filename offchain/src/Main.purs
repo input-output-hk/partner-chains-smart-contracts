@@ -14,8 +14,6 @@ import Data.Array as Array
 import Data.List as List
 import Data.List.NonEmpty as NonEmpty
 import Data.List.Types as Data.List.Types
-import Data.Map as Map
-import Effect.Class (liftEffect)
 import Effect.Exception (error)
 import JS.BigInt as BigInt
 import Options.Applicative (execParser)
@@ -96,7 +94,7 @@ import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.NativeTokenManagement.Reserve
   ( depositToReserve
   , handover
-  , findReserveUtxos
+  , findOneReserveUtxo
   , initialiseReserveUtxo
   , transferToIlliquidCirculationSupply
   , updateReserveUtxo
@@ -699,13 +697,11 @@ runTxEndpoint sidechainEndpointParams endpoint =
           scParams
           immutableReserveSettings
           mutableReserveSettings
-          (depositAmount)
-        pure $ ReserveRep { transactionHash: (txHashToByteArray txHash) }
+          depositAmount
+        pure $ ReserveRep { transactionHash: txHashToByteArray txHash }
 
       UpdateReserve { mutableReserveSettings } -> do
-        utxo <- Effect.fromMaybeThrow (NotFoundUtxo "No Reserved Utxo existes for the given asset")
-          $ Map.toUnfoldable
-          <$> findReserveUtxos scParams
+        utxo <-findOneReserveUtxo scParams
         txHash <- updateReserveUtxo scParams mutableReserveSettings utxo
         pure $ ReserveRep { transactionHash: (txHashToByteArray txHash) }
 
@@ -717,11 +713,8 @@ runTxEndpoint sidechainEndpointParams endpoint =
         { totalAccruedTillNow
         , transactionInput
         } -> do
-        utxo <- Effect.fromMaybeThrow (NotFoundUtxo "No Reserved Utxo existes for the given asset")
-          $ Map.toUnfoldable
-          <$> findReserveUtxos scParams
-
-        plutusScript <- Effect.fromMaybeThrow (NotFoundUtxo "No Reserved Utxo existes for the given asset")
+        utxo <-findOneReserveUtxo scParams
+        plutusScript <- Effect.fromMaybeThrow (NotFoundUtxo "No Reserved UTxO existes for the given asset")
           (plutusScriptFromTxIn transactionInput)
         txHash <- transferToIlliquidCirculationSupply
           scParams
@@ -731,13 +724,11 @@ runTxEndpoint sidechainEndpointParams endpoint =
         pure $ ReserveRep { transactionHash: (txHashToByteArray txHash) }
 
       HandOverReserve -> do
-        utxo <- Effect.fromMaybeThrow (NotFoundUtxo "No Reserved Utxo existes for the given asset")
-          $ Map.toUnfoldable
-          <$> findReserveUtxos scParams
+        utxo <-findOneReserveUtxo scParams
         txHash <- handover
           scParams
           utxo
-        pure $ ReserveRep { transactionHash: (txHashToByteArray txHash) }
+        pure $ ReserveRep { transactionHash: txHashToByteArray txHash }
 
 -- | Executes an endpoint for the `utils` subcommand. Note that this does _not_
 -- | need to be in the Contract monad.
