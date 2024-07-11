@@ -10,6 +10,8 @@ module TrustlessSidechain.Versioning.V1
 
 import Contract.Prelude
 
+import JS.BigInt as BigInt
+import Contract.PlutusData (toData)
 import Cardano.Types.PlutusScript (PlutusScript)
 import Data.List (List)
 import Data.List as List
@@ -187,7 +189,7 @@ getNativeTokenManagementPoliciesAndValidators sp = do
     versionOracleConfig
 
   { mintingPolicy: pocAlwaysPassing } <-
-    getCurrencyInfo PoCAlwaysPassingPolicy []
+    getCurrencyInfo PoCAlwaysPassingPolicy [ toData $ BigInt.fromInt 1 ]
 
   let
     versionedPolicies = List.fromFoldable
