@@ -40,13 +40,14 @@ in rec {
 
         node "$CLI_TMP" "$@"
       '';
+    prunedNodeModules = project.mkNodeModules {withDevDeps = false;};
   in
     pkgs.runCommand "bundled-cli"
     {
       buildInputs = [pkgs.zip];
     }
     ''
-      cp -R ${project.nodeModules}/lib/node_modules .
+      cp -R ${prunedNodeModules}/lib/node_modules .
       chmod -R u+rw ./node_modules
       cp ${wrappedNodeScript} ./sidechain-cli
       mkdir -p $out

@@ -29,16 +29,9 @@
         ln -s ${project.nodeModules}/lib/node_modules $out/node_modules
       '';
     });
-    prunedNodeModules = project.nodeModules.overrideAttrs (old: {
-      fixupPhase = ''
-        echo "Pruning node modules for production..."
-        cd $out/lib && npm prune --omit=dev
-      '';
-    });
   in
     project
     // {
       compiled = compiled';
-      nodeModules = prunedNodeModules;
     };
 }
