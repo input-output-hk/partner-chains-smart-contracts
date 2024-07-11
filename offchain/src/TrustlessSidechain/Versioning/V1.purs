@@ -45,6 +45,7 @@ import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash.Utils
   ( getUpdateCommitteeHashValidator
   )
+import TrustlessSidechain.Utils.Address ( getCurrencyInfo )
 import TrustlessSidechain.Versioning.Types (ScriptId(..))
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
@@ -185,9 +186,14 @@ getNativeTokenManagementPoliciesAndValidators sp = do
   illiquidCirculationSupplyValidator' ← illiquidCirculationSupplyValidator
     versionOracleConfig
 
+  { mintingPolicy: pocAlwaysPassing } <-
+    getCurrencyInfo PoCAlwaysPassingPolicy []
+
   let
     versionedPolicies = List.fromFoldable
       [ ReserveAuthPolicy /\ reserveAuthPolicy'
+      , GovernancePolicy /\ pocAlwaysPassing  -- JSTOLAREK: temporary workaround
+      , IlliquidCirculationSupplyWithdrawalPolicy /\ pocAlwaysPassing  -- JSTOLAREK: temporary workaround
       ]
     versionedValidators = List.fromFoldable
       [ ReserveValidator /\ reserveValidator'

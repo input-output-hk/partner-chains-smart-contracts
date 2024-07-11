@@ -367,6 +367,7 @@ main =
             ( "IlliquidCirculationSupplyValidator"
             , IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyValidator
             )
+          , ("PoCAlwaysPassingPolicy", PoCAlwaysPassing.serialisableAlwaysPassingPolicy)  -- JSTOLAREK: temporary workaround
           ]
         -- Validators for proof of concept tests.
         plutusPoCScripts =
