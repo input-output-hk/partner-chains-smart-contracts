@@ -232,6 +232,24 @@ optSpec maybeConfig =
         ( info (withCommonOpts maybeConfig saveCheckpointSpec)
             (progDesc "Saving a new checkpoint")
         )
+
+    , command "reserve-initialize"
+        ( info (withCommonOpts maybeConfig initReserveSpec)
+            (progDesc "Create a new token reserve")
+        )
+    , command "reserve-handover"
+        ( info (withCommonOpts maybeConfig handOverReserveSpec)
+            (progDesc "Handover an existing reserve")
+        )
+    , command "reserve-deposit"
+        ( info (withCommonOpts maybeConfig depositReserveSpec)
+            (progDesc "Deposit assets to existing reserve")
+        )
+    , command "reserve-transfer"
+        ( info (withCommonOpts maybeConfig transferReserveSpec)
+            (progDesc "Release currently available funds from the reservr")
+        )
+
     , command "insert-version-2"
         ( info (withCommonOpts maybeConfig insertVersionSpec)
             (progDesc "Initialize version 2 of a protocol")
@@ -248,13 +266,6 @@ optSpec maybeConfig =
         ( info (withCommonOpts maybeConfig listVersionedScriptsSpec)
             ( progDesc
                 "Get scripts (validators and minting policies) that are currently being versioned"
-            )
-        )
-
-    , command "utils"
-        ( info (utilsSpec maybeConfig)
-            ( progDesc
-                "Utility functions for cryptographic primitives and messages."
             )
         )
 
@@ -278,36 +289,21 @@ optSpec maybeConfig =
         ( info (withCommonOpts maybeConfig initTokenStatusSpec)
             (progDesc "List the number of each init token the wallet still holds")
         )
+
     , command "cli-version"
         ( info (pure CLIVersion)
             ( progDesc
                 "Display semantic version of the CLI and its git hash"
             )
         )
-    , command "initialize-native-token-management-system"
-        ( info (withCommonOpts maybeConfig initReserveSpec)
+
+    , command "utils"
+        ( info (utilsSpec maybeConfig)
             ( progDesc
-                "Initialize Reserve AssetClass"
+                "Utility functions for cryptographic primitives and messages."
             )
         )
-    , command "hand-over-reserve-asset-class"
-        ( info (withCommonOpts maybeConfig handOverReserveSpec)
-            ( progDesc
-                "Handover Reserve AssetClass"
-            )
-        )
-    , command "deposit-reserve-assetclass"
-        ( info (withCommonOpts maybeConfig depositReserveSpec)
-            ( progDesc
-                "Deposit Reserve AssetClass"
-            )
-        )
-    , command "transfer-reserve-assetclass"
-        ( info (withCommonOpts maybeConfig transferReserveSpec)
-            ( progDesc
-                "transfer Reserve AssetClass"
-            )
-        )
+
     ]
 
 
