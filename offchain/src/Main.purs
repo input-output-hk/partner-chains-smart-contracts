@@ -713,7 +713,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
         pure $ ReserveResp { transactionHash: txHashToByteArray txHash }
 
       UpdateReserveSettings { mutableReserveSettings } -> do
-        utxo <-findOneReserveUtxo scParams
+        utxo <- findOneReserveUtxo scParams
         txHash <- updateReserveUtxo scParams mutableReserveSettings utxo
         pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
 
@@ -725,8 +725,9 @@ runTxEndpoint sidechainEndpointParams endpoint =
         { totalAccruedTillNow
         , transactionInput
         } -> do
-        utxo <-findOneReserveUtxo scParams
-        plutusScript <- Effect.fromMaybeThrow (NotFoundUtxo "No Reserved UTxO existes for the given asset")
+        utxo <- findOneReserveUtxo scParams
+        plutusScript <- Effect.fromMaybeThrow
+          (NotFoundUtxo "No Reserved UTxO existes for the given asset")
           (plutusScriptFromTxIn transactionInput)
         txHash <- transferToIlliquidCirculationSupply
           scParams
@@ -736,10 +737,8 @@ runTxEndpoint sidechainEndpointParams endpoint =
         pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
 
       HandoverReserve -> do
-        utxo <-findOneReserveUtxo scParams
-        txHash <- handover
-          scParams
-          utxo
+        utxo <- findOneReserveUtxo scParams
+        txHash <- handover scParams utxo
         pure $ ReserveResp { transactionHash: txHashToByteArray txHash }
 
 -- | Executes an endpoint for the `utils` subcommand. Note that this does _not_
