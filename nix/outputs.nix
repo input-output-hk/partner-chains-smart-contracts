@@ -69,11 +69,11 @@ in [
       pkgs.runCommand "combined-check"
       {
         nativeBuildInputs =
-          builtins.attrValues repoRoot.nix.checks
-          ++ builtins.attrValues inputs.self.packages
-          ++ inputs.self.devShells.hs.nativeBuildInputs
-          ++ inputs.self.devShells.ps.nativeBuildInputs
-          ++ inputs.self.devShells.ps.buildInputs;
+          builtins.attrValues inputs.self.checks.${system}
+          ++ builtins.attrValues inputs.self.packages.${system}
+          ++ inputs.self.devShells.${system}.hs.nativeBuildInputs
+          ++ inputs.self.devShells.${system}.ps.nativeBuildInputs
+          ++ inputs.self.devShells.${system}.ps.buildInputs;
       } "touch $out";
   }
 ]
