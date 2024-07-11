@@ -5,6 +5,11 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 # Unreleased
 
+## Added
+
+  * Added docker-compose to spin up trustless depenencies for internal use.
+
+
 # v6.0.0
 
 ## Added

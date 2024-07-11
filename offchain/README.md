@@ -66,8 +66,7 @@ For more information about the arguments, please refer to
 
 To use a configuration file instead, see
 [3.3. Configuring hosted runtime dependencies](#3.3.-configuring-hosted-runtime-dependencies)
-
-## 3. Running the CLI
+## 3 Running the CLI
 
 You can call the contract endpoints with the following CLI command
 (you need to add `--` before the arguments):
@@ -81,15 +80,15 @@ nix run .#sidechain-main-cli -- --help
 **Bundle to a JavaScript file and run using node:**
 
 ```shell
-nix build .#ctl-bundle-cli
+nix build .#sidechain-release-bundle
 ```
 
-This will produce a package `trustless-sidechain-cli-<version>.tar` with the
-compiled `main.js` script that can be run using Node and all necessary
+This will produce a package `result/release.zip` with the
+compiled `sidechain-cli` script that can be run using Node and all necessary
 dependencies in `node_modules` directory.
 
 ```
-node main.js --help
+./sidechain-cli --help
 ```
 
 ### 3.1. Using a configuration file

@@ -1,0 +1,278 @@
+services:
+
+  cardano-node-1:
+    container_name: cardano-node-1
+    image: ghcr.io/intersectmbo/cardano-node:8.9.3
+    platform: linux/amd64
+    network_mode: "host"
+    volumes:
+      - cardano-node-1-data:/data
+      - config-data:/config
+      - ./bin/busybox:/busybox
+      - ./config/local/node-1/topology-pool1.json:/config/node-1-topology.json
+      - ./config/local/node-1/keys/cold.vkey:/keys/cold.vkey
+      - ./config/local/node-1/keys/kes.skey:/keys/kes.skey
+      - ./config/local/node-1/keys/vrf.skey:/keys/vrf.skey
+      - ./config/local/node-1/keys/funded_address.skey:/keys/funded_address.skey
+      - ./config/local/node-1/keys/funded_address.vkey:/keys/funded_address.vkey
+      - ./config/local/node-1/keys/op.cert:/keys/node.cert
+      - ./config/local/node-1/config-pool1.json:/config/node-1-config.json.base
+      - ./config/local/node-2/config-pool2.json:/config/node-2-config.json.base
+      - ./config/local/node-3/config-pool3.json:/config/node-3-config.json.base
+      - ./config/local/genesis/byron/genesis.json:/config/byron/genesis.json.base
+      - ./config/local/genesis/shelley/genesis.json:/config/shelley/genesis.json.base
+      - ./config/local/genesis/shelley/genesis.alonzo.json:/config/shelley/genesis.alonzo.json
+      - ./config/local/genesis/shelley/genesis-utxo.addr:/config/shelley/genesis-utxo.addr
+      - ./config/local/genesis/shelley/genesis-utxo.skey:/config/shelley/genesis-utxo.skey
+      - ./config/local/genesis/shelley/genesis-utxo.vkey:/config/shelley/genesis-utxo.vkey
+      - ./config/local/genesis/conway/genesis.conway.json:/config/conway/genesis.conway.json
+    environment:
+      - CARDANO_NODE_SOCKET_PATH=/data/node.socket
+    entrypoint: /bin/bash
+    command: >
+      -c '
+          chmod +x /busybox;
+  
+          target_time=$$(date --utc +"%Y-%m-%d %H:%M:%S" --date="30 seconds");
+          byron_startTime=$$(date --utc +"%s" --date="$$target_time");
+          shelley_systemStart=$$(date --utc +"%Y-%m-%dT%H:%M:%SZ" --date="$$target_time");
+  
+          /busybox sed "s/\"startTime\": [0-9]*/\"startTime\": $$byron_startTime/" /config/byron/genesis.json.base > /config/byron/genesis.json;
+          echo "Updated startTime value in Byron genesis.json to: $$byron_startTime";
+  
+          /busybox sed "s/\"systemStart\": \"[^\"]*\"/\"systemStart\": \"$$shelley_systemStart\"/" /config/shelley/genesis.json.base > /config/shelley/genesis.json;
+          echo "Updated systemStart value in Shelley genesis.json to: $$shelley_systemStart";
+  
+          byron_hash=$$(/bin/cardano-cli byron genesis print-genesis-hash --genesis-json /config/byron/genesis.json);
+          shelley_hash=$$(/bin/cardano-cli genesis hash --genesis /config/shelley/genesis.json);
+          alonzo_hash=$$(/bin/cardano-cli genesis hash --genesis /config/shelley/genesis.alonzo.json);
+  
+          /busybox sed "s/\"ByronGenesisHash\": \"[^\"]*\"/\"ByronGenesisHash\": \"$$byron_hash\"/" /config/node-1-config.json.base > /config/node-1-config.json.base.byron;
+          /busybox sed "s/\"ByronGenesisHash\": \"[^\"]*\"/\"ByronGenesisHash\": \"$$byron_hash\"/" /config/node-2-config.json.base > /config/node-2-config.json.base.byron;
+          /busybox sed "s/\"ByronGenesisHash\": \"[^\"]*\"/\"ByronGenesisHash\": \"$$byron_hash\"/" /config/node-3-config.json.base > /config/node-3-config.json.base.byron;
+          /busybox sed "s/\"ByronGenesisHash\": \"[^\"]*\"/\"ByronGenesisHash\": \"$$byron_hash\"/" /config/db-sync-config.json.base > /config/db-sync-config.json.base.byron;
+          /busybox sed "s/\"ShelleyGenesisHash\": \"[^\"]*\"/\"ShelleyGenesisHash\": \"$$shelley_hash\"/" /config/node-1-config.json.base.byron > /config/node-1-config.base.shelley;
+          /busybox sed "s/\"ShelleyGenesisHash\": \"[^\"]*\"/\"ShelleyGenesisHash\": \"$$shelley_hash\"/" /config/node-2-config.json.base.byron > /config/node-2-config.base.shelley;
+          /busybox sed "s/\"ShelleyGenesisHash\": \"[^\"]*\"/\"ShelleyGenesisHash\": \"$$shelley_hash\"/" /config/node-3-config.json.base.byron > /config/node-3-config.base.shelley;
+          /busybox sed "s/\"ShelleyGenesisHash\": \"[^\"]*\"/\"ShelleyGenesisHash\": \"$$shelley_hash\"/" /config/db-sync-config.json.base.byron > /config/db-sync-config.base.shelley;
+          /busybox sed "s/\"AlonzoGenesisHash\": \"[^\"]*\"/\"AlonzoGenesisHash\": \"$$alonzo_hash\"/" /config/node-1-config.base.shelley > /config/node-1-config.json;
+          /busybox sed "s/\"AlonzoGenesisHash\": \"[^\"]*\"/\"AlonzoGenesisHash\": \"$$alonzo_hash\"/" /config/node-2-config.base.shelley > /config/node-2-config.json;
+          /busybox sed "s/\"AlonzoGenesisHash\": \"[^\"]*\"/\"AlonzoGenesisHash\": \"$$alonzo_hash\"/" /config/node-3-config.base.shelley > /config/node-3-config.json;
+          /busybox sed "s/\"AlonzoGenesisHash\": \"[^\"]*\"/\"AlonzoGenesisHash\": \"$$alonzo_hash\"/" /config/db-sync-config.base.shelley > /config/db-sync-config.json;
+          /busybox sed "s/\"AlonzoGenesisHash\": \"[^\"]*\"/\"AlonzoGenesisHash\": \"$$alonzo_hash\"/" /config/db-sync-config.base.shelley > /config/db-sync-config.json;
+  
+          echo "Updated ByronGenesisHash value in config files to: $$byron_hash";
+          echo "Updated ShelleyGenesisHash value in config files to: $$shelley_hash";
+  
+          chmod 600 /keys/*;
+  
+          # Start the node in the background
+          cardano-node run \
+            --topology /config/node-1-topology.json \
+            --database-path /data/db \
+            --socket-path /data/node.socket \
+            --host-addr 0.0.0.0 \
+            --port 32000 \
+            --config /config/node-1-config.json \
+            --shelley-kes-key /keys/kes.skey \
+            --shelley-vrf-key /keys/vrf.skey \
+            --shelley-operational-certificate /keys/node.cert &
+  
+          # Wait for the node to start
+          echo "Waiting 10 seconds for the network to start...";
+          sleep 10;
+
+          echo "Generating new address and funding it with 2 UTXOs from the genesis address";
+
+          new_address=$$(cardano-cli address build \
+            --payment-verification-key-file /keys/funded_address.vkey \
+            --testnet-magic 42);
+
+          echo "New address created: $$new_address";
+
+          # Define the UTXO details and amounts
+          tx_in1="781cb948a37c7c38b43872af9b1e22135a94826eafd3740260a6db0a303885d8#0";
+          tx_in_amount=29993040000000000;
+          tx_out1=14990000000000000;
+          tx_out2=14990000000000000;
+
+          # Calculate fee to ensure value conservation
+          fee=$(($$tx_in_amount - ($$tx_out1 + $$tx_out2)));
+
+          echo "tx_in1: $$tx_in1";
+          echo "tx_in_amount: $$tx_in_amount";
+          echo "tx_out1: addr_test1vz8ajt5gy7lmp4kzggd2mrq7se3tepnpp6g02cuugrezfgqepfq75+$$tx_out1";
+          echo "tx_out2: addr_test1vz8ajt5gy7lmp4kzggd2mrq7se3tepnpp6g02cuugrezfgqepfq75+$$tx_out2";
+          echo "fee: $$fee";
+
+          cardano-cli transaction build-raw \
+            --tx-in $$tx_in1 \
+            --tx-out "$${new_address}+$$tx_out1" \
+            --tx-out "$${new_address}+$$tx_out2" \
+            --fee $$fee \
+            --out-file /data/tx.raw;
+
+          echo "Raw transaction file contents:";
+          cat /data/tx.raw;
+
+          # Sign the transaction
+          cardano-cli transaction sign \
+            --tx-body-file /data/tx.raw \
+            --signing-key-file /config/shelley/genesis-utxo.skey \
+            --testnet-magic 42 \
+            --out-file /data/tx.signed;
+
+          echo "Signed transaction file contents:";
+          cat /data/tx.signed;
+
+          echo "Transaction prepared, waiting 20 seconds for other nodes to start...";
+          sleep 20;
+
+          echo "Submitting transaction to fund the new address...";
+          cardano-cli transaction submit \
+            --tx-file /data/tx.signed \
+            --testnet-magic 42;
+
+          echo "Transaction submitted to fund the new address. Waiting 40 seconds for transaction to process...";
+          sleep 40;
+          echo "Balance:";
+
+          cardano-cli query utxo \
+            --testnet-magic 42 \
+            --address $$new_address;
+
+          echo $$new_address > /config/FUNDED_ADDRESS;
+          echo "Created /config/FUNDED_ADDRESS with value: $$new_address";
+
+          tail -f /dev/null
+          '
+
+
+  cardano-node-2:
+    container_name: cardano-node-2
+    image: ghcr.io/intersectmbo/cardano-node:8.9.3
+    platform: linux/amd64
+    network_mode: "host"
+    volumes:
+      - cardano-node-2-data:/data
+      - config-data:/config
+      - ./config/local/node-2/topology-pool2.json:/config/node-2-topology.json
+      - ./config/local/genesis/shelley/genesis.alonzo.json:/config/shelley/genesis.alonzo.json
+      - ./config/local/genesis/conway/genesis.conway.json:/config/conway/genesis.conway.json
+      - ./config/local/node-2/keys/cold.vkey:/keys/cold.vkey
+      - ./config/local/node-2/keys/kes.skey:/keys/kes.skey
+      - ./config/local/node-2/keys/vrf.skey:/keys/vrf.skey
+      - ./config/local/node-2/keys/op.cert:/keys/node.cert
+    environment:
+      - CARDANO_NODE_SOCKET_PATH=/data/node.socket
+    entrypoint: /bin/bash
+    command: >
+      -c 'sleep 15;
+          chmod 600 /keys/*;
+
+          cardano-node run \
+          --topology /config/node-2-topology.json \
+          --database-path /data/db \
+          --socket-path /data/node.socket \
+          --host-addr 0.0.0.0 \
+          --port 32005 \
+          --config /config/node-2-config.json \
+          --shelley-kes-key /keys/kes.skey \
+          --shelley-vrf-key /keys/vrf.skey \
+          --shelley-operational-certificate /keys/node.cert'
+
+  cardano-node-3:
+    container_name: cardano-node-3
+    image: ghcr.io/intersectmbo/cardano-node:8.9.3
+    platform: linux/amd64
+    network_mode: "host"
+    volumes:
+      - cardano-node-3-data:/data
+      - config-data:/config
+      - ./config/local/node-3/topology-pool3.json:/config/node-3-topology.json
+      - ./config/local/genesis/shelley/genesis.alonzo.json:/config/shelley/genesis.alonzo.json
+      - ./config/local/genesis/conway/genesis.conway.json:/config/conway/genesis.conway.json
+      - ./config/local/node-3/keys/cold.vkey:/keys/cold.vkey
+      - ./config/local/node-3/keys/kes.skey:/keys/kes.skey
+      - ./config/local/node-3/keys/vrf.skey:/keys/vrf.skey
+      - ./config/local/node-3/keys/op.cert:/keys/node.cert
+    environment:
+      - CARDANO_NODE_SOCKET_PATH=/data/node.socket
+    entrypoint: /bin/bash
+    command: >
+      -c 'sleep 15;
+          chmod 600 /keys/*;
+
+          cardano-node run \
+          --topology /config/node-3-topology.json \
+          --database-path /data/db \
+          --socket-path /data/node.socket \
+          --host-addr 0.0.0.0 \
+          --port 32010 \
+          --config /config/node-3-config.json \
+          --shelley-kes-key /keys/kes.skey \
+          --shelley-vrf-key /keys/vrf.skey \
+          --shelley-operational-certificate /keys/node.cert'
+
+  ogmios:
+    container_name: ogmios
+    image: cardanosolutions/ogmios:v6.2.0
+    platform: linux/amd64
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    command: >
+      --host=0.0.0.0
+      --node-config=/config/node-1-config.json
+      --node-socket=/node-ipc/node.socket
+    environment:
+      - DATA_DIR=/data
+      - OGMIOS_PORT=${OGMIOS_PORT}
+    volumes:
+      - config-data:/config/
+      - ogmios-data:/data
+      - cardano-node-1-data:/node-ipc
+      - ./config/local/ogmios/entrypoint.sh:/entrypoint.sh
+    ports:
+      - "${OGMIOS_PORT}:${OGMIOS_PORT}"
+    healthcheck:
+      disable: true
+    deploy:
+      resources:
+        limits:
+          cpus: ${CPU_OGMIOS:-}
+          memory: ${MEM_OGMIOS:-}
+
+  kupo:
+    container_name: kupo
+    image: cardanosolutions/kupo:v2.8.0
+    platform: linux/amd64
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    command: >
+      --node-socket=/node-ipc/node.socket
+      --node-config=/config/node-1-config.json
+      --host=0.0.0.0
+      --workdir=/kupo-workdir
+      --match=*
+      --since=origin
+    volumes:
+      - config-data:/config/
+      - cardano-node-1-data:/node-ipc
+      - kupo-workdir:/kupo-workdir
+      - ./config/local/kupo/entrypoint.sh:/entrypoint.sh
+    ports:
+      - "${KUPO_PORT}:1442"
+    healthcheck:
+      disable: true
+    deploy:
+      resources:
+        limits:
+          cpus: ${CPU_KUPO:-}
+          memory: ${MEM_KUPO:-}
+
+volumes:
+  cardano-node-1-data: {}
+  cardano-node-2-data: {}
+  cardano-node-3-data: {}
+  config-data: {}
+  ogmios-data: {}
+  ipc: {}
+  kupo-workdir: {}
