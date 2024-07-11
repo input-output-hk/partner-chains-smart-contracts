@@ -45,6 +45,7 @@ import TrustlessSidechain.EndpointResp
       , InitCandidatePermissionTokenResp
       , InitTokensMintResp
       , InitFuelResp
+      , InitReserveManagementResp
       , CommitteeHandoverResp
       , SaveCheckpointResp
       , InsertVersionResp
@@ -87,6 +88,9 @@ import TrustlessSidechain.InitSidechain.CandidatePermissionToken
 import TrustlessSidechain.InitSidechain.Checkpoint (initCheckpoint)
 import TrustlessSidechain.InitSidechain.FUEL (initFuel)
 import TrustlessSidechain.InitSidechain.Init (getInitTokenStatus)
+import TrustlessSidechain.InitSidechain.NativeTokenManagement
+  ( initNativeTokenMgmt
+  )
 import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
 import TrustlessSidechain.MerkleRoot (SaveRootParams(SaveRootParams))
 import TrustlessSidechain.MerkleRoot as MerkleRoot
@@ -119,6 +123,7 @@ import TrustlessSidechain.Options.Types
       , InitCandidatePermissionToken
       , InitTokensMint
       , InitFuel
+      , InitReserveManagement
       , CommitteeHandover
       , SaveCheckpoint
       , InsertVersion2
@@ -518,6 +523,13 @@ runTxEndpoint sidechainEndpointParams endpoint =
         pure $ InitFuelResp
           { scriptsInitTxIds: map txHashToByteArray resp.scriptsInitTxIds
           , tokensInitTxId: map txHashToByteArray resp.tokensInitTxId
+          }
+
+      InitReserveManagement { version } → do
+        resp ← initNativeTokenMgmt scParams atmsKind version
+
+        pure $ InitReserveManagementResp
+          { scriptsInitTxIds: map txHashToByteArray resp.scriptsInitTxIds
           }
 
       CommitteeHandover

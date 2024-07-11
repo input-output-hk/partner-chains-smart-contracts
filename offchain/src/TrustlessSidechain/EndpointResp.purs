@@ -92,6 +92,9 @@ data EndpointResp
       { scriptsInitTxIds ∷ Array ByteArray
       , tokensInitTxId ∷ Maybe ByteArray
       }
+  | InitReserveManagementResp
+      { scriptsInitTxIds ∷ Array ByteArray
+      }
   | InitResp
       { transactionId ∷ ByteArray
       , initTransactionIds ∷ Array ByteArray
@@ -330,6 +333,16 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
           , "tokensInitTxId" /\ CA.encode
               (CAC.maybe CA.string)
               (map byteArrayToHex tokensInitTxId)
+          ]
+
+    InitReserveManagementResp
+      { scriptsInitTxIds
+      } →
+      J.fromObject $
+        Object.fromFoldable
+          [ "endpoint" /\ J.fromString "InitReserveManagement"
+          , "scriptsInitTxIds" /\ J.fromArray
+              (map (J.fromString <<< byteArrayToHex) scriptsInitTxIds)
           ]
 
     InitResp

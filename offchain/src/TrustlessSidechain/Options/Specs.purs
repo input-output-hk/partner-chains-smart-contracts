@@ -109,6 +109,7 @@ import TrustlessSidechain.Options.Types
       , InitTokensMint
       , InitCheckpoint
       , InitFuel
+      , InitReserveManagement
       , Init
       , InitCandidatePermissionToken
       , CommitteeCandidateReg
@@ -169,6 +170,10 @@ optSpec maybeConfig =
     , command "init-tokens-mint"
         ( info (withCommonOpts maybeConfig initTokensMintSpec)
             (progDesc "Mint all sidechain initialisation tokens")
+        )
+    , command "init-reserve-management"
+        ( info (withCommonOpts maybeConfig initReserveManagementSpec)
+            (progDesc "Initialise native token reserve management system")
         )
     , command "init-checkpoint"
         ( info (withCommonOpts maybeConfig initCheckpointSpec)
@@ -1100,6 +1105,14 @@ initCheckpointSpec = ado
       , initCandidatePermissionTokenMintInfo
       , genesisHash
       , version
+      }
+
+initReserveManagementSpec ∷ Parser TxEndpoint
+initReserveManagementSpec = ado
+  version ← parseVersion
+  in
+    InitReserveManagement
+      { version
       }
 
 initFuelSpec ∷ Parser TxEndpoint

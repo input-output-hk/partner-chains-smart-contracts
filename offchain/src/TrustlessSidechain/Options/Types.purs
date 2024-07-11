@@ -221,6 +221,9 @@ data TxEndpoint
       , genesisHash ∷ ByteArray
       , version ∷ Int
       }
+  | InitReserveManagement
+      { version ∷ Int
+      }
   | InitCandidatePermissionToken
       { initCandidatePermissionTokenMintInfo ∷ Maybe BigInt
       }
