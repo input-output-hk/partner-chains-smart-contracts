@@ -67,7 +67,7 @@ import TrustlessSidechain.EndpointResp
       , BurnNFTsResp
       , InitTokenStatusResp
       , ListVersionedScriptsResp
-      , ReserveRep
+      , ReserveResp
       )
   , stringifyEndpointResp
   )
@@ -130,11 +130,11 @@ import TrustlessSidechain.Options.Types
       , BurnNFTs
       , InitTokenStatus
       , ListVersionedScripts
-      , InitReserve
-      , UpdateReserve
+      , CreateReserve
+      , UpdateReserveSettings
       , DepositReserve
-      , TransferReserve
-      , HandOverReserve
+      , ReleaseReserveFunds
+      , HandoverReserve
       )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
@@ -688,7 +688,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
               version
           )
 
-      InitReserve
+      CreateReserve
         { mutableReserveSettings
         , immutableReserveSettings
         , depositAmount
@@ -698,18 +698,18 @@ runTxEndpoint sidechainEndpointParams endpoint =
           immutableReserveSettings
           mutableReserveSettings
           depositAmount
-        pure $ ReserveRep { transactionHash: txHashToByteArray txHash }
+        pure $ ReserveResp { transactionHash: txHashToByteArray txHash }
 
-      UpdateReserve { mutableReserveSettings } -> do
+      UpdateReserveSettings { mutableReserveSettings } -> do
         utxo <-findOneReserveUtxo scParams
         txHash <- updateReserveUtxo scParams mutableReserveSettings utxo
-        pure $ ReserveRep { transactionHash: (txHashToByteArray txHash) }
+        pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
 
       DepositReserve { asset, depositAmount } -> do
         txHash <- depositToReserve scParams asset depositAmount
-        pure $ ReserveRep { transactionHash: (txHashToByteArray txHash) }
+        pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
 
-      TransferReserve
+      ReleaseReserveFunds
         { totalAccruedTillNow
         , transactionInput
         } -> do
@@ -721,14 +721,14 @@ runTxEndpoint sidechainEndpointParams endpoint =
           totalAccruedTillNow
           plutusScript
           utxo
-        pure $ ReserveRep { transactionHash: (txHashToByteArray txHash) }
+        pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
 
-      HandOverReserve -> do
+      HandoverReserve -> do
         utxo <-findOneReserveUtxo scParams
         txHash <- handover
           scParams
           utxo
-        pure $ ReserveRep { transactionHash: txHashToByteArray txHash }
+        pure $ ReserveResp { transactionHash: txHashToByteArray txHash }
 
 -- | Executes an endpoint for the `utils` subcommand. Note that this does _not_
 -- | need to be in the Contract monad.

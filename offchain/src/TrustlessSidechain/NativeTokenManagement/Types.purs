@@ -141,7 +141,7 @@ instance FromData ReserveDatum where
 data ReserveRedeemer
   = DepositToReserve
   | TransferToIlliquidCirculationSupply
-  | UpdateReserve
+  | UpdateReserveSettings
   | Handover
 
 derive instance Eq ReserveRedeemer
@@ -154,7 +154,7 @@ instance Show ReserveRedeemer where
 instance ToData ReserveRedeemer where
   toData DepositToReserve = Integer (BigInt.fromInt 0)
   toData TransferToIlliquidCirculationSupply = Integer (BigInt.fromInt 1)
-  toData UpdateReserve = Integer (BigInt.fromInt 2)
+  toData UpdateReserveSettings = Integer (BigInt.fromInt 2)
   toData Handover = Integer (BigInt.fromInt 3)
 
 instance FromData ReserveRedeemer where
@@ -162,7 +162,7 @@ instance FromData ReserveRedeemer where
     Integer tag | tag == BigInt.fromInt 0 → pure DepositToReserve
     Integer tag | tag == BigInt.fromInt 1 → pure
       TransferToIlliquidCirculationSupply
-    Integer tag | tag == BigInt.fromInt 2 → pure UpdateReserve
+    Integer tag | tag == BigInt.fromInt 2 → pure UpdateReserveSettings
     Integer tag | tag == BigInt.fromInt 3 → pure Handover
     _ → Nothing
 

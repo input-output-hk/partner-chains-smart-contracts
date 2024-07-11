@@ -126,10 +126,10 @@ import TrustlessSidechain.Options.Types
       , BurnNFTs
       , InitTokenStatus
       , ListVersionedScripts
-      , InitReserve
+      , CreateReserve
       , DepositReserve
-      , TransferReserve
-      , HandOverReserve
+      , ReleaseReserveFunds
+      , HandoverReserve
       )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
@@ -233,21 +233,21 @@ optSpec maybeConfig =
             (progDesc "Saving a new checkpoint")
         )
 
-    , command "reserve-initialize"
-        ( info (withCommonOpts maybeConfig initReserveSpec)
+    , command "reserve-create"
+        ( info (withCommonOpts maybeConfig createReserveSpec)
             (progDesc "Create a new token reserve")
         )
     , command "reserve-handover"
         ( info (withCommonOpts maybeConfig handOverReserveSpec)
-            (progDesc "Handover an existing reserve")
+            (progDesc "Empty and remove an existing reserve")
         )
     , command "reserve-deposit"
         ( info (withCommonOpts maybeConfig depositReserveSpec)
             (progDesc "Deposit assets to existing reserve")
         )
-    , command "reserve-transfer"
-        ( info (withCommonOpts maybeConfig transferReserveSpec)
-            (progDesc "Release currently available funds from the reservr")
+    , command "reserve-release-funds"
+        ( info (withCommonOpts maybeConfig releaseReserveFundsSpec)
+            (progDesc "Release currently available funds from an existing reserve")
         )
 
     , command "insert-version-2"
@@ -1563,7 +1563,7 @@ parseAssetName =
   )
 
 handOverReserveSpec :: Parser TxEndpoint
-handOverReserveSpec = flag' HandOverReserve $ fold
+handOverReserveSpec = flag' HandoverReserve $ fold
   [ long "hand-over"
   , help "Hand Over Reserve Tokens"
   ]
@@ -1612,13 +1612,13 @@ parseMutableReserveSettings = ado
   incentiveAmount ← parseIncentiveAmount
   in MutableReserveSettings { vFunctionTotalAccrued, incentiveAmount }
 
-initReserveSpec ∷ Parser TxEndpoint
-initReserveSpec = ado
+createReserveSpec ∷ Parser TxEndpoint
+createReserveSpec = ado
   mutableReserveSettings ← parseMutableReserveSettings
   immutableReserveSettings ← parseImmutableReserveSettings
   depositAmount ← parseDepositAmount
   in
-    InitReserve
+    CreateReserve
       { mutableReserveSettings
       , immutableReserveSettings
       , depositAmount
@@ -1638,12 +1638,12 @@ parseUnit = option uint $ fold
   , help "Computerd integer for the v(t)"
   ]
 
-transferReserveSpec :: Parser TxEndpoint
-transferReserveSpec = ado
+releaseReserveFundsSpec :: Parser TxEndpoint
+releaseReserveFundsSpec = ado
   totalAccruedTillNow <- UInt.toInt <$> parseUnit
   transactionInput <- parseTransactionInput
   in
-    TransferReserve
+    ReleaseReserveFunds
       { totalAccruedTillNow
       , transactionInput
       }

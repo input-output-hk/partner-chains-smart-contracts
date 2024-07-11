@@ -435,7 +435,7 @@ genReserveRedeemer = QGen.oneOf $ NE.cons'
   ( pure DepositToReserve
   )
   [ pure TransferToIlliquidCirculationSupply
-  , pure UpdateReserve
+  , pure UpdateReserveSettings
   , pure Handover
   ]
 

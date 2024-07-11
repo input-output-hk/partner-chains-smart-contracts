@@ -274,14 +274,14 @@ data TxEndpoint
   | InitTokenStatus
 
   -- | CLI entpoints for reserve initialization for an asset class
-  | InitReserve
+  | CreateReserve
       { mutableReserveSettings ∷ MutableReserveSettings
       , immutableReserveSettings ∷ ImmutableReserveSettings
       , depositAmount ∷ BigNum
       }
 
   -- | update of a reserve
-  | UpdateReserve
+  | UpdateReserveSettings
       { mutableReserveSettings ∷ MutableReserveSettings}
 
   -- | deposit to a reserve
@@ -291,13 +291,13 @@ data TxEndpoint
       }
 
   -- | transfer from a reserve to illiquid circulation supply
-  | TransferReserve
+  | ReleaseReserveFunds
       { totalAccruedTillNow :: Int
       , transactionInput :: TransactionInput
       }
 
   -- | handover of a reserve
-  | HandOverReserve
+  | HandoverReserve
 
 -- | `InputArgOrFile` represents that we may either allow an option as input
 -- | via a CLI argument or a filepath of a JSON file

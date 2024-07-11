@@ -518,7 +518,7 @@ updateReserveUtxo sp updatedMutableSettings utxo = do
           DatumInline
           value
         <> TxConstraints.mustSpendScriptOutput (fst utxo)
-          (RedeemerDatum $ toData UpdateReserve)
+          (RedeemerDatum $ toData UpdateReserveSettings)
 
   balanceSignAndSubmit
     "Update reserve mutable settings"
