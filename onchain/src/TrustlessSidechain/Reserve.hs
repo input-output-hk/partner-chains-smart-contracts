@@ -39,7 +39,6 @@ import PlutusLedgerApi.V2 (
  )
 import PlutusTx qualified
 import PlutusTx.Bool
-import TrustlessSidechain.Governance
 import TrustlessSidechain.HaskellPrelude (on)
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
@@ -58,6 +57,7 @@ import TrustlessSidechain.Utils qualified as Utils
 import TrustlessSidechain.Versioning (
   VersionOracle (VersionOracle, scriptId, version),
   VersionOracleConfig,
+  approvedByMultiSigGovernance,
   getVersionedCurrencySymbolUnsafe,
   getVersionedValidatorAddressUnsafe,
   illiquidCirculationSupplyValidatorId,
@@ -210,7 +210,7 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
     outputDatum = Utils.fromJust "ERROR-RESERVE-08" (extractReserveUtxoDatumUnsafe outputReserveUtxo)
 
     isApprovedByGovernance :: Integer -> Bool
-    isApprovedByGovernance gv = approvedByGovernance voc gv ctx
+    isApprovedByGovernance gv = approvedByMultiSigGovernance voc gv ctx
 
     {-# INLINEABLE kindsOfTokenMinted #-}
     kindsOfTokenMinted :: Integer -> Bool
@@ -402,7 +402,7 @@ mkReserveAuthPolicy voc ReserveAuthPolicyRedeemer {..} ctx =
         Nothing -> traceError "ERROR-RESERVE-AUTH-07"
 
     isApprovedByAdminGovernance :: Bool
-    isApprovedByAdminGovernance = approvedByGovernance voc governanceVersion ctx
+    isApprovedByAdminGovernance = approvedByMultiSigGovernance voc governanceVersion ctx
 
     oneReserveAuthTokenIsMinted :: Bool
     oneReserveAuthTokenIsMinted =

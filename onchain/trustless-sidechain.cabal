@@ -87,7 +87,6 @@ library
     TrustlessSidechain.CandidatePermissionMintingPolicy
     TrustlessSidechain.CommitteeCandidateValidator
     TrustlessSidechain.DParameter
-    TrustlessSidechain.Governance
     TrustlessSidechain.Governance.Admin
     TrustlessSidechain.Governance.MultiSig
     TrustlessSidechain.IlliquidCirculationSupply
