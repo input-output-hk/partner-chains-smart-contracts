@@ -242,6 +242,11 @@ register
   ownPkh ← getOwnPaymentPubKeyHash
   ownAddr ← getOwnWalletAddress
 
+  ownUtxos <- getOwnUTxOs
+  Effect.logInfo' ("Own utxos: " <> show ownUtxos)
+  inputUtxo' <- getUtxo inputUTxo
+  Effect.logInfo' ("Input utxo: " <> show inputUtxo')
+
   validator ← getCommitteeCandidateValidator sidechainParams
   let valHash = PlutusScript.hash validator
   valAddr ← toAddress valHash
