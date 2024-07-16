@@ -11,6 +11,7 @@ module TrustlessSidechain.Versioning.V1
 import Contract.Prelude
 
 import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.NativeScript (NativeScript)
 import Data.List (List)
 import Data.List as List
 import Run (Run)
@@ -62,6 +63,7 @@ getVersionedPoliciesAndValidators ∷
   Run (READER Env + EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
+    , versionedNativeScripts :: List (Tuple ScriptId NativeScript)
     }
 getVersionedPoliciesAndValidators { sidechainParams: sp, atmsKind } = do
   committeeScripts ← getCommitteeSelectionPoliciesAndValidators atmsKind sp
@@ -84,6 +86,7 @@ getMerkleRootPoliciesAndValidators ∷
   Run (EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
+    , versionedNativeScripts :: List (Tuple ScriptId NativeScript)
     }
 getMerkleRootPoliciesAndValidators sp = do
   { mintingPolicy: merkleRootTokenMintingPolicy } ←
@@ -96,8 +99,9 @@ getMerkleRootPoliciesAndValidators sp = do
       [ MerkleRootTokenPolicy /\ merkleRootTokenMintingPolicy ]
     versionedValidators = List.fromFoldable
       [ MerkleRootTokenValidator /\ merkleRootTokenValidator ]
+    versionedNativeScripts = List.fromFoldable []
 
-  pure { versionedPolicies, versionedValidators }
+  pure { versionedPolicies, versionedValidators, versionedNativeScripts }
 
 getCommitteeSelectionPoliciesAndValidators ∷
   ∀ r.
@@ -106,6 +110,7 @@ getCommitteeSelectionPoliciesAndValidators ∷
   Run (EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
+    , versionedNativeScripts :: List (Tuple ScriptId NativeScript)
     }
 getCommitteeSelectionPoliciesAndValidators atmsKind sp =
   do
@@ -147,8 +152,9 @@ getCommitteeSelectionPoliciesAndValidators atmsKind sp =
         [ CommitteeHashValidator /\ committeeHashValidator
         , CommitteeCandidateValidator /\ committeeCandidateValidator
         ]
+      versionedNativeScripts = List.fromFoldable []
 
-    pure $ { versionedPolicies, versionedValidators }
+    pure $ { versionedPolicies, versionedValidators, versionedNativeScripts }
 
 getCheckpointPoliciesAndValidators ∷
   ∀ r.
@@ -156,6 +162,7 @@ getCheckpointPoliciesAndValidators ∷
   Run (EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
+    , versionedNativeScripts :: List (Tuple ScriptId NativeScript)
     }
 getCheckpointPoliciesAndValidators sp = do
   checkpointAssetClass ← Checkpoint.checkpointAssetClass sp
@@ -170,11 +177,14 @@ getCheckpointPoliciesAndValidators sp = do
     Checkpoint.checkpointValidator checkpointParam versionOracleConfig
 
   let
+    versionedPolicies = List.fromFoldable []
     versionedValidators = List.fromFoldable
       [ CheckpointValidator /\ checkpointValidator
       ]
+    versionedNativeScripts = List.fromFoldable []
 
-  pure $ { versionedPolicies: mempty, versionedValidators }
+
+  pure $ { versionedPolicies, versionedValidators, versionedNativeScripts }
 
 getNativeTokenManagementPoliciesAndValidators ∷
   ∀ r.
@@ -182,6 +192,7 @@ getNativeTokenManagementPoliciesAndValidators ∷
   Run (READER Env + EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
+    , versionedNativeScripts :: List (Tuple ScriptId NativeScript)
     }
 getNativeTokenManagementPoliciesAndValidators sp = do
   governance <- (_.governance) <$> ask
@@ -199,16 +210,18 @@ getNativeTokenManagementPoliciesAndValidators sp = do
       let
           versionedPolicies = List.fromFoldable
             [ ReserveAuthPolicy /\ reserveAuthPolicy'
-            , GovernancePolicy /\ governancePolicy
             ]
           versionedValidators = List.fromFoldable
             [ ReserveValidator /\ reserveValidator'
             , IlliquidCirculationSupplyValidator /\
               illiquidCirculationSupplyValidator'
             ]
+          versionedNativeScripts = List.fromFoldable
+            [ GovernancePolicy /\ governancePolicy
+            ]
 
-      pure $ { versionedPolicies, versionedValidators }
-    _ -> pure { versionedPolicies: mempty, versionedValidators: mempty }
+      pure $ { versionedPolicies, versionedValidators, versionedNativeScripts }
+    _ -> pure { versionedPolicies: mempty, versionedValidators: mempty, versionedNativeScripts: mempty }
 
 
 -- | Return policies and validators needed for FUEL minting
@@ -219,6 +232,7 @@ getFuelPoliciesAndValidators ∷
   Run (EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
+    , versionedNativeScripts :: List (Tuple ScriptId NativeScript)
     }
 getFuelPoliciesAndValidators sp = do
   { fuelMintingPolicy } ← FUELMintingPolicy.V1.getFuelMintingPolicy sp
@@ -230,8 +244,9 @@ getFuelPoliciesAndValidators sp = do
       , FUELBurningPolicy /\ fuelBurningPolicy
       ]
     versionedValidators = List.fromFoldable []
+    versionedNativeScripts = List.fromFoldable []
 
-  pure { versionedPolicies, versionedValidators }
+  pure { versionedPolicies, versionedValidators, versionedNativeScripts }
 
 -- | Get V1 policies and validators for the
 -- | Ds* types.
@@ -241,6 +256,7 @@ getDsPoliciesAndValidators ∷
   Run (EXCEPT OffchainError + r)
     { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
+    , versionedNativeScripts :: List (Tuple ScriptId NativeScript)
     }
 getDsPoliciesAndValidators sp = do
   ds ← DistributedSet.getDs sp
@@ -249,5 +265,6 @@ getDsPoliciesAndValidators sp = do
   let
     versionedPolicies = List.fromFoldable [ DsKeyPolicy /\ dsKeyPolicy ]
     versionedValidators = List.fromFoldable []
+    versionedNativeScripts = List.fromFoldable []
 
-  pure { versionedPolicies, versionedValidators }
+  pure { versionedPolicies, versionedValidators, versionedNativeScripts }

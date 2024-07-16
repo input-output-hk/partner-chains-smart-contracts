@@ -10,6 +10,7 @@ import Contract.Prelude
 import Cardano.Types.AssetName (AssetName)
 import Cardano.Types.BigNum (BigNum)
 import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.NativeScript (NativeScript)
 import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Types.Value (Value)
 import Cardano.Types.Value as Value
@@ -42,6 +43,7 @@ insertScriptsIdempotent ∷
     Run (APP + r)
       { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
       , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
+      , versionedNativeScripts ∷ List (Tuple ScriptId NativeScript)
       }
   ) →
   SidechainParams →
@@ -55,6 +57,7 @@ insertScriptsIdempotent f sidechainParams initATMSKind version = do
   toInsert ∷
     { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
+    , versionedNativeScripts ∷ List (Tuple ScriptId NativeScript)
     } ← getScriptsToInsert sidechainParams initATMSKind scripts version
 
   validatorsTxIds ←
@@ -71,7 +74,14 @@ insertScriptsIdempotent f sidechainParams initATMSKind version = do
       )
       $ List.toUnfoldable (toInsert.versionedPolicies)
 
-  pure $ policiesTxIds <> validatorsTxIds
+  nativeScriptTxIds <-
+    (traverse ∷ ∀ m a b. Applicative m ⇒ (a → m b) → Array a → m (Array b))
+      ( Utils.initializeNativeScriptVersionLookupsAndConstraints sidechainParams version >=>
+          Utils.Transaction.balanceSignAndSubmit "Initialize versioned native scripts"
+      )
+      $ List.toUnfoldable (toInsert.versionedNativeScripts)
+
+  pure $ policiesTxIds <> validatorsTxIds <> nativeScriptTxIds
 
 getScriptsToInsert ∷
   ∀ r.
@@ -79,11 +89,13 @@ getScriptsToInsert ∷
   ATMSKinds →
   { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
   , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
+  , versionedNativeScripts ∷ List (Tuple Types.ScriptId NativeScript)
   } →
   Int →
   Run (APP + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedNativeScripts ∷ List (Tuple Types.ScriptId NativeScript)
     }
 getScriptsToInsert
   sidechainParams
@@ -105,6 +117,8 @@ getScriptsToInsert
         comparisonScripts.versionedPolicies
     , versionedValidators: filterScripts toFilterScripts.versionedValidators
         comparisonScripts.versionedValidators
+    , versionedNativeScripts: filterScripts toFilterScripts.versionedNativeScripts
+        comparisonScripts.versionedNativeScripts
     }
 
 -- | Perform a token initialization action, if the corresponding

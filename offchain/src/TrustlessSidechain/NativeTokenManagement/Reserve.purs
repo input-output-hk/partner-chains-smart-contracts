@@ -22,11 +22,13 @@ import Cardano.Types.Asset (Asset(Asset))
 import Cardano.Types.OutputDatum (outputDatumDatum)
 import Cardano.Types.PlutusData (unit) as PlutusData
 import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.NativeScript as NativeScript
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Types.AssetName (AssetName)
 import Cardano.Types.Value (valueOf)
 import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
+import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
 import Contract.PlutusData
   ( RedeemerDatum(RedeemerDatum)
   , fromData
@@ -181,20 +183,6 @@ getIlliquidCirculationSupplyScriptRefUtxo sidechainParams =
     sidechainParams
     illiquidCirculationSupplyVersionOracle
 
-getGovernancePolicy ∷
-  ∀ r.
-  SidechainParams →
-  Run
-    (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    PlutusScript
-getGovernancePolicy sidechainParams = do
-  (_ /\ refTxOutput) ← getGovernanceScriptRefUtxo sidechainParams
-
-  case (unwrap refTxOutput).scriptRef of
-    Just (PlutusScriptRef s) → pure s
-    _ → throw $ GenericInternalError
-      "Versioning system utxo does not carry governance script"
-
 getIlliquidCirculationSupplyValidator ∷
   ∀ r.
   SidechainParams →
@@ -295,7 +283,10 @@ governanceLookupsAndConstraints sp = do
   (governanceRefTxInput /\ governanceRefTxOutput) ←
     getGovernanceScriptRefUtxo sp
 
-  governancePolicy ← getGovernancePolicy sp
+  governanceNativeScript <- case governanceRefTxOutput of
+    TransactionOutput { scriptRef: Just (NativeScriptRef s) } -> pure s
+    _ -> throw $ GenericInternalError
+      "Versioning system utxo does not carry governance script"
 
   env <- ask
 
@@ -306,17 +297,11 @@ governanceLookupsAndConstraints sp = do
         (Map.singleton governanceRefTxInput governanceRefTxOutput)
     , governanceConstraints:
         TxConstraints.mustReferenceOutput governanceRefTxInput
-          <> TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
-            (PlutusScript.hash governancePolicy)
-            (RedeemerDatum $ toData MultiSignatureCheck)
+          <> TxConstraints.mustMintCurrencyUsingNativeScript
+            governanceNativeScript
             emptyAssetName
             (Int.fromInt 1)
-            ( RefInput $ TransactionUnspentOutput
-                { input: governanceRefTxInput
-                , output: governanceRefTxOutput
-                }
-            )
-          <> (foldMap (\x -> TxConstraints.mustBeSignedBy $ wrap x) members)
+          -- <> (foldMap (\x -> TxConstraints.mustBeSignedBy $ wrap x) members)
     }
 
 initialiseReserveUtxo ∷

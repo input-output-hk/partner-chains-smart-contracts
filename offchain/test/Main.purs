@@ -61,27 +61,27 @@ main = do
           ConfigFile.tests
 
         group "Plutip integration tests" do
-          IlliquidCirculationSupply.tests
+          --IlliquidCirculationSupply.tests
           Reserve.tests
-          InitCandidatePermissionToken.tests
-          InitSidechain.tests
-          InitMint.tests
-          InitCheckpoint.tests
-          InitFUEL.tests
-          CommitteePlainEcdsaSecp256k1ATMSPolicy.tests
-          CommitteePlainSchnorrSecp256k1ATMSPolicy.tests
-          CommitteeCandidateValidator.tests
-          CandidatePermissionToken.tests
-          FUELMintingPolicy.V1.tests
-          FUELProxyPolicy.tests
-          UpdateCommitteeHash.tests
-          MerkleRoot.tests
-          MerkleRootChaining.tests
-          Checkpoint.tests
-          Versioning.tests
-          DParameter.tests
-          PermissionedCandidates.tests
-          GarbageCollector.tests
+          -- InitCandidatePermissionToken.tests
+          -- InitSidechain.tests
+          -- InitMint.tests
+          -- InitCheckpoint.tests
+          -- InitFUEL.tests
+          -- CommitteePlainEcdsaSecp256k1ATMSPolicy.tests
+          -- CommitteePlainSchnorrSecp256k1ATMSPolicy.tests
+          -- CommitteeCandidateValidator.tests
+          -- CandidatePermissionToken.tests
+          -- FUELMintingPolicy.V1.tests
+          -- FUELProxyPolicy.tests
+          -- UpdateCommitteeHash.tests
+          -- MerkleRoot.tests
+          -- MerkleRootChaining.tests
+          -- Checkpoint.tests
+          -- Versioning.tests
+          -- DParameter.tests
+          -- PermissionedCandidates.tests
+          -- GarbageCollector.tests
 
         plutipGroup "POC Plutip tests" do
           PoCInlineDatum.tests

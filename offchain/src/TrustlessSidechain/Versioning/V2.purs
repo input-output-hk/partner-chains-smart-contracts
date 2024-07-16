@@ -11,6 +11,7 @@ module TrustlessSidechain.Versioning.V2
 import Contract.Prelude
 
 import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.NativeScript (NativeScript)
 import Data.List (List)
 import Data.List as List
 import Run (Run)
@@ -29,6 +30,7 @@ getVersionedPoliciesAndValidators ∷
   Run (EXCEPT OffchainError + r)
     { versionedPolicies ∷ (List (Tuple Types.ScriptId PlutusScript))
     , versionedValidators ∷ (List (Tuple Types.ScriptId PlutusScript))
+    , versionedNativeScripts ∷ (List (Tuple Types.ScriptId NativeScript))
     }
 getVersionedPoliciesAndValidators sp = do
   committeeScripts ← getCommitteeSelectionPoliciesAndValidators sp
@@ -46,13 +48,15 @@ getCommitteeSelectionPoliciesAndValidators ∷
   Run (EXCEPT OffchainError + r)
     { versionedPolicies ∷ (List (Tuple Types.ScriptId PlutusScript))
     , versionedValidators ∷ (List (Tuple Types.ScriptId PlutusScript))
+    , versionedNativeScripts ∷ (List (Tuple Types.ScriptId NativeScript))
     }
 getCommitteeSelectionPoliciesAndValidators _ =
   let
     versionedPolicies = List.fromFoldable []
     versionedValidators = List.fromFoldable []
+    versionedNativeScripts = List.fromFoldable []
   in
-    pure $ { versionedPolicies, versionedValidators }
+    pure $ { versionedPolicies, versionedValidators, versionedNativeScripts }
 
 -- | Get V2 policies and validators for FUEL minting and burning.
 getFuelPoliciesAndValidators ∷
@@ -61,6 +65,7 @@ getFuelPoliciesAndValidators ∷
   Run (EXCEPT OffchainError + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedNativeScripts ∷ List (Tuple Types.ScriptId NativeScript)
     }
 getFuelPoliciesAndValidators sp = do
   { fuelMintingPolicy } ← FUELMintingPolicy.V2.getFuelMintingPolicy sp
@@ -71,8 +76,9 @@ getFuelPoliciesAndValidators sp = do
       [ Types.FUELMintingPolicy /\ fuelMintingPolicy
       , Types.FUELBurningPolicy /\ fuelBurningPolicy
       ]
+    versionedNativeScripts = List.fromFoldable []
 
-  pure { versionedPolicies, versionedValidators }
+  pure { versionedPolicies, versionedValidators, versionedNativeScripts }
 
 -- | Get V2 policies and validators for the Ds* types.
 getDsPoliciesAndValidators ∷
@@ -81,13 +87,15 @@ getDsPoliciesAndValidators ∷
   Run (EXCEPT OffchainError + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedNativeScripts ∷ List (Tuple Types.ScriptId NativeScript)
     }
 getDsPoliciesAndValidators _ =
   let
     versionedPolicies = List.fromFoldable []
     versionedValidators = List.fromFoldable []
+    versionedNativeScripts = List.fromFoldable []
   in
-    pure { versionedPolicies, versionedValidators }
+    pure { versionedPolicies, versionedValidators, versionedNativeScripts }
 
 getCheckpointPoliciesAndValidators ∷
   ∀ r.
@@ -95,13 +103,15 @@ getCheckpointPoliciesAndValidators ∷
   Run (EXCEPT OffchainError + r)
     { versionedPolicies ∷ (List (Tuple Types.ScriptId PlutusScript))
     , versionedValidators ∷ (List (Tuple Types.ScriptId PlutusScript))
+    , versionedNativeScripts ∷ (List (Tuple Types.ScriptId NativeScript))
     }
 getCheckpointPoliciesAndValidators _ =
   let
     versionedPolicies = List.fromFoldable []
     versionedValidators = List.fromFoldable []
+    versionedNativeScripts = List.fromFoldable []
   in
-    pure $ { versionedPolicies, versionedValidators }
+    pure $ { versionedPolicies, versionedValidators, versionedNativeScripts }
 
 getNativeTokenManagementPoliciesAndValidators ∷
   ∀ r.
@@ -109,13 +119,15 @@ getNativeTokenManagementPoliciesAndValidators ∷
   Run (EXCEPT OffchainError + r)
     { versionedPolicies ∷ (List (Tuple Types.ScriptId PlutusScript))
     , versionedValidators ∷ (List (Tuple Types.ScriptId PlutusScript))
+    , versionedNativeScripts ∷ (List (Tuple Types.ScriptId NativeScript))
     }
 getNativeTokenManagementPoliciesAndValidators _ =
   let
     versionedPolicies = List.fromFoldable []
     versionedValidators = List.fromFoldable []
+    versionedNativeScripts = List.fromFoldable []
   in
-    pure $ { versionedPolicies, versionedValidators }
+    pure $ { versionedPolicies, versionedValidators, versionedNativeScripts }
 
 -- | Get V2 policies and validators for the
 -- | Merkle Root.
@@ -125,10 +137,12 @@ getMerkleRootPoliciesAndValidators ∷
   Run (EXCEPT OffchainError + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedNativeScripts ∷ List (Tuple Types.ScriptId NativeScript)
     }
 getMerkleRootPoliciesAndValidators _ =
   let
     versionedPolicies = List.fromFoldable []
     versionedValidators = List.fromFoldable []
+    versionedNativeScripts = List.fromFoldable []
   in
-    pure { versionedPolicies, versionedValidators }
+    pure { versionedPolicies, versionedValidators, versionedNativeScripts }

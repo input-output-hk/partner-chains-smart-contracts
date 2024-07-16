@@ -15,7 +15,9 @@ import Cardano.ToData (toData)
 import Cardano.Types.AssetName (AssetName)
 import Cardano.Types.BigNum (BigNum)
 import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.NativeScript (NativeScript)
 import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.NativeScript as NativeScript
 import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.CborBytes (cborBytesToByteArray)
 import Contract.PlutusData
@@ -161,6 +163,7 @@ data EndpointResp
   | ListVersionedScriptsResp
       { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
       , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
+      , versionedNativeScripts ∷ List (Tuple Types.ScriptId NativeScript)
       }
 
 -- | `serialisePlutusDataToHex` serialises plutus data to CBOR, and shows the
@@ -515,12 +518,13 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         ]
 
     ListVersionedScriptsResp
-      { versionedPolicies, versionedValidators } → do
+      { versionedPolicies, versionedValidators, versionedNativeScripts } → do
       -- We encode in JSON the versioned script ids along with their hashes
       let
         (versionedScriptIdsWithHashes ∷ List (Tuple ScriptId ScriptHash)) =
           (map (map PlutusScript.hash) versionedPolicies)
             <> (map (map PlutusScript.hash) versionedValidators)
+            <> (map (map NativeScript.hash) versionedNativeScripts)
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "ListVersionedScripts"
         , "versionedScripts" /\ toStringifiedNumbersJson

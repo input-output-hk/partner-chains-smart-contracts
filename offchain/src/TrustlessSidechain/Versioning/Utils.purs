@@ -5,7 +5,9 @@ module TrustlessSidechain.Versioning.Utils
   , getVersionedScriptRefUtxo
   , getVersionedValidatorAddress
   , initializeVersionLookupsAndConstraints
+  , initializeNativeScriptVersionLookupsAndConstraints
   , insertVersionLookupsAndConstraints
+  , insertVersionNativeScriptsLookupsAndConstraints
   , invalidateVersionLookupsAndConstraints
   , versionOraclePolicy
   , versionOracleTokenName
@@ -25,6 +27,8 @@ import Cardano.Types.Mint as Mint
 import Cardano.Types.OutputDatum (OutputDatum(OutputDatum))
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.NativeScript (NativeScript)
+import Cardano.Types.NativeScript as NativeScript
 import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Types.TransactionInput (TransactionInput(TransactionInput))
 import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
@@ -39,7 +43,7 @@ import Contract.PlutusData
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction
-  ( ScriptRef(PlutusScriptRef)
+  ( ScriptRef(PlutusScriptRef, NativeScriptRef)
   )
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
@@ -187,6 +191,32 @@ initializeVersionLookupsAndConstraints ∷
     , constraints ∷ TxConstraints
     }
 initializeVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
+  initializeVersionLookupsAndConstraints' sp ver scriptId (PlutusScript.hash versionedScript) (PlutusScriptRef versionedScript)
+
+initializeNativeScriptVersionLookupsAndConstraints ::
+  ∀ r.
+  SidechainParams →
+  Int → -- ^ Script version
+  Tuple ScriptId NativeScript → -- ^ Script ID and the script itself
+  Run (APP + r)
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
+    }
+initializeNativeScriptVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
+  initializeVersionLookupsAndConstraints' sp ver scriptId (NativeScript.hash versionedScript) (NativeScriptRef versionedScript)
+
+initializeVersionLookupsAndConstraints' ∷
+  ∀ r.
+  SidechainParams →
+  Int → -- ^ Script version
+  ScriptId -> -- ^ Script ID
+  ScriptHash -> -- ^ Script hash
+  ScriptRef → -- ^ Script itself
+  Run (APP + r)
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
+    }
+initializeVersionLookupsAndConstraints' sp ver scriptId versionedScriptHash scriptRef =
   do
       burnVersionInitToken ← burnOneVersionInitToken sp
 
@@ -199,7 +229,6 @@ initializeVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
       -- Prepare datum and other boilerplate
       -----------------------------------
       let
-        versionedScriptHash = PlutusScript.hash versionedScript
         versionOracle = VersionOracle
           { version: BigNum.fromInt ver
           , scriptId
@@ -240,7 +269,7 @@ initializeVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
             (PlutusScript.hash vValidator)
             (toData versionOracleDatum)
             DatumInline
-            (PlutusScriptRef versionedScript)
+            scriptRef
             oneVersionOracleAsset
             <> initializeVersioningTokensConstraints
 
@@ -261,6 +290,34 @@ insertVersionLookupsAndConstraints ∷
     , constraints ∷ TxConstraints
     }
 insertVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
+  insertVersionLookupsAndConstraints' sp ver scriptId (PlutusScript.hash versionedScript) (PlutusScriptRef versionedScript)
+
+
+insertVersionNativeScriptsLookupsAndConstraints ∷
+  ∀ r.
+  SidechainParams →
+  Int → -- ^ Script version
+  Tuple ScriptId NativeScript → -- ^ Script ID and the script itself
+  Run (APP + r)
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
+    }
+insertVersionNativeScriptsLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
+  insertVersionLookupsAndConstraints' sp ver scriptId (NativeScript.hash versionedScript) (NativeScriptRef versionedScript)
+
+
+insertVersionLookupsAndConstraints' ∷
+  ∀ r.
+  SidechainParams →
+  Int → -- ^ Script version
+  ScriptId -> -- ^ Script ID
+  ScriptHash -> -- ^ Script hash of the script
+  ScriptRef → -- ^ The script itself
+  Run (APP + r)
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
+    }
+insertVersionLookupsAndConstraints' sp ver scriptId versionedScriptHash scriptRef =
   do
       -- Preparing versioning scripts and tokens
       -----------------------------------
@@ -271,7 +328,6 @@ insertVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
       -- Prepare datum and other boilerplate
       -----------------------------------
       let
-        versionedScriptHash = PlutusScript.hash versionedScript
         versionOracle = VersionOracle
           { version: BigNum.fromInt ver
           , scriptId
@@ -320,7 +376,7 @@ insertVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
             (PlutusScript.hash vValidator)
             (toData versionOracleDatum)
             DatumInline
-            (PlutusScriptRef versionedScript)
+            scriptRef
             oneVersionOracleAsset
             <> governanceAuthorityConstraints
             <> mintVersioningTokensConstraints
@@ -489,6 +545,7 @@ getVersionedCurrencySymbol sp versionOracle = do
       ( "Script for given version oracle was not found: " <> show
           versionOracle
       )
+    Just (NativeScriptRef nativeScript) -> pure $ NativeScript.hash nativeScript
     Just (PlutusScriptRef plutusScript) →
       pure $ PlutusScript.hash plutusScript
     _ → throw $ NotFoundReferenceScript $

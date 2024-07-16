@@ -19,9 +19,11 @@ import Contract.Prelude
 import Cardano.Types.Int as Int
 import Cardano.Types.Mint as Mint
 import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.NativeScript (NativeScript)
+import Cardano.Types.NativeScript as NativeScript
 import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.ScriptHash (ScriptHash)
-import Cardano.Types.ScriptRef (ScriptRef(PlutusScriptRef))
+import Cardano.Types.ScriptRef (ScriptRef(PlutusScriptRef, NativeScriptRef))
 import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
 import Contract.PlutusData (RedeemerDatum(RedeemerDatum), toData)
 import Contract.ScriptLookups (ScriptLookups)
@@ -74,13 +76,13 @@ mintVersionInitTokens ∷
     , constraints ∷ TxConstraints
     }
 mintVersionInitTokens { sidechainParams, atmsKind } version = do
-  { versionedPolicies, versionedValidators } ←
+  { versionedPolicies, versionedValidators, versionedNativeScripts } ←
     getExpectedVersionedPoliciesAndValidators { sidechainParams, atmsKind }
       version
 
   let
     amount = Int.fromInt
-      (List.length versionedPolicies + List.length versionedValidators)
+      (List.length versionedPolicies + List.length versionedValidators + List.length versionedNativeScripts)
 
   { mintingPolicy, currencySymbol } ← initTokenCurrencyInfo sidechainParams
 
@@ -101,7 +103,7 @@ initializeVersion ∷
   Run (APP + r)
     (Array TransactionHash)
 initializeVersion { sidechainParams, atmsKind } version = do
-  { versionedPolicies, versionedValidators } ←
+  { versionedPolicies, versionedValidators, versionedNativeScripts } ←
     getExpectedVersionedPoliciesAndValidators { sidechainParams, atmsKind }
       version
 
@@ -117,7 +119,14 @@ initializeVersion { sidechainParams, atmsKind } version = do
           Utils.Transaction.balanceSignAndSubmit "Initialize versioned policies"
       )
       $ List.toUnfoldable versionedPolicies
-  pure (validatorsTxIds <> policiesTxIds)
+
+  nativeScriptTxIds ←
+    traverse
+      ( Utils.initializeNativeScriptVersionLookupsAndConstraints sidechainParams version >=>
+          Utils.Transaction.balanceSignAndSubmit "Initialize versioned native scripts"
+      )
+      $ List.toUnfoldable versionedNativeScripts
+  pure (validatorsTxIds <> policiesTxIds <> nativeScriptTxIds)
 
 -- Note [Supporting version insertion beyond version 2]
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -187,6 +196,7 @@ insertVersion { sidechainParams, atmsKind } version = do
 
   { versionedPolicies: prevVersionedPolicies
   , versionedValidators: prevVersionedValidators
+  , versionedNativeScripts: prevVersionedNativeScripts
   } ←
     getActualVersionedPoliciesAndValidators
       { sidechainParams, atmsKind }
@@ -194,6 +204,7 @@ insertVersion { sidechainParams, atmsKind } version = do
 
   { versionedPolicies: actualVersionedPolicies
   , versionedValidators: actualVersionedValidators
+  , versionedNativeScripts: actualVersionedNativeScripts
   } ←
     getActualVersionedPoliciesAndValidators
       { sidechainParams, atmsKind }
@@ -201,6 +212,7 @@ insertVersion { sidechainParams, atmsKind } version = do
 
   { versionedPolicies: expectedVersionedPolicies
   , versionedValidators: expectedVersionedValidators
+  , versionedNativeScripts: expectedVersionedNativeScripts
   } ←
     getExpectedVersionedPoliciesAndValidators
       { sidechainParams, atmsKind }
@@ -222,6 +234,12 @@ insertVersion { sidechainParams, atmsKind } version = do
         { expected: expectedVersionedValidators
         , actual: actualVersionedValidators
         , prev: prevVersionedValidators
+        }
+    versionedNativeScripts =
+      filterToScriptIds
+        { expected: expectedVersionedNativeScripts
+        , actual: actualVersionedNativeScripts
+        , prev: prevVersionedNativeScripts
         }
 
   logInfo'
@@ -246,7 +264,18 @@ insertVersion { sidechainParams, atmsKind } version = do
       )
       $ List.toUnfoldable versionedPolicies
 
-  pure (validatorsTxIds <> policiesTxIds)
+  logInfo'
+    $ "Insert native scripts for version"
+    <> show version
+
+  nativeScriptTxIds ←
+    traverse
+      ( Utils.insertVersionNativeScriptsLookupsAndConstraints sidechainParams version >=>
+          Utils.Transaction.balanceSignAndSubmit "Insert versioned native scripts"
+      )
+      $ List.toUnfoldable versionedNativeScripts
+
+  pure (validatorsTxIds <> policiesTxIds <> nativeScriptTxIds)
 
 invalidateVersion ∷
   ∀ r.
@@ -256,7 +285,7 @@ invalidateVersion ∷
   Int →
   Run (APP + r) (Array TransactionHash)
 invalidateVersion { sidechainParams, atmsKind } version = do
-  { versionedPolicies, versionedValidators } ←
+  { versionedPolicies, versionedValidators, versionedNativeScripts } ←
     getExpectedVersionedPoliciesAndValidators
       { sidechainParams, atmsKind }
       version
@@ -278,7 +307,16 @@ invalidateVersion { sidechainParams, atmsKind } version = do
       $ List.nub
       $ map fst versionedPolicies
 
-  pure (validatorsTxIds <> policiesTxIds)
+  nativeScriptTxIds ←
+    traverse
+      ( Utils.invalidateVersionLookupsAndConstraints sidechainParams version >=>
+          Utils.Transaction.balanceSignAndSubmit "Invalidate versioned native scripts"
+      )
+      $ Array.fromFoldable
+      $ List.nub
+      $ map fst versionedNativeScripts
+
+  pure (validatorsTxIds <> policiesTxIds <> nativeScriptTxIds)
 
 updateVersion ∷
   ∀ r.
@@ -291,11 +329,13 @@ updateVersion ∷
 updateVersion { sidechainParams, atmsKind } oldVersion newVersion = do
   { versionedPolicies: oldVersionedPolicies
   , versionedValidators: oldVersionedValidators
+  , versionedNativeScripts: oldVersionedNativeScripts
   } ← getExpectedVersionedPoliciesAndValidators { sidechainParams, atmsKind }
     oldVersion
 
   { versionedPolicies: newVersionedPolicies
   , versionedValidators: newVersionedValidators
+  , versionedNativeScripts: newVersionedNativeScripts
   } ← getExpectedVersionedPoliciesAndValidators { sidechainParams, atmsKind }
     newVersion
 
@@ -311,6 +351,12 @@ updateVersion { sidechainParams, atmsKind } oldVersion newVersion = do
           Utils.Transaction.balanceSignAndSubmit "Update new versioned policies"
       )
       $ List.toUnfoldable newVersionedPolicies
+  newNativeScriptsTxIds <-
+    traverse
+      ( Utils.insertVersionNativeScriptsLookupsAndConstraints sidechainParams newVersion >=>
+          Utils.Transaction.balanceSignAndSubmit "Update new versioned native scripts"
+      )
+      $ List.toUnfoldable newVersionedNativeScripts
 
   oldValidatorsTxIds ←
     traverse
@@ -332,10 +378,24 @@ updateVersion { sidechainParams, atmsKind } oldVersion newVersion = do
       $ List.nub
       $ map fst oldVersionedPolicies
 
+  oldNativeScriptsTxIds <-
+    traverse
+      ( Utils.invalidateVersionLookupsAndConstraints sidechainParams oldVersion
+          >=>
+            Utils.Transaction.balanceSignAndSubmit
+              "Update old versioned native scripts"
+      )
+      $ Array.fromFoldable
+      $ List.nub
+      $ map fst oldVersionedNativeScripts
+
   pure $ newValidatorsTxIds
     <> newPoliciesTxIds
+    <> newNativeScriptsTxIds
     <> oldValidatorsTxIds
     <> oldPoliciesTxIds
+    <> oldNativeScriptsTxIds
+
 
 -- | Get the list of "expected" validators and minting policies that should be versioned.
 --
@@ -349,6 +409,7 @@ getExpectedVersionedPoliciesAndValidators ∷
   Run (READER Env + EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedNativeScripts ∷ List (Tuple Types.ScriptId NativeScript)
     }
 getExpectedVersionedPoliciesAndValidators { sidechainParams, atmsKind } version =
   case version of
@@ -364,6 +425,7 @@ getCommitteeSelectionPoliciesAndValidators ∷
   Run (EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedNativeScripts ∷ List (Tuple Types.ScriptId NativeScript)
     }
 getCommitteeSelectionPoliciesAndValidators atmsKind sidechainParams version = do
   case version of
@@ -378,6 +440,7 @@ getCheckpointPoliciesAndValidators ∷
   Run (EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedNativeScripts ∷ List (Tuple Types.ScriptId NativeScript)
     }
 getCheckpointPoliciesAndValidators sidechainParams version = do
   case version of
@@ -392,6 +455,7 @@ getNativeTokenManagementPoliciesAndValidators ∷
   Run (READER Env + EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedNativeScripts ∷ List (Tuple Types.ScriptId NativeScript)
     }
 getNativeTokenManagementPoliciesAndValidators sidechainParams version = do
   case version of
@@ -413,6 +477,7 @@ getActualVersionedPoliciesAndValidators ∷
   Run (READER Env + EXCEPT OffchainError + TRANSACTION + WALLET + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedNativeScripts ∷ List (Tuple Types.ScriptId NativeScript)
     }
 
 getActualVersionedPoliciesAndValidators { sidechainParams, atmsKind } version =
@@ -424,7 +489,7 @@ getActualVersionedPoliciesAndValidators { sidechainParams, atmsKind } version =
     scriptUtxos ← Effect.utxosAt versionOracleValidatorAddr
 
     -- Get scripts that should be versioned
-    { versionedPolicies, versionedValidators } ←
+    { versionedPolicies, versionedValidators, versionedNativeScripts } ←
       getExpectedVersionedPoliciesAndValidators { sidechainParams, atmsKind }
         version
 
@@ -441,6 +506,11 @@ getActualVersionedPoliciesAndValidators { sidechainParams, atmsKind } version =
           $ map (\t@(Tuple _ script) → PlutusScript.hash script /\ t)
           $ versionedValidators
 
+      versionedNativeScriptsIndexedByHash =
+        Map.fromFoldable
+          $ map (\t@(Tuple _ script) → NativeScript.hash script /\ t)
+          $ versionedNativeScripts
+
     -- Get script hashes of versioned scripts that are linked to the version
     -- oracle validator.
     let
@@ -450,6 +520,7 @@ getActualVersionedPoliciesAndValidators { sidechainParams, atmsKind } version =
               ( \(TransactionOutput { scriptRef }) → case scriptRef of
                   Just (PlutusScriptRef plutusScript) → Just $ PlutusScript.hash
                     plutusScript
+                  Just (NativeScriptRef nativeScript) -> Just $ NativeScript.hash nativeScript
                   _ → Nothing
               )
           $ Map.values scriptUtxos
@@ -468,9 +539,16 @@ getActualVersionedPoliciesAndValidators { sidechainParams, atmsKind } version =
             (\scriptHash → Map.lookup scriptHash versionedValidatorsIndexedByHash)
             actualVersionedScriptHashes
 
+      actualVersionedNativeScripts
+        = List.catMaybes $
+          map
+            (\scriptHash → Map.lookup scriptHash versionedNativeScriptsIndexedByHash)
+            actualVersionedScriptHashes
+
     pure
       { versionedPolicies: actualVersionedPolicies
       , versionedValidators: actualVersionedValidators
+      , versionedNativeScripts: actualVersionedNativeScripts
       }
 
 -- | Get versioned policies and validators for
@@ -482,6 +560,7 @@ getFuelPoliciesAndValidators ∷
   Run (EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedNativeScripts ∷ List (Tuple Types.ScriptId NativeScript)
     }
 getFuelPoliciesAndValidators sidechainParams version =
   case version of
@@ -498,6 +577,7 @@ getDsPoliciesAndValidators ∷
   Run (EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedNativeScripts ∷ List (Tuple Types.ScriptId NativeScript)
     }
 getDsPoliciesAndValidators sidechainParams version =
   case version of
@@ -512,6 +592,7 @@ getMerkleRootPoliciesAndValidators ∷
   Run (EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedNativeScripts ∷ List (Tuple Types.ScriptId NativeScript)
     }
 getMerkleRootPoliciesAndValidators sidechainParams version =
   case version of

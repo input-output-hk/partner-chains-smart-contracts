@@ -2,7 +2,6 @@ module TrustlessSidechain.Governance.MultiSig
   ( MultiSigGovParams (MultiSigGovParams)
   , MultiSigGovRedeemer (..)
   , multisigGovPolicy
-  , multisigGovCurrencyInfo
   , multisigGovTokenName
   ) where
 
@@ -16,11 +15,11 @@ import Contract.PlutusData
   , fromData
   , toData
   )
-import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.NativeScript (NativeScript(..))
 import Contract.Value (TokenName)
 import JS.BigInt as BigInt
 import Run (Run)
-import Run.Except (EXCEPT)
+import Run.Except (EXCEPT, throw)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.Types (CurrencyInfo)
 import TrustlessSidechain.Utils.Address (getCurrencyInfo)
@@ -30,6 +29,9 @@ import TrustlessSidechain.Utils.Scripts
   )
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(MultiSigPolicy)
+  )
+import TrustlessSidechain.Error
+  ( OffchainError(GenericInternalError)
   )
 import Type.Row (type (+))
 
@@ -115,14 +117,15 @@ multisigGovTokenName = emptyAssetName
 multisigGovPolicy ∷
   ∀ r.
   MultiSigGovParams →
-  Run (EXCEPT OffchainError + r) PlutusScript
-multisigGovPolicy msgp =
-  mkMintingPolicyWithParams MultiSigPolicy [ toData msgp ]
+  Run (EXCEPT OffchainError + r) NativeScript
+multisigGovPolicy (MultiSigGovParams {requiredSignatures, governanceMembers}) = case BigInt.toInt requiredSignatures of
+  Just requiredSignatures' → pure $ ScriptNOfK requiredSignatures' $ map ScriptPubkey governanceMembers
+  Nothing -> throw $ GenericInternalError "Failed to convert required signatures to Int"
 
--- | Get currency information for a multisignature governance policy.
-multisigGovCurrencyInfo ∷
-  ∀ r.
-  MultiSigGovParams →
-  Run (EXCEPT OffchainError + r) CurrencyInfo
-multisigGovCurrencyInfo msgp = do
-  getCurrencyInfo MultiSigPolicy [ toData msgp ]
+-- -- | Get currency information for a multisignature governance policy.
+-- multisigGovCurrencyInfo ∷
+--   ∀ r.
+--   MultiSigGovParams →
+--   Run (EXCEPT OffchainError + r) CurrencyInfo
+-- multisigGovCurrencyInfo msgp = do
+--   getCurrencyInfo MultiSigPolicy [ toData msgp ]
