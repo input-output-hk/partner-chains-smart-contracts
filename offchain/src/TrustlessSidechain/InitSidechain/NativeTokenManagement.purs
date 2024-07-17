@@ -23,7 +23,9 @@ initNativeTokenMgmt ∷
   SidechainParams →
   ATMSKinds →
   Int →
-  Run (APP + r) (Array TransactionHash)
+  Run (APP + r)
+    { scriptsInitTxIds ∷ Array TransactionHash
+    }
 initNativeTokenMgmt sidechainParams initATMSKind version = do
   -- Attempt to insert scripts into the versioning system
   logDebug' "Attempting to initialize Native Token Management versioning scripts"
@@ -33,4 +35,4 @@ initNativeTokenMgmt sidechainParams initATMSKind version = do
     initATMSKind
     version
 
-  pure scriptsInitTxIds
+  pure { scriptsInitTxIds }

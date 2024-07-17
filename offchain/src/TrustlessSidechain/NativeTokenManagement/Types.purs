@@ -10,6 +10,10 @@ module TrustlessSidechain.NativeTokenManagement.Types
 
 import Contract.Prelude
 
+import Cardano.Types.Asset (Asset(..))
+import Cardano.Types.BigInt as BigInt
+import Cardano.Types.BigNum as BigNum
+import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -17,12 +21,8 @@ import Contract.PlutusData
   , fromData
   , toData
   )
-import Data.ByteArray as ByteArray
-import Cardano.Types.BigNum as BigNum
-import Cardano.Types.Asset (Asset(..))
-import Cardano.Types.ScriptHash (ScriptHash)
 import Ctl.Internal.Types.Interval (POSIXTime)
-import Cardano.Types.BigInt as BigInt
+import Data.ByteArray as ByteArray
 import TrustlessSidechain.Utils.Data
   ( productFromData2
   , productFromData3
@@ -42,27 +42,32 @@ derive newtype instance Show ImmutableReserveSettings
 
 instance ToData ImmutableReserveSettings where
   toData (ImmutableReserveSettings { t0, tokenKind: Asset cs tn }) =
-    productToData2 t0 (Constr (BigNum.fromInt 0) [toData cs, toData tn])
-  toData (ImmutableReserveSettings { t0, tokenKind: AdaAsset}) =
-    productToData2 t0 (Constr (BigNum.fromInt 0) [toData $ ByteArray.hexToByteArrayUnsafe "", toData $ ByteArray.hexToByteArrayUnsafe ""])
+    productToData2 t0 (Constr (BigNum.fromInt 0) [ toData cs, toData tn ])
+  toData (ImmutableReserveSettings { t0, tokenKind: AdaAsset }) =
+    productToData2 t0
+      ( Constr (BigNum.fromInt 0)
+          [ toData $ ByteArray.hexToByteArrayUnsafe ""
+          , toData $ ByteArray.hexToByteArrayUnsafe ""
+          ]
+      )
 
 instance FromData ImmutableReserveSettings where
-  fromData (List [t0', Constr _ [cs', tn']]) = do
+  fromData (List [ t0', Constr _ [ cs', tn' ] ]) = do
     csB ← fromData cs'
     tnB ← fromData tn'
     t0 ← fromData t0'
     let emptyByteString = ByteArray.hexToByteArrayUnsafe ""
-    if (csB /\ tnB) == (emptyByteString /\ emptyByteString)
-      then Just $ ImmutableReserveSettings { t0, tokenKind: AdaAsset }
-      else do
-        cs ← fromData cs'
-        tn ← fromData tn'
-        Just $ ImmutableReserveSettings { t0, tokenKind: Asset cs tn }
+    if (csB /\ tnB) == (emptyByteString /\ emptyByteString) then Just $
+      ImmutableReserveSettings { t0, tokenKind: AdaAsset }
+    else do
+      cs ← fromData cs'
+      tn ← fromData tn'
+      Just $ ImmutableReserveSettings { t0, tokenKind: Asset cs tn }
   fromData _ = Nothing
 
 newtype MutableReserveSettings = MutableReserveSettings
   { vFunctionTotalAccrued ∷ ScriptHash
-  , incentiveAmount :: BigInt.BigInt
+  , incentiveAmount ∷  BigInt.BigInt
   }
 
 derive newtype instance Eq MutableReserveSettings

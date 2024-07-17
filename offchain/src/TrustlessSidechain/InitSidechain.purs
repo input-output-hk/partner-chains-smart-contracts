@@ -161,7 +161,7 @@ initSidechain (InitSidechainParams isp) version = do
           <> maybeToArray permissionTokensInitTx
           <> checkpointInitTx.scriptsInitTxIds
           <> maybeToArray checkpointInitTx.tokensInitTxId
-          <> nativeTokenMgmtInitTxs
+          <> nativeTokenMgmtInitTxs.scriptsInitTxIds
     , sidechainParams
     , sidechainAddresses
     }

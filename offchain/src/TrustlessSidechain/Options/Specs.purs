@@ -3,6 +3,9 @@ module TrustlessSidechain.Options.Specs (options) where
 import Contract.Prelude
 
 import Cardano.AsCbor (decodeCbor)
+import Cardano.Types.Asset (Asset (..))
+import Cardano.Types.BigNum (BigNum)
+import Cardano.Types.TransactionInput (TransactionInput)
 import Contract.Config
   ( PrivateStakeKeySource(PrivateStakeKeyFile)
   , ServerConfig
@@ -12,12 +15,14 @@ import Contract.Config
   )
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Scripts (ValidatorHash)
+import Contract.Value (AssetName)
 import Contract.Wallet
   ( PrivatePaymentKeySource(PrivatePaymentKeyFile)
   , WalletSpec(UseKeys)
   )
 import Control.Alternative ((<|>))
 import Ctl.Internal.Helpers (logWithLevel)
+import Contract.Time(POSIXTime)
 import Data.List (List)
 import Data.List.Types (NonEmptyList)
 import Data.UInt (UInt)
@@ -62,6 +67,10 @@ import TrustlessSidechain.MerkleRoot.Types
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   )
 import TrustlessSidechain.MerkleTree (MerkleTree, RootHash)
+import TrustlessSidechain.NativeTokenManagement.Types
+  ( ImmutableReserveSettings(..)
+  , MutableReserveSettings(..)
+  )
 import TrustlessSidechain.Options.Parsers
   ( bech32BytesParser
   , bech32ValidatorHashParser
@@ -80,7 +89,6 @@ import TrustlessSidechain.Options.Parsers
   , rootHash
   , schnorrSecp256k1PrivateKey
   , sidechainAddress
-  , transactionInput
   , uint
   , validatorHashParser
   )
@@ -88,11 +96,7 @@ import TrustlessSidechain.Options.Parsers as Parsers
 import TrustlessSidechain.Options.Types
   ( Config
   , InputArgOrFile(InputFromArg, InputFromFile)
-  , Options
-      ( TxOptions
-      , UtilsOptions
-      , CLIVersion
-      )
+  , Options(TxOptions, UtilsOptions, CLIVersion)
   , SidechainEndpointParams(SidechainEndpointParams)
   , TxEndpoint
       ( ClaimActV1
@@ -104,6 +108,7 @@ import TrustlessSidechain.Options.Types
       , InitTokensMint
       , InitCheckpoint
       , InitFuel
+      , InitReserveManagement
       , Init
       , InitCandidatePermissionToken
       , CommitteeCandidateReg
@@ -121,6 +126,10 @@ import TrustlessSidechain.Options.Types
       , BurnNFTs
       , InitTokenStatus
       , ListVersionedScripts
+      , CreateReserve
+      , DepositReserve
+      , ReleaseReserveFunds
+      , HandoverReserve
       )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
@@ -160,6 +169,10 @@ optSpec maybeConfig =
     , command "init-tokens-mint"
         ( info (withCommonOpts maybeConfig initTokensMintSpec)
             (progDesc "Mint all sidechain initialisation tokens")
+        )
+    , command "init-reserve-management"
+        ( info (withCommonOpts maybeConfig initReserveManagementSpec)
+            (progDesc "Initialise native token reserve management system")
         )
     , command "init-checkpoint"
         ( info (withCommonOpts maybeConfig initCheckpointSpec)
@@ -223,6 +236,24 @@ optSpec maybeConfig =
         ( info (withCommonOpts maybeConfig saveCheckpointSpec)
             (progDesc "Saving a new checkpoint")
         )
+
+    , command "reserve-create"
+        ( info (withCommonOpts maybeConfig createReserveSpec)
+            (progDesc "Create a new token reserve")
+        )
+    , command "reserve-handover"
+        ( info (withCommonOpts maybeConfig handOverReserveSpec)
+            (progDesc "Empty and remove an existing reserve")
+        )
+    , command "reserve-deposit"
+        ( info (withCommonOpts maybeConfig depositReserveSpec)
+            (progDesc "Deposit assets to existing reserve")
+        )
+    , command "reserve-release-funds"
+        ( info (withCommonOpts maybeConfig releaseReserveFundsSpec)
+            (progDesc "Release currently available funds from an existing reserve")
+        )
+
     , command "insert-version-2"
         ( info (withCommonOpts maybeConfig insertVersionSpec)
             (progDesc "Initialize version 2 of a protocol")
@@ -239,13 +270,6 @@ optSpec maybeConfig =
         ( info (withCommonOpts maybeConfig listVersionedScriptsSpec)
             ( progDesc
                 "Get scripts (validators and minting policies) that are currently being versioned"
-            )
-        )
-
-    , command "utils"
-        ( info (utilsSpec maybeConfig)
-            ( progDesc
-                "Utility functions for cryptographic primitives and messages."
             )
         )
 
@@ -269,13 +293,23 @@ optSpec maybeConfig =
         ( info (withCommonOpts maybeConfig initTokenStatusSpec)
             (progDesc "List the number of each init token the wallet still holds")
         )
+
     , command "cli-version"
         ( info (pure CLIVersion)
             ( progDesc
                 "Display semantic version of the CLI and its git hash"
             )
         )
+
+    , command "utils"
+        ( info (utilsSpec maybeConfig)
+            ( progDesc
+                "Utility functions for cryptographic primitives and messages."
+            )
+        )
+
     ]
+
 
 -- | `utilsSpec` provides CLI options for utilities in the sidechain that do
 -- | not submit a tx to the blockchain
@@ -485,7 +519,7 @@ sidechainParamsSpec maybeConfig = ado
         (maybeConfig >>= _.sidechainParameters >>= _.chainId)
     ]
 
-  genesisUtxo ← option transactionInput $ fold
+  genesisUtxo ← option Parsers.transactionInput $ fold
     [ short 'c'
     , long "genesis-committee-hash-utxo"
     , metavar "TX_ID#TX_IDX"
@@ -574,7 +608,7 @@ claimSpecV1 = ado
         , metavar "CBOR"
         , help "CBOR-encoded Combined Merkle Proof"
         ]
-  dsUtxo ← optional $ option transactionInput $ fold
+  dsUtxo ← optional $ option Parsers.transactionInput $ fold
     [ long "distributed-set-utxo"
     , metavar "TX_ID#TX_IDX"
     , help
@@ -675,7 +709,7 @@ regSpec = ado
     , metavar "SIGNATURE"
     , help "Sidechain signature"
     ]
-  inputUtxo ← option transactionInput $ fold
+  inputUtxo ← option Parsers.transactionInput $ fold
     [ long "registration-utxo"
     , metavar "TX_ID#TX_IDX"
     , help "Input UTxO to be spend with the commitee candidate registration"
@@ -835,6 +869,7 @@ saveCheckpointSpec = ado
       , newCheckpointBlockHash
       , newCheckpointBlockNumber
       , sidechainEpoch
+
       }
 
 -- `parseCommittee` parses the committee public keys and takes the long
@@ -985,8 +1020,8 @@ parseGenesisHash =
 
 -- | `initCandidatePermissionTokenMintHelper` helps mint candidate permission
 -- | tokens from initializing the sidechain
-initCandidatePermissionTokenMintHelper ∷
-  Parser BigInt
+initCandidatePermissionTokenMintHelper
+  ∷ Parser BigInt
 initCandidatePermissionTokenMintHelper =
   option bigInt $ fold
     [ long "candidate-permission-token-amount"
@@ -1069,6 +1104,14 @@ initCheckpointSpec = ado
       , initCandidatePermissionTokenMintInfo
       , genesisHash
       , version
+      }
+
+initReserveManagementSpec ∷ Parser TxEndpoint
+initReserveManagementSpec = ado
+  version ← parseVersion
+  in
+    InitReserveManagement
+      { version
       }
 
 initFuelSpec ∷ Parser TxEndpoint
@@ -1381,7 +1424,7 @@ cborBlockProducerRegistrationMessageSpec mConfig = ado
       , metavar "SIDECHAIN_PUB_KEY"
       , help "Sidechain public key"
       ]
-  inputUtxo ← option transactionInput $ fold
+  inputUtxo ← option Parsers.transactionInput $ fold
     [ long "input-utxo"
     , metavar "TX_ID#TX_IDX"
     , help "Input UTxO which must be spent by the transaction"
@@ -1486,3 +1529,148 @@ cborCombinedMerkleProofSpec = ado
   in
     UtilsOptions
       { utilsOptions: CborCombinedMerkleProofAct { merkleTree, merkleTreeEntry } }
+
+parseDepositAmount ∷ Parser BigNum
+parseDepositAmount = option Parsers.tokenAmount
+  ( fold
+      [ long "reserve-initial-deposit-amount"
+      , metavar "RESERVE-DEPOSIT-AMOUNT"
+      , help "Inital amount of tokens to deposit"
+      ]
+  )
+
+parseIncentiveAmount ∷ Parser BigInt
+parseIncentiveAmount =
+  let
+     fparser =
+       Parsers.positiveAmount
+       "failed to parse incentive-amount"
+       "incentive-amount amount must be non-negative"
+  in
+   option fparser
+  ( fold
+      [ long "reserve-initial-incentive-amount"
+      , metavar "RESERVE-INCENTIVE-AMOUNT"
+      , help "Incentive amount of tokens"
+      , (value (BigInt.fromInt 0))
+      , showDefault
+      ]
+  )
+
+-- `parsePOSIXTime`
+parserT0 ∷ Parser POSIXTime
+parserT0 = option Parsers.posixTime
+  ( fold
+      [ long "reserve-posixtime-t0"
+      , metavar "POSIXTIME"
+      , help
+          "Partner chain POSIX timestamp of the moment the reserve is launched"
+      ]
+  )
+
+parseAssetName ∷ Parser AssetName
+parseAssetName =
+  ( option
+      Parsers.assetNameParser
+      ( fold
+          [ long "reserve-asset-name"
+          , metavar "RESERVE_ASSET_NAME"
+          , help
+              "Reserve native token assetName"
+          ]
+      )
+  )
+
+handOverReserveSpec :: Parser TxEndpoint
+handOverReserveSpec = flag' HandoverReserve $ fold
+  [ long "hand-over"
+  , help "Hand Over Reserve Tokens"
+  ]
+
+parseAdaAsset ∷ Parser Asset
+parseAdaAsset = flag' AdaAsset $ fold
+  [ long "reserve-ada-asset"
+  , help "Use Ada for reserve asset"
+  ]
+
+parseAsset ∷ String -> String -> Parser Asset
+parseAsset long' metavar' =
+  (
+    Asset
+    <$>
+    ( option validatorHashParser
+      ( fold
+        [ long long'
+        , metavar metavar'
+        , help "Hex encoded hash string"
+        ]
+      )
+    )
+    <*> parseAssetName
+  )
+  <|>
+  parseAdaAsset
+
+
+parseImmutableReserveSettings ∷ Parser ImmutableReserveSettings
+parseImmutableReserveSettings = ado
+  t0 ← parserT0
+  tokenKind ← parseAsset "reserve-asset-script-hash" "ASSET-SCRIPT-HASH"
+  in ImmutableReserveSettings { t0, tokenKind }
+
+parseMutableReserveSettings ∷ Parser MutableReserveSettings
+parseMutableReserveSettings = ado
+  vFunctionTotalAccrued ← (option validatorHashParser
+                            (fold
+                              [ long "total-accrued-function-script-hash"
+                              , metavar "SCRIPT-HASH"
+                              , help "Hex encoded hash string"
+                              ]
+                            ))
+
+  incentiveAmount ← parseIncentiveAmount
+  in MutableReserveSettings { vFunctionTotalAccrued, incentiveAmount }
+
+createReserveSpec ∷ Parser TxEndpoint
+createReserveSpec = ado
+  mutableReserveSettings ← parseMutableReserveSettings
+  immutableReserveSettings ← parseImmutableReserveSettings
+  depositAmount ← parseDepositAmount
+  in
+    CreateReserve
+      { mutableReserveSettings
+      , immutableReserveSettings
+      , depositAmount
+      }
+
+depositReserveSpec :: Parser TxEndpoint
+depositReserveSpec = ado
+  asset <- parseAsset "deposit-reserve-asset" "ASSET-SCRIPT-HASH"
+  depositAmount <- parseDepositAmount
+  in
+    DepositReserve { asset, depositAmount }
+
+parseUnit :: Parser UInt
+parseUnit = option uint $ fold
+  [ long "total-accrued-till-now"
+  , metavar "INT"
+  , help "Computerd integer for the v(t)"
+  ]
+
+releaseReserveFundsSpec :: Parser TxEndpoint
+releaseReserveFundsSpec = ado
+  totalAccruedTillNow <- UInt.toInt <$> parseUnit
+  transactionInput <- parseTransactionInput
+  in
+    ReleaseReserveFunds
+      { totalAccruedTillNow
+      , transactionInput
+      }
+
+parseTransactionInput :: Parser TransactionInput
+parseTransactionInput =
+  option Parsers.transactionInput $ fold
+    [ long "reserve-transaction-input"
+    , metavar "RESERVE-TRANSACTION-INPUT"
+    , help "Transaction input of the policy script for to transfer illiquid circulation"
+    ]

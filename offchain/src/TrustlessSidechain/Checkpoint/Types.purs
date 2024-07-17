@@ -64,13 +64,13 @@ instance ToData CheckpointParameter where
         }
     ) = productToData2
     sidechainParams
-    (Constr (BigNum.fromInt 0) $ [toData cs, toData an])
+    (Constr (BigNum.fromInt 0) $ [ toData cs, toData an ])
 
 instance FromData CheckpointParameter where
-  fromData (List [sp', Constr _ [cs', an']]) = do
-    sidechainParams <- fromData sp'
-    cs <- fromData cs'
-    an <- fromData an'
+  fromData (List [ sp', Constr _ [ cs', an' ] ]) = do
+    sidechainParams ← fromData sp'
+    cs ← fromData cs'
+    an ← fromData an'
     let checkpointAssetClass = AssetClass cs an
     pure $ CheckpointParameter { sidechainParams, checkpointAssetClass }
   fromData _ = Nothing

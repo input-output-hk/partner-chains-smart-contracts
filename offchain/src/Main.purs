@@ -14,7 +14,6 @@ import Data.Array as Array
 import Data.List as List
 import Data.List.NonEmpty as NonEmpty
 import Data.List.Types as Data.List.Types
-import Effect.Class (liftEffect)
 import Effect.Exception (error)
 import JS.BigInt as BigInt
 import Options.Applicative (execParser)
@@ -28,6 +27,7 @@ import TrustlessSidechain.ConfigFile as ConfigFile
 import TrustlessSidechain.DParameter as DParameter
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Run (runAppLive)
+import TrustlessSidechain.Effects.Util as Effect
 import TrustlessSidechain.EndpointResp
   ( EndpointResp
       ( ClaimActRespV1
@@ -45,6 +45,7 @@ import TrustlessSidechain.EndpointResp
       , InitCandidatePermissionTokenResp
       , InitTokensMintResp
       , InitFuelResp
+      , InitReserveManagementResp
       , CommitteeHandoverResp
       , SaveCheckpointResp
       , InsertVersionResp
@@ -67,9 +68,11 @@ import TrustlessSidechain.EndpointResp
       , BurnNFTsResp
       , InitTokenStatusResp
       , ListVersionedScriptsResp
+      , ReserveResp
       )
   , stringifyEndpointResp
   )
+import TrustlessSidechain.Error (OffchainError(..))
 import TrustlessSidechain.FUELMintingPolicy.V1 as Mint.V1
 import TrustlessSidechain.FUELMintingPolicy.V2 as Mint.V2
 import TrustlessSidechain.FUELProxyPolicy as FUELProxyPolicy
@@ -87,10 +90,21 @@ import TrustlessSidechain.InitSidechain.CandidatePermissionToken
 import TrustlessSidechain.InitSidechain.Checkpoint (initCheckpoint)
 import TrustlessSidechain.InitSidechain.FUEL (initFuel)
 import TrustlessSidechain.InitSidechain.Init (getInitTokenStatus)
+import TrustlessSidechain.InitSidechain.NativeTokenManagement
+  ( initNativeTokenMgmt
+  )
 import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
 import TrustlessSidechain.MerkleRoot (SaveRootParams(SaveRootParams))
 import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.MerkleTree as MerkleTree
+import TrustlessSidechain.NativeTokenManagement.Reserve
+  ( depositToReserve
+  , handover
+  , findOneReserveUtxo
+  , initialiseReserveUtxo
+  , transferToIlliquidCirculationSupply
+  , updateReserveUtxo
+  )
 import TrustlessSidechain.Options.Specs (options)
 import TrustlessSidechain.Options.Types
   ( Options(TxOptions, UtilsOptions, CLIVersion)
@@ -111,6 +125,7 @@ import TrustlessSidechain.Options.Types
       , InitCandidatePermissionToken
       , InitTokensMint
       , InitFuel
+      , InitReserveManagement
       , CommitteeHandover
       , SaveCheckpoint
       , InsertVersion2
@@ -122,6 +137,11 @@ import TrustlessSidechain.Options.Types
       , BurnNFTs
       , InitTokenStatus
       , ListVersionedScripts
+      , CreateReserve
+      , UpdateReserveSettings
+      , DepositReserve
+      , ReleaseReserveFunds
+      , HandoverReserve
       )
   , UtilsEndpoint
       ( EcdsaSecp256k1KeyGenAct
@@ -151,6 +171,7 @@ import TrustlessSidechain.Utils.Transaction
   )
 import TrustlessSidechain.Versioning as Versioning
 import Type.Row (type (+))
+import TrustlessSidechain.Utils.Utxos (plutusScriptFromTxIn)
 
 -- | Main entrypoint for the CTL CLI
 main ∷ Effect Unit
@@ -508,6 +529,13 @@ runTxEndpoint sidechainEndpointParams endpoint =
           , tokensInitTxId: map txHashToByteArray resp.tokensInitTxId
           }
 
+      InitReserveManagement { version } → do
+        resp ← initNativeTokenMgmt scParams atmsKind version
+
+        pure $ InitReserveManagementResp
+          { scriptsInitTxIds: map txHashToByteArray resp.scriptsInitTxIds
+          }
+
       CommitteeHandover
         { merkleRoot
         , previousMerkleRoot
@@ -675,6 +703,47 @@ runTxEndpoint sidechainEndpointParams endpoint =
               { sidechainParams: scParams, atmsKind }
               version
           )
+
+      CreateReserve
+        { mutableReserveSettings
+        , immutableReserveSettings
+        , depositAmount
+        } → do
+        txHash ← initialiseReserveUtxo
+          scParams
+          immutableReserveSettings
+          mutableReserveSettings
+          depositAmount
+        pure $ ReserveResp { transactionHash: txHashToByteArray txHash }
+
+      UpdateReserveSettings { mutableReserveSettings } -> do
+        utxo <- findOneReserveUtxo scParams
+        txHash <- updateReserveUtxo scParams mutableReserveSettings utxo
+        pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
+
+      DepositReserve { asset, depositAmount } -> do
+        txHash <- depositToReserve scParams asset depositAmount
+        pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
+
+      ReleaseReserveFunds
+        { totalAccruedTillNow
+        , transactionInput
+        } -> do
+        utxo <- findOneReserveUtxo scParams
+        plutusScript <- Effect.fromMaybeThrow
+          (NotFoundUtxo "No Reserved UTxO exists for the given asset")
+          (plutusScriptFromTxIn transactionInput)
+        txHash <- transferToIlliquidCirculationSupply
+          scParams
+          totalAccruedTillNow
+          plutusScript
+          utxo
+        pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
+
+      HandoverReserve -> do
+        utxo <- findOneReserveUtxo scParams
+        txHash <- handover scParams utxo
+        pure $ ReserveResp { transactionHash: txHashToByteArray txHash }
 
 -- | Executes an endpoint for the `utils` subcommand. Note that this does _not_
 -- | need to be in the Contract monad.

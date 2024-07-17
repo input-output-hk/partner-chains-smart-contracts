@@ -3,6 +3,7 @@ module TrustlessSidechain.NativeTokenManagement.Reserve
   , reserveAuthPolicy
   , initialiseReserveUtxo
   , findReserveUtxos
+  , findOneReserveUtxo
   , depositToReserve
   , extractReserveDatum
   , updateReserveUtxo
@@ -37,6 +38,7 @@ import Contract.Transaction
   ( ScriptRef(..)
   , TransactionInput
   , TransactionOutput
+  , TransactionHash
   )
 import Contract.TxConstraints (DatumPresence(..), InputWithScriptRef(..))
 import Contract.TxConstraints as TxConstraints
@@ -46,9 +48,8 @@ import JS.BigInt as BigInt
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT, throw)
-import Run.Reader (READER)
-import TrustlessSidechain.Effects.Env (Env, ask)
-import TrustlessSidechain.Effects.Log (LOG)
+import TrustlessSidechain.Effects.Env (ask)
+import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow)
 import TrustlessSidechain.Effects.Wallet (WALLET)
@@ -159,7 +160,7 @@ getReserveScriptRefUtxo sidechainParams =
     sidechainParams
     reserveVersionOracle
 
-getReserveAuthScriptRefUtxo ∷
+getReserveAuthScriptRefUtxo ::
   ∀ r.
   SidechainParams →
   Run
@@ -212,9 +213,7 @@ getIlliquidCirculationSupplyValidator sidechainParams = do
 findReserveUtxos ∷
   ∀ r.
   SidechainParams →
-  Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
-    UtxoMap
+  Run (APP r) UtxoMap
 findReserveUtxos sidechainParams = do
   reserveAuthCurrencySymbol ← getReserveAuthCurrencySymbol sidechainParams
 
@@ -226,11 +225,19 @@ findReserveUtxos sidechainParams = do
     valueOf (Asset reserveAuthCurrencySymbol reserveAuthTokenName)
       (unwrap o).amount
 
+findOneReserveUtxo ∷
+  ∀ r.
+  SidechainParams →
+  Run (APP r) (TransactionInput /\ TransactionOutput)
+findOneReserveUtxo scParams =
+  fromMaybeThrow (NotFoundUtxo "No Reserved UTxO exists for the given asset")
+  $ Map.toUnfoldable
+  <$> findReserveUtxos scParams
+
 reserveAuthLookupsAndConstraints ∷
   ∀ r.
   SidechainParams →
-  Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+  Run (APP r)
     { reserveAuthLookups ∷ Lookups.ScriptLookups
     , reserveAuthConstraints ∷ TxConstraints.TxConstraints
     }
@@ -248,8 +255,7 @@ reserveAuthLookupsAndConstraints sp = do
 illiquidCirculationSupplyLookupsAndConstraints ∷
   ∀ r.
   SidechainParams →
-  Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+  Run (APP r)
     { icsLookups ∷ Lookups.ScriptLookups
     , icsConstraints ∷ TxConstraints.TxConstraints
     }
@@ -267,8 +273,7 @@ illiquidCirculationSupplyLookupsAndConstraints sp = do
 reserveLookupsAndConstraints ∷
   ∀ r.
   SidechainParams →
-  Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+  Run (APP r)
     { reserveLookups ∷ Lookups.ScriptLookups
     , reserveConstraints ∷ TxConstraints.TxConstraints
     }
@@ -286,8 +291,7 @@ reserveLookupsAndConstraints sp = do
 governanceLookupsAndConstraints ∷
   ∀ r.
   SidechainParams →
-  Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + READER Env + r)
+  Run (APP r)
     { governanceLookups ∷ Lookups.ScriptLookups
     , governanceConstraints ∷ TxConstraints.TxConstraints
     }
@@ -325,9 +329,7 @@ initialiseReserveUtxo ∷
   ImmutableReserveSettings →
   MutableReserveSettings →
   BigNum →
-  Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + READER Env + r)
-    Unit
+  Run (APP r) TransactionHash
 initialiseReserveUtxo
   sidechainParams
   immutableSettings
@@ -382,7 +384,7 @@ initialiseReserveUtxo
             DatumInline
             totalValueToPay
 
-    void $ balanceSignAndSubmit
+    balanceSignAndSubmit
       "Reserve initialization transaction"
       { constraints, lookups }
 
@@ -408,16 +410,12 @@ findReserveUtxoForAssetClass ∷
   ∀ r.
   SidechainParams →
   Asset →
-  Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
-    UtxoMap
+  Run (APP r) UtxoMap
 findReserveUtxoForAssetClass sp ac = do
   utxos ← findReserveUtxos sp
-
   let
     extractTokenKind =
       unwrap >>> _.immutableSettings >>> unwrap >>> _.tokenKind
-
   pure $ flip Map.filter utxos $ \txOut →
     flip (maybe false) (extractReserveDatum txOut)
       $ extractTokenKind
@@ -428,9 +426,7 @@ depositToReserve ∷
   SidechainParams →
   Asset →
   BigNum →
-  Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + READER Env + r)
-    Unit
+  Run (APP r) TransactionHash
 depositToReserve sp asset amount = do
   utxo ← fromMaybeThrow (NotFoundUtxo "Reserve UTxO for asset class not found")
     $ (Map.toUnfoldable <$> findReserveUtxoForAssetClass sp asset)
@@ -456,7 +452,8 @@ depositToReserve sp asset amount = do
   let
     value = unwrap >>> _.amount $ snd utxo
 
-  newValue <- fromMaybeThrow
+  newValue <-
+    fromMaybeThrow
       (GenericInternalError "Could not calculate new reserve value")
       $ pure (value `Value.add` singletonFromAsset asset amount)
 
@@ -481,7 +478,7 @@ depositToReserve sp asset amount = do
         <> TxConstraints.mustSpendScriptOutput (fst utxo)
           (RedeemerDatum $ toData $ DepositToReserve { governanceVersion: BigInt.fromInt 1 })
 
-  void $ balanceSignAndSubmit
+  balanceSignAndSubmit
     "Deposit to a reserve utxo"
     { constraints, lookups }
 
@@ -492,9 +489,7 @@ updateReserveUtxo ∷
   SidechainParams →
   MutableReserveSettings →
   (TransactionInput /\ TransactionOutput) →
-  Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + READER Env + r)
-    Unit
+  Run (APP r) TransactionHash
 updateReserveUtxo sp updatedMutableSettings utxo = do
   { governanceLookups
   , governanceConstraints
@@ -542,7 +537,7 @@ updateReserveUtxo sp updatedMutableSettings utxo = do
         <> TxConstraints.mustSpendScriptOutput (fst utxo)
           (RedeemerDatum $ toData $ UpdateReserve { governanceVersion: BigInt.fromInt 1 })
 
-  void $ balanceSignAndSubmit
+  balanceSignAndSubmit
     "Update reserve mutable settings"
     { constraints, lookups }
 
@@ -552,9 +547,7 @@ transferToIlliquidCirculationSupply ∷
   Int → -- total amount of assets paid out until now
   PlutusScript →
   (TransactionInput /\ TransactionOutput) →
-  Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
-    Unit
+  Run (APP r) TransactionHash
 transferToIlliquidCirculationSupply
   sp
   totalAccruedTillNow
@@ -589,13 +582,14 @@ transferToIlliquidCirculationSupply
 
   tokenTotalAmountTransferred <- fromMaybeThrow
     (GenericInternalError "Could not calculate total amount transferred")
-    (unwrap
+    ( unwrap
         >>> _.stats
         >>> unwrap
         >>> _.tokenTotalAmountTransferred
         >>> BigInt.toInt
         >>> pure
-        $ datum)
+        $ datum
+    )
   let
     vFunctionTotalAccruedCurrencySymbol =
       unwrap
@@ -604,16 +598,17 @@ transferToIlliquidCirculationSupply
         >>> _.vFunctionTotalAccrued
         $ datum
 
-  incentiveAmount <- fromMaybeThrow
-    (GenericInternalError "Could not calculate incentive amount")
-    $ pure
-      (unwrap
-        >>> _.mutableSettings
-        >>> unwrap
-        >>> _.incentiveAmount
-        >>> BigInt.toString
-        >>> BigNum.fromString
-        $ datum)
+  incentiveAmount <-
+    fromMaybeThrow
+      (GenericInternalError "Could not calculate incentive amount")
+      $ pure
+        ( unwrap
+           >>> _.mutableSettings
+           >>> unwrap
+           >>> _.incentiveAmount
+           >>> BigInt.toString
+           >>> BigNum.fromString
+           $ datum)
 
   unless
     ( (PlutusScript.hash vFunctionTotalAccruedMintingPolicy) ==
@@ -668,14 +663,14 @@ transferToIlliquidCirculationSupply
         <> TxConstraints.mustSpendScriptOutput (fst utxo)
           (RedeemerDatum $ toData TransferToIlliquidCirculationSupply)
         <> TxConstraints.mustMintValue
-              (Mint.fromMultiAsset $ Value.getMultiAsset vtTokensAsValue)
+          (Mint.fromMultiAsset $ Value.getMultiAsset vtTokensAsValue)
         <> TxConstraints.mustPayToScript
           (PlutusScript.hash illiquidCirculationSupplyValidator)
           PlutusData.unit
           DatumInline
           illiquidCirculationNewValue
 
-  void $ balanceSignAndSubmit
+  balanceSignAndSubmit
     "Transfer to illiquid circulation supply"
     { constraints, lookups }
 
@@ -683,9 +678,7 @@ handover ∷
   ∀ r.
   SidechainParams →
   (TransactionInput /\ TransactionOutput) →
-  Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + READER Env + r)
-    Unit
+  Run (APP r) TransactionHash
 handover
   sp
   utxo = do
@@ -770,6 +763,6 @@ handover
               }
           )
 
-  void $ balanceSignAndSubmit
+  balanceSignAndSubmit
     "Handover to illiquid circulation supply"
     { constraints, lookups }

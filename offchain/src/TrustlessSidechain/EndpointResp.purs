@@ -92,6 +92,9 @@ data EndpointResp
       { scriptsInitTxIds ∷ Array ByteArray
       , tokensInitTxId ∷ Maybe ByteArray
       }
+  | InitReserveManagementResp
+      { scriptsInitTxIds ∷ Array ByteArray
+      }
   | InitResp
       { transactionId ∷ ByteArray
       , initTransactionIds ∷ Array ByteArray
@@ -162,6 +165,7 @@ data EndpointResp
       { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
       , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
       }
+  | ReserveResp { transactionHash ∷ ByteArray }
 
 -- | `serialisePlutusDataToHex` serialises plutus data to CBOR, and shows the
 -- | hex encoded CBOR.
@@ -329,6 +333,16 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
           , "tokensInitTxId" /\ CA.encode
               (CAC.maybe CA.string)
               (map byteArrayToHex tokensInitTxId)
+          ]
+
+    InitReserveManagementResp
+      { scriptsInitTxIds
+      } →
+      J.fromObject $
+        Object.fromFoldable
+          [ "endpoint" /\ J.fromString "InitReserveManagement"
+          , "scriptsInitTxIds" /\ J.fromArray
+              (map (J.fromString <<< byteArrayToHex) scriptsInitTxIds)
           ]
 
     InitResp
@@ -526,6 +540,10 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         , "versionedScripts" /\ toStringifiedNumbersJson
             (encodeAeson $ map show $ versionedScriptIdsWithHashes)
         ]
+
+    ReserveResp { transactionHash } →
+      J.fromObject $ Object.fromFoldable
+        [ "transactionHash" /\ J.fromString (byteArrayToHex transactionHash) ]
 
 -- | Encode the endpoint response to a json object
 encodeEndpointResp ∷ EndpointResp → J.Json

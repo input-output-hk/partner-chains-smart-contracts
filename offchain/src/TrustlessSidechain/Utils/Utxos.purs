@@ -3,6 +3,7 @@ module TrustlessSidechain.Utils.Utxos
   ( findUtxoByValueAt
   , getOwnUTxOsTotalValue
   , getOwnUTxOs
+  , plutusScriptFromTxIn
   ) where
 
 import Contract.Prelude
@@ -27,6 +28,10 @@ import TrustlessSidechain.Utils.Address
   ( getOwnWalletAddress
   )
 import Type.Row (type (+))
+import Cardano.Types.PlutusScript (PlutusScript)
+import TrustlessSidechain.Effects.App (APP)
+import Cardano.Types.ScriptRef (ScriptRef(..))
+import TrustlessSidechain.Effects.Log (logWarn')
 
 -- | `findUtxoAtByValue addr p` finds all utxos at the validator address `addr`
 -- | using `Contract.Utxos.utxosAt`, then looks for the first utxo which satisfies
@@ -34,11 +39,11 @@ import Type.Row (type (+))
 -- |
 -- | Note: this does a linear scan over all utxos at the given address `addr`
 findUtxoByValueAt ∷
-  ∀ r.
-  Address →
-  (Value → Boolean) →
-  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    (Maybe { index ∷ TransactionInput, value ∷ TransactionOutput })
+  ∀ r
+  . Address
+  → (Value → Boolean)
+  → Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
+      (Maybe { index ∷ TransactionInput, value ∷ TransactionOutput })
 findUtxoByValueAt addr p = do
   scriptUtxos ← Effect.utxosAt addr
   let
@@ -58,7 +63,21 @@ getOwnUTxOsTotalValue = do
         )
     $ Map.values ownUtxos
 
-getOwnUTxOs ∷ ∀ r. Run (EXCEPT OffchainError + WALLET + TRANSACTION + r) UtxoMap
+getOwnUTxOs ∷
+  ∀ r. Run (EXCEPT OffchainError + WALLET + TRANSACTION + r) UtxoMap
 getOwnUTxOs = do
   ownAddr ← getOwnWalletAddress
   Effect.utxosAt ownAddr
+
+-- | Retrieve plutusScript from TransactionInput
+plutusScriptFromTxIn ::
+  forall r. TransactionInput ->
+  Run (APP r) (Maybe PlutusScript)
+plutusScriptFromTxIn txIn = do
+  m ← Effect.getUtxo txIn
+  case m of
+    Just (TransactionOutput { scriptRef: Just (PlutusScriptRef plutusScript) }) ->
+      pure $ Just plutusScript
+    _ ->
+      logWarn' "Failed to retrieve PlutusScript from TransactionInput" *>
+        pure Nothing

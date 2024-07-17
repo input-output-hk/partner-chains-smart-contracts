@@ -1,5 +1,6 @@
 module TrustlessSidechain.Options.Parsers
-  ( atmsKind
+  ( assetNameParser
+  , atmsKind
   , bech32AddressParser
   , bech32BytesParser
   , bech32ValidatorHashParser
@@ -10,16 +11,21 @@ module TrustlessSidechain.Options.Parsers
   , combinedMerkleProofParser
   , combinedMerkleProofParserWithPkh
   , committeeSignature
+  , currencySymbolParser
   , denominator
   , ecdsaSecp256k1PrivateKey
   , ecdsaSecp256k1PublicKey
   , epoch
   , governanceAuthority
+  , mkCurrencySymbol
   , numerator
   , parseATMSKind
   , parsePubKeyAndSignature
   , parsePubKeyBytesAndSignatureBytes
   , parseAssetName
+  , parseTokenName
+  , posixTime
+  , positiveAmount
   , registrationSidechainKeys
   , permissionedCandidateKeys
   , permissionedCandidatesCount
@@ -31,7 +37,8 @@ module TrustlessSidechain.Options.Parsers
   , schnorrSecp256k1PrivateKey
   , sidechainAddress
   , sidechainSignature
-  , assetName
+  , tokenAmount
+  , depositAmount
   , transactionInput
   , uint
   , validatorHashParser
@@ -39,30 +46,32 @@ module TrustlessSidechain.Options.Parsers
 
 import Contract.Prelude
 
-import Cardano.AsCbor
-  ( decodeCbor
-  )
+import Cardano.AsCbor (decodeCbor)
 import Cardano.FromData (fromData)
 import Cardano.Plutus.Types.Address (fromCardano)
 import Cardano.Plutus.Types.Credential (Credential(ScriptCredential))
 import Cardano.Serialization.Lib (fromBytes, toBytes)
 import Cardano.Types.Address (Address, fromBech32, fromCsl, toCsl)
 import Cardano.Types.AssetName as AssetName
+import Cardano.Types.BigNum (BigNum, fromBigInt)
 import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash(PaymentPubKeyHash))
 import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Types.TransactionInput (TransactionInput(TransactionInput))
 import Contract.CborBytes (CborBytes, cborBytesFromByteArray, hexToCborBytes)
 import Contract.PlutusData (class FromData)
-import Contract.Value (AssetName)
+import Contract.Value (AssetName, CurrencySymbol, TokenName)
+import Ctl.Internal.Types.Interval (POSIXTime(..))
 import Data.ByteArray (ByteArray)
 import Data.ByteArray as ByteArray
 import Data.Either as Either
+import Data.Maybe (fromJust, isJust)
 import Data.String (Pattern(Pattern), split, stripPrefix)
 import Data.UInt (UInt)
 import Data.UInt as UInt
 import JS.BigInt (BigInt)
 import JS.BigInt as BigInt
 import Options.Applicative (ReadM, eitherReader, maybeReader, readerError)
+import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSKinds
       ( ATMSPlainEcdsaSecp256k1
@@ -82,9 +91,7 @@ import TrustlessSidechain.Utils.Crypto
   , EcdsaSecp256k1Signature
   )
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.SchnorrSecp256k1
-  ( SchnorrSecp256k1PrivateKey
-  )
+import TrustlessSidechain.Utils.SchnorrSecp256k1 (SchnorrSecp256k1PrivateKey)
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
 
 hexToByteArray ∷ String → Maybe ByteArray
@@ -468,5 +475,51 @@ parseAssetName hexStr = do
   AssetName.mkAssetName ba
 
 -- | `assetName` wraps `parseAssetName`.
-assetName ∷ ReadM AssetName
-assetName = maybeReader parseAssetName
+assetNameParser ∷ ReadM AssetName
+assetNameParser = maybeReader parseAssetName
+
+-- | `parseTokenName` is a thin wrapper around `Contract.Value.mkTokenName` for
+-- | converting hex encoded strings to token names
+parseTokenName ∷ String → Maybe (TokenName)
+parseTokenName = parseAssetName
+
+-- | `parseCurrencySymbol` is a thin wrapper around `Contract.Value.mkCurrencySymbol` for
+-- | converting hex encoded strings to token names
+currencySymbolParser ∷ ReadM CurrencySymbol
+currencySymbolParser = validatorHashParser
+
+positiveAmount ∷ String → String → ReadM BigInt
+positiveAmount parseError negativeNumberError = eitherReader
+  ( \str → case BigInt.fromString str of
+      Just i
+        | i >= zero → pure i
+        | otherwise → Left negativeNumberError
+      Nothing → Left parseError
+  )
+
+tokenAmount ∷ ReadM BigNum
+tokenAmount = eitherReader
+  ( \str → case BigInt.fromString str of
+      Just i
+        | i >= zero && isJust (fromBigInt i) → pure
+            $ unsafePartial
+            $ fromJust
+            $ fromBigInt i
+        | otherwise → Left "token-amount amount must be non-negative"
+      Nothing → Left "failed to parse token-amount"
+  )
+
+depositAmount ∷ ReadM BigInt.BigInt
+depositAmount = eitherReader
+  ( \str → case BigInt.fromString str of
+      Just i
+        | i >= zero → pure i
+        | otherwise → Left "deposit-amount amount must be non-negative"
+      Nothing → Left "failed to parse deposit-amount"
+  )
+
+posixTime ∷ ReadM POSIXTime
+posixTime = POSIXTime <$> bigInt
+
+mkCurrencySymbol ∷ String → Maybe CurrencySymbol
+mkCurrencySymbol s = decodeCbor =<< hexToCborBytes s

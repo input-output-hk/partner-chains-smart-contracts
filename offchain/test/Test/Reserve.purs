@@ -5,28 +5,28 @@ module Test.Reserve
 import Contract.Prelude
 
 import Cardano.Serialization.Lib (fromBytes)
-import Cardano.Types.AssetClass (AssetClass(AssetClass))
 import Cardano.Types.Asset (Asset(AdaAsset), fromAssetClass)
+import Cardano.Types.AssetClass (AssetClass(AssetClass))
+import Cardano.Types.BigNum (BigNum)
+import Cardano.Types.BigNum as BigNum
+import Cardano.Types.Int as Int
+import Cardano.Types.Mint as Mint
+import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Types.PaymentPubKeyHash(PaymentPubKeyHash)
+import Cardano.Types.Value (getCoin, valueOf)
+import Cardano.Types.Value as Value
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
-import Cardano.Types.BigNum as BigNum
-import Cardano.Types.BigNum (BigNum)
-import Cardano.Types.Mint as Mint
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction (TransactionOutput)
 import Contract.TxConstraints as TxConstraints
-import Cardano.Types.Value as Value
-import Cardano.Types.Value (valueOf, getCoin)
 import Contract.Wallet as Wallet
-import Cardano.Types.PlutusScript as PlutusScript
 import Control.Monad.Error.Class (throwError)
 import Data.Array as Array
-import JS.BigInt as BigInt
-import Cardano.Types.Int as Int
 import Data.Map as Map
 import Effect.Exception (error)
+import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe (unsafePartial)
 import Run (EFFECT, Run)
@@ -63,9 +63,9 @@ import TrustlessSidechain.NativeTokenManagement.Types
   ( ImmutableReserveSettings(..)
   , MutableReserveSettings(..)
   )
-import TrustlessSidechain.Utils.Asset (emptyAssetName)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
+import TrustlessSidechain.Utils.Asset (emptyAssetName)
 import TrustlessSidechain.Utils.Crypto
   ( aggregateKeys
   , generatePrivKey
@@ -74,7 +74,7 @@ import TrustlessSidechain.Utils.Crypto
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import Type.Row (type (+))
 
-invalidScriptHash :: ScriptHash
+invalidScriptHash ∷ ScriptHash
 invalidScriptHash =
   wrap $ unsafePartial $ fromJust $ fromBytes $ hexToByteArrayUnsafe
     "00000000000000000000000000000000000000000000000000000000"
@@ -98,8 +98,10 @@ tests = plutipGroup "Reserve" $ do
   testScenario8
 
 totalAssets ∷ ∀ f. Foldable f ⇒ f (TransactionOutput) → Value.Value
-totalAssets assets = unsafePartial $ fromJust $ Value.sum $ map
-  (unwrap >>> _.amount) $ Array.fromFoldable assets
+totalAssets assets = unsafePartial $ fromJust $ Value.sum
+  $ map
+      (unwrap >>> _.amount)
+  $ Array.fromFoldable assets
 
 invalidMutableSettings ∷ MutableReserveSettings
 invalidMutableSettings = MutableReserveSettings
@@ -184,7 +186,7 @@ testScenario1 =
 
           sidechainParams ← dummyInitialiseSidechain pkh
 
-          initialiseReserveUtxo
+          void $ initialiseReserveUtxo
             sidechainParams
             immutableAdaSettings
             invalidMutableSettings
@@ -218,7 +220,7 @@ testScenario2 =
               , tokenKind: fromAssetClass tokenKind
               }
 
-          initialiseReserveUtxo
+          void $ initialiseReserveUtxo
             sidechainParams
             immutableSettings
             invalidMutableSettings
@@ -257,13 +259,13 @@ testScenario3 =
               , tokenKind: fromAssetClass tokenKind
               }
 
-          initialiseReserveUtxo
+          void $ initialiseReserveUtxo
             sidechainParams
             immutableSettings
             invalidMutableSettings
             (BigNum.fromInt initialAmountOfNonAdaTokens)
 
-          depositToReserve
+          void $ depositToReserve
             sidechainParams
             (fromAssetClass tokenKind)
             (BigNum.fromInt depositAmountOfNonAdaTokens)
@@ -292,7 +294,7 @@ testScenario4 =
 
           sidechainParams ← dummyInitialiseSidechain pkh
 
-          initialiseReserveUtxo
+          void $ initialiseReserveUtxo
             sidechainParams
             immutableAdaSettings
             invalidMutableSettings
@@ -305,13 +307,14 @@ testScenario4 =
           let
             updatedMutableSettings = MutableReserveSettings
               { vFunctionTotalAccrued:
-                  wrap $ unsafePartial $ fromJust $ fromBytes $
-                    hexToByteArrayUnsafe $
+                  wrap $ unsafePartial $ fromJust $ fromBytes
+                    $ hexToByteArrayUnsafe
+                    $
                       "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
               , incentiveAmount: BigInt.fromInt 20
               }
 
-          updateReserveUtxo
+          void $ updateReserveUtxo
             sidechainParams
             updatedMutableSettings
             utxoBefore
@@ -366,7 +369,7 @@ testScenario5 =
               , tokenKind: fromAssetClass tokenKind
               }
 
-          initialiseReserveUtxo
+          void $ initialiseReserveUtxo
             sidechainParams
             immutableSettings
             mutableSettings
@@ -376,18 +379,17 @@ testScenario5 =
             $ Map.toUnfoldable
             <$> findReserveUtxos sidechainParams
 
-          transferToIlliquidCirculationSupply
+          void $ transferToIlliquidCirculationSupply
             sidechainParams
             numOfTransferTokens
             fakeVt
             utxo
 
-          let amountOfReserveTokens t = valueOf (fromAssetClass tokenKind) t
-
           reserveAfterTransfer ← totalAssets <$> findReserveUtxos sidechainParams
           icsAfterTransfer ← map totalAssets $ findIlliquidCirculationSupplyUtxos
             sidechainParams
 
+          let amountOfReserveTokens t = valueOf (fromAssetClass tokenKind) t
           unless
             ( amountOfReserveTokens reserveAfterTransfer ==
                 BigNum.fromInt (numOfNonAdaTokens - numOfTransferTokens)
@@ -432,17 +434,17 @@ testScenario8 =
               , incentiveAmount
               }
 
-          initialiseReserveUtxo
-            sidechainParams
-            immutableAdaSettings
-            mutableSettings
-            (BigNum.fromInt numOfAda)
+          void $ initialiseReserveUtxo
+           sidechainParams
+           immutableAdaSettings
+           mutableSettings
+           (BigNum.fromInt numOfAda)
 
           utxo ← Test.Utils.fromMaybeTestError "Utxo after initialization not found"
             $ Map.toUnfoldable
             <$> findReserveUtxos sidechainParams
 
-          transferToIlliquidCirculationSupply
+          void $ transferToIlliquidCirculationSupply
             sidechainParams
             numOfTransferred
             fakeVt
@@ -492,7 +494,7 @@ testScenario6 =
               , tokenKind: fromAssetClass tokenKind
               }
 
-          initialiseReserveUtxo
+          void $ initialiseReserveUtxo
             sidechainParams
             immutableSettings
             invalidMutableSettings
@@ -502,7 +504,7 @@ testScenario6 =
             $ Map.toUnfoldable
             <$> findReserveUtxos sidechainParams
 
-          handover
+          void $ handover
             sidechainParams
             utxo
 
@@ -535,7 +537,7 @@ testScenario7 =
 
           let numOfAda = 3_000_000
 
-          initialiseReserveUtxo
+          void $ initialiseReserveUtxo
             sidechainParams
             immutableAdaSettings
             invalidMutableSettings
@@ -545,7 +547,7 @@ testScenario7 =
             $ Map.toUnfoldable
             <$> findReserveUtxos sidechainParams
 
-          handover
+          void $ handover
             sidechainParams
             utxo
 
