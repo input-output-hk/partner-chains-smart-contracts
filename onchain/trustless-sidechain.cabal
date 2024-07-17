@@ -12,7 +12,6 @@ maintainer:         TODO
 copyright:          TODO
 category:           TODO
 build-type:         Simple
-tested-with:        GHC ==8.10.7
 extra-source-files: README.md
 
 source-repository head
@@ -26,8 +25,9 @@ common common-lang
     -Wall -Wcompat -Wincomplete-record-updates
     -Wincomplete-uni-patterns -Wredundant-constraints -Werror
     -fexpose-all-unfoldings
+    -fplugin-opt PlutusTx.Plugin:target-version=1.0.0
 
-  build-depends:      base ^>=4.14
+  build-depends:      base
   default-extensions:
     NoStarIsType
     BangPatterns
@@ -57,6 +57,7 @@ common common-lang
     StandaloneDeriving
     TupleSections
     TypeApplications
+    ViewPatterns
 
   default-language:   Haskell2010
 
@@ -111,11 +112,11 @@ library
     TrustlessSidechain.Versioning
 
   build-depends:
-    , aeson                        ^>=1.5.0.0
+    , aeson                        >=1.5.0.0
     , attoparsec
     , base16-bytestring
     , bech32
-    , bytestring                   ^>=0.10.12.0
+    , bytestring                   >=0.10.12.0
     , cardano-addresses
     , cardano-api
     , cardano-binary
@@ -126,7 +127,6 @@ library
     , deepseq
     , either
     , lens
-    , plutonomy
     , plutus-core
     , plutus-ledger-api
     , plutus-shim-prelude
@@ -152,11 +152,11 @@ library onchain-poc
     TrustlessSidechain.PoCSerialiseData
 
   build-depends:
-    , aeson                        ^>=1.5.0.0
+    , aeson                        >=1.5.0.0
     , attoparsec
     , base16-bytestring
     , bech32
-    , bytestring                   ^>=0.10.12.0
+    , bytestring                   >=0.10.12.0
     , cardano-addresses
     , cardano-api
     , cardano-binary
@@ -167,7 +167,6 @@ library onchain-poc
     , deepseq
     , either
     , lens
-    , plutonomy
     , plutus-core
     , plutus-ledger-api
     , plutus-shim-prelude
@@ -259,7 +258,6 @@ executable trustless-sidechain-serialise
     , cardano-api
     , filepath
     , onchain-poc
-    , plutonomy
     , plutus-ledger-api
     , text
     , trustless-sidechain
@@ -331,7 +329,7 @@ test-suite script-size
     Sizer
 
   build-depends:
-    , plutonomy
+    , bytestring
     , plutus-core
     , plutus-ledger-api
     , plutus-shim-prelude

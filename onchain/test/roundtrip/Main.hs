@@ -6,13 +6,15 @@ import Crypto.Secp256k1 qualified as SECP
 import Data.Bits (unsafeShiftL)
 import GHC.Exts (fromList)
 import Laws (toDataSafeLaws', toDataUnsafeLaws')
-import Plutus.V1.Ledger.Value (AssetClass (AssetClass))
-import Plutus.V2.Ledger.Api (
+
+import PlutusLedgerApi.V1.Value (AssetClass (AssetClass))
+import PlutusLedgerApi.V2 (
   CurrencySymbol,
   LedgerBytes (LedgerBytes),
   POSIXTime (POSIXTime),
-  ValidatorHash,
+  ScriptHash,
  )
+import System.IO.Unsafe (unsafePerformIO)
 import Test.QuickCheck (
   Arbitrary (arbitrary, shrink),
   Gen,
@@ -36,7 +38,7 @@ import Test.QuickCheck.Extra (
   ArbitraryPubKeyHash (ArbitraryPubKeyHash),
   ArbitraryTokenName (ArbitraryTokenName),
   ArbitraryTxOutRef (ArbitraryTxOutRef),
-  ArbitraryValidatorHash (ArbitraryValidatorHash),
+  ArbitraryScriptHash (ArbitraryScriptHash),
   DA,
  )
 import Test.Tasty (adjustOption, defaultMain, testGroup)
@@ -299,9 +301,9 @@ genIb = Ib <$> arbitrary
 genDsKeyMint :: Gen DsKeyMint
 genDsKeyMint = DsKeyMint <$> go <*> go2
   where
-    go :: Gen ValidatorHash
+    go :: Gen ScriptHash
     go = do
-      ArbitraryValidatorHash vh <- arbitrary
+      ArbitraryScriptHash vh <- arbitrary
       pure vh
     go2 :: Gen CurrencySymbol
     go2 = do
@@ -436,7 +438,7 @@ genUCHM = do
   nacpk <- arbitrary
   pmr <- genPMR
   NonNegative se <- arbitrary
-  ArbitraryValidatorHash vh <- arbitrary
+  ArbitraryScriptHash vh <- arbitrary
   pure . UpdateCommitteeHashMessage sp nacpk pmr se $ vh
 
 genAPAPK :: Gen ATMSPlainAggregatePubKey
@@ -555,6 +557,11 @@ genBPR = do
       auraKey
       grandpaKey
 
+-- | A local context.
+{-# NOINLINE ctx #-}
+ctx :: SECP.Ctx
+ctx = unsafePerformIO SECP.createContext
+
 genPK :: Gen EcdsaSecp256k1PubKey
 genPK = do
   seed <- fromList @ByteString <$> vectorOf 32 arbitrary
@@ -564,8 +571,8 @@ genPK = do
         . EcdsaSecp256k1PubKey
         . LedgerBytes
         . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
-        . SECP.exportPubKey True
-        . SECP.derivePubKey
+        . SECP.exportPubKey ctx True
+        . SECP.derivePubKey ctx
         $ privKey
     Nothing -> genPK -- we assume this isn't gonna happen too often
 
@@ -623,7 +630,7 @@ shrinkIb (Ib x) = Ib <$> shrink x
 
 shrinkDsKeyMint :: DsKeyMint -> [DsKeyMint]
 shrinkDsKeyMint (DsKeyMint vh cs) = do
-  ArbitraryValidatorHash vh' <- shrink (ArbitraryValidatorHash vh)
+  ArbitraryScriptHash vh' <- shrink (ArbitraryScriptHash vh)
   ArbitraryCurrencySymbol cs' <- shrink (ArbitraryCurrencySymbol cs)
   pure . DsKeyMint vh' $ cs'
 
@@ -731,7 +738,7 @@ shrinkUCHM (UpdateCommitteeHashMessage {..}) = do
   nacpk' <- shrink newAggregateCommitteePubKeys
   pmr' <- shrinkPMR previousMerkleRoot
   NonNegative se' <- shrink (NonNegative sidechainEpoch)
-  ArbitraryValidatorHash vh' <- shrink (ArbitraryValidatorHash validatorHash)
+  ArbitraryScriptHash vh' <- shrink (ArbitraryScriptHash validatorHash)
   pure . UpdateCommitteeHashMessage sp' nacpk' pmr' se' $ vh'
 
 shrinkAPAPK ::

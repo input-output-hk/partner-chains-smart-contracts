@@ -9,10 +9,10 @@ module TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy (
   serialisableMintingPolicy,
 ) where
 
-import Plutus.V2.Ledger.Api (
-  Script,
-  fromCompiledCode,
- )
+import PlutusLedgerApi.Common (
+  SerialisedScript,
+  serialiseCompiledCode
+  )
 import PlutusTx qualified
 import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CommitteePlainATMSPolicy
 import TrustlessSidechain.PlutusPrelude
@@ -42,5 +42,5 @@ mkMintingPolicyUntyped ccm versionOracleConfig redeemer ctx =
       (unsafeFromBuiltinData redeemer)
       (Unsafe.wrap ctx)
 
-serialisableMintingPolicy :: Script
-serialisableMintingPolicy = fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
+serialisableMintingPolicy :: SerialisedScript
+serialisableMintingPolicy = serialiseCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])

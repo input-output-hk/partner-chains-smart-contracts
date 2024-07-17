@@ -44,16 +44,16 @@ module TrustlessSidechain.Types (
   IlliquidCirculationSupplyRedeemer (..),
 ) where
 
-import Plutus.V1.Ledger.Crypto (PubKeyHash)
-import Plutus.V1.Ledger.Value (AssetClass)
-import Plutus.V2.Ledger.Api (
+import PlutusLedgerApi.V1.Crypto (PubKeyHash)
+import PlutusLedgerApi.V1.Value (AssetClass)
+import PlutusLedgerApi.V2 (
   BuiltinData (BuiltinData),
   CurrencySymbol,
   LedgerBytes (LedgerBytes),
   POSIXTime,
+  ScriptHash,
   TokenName,
   TxOutRef,
-  ValidatorHash,
  )
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
@@ -486,7 +486,7 @@ data UpdateCommitteeHashMessage aggregatePubKeys = UpdateCommitteeHashMessage
   , previousMerkleRoot :: Maybe LedgerBytes
   , sidechainEpoch :: Integer
   , -- | @since v5.0.0
-    validatorHash :: ValidatorHash
+    validatorHash :: ScriptHash
   }
   deriving stock
     ( -- | @since v4.0.0

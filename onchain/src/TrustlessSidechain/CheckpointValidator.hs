@@ -14,15 +14,15 @@ module TrustlessSidechain.CheckpointValidator (
   serialisableCheckpointValidator,
 ) where
 
-import Plutus.V1.Ledger.Value qualified as Value
-import Plutus.V2.Ledger.Api (
+import PlutusLedgerApi.Common (SerialisedScript)
+import PlutusLedgerApi.V1.Value qualified as Value
+import PlutusLedgerApi.V2 (
   CurrencySymbol,
   Datum (getDatum),
   OutputDatum (OutputDatum),
-  Script,
   TokenName (TokenName),
   Value (getValue),
-  fromCompiledCode,
+  serialiseCompiledCode,
  )
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
@@ -221,9 +221,9 @@ mkCheckpointPolicyUntyped itac red ctx =
       (PlutusTx.unsafeFromBuiltinData red)
       (Unsafe.ScriptContext ctx)
 
-serialisableCheckpointPolicy :: Script
+serialisableCheckpointPolicy :: SerialisedScript
 serialisableCheckpointPolicy =
-  fromCompiledCode $$(PlutusTx.compile [||mkCheckpointPolicyUntyped||])
+  serialiseCompiledCode $$(PlutusTx.compile [||mkCheckpointPolicyUntyped||])
 
 mkCheckpointValidatorUntyped ::
   BuiltinData ->
@@ -241,6 +241,6 @@ mkCheckpointValidatorUntyped checkpointParam versioningConfig datum red ctx =
       red
       (Unsafe.ScriptContext ctx)
 
-serialisableCheckpointValidator :: Script
+serialisableCheckpointValidator :: SerialisedScript
 serialisableCheckpointValidator =
-  fromCompiledCode $$(PlutusTx.compile [||mkCheckpointValidatorUntyped||])
+  serialiseCompiledCode $$(PlutusTx.compile [||mkCheckpointValidatorUntyped||])

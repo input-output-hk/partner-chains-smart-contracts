@@ -43,11 +43,22 @@ import Cardano.Crypto.DSIGN.Class (
   rawSerialiseVerKeyDSIGN,
   signDSIGN,
  )
+import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
+import Cardano.Crypto.Hash.Class (digest)
 import Codec.Binary.Bech32 (DataPart, HumanReadablePart)
 import Codec.Binary.Bech32 qualified as Bech32
 import Crypto.Random qualified as Random
 import Crypto.Secp256k1 qualified as SECP
-import Crypto.Secp256k1.Internal qualified as SECP.Internal
+import Crypto.Secp256k1.Internal.BaseOps qualified as SECP.Internal (
+  ecSecKeyVerify,
+ )
+import Crypto.Secp256k1.Internal.Context qualified as SECP.Internal (
+  contextCreate,
+  signVerify,
+ )
+import Crypto.Secp256k1.Internal.Util qualified as SECP.Internal (
+  useByteString,
+ )
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Types qualified as Aeson.Types
@@ -55,13 +66,12 @@ import Data.Bifunctor qualified as Bifunctor
 import Data.ByteString qualified as ByteString
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as ByteString.Char8
-import Data.ByteString.Hash (blake2b_256)
 import Data.String qualified as HString
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text
 import GHC.Err (undefined)
-import Plutus.V1.Ledger.Bytes qualified as Plutus
-import Plutus.V2.Ledger.Api (
+import PlutusLedgerApi.V1.Bytes qualified as Plutus
+import PlutusLedgerApi.V2 (
   BuiltinByteString,
   LedgerBytes (LedgerBytes),
   ToData (toBuiltinData),
@@ -70,6 +80,7 @@ import Plutus.V2.Ledger.Api (
  )
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Builtins.Internal qualified as Builtins.Internal
+import System.IO.Unsafe (unsafePerformIO)
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree)
 import TrustlessSidechain.Types (
@@ -224,7 +235,7 @@ strToSecpPubKey raw = do
     Bifunctor.first ("Invalid sidechain public key hex: " <>)
       . Base16.decode
       $ raw
-  maybe (Left "Unable to parse sidechain public key") Right $ SECP.importPubKey decoded
+  maybe (Left "Unable to parse sidechain public key") Right $ SECP.importPubKey ctx decoded
 
 -- * Generating a private sidechain key
 
@@ -252,18 +263,24 @@ strToSecpPubKey raw = do
 --
 -- TODO: might be a good idea to put this in a newtype wrapper...
 generateRandomSecpPrivKey :: IO SECP.SecKey
-generateRandomSecpPrivKey =
+generateRandomSecpPrivKey = do
+  ctxPtr <- SECP.Internal.contextCreate SECP.Internal.signVerify
   let go = do
         bs <- Random.getRandomBytes 32
         ret <- SECP.Internal.useByteString bs $ \(ptr, _len) ->
-          SECP.Internal.ecSecKeyVerify SECP.Internal.ctx ptr
+          SECP.Internal.ecSecKeyVerify ctxPtr ptr
         -- Returns 1 in the case that this is valid, see the FFI
         -- call
         -- [here](https://github.com/bitcoin-core/secp256k1/blob/44c2452fd387f7ca604ab42d73746e7d3a44d8a2/include/secp256k1.h#L608)
         case SECP.secKey bs of
           Just bs' | ret == 1 -> pure bs'
           _ -> go
-   in go
+  go
+
+-- | A local context.
+{-# NOINLINE ctx #-}
+ctx :: SECP.Ctx
+ctx = unsafePerformIO SECP.createContext
 
 -- * Signing a message
 
@@ -284,7 +301,7 @@ signWithSPOKey skey msg =
 -- representation, seralises to cbor, then takes the @blake2b_256@ hash.
 -- Finally, this signs the hash with the given SECP256K1 key
 signWithSidechainKey ::
-  ToData a =>
+  (ToData a) =>
   SECP.SecKey ->
   a ->
   Signature
@@ -292,12 +309,18 @@ signWithSidechainKey skey msg =
   let serialised = Builtins.serialiseData $ toBuiltinData msg
       hashedMsg = blake2b_256 $ Builtins.fromBuiltin serialised
       ecdsaMsg = fromMaybe undefined $ SECP.msg hashedMsg
+      blake2b_256 :: ByteString.ByteString -> ByteString.ByteString
+      blake2b_256 = digest (Proxy @Blake2b_256)
    in Signature
         . LedgerBytes
         . Builtins.toBuiltin
-        . SECP.getCompactSig
-        . SECP.exportCompactSig
-        $ SECP.signMsg skey ecdsaMsg
+        . getCompactSig
+        . SECP.exportCompactSig ctx
+        $ SECP.signMsg ctx skey ecdsaMsg
+
+-- | Unwrap 'CompactSig' newtype.
+getCompactSig :: SECP.CompactSig -> ByteString
+getCompactSig (SECP.CompactSig sig) = sig
 
 -- * Show functions
 
@@ -313,7 +336,7 @@ encodeHexBuiltinBS = Base16.encode . Builtins.fromBuiltin
 
 -- | Serailises a 'SECP.SecKey' private key by hex encoding it
 encodeHexSecpPrivKey :: SECP.SecKey -> ByteString
-encodeHexSecpPrivKey = Base16.encode . SECP.getSecKey
+encodeHexSecpPrivKey (SECP.SecKey k) = Base16.encode k
 
 -- | Serialise a sidechain public key and signature into
 -- > PUBKEY:SIG
@@ -383,11 +406,11 @@ vKeyToSpoPubKey =
 toSidechainPubKey :: SECP.SecKey -> EcdsaSecp256k1PubKey
 toSidechainPubKey =
   secpPubKeyToSidechainPubKey
-    . SECP.derivePubKey
+    . SECP.derivePubKey ctx
 
 -- | Converts a 'SECP.PubKey' to a 'SidechainPubKey'
 secpPubKeyToSidechainPubKey :: SECP.PubKey -> EcdsaSecp256k1PubKey
-secpPubKeyToSidechainPubKey = EcdsaSecp256k1PubKey . LedgerBytes . Builtins.toBuiltin . SECP.exportPubKey True
+secpPubKeyToSidechainPubKey = EcdsaSecp256k1PubKey . LedgerBytes . Builtins.toBuiltin . SECP.exportPubKey ctx True
 
 -- * ATMS offchain types
 
