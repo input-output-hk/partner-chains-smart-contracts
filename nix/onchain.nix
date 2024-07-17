@@ -18,7 +18,7 @@
 
     src = lib.cleanSource ../onchain;
 
-    compiler-nix-name = "ghc8107";
+    compiler-nix-name = "ghc96";
 
     flake.variants.profiled.modules = [
       {
