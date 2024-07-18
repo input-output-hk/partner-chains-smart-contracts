@@ -132,9 +132,8 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} atmsKind cliCommand =
         , ["--threshold-denominator", bytesFromShow thresholdDenominator]
         , ["--atms-kind", OffChain.showATMSKind atmsKind]
         ]
-   in ByteString.Char8.intercalate " \\\n"
-        $ fmap ByteString.Char8.unwords
-        $ case cliCommand of
+   in ByteString.Char8.intercalate " \\\n" $
+      fmap ByteString.Char8.unwords $ case cliCommand of
           InitSidechainCommand {..} ->
             -- note: this will look similar to the UpdateCommitteeHashCommand
             -- case
