@@ -10,21 +10,21 @@ module TrustlessSidechain.MerkleRootTokenMintingPolicy (
   serialisableMintingPolicy,
 ) where
 
-import Plutus.V1.Ledger.Value qualified as Value
-import Plutus.V2.Ledger.Api (
+import PlutusLedgerApi.Common (SerialisedScript)
+import PlutusLedgerApi.V1.Value qualified as Value
+import PlutusLedgerApi.V2 (
   CurrencySymbol,
   LedgerBytes (LedgerBytes, getLedgerBytes),
-  Script,
   ScriptContext,
   TokenName (TokenName, unTokenName),
   TxInInfo (txInInfoResolved),
   TxInfo (txInfoMint, txInfoOutputs, txInfoReferenceInputs),
   TxOut (txOutAddress, txOutValue),
   Value (getValue),
-  fromCompiledCode,
   scriptContextTxInfo,
+  serialiseCompiledCode,
  )
-import Plutus.V2.Ledger.Contexts qualified as Contexts
+import PlutusLedgerApi.V2.Contexts qualified as Contexts
 import PlutusTx (compile)
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
@@ -144,38 +144,39 @@ mkMintingPolicy
           -- this currency symbol
           [(tn, amount)]
             | amount == 1 ->
-              let msg =
-                    MerkleRootInsertionMessage
-                      { sidechainParams = sp
-                      , merkleRoot = LedgerBytes $ unTokenName tn
-                      , previousMerkleRoot = get @"previousMerkleRoot" smrr
-                      }
-               in traceIfFalse
-                    "ERROR-MERKLE-ROOT-POLICY-03"
-                    ( Value.valueOf
-                        minted
-                        committeeCertificateVerificationPolicy
-                        (TokenName (getLedgerBytes (serialiseMrimHash msg)))
-                        > 0
-                    )
-                    && traceIfFalse
-                      "ERROR-MERKLE-ROOT-POLICY-04"
-                      ( let go [] = False
-                            go (txOut : txOuts) =
-                              ( ( txOutAddress txOut == merkleRootTokenValidatorAddress
-                                    && Value.valueOf (txOutValue txOut) ownCurrencySymbol tn
-                                    > 0
-                                )
-                                  || go txOuts
-                              )
-                         in go $ txInfoOutputs info
+                let msg =
+                      MerkleRootInsertionMessage
+                        { sidechainParams = sp
+                        , merkleRoot = LedgerBytes $ unTokenName tn
+                        , previousMerkleRoot = get @"previousMerkleRoot" smrr
+                        }
+                 in traceIfFalse
+                      "ERROR-MERKLE-ROOT-POLICY-03"
+                      ( Value.valueOf
+                          minted
+                          committeeCertificateVerificationPolicy
+                          (TokenName (getLedgerBytes (serialiseMrimHash msg)))
+                          > 0
                       )
+                      && traceIfFalse
+                        "ERROR-MERKLE-ROOT-POLICY-04"
+                        ( let go [] = False
+                              go (txOut : txOuts) =
+                                ( ( txOutAddress txOut
+                                      == merkleRootTokenValidatorAddress
+                                      && Value.valueOf (txOutValue txOut) ownCurrencySymbol tn
+                                      > 0
+                                  )
+                                    || go txOuts
+                                )
+                           in go $ txInfoOutputs info
+                        )
           _ -> False
 
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkMintingPolicyUntyped sp versioningConfig =
   mkUntypedMintingPolicy $ mkMintingPolicy (IsData.unsafeFromBuiltinData sp) (IsData.unsafeFromBuiltinData versioningConfig)
 
-serialisableMintingPolicy :: Script
+serialisableMintingPolicy :: SerialisedScript
 serialisableMintingPolicy =
-  fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
+  serialiseCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])

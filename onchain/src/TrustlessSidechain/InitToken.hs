@@ -5,10 +5,9 @@ module TrustlessSidechain.InitToken (
   serialisableInitTokenPolicy,
 ) where
 
-import Plutus.V2.Ledger.Api (
-  Script,
-  Value (getValue),
-  fromCompiledCode,
+import PlutusLedgerApi.Common (SerialisedScript, serialiseCompiledCode)
+import PlutusLedgerApi.V2 (
+  getValue,
  )
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
@@ -40,7 +39,7 @@ mkInitTokenPolicy ::
   Bool
 mkInitTokenPolicy sp MintInitToken ctx
   | isJust . Unsafe.getMinting . Unsafe.scriptContextPurpose $ ctx =
-    traceIfFalse "ERROR-INIT-TOKENS-01" isGenesisUtxoUsed
+      traceIfFalse "ERROR-INIT-TOKENS-01" isGenesisUtxoUsed
   where
     -- Ensure that the genesis UTxO is used by the transaction.
     isGenesisUtxoUsed :: Bool
@@ -48,7 +47,8 @@ mkInitTokenPolicy sp MintInitToken ctx
       Unsafe.genesisUtxo sp `elem` map Unsafe.txInInfoOutRef (Unsafe.txInfoInputs $ Unsafe.scriptContextTxInfo ctx)
 mkInitTokenPolicy _ BurnInitToken ctx
   | Just cs <- Unsafe.decode <$> (Unsafe.getMinting . Unsafe.scriptContextPurpose $ ctx) =
-    let -- What this transaction mints
+      let
+        -- What this transaction mints
         mintedValue = getValue (Unsafe.decode . Unsafe.txInfoMint . Unsafe.scriptContextTxInfo $ ctx)
 
         -- Amounts of own tokens minted/burned by transaction
@@ -64,7 +64,8 @@ mkInitTokenPolicy _ BurnInitToken ctx
         allBurned :: [Integer] -> Bool
         allBurned [] = True
         allBurned (x : xs) = x < 0 || allBurned xs
-     in traceIfFalse "ERROR-INIT-TOKENS-02" (allBurned ownMintedAmounts)
+       in
+        traceIfFalse "ERROR-INIT-TOKENS-02" (allBurned ownMintedAmounts)
 mkInitTokenPolicy _ _ _ =
   traceError "ERROR-INIT-TOKENS-03"
 
@@ -74,12 +75,12 @@ mkInitTokenPolicyUntyped ::
   BuiltinData ->
   ()
 mkInitTokenPolicyUntyped sp red ctx =
-  check $
-    mkInitTokenPolicy
+  check
+    $ mkInitTokenPolicy
       (Unsafe.wrap sp)
       (PlutusTx.unsafeFromBuiltinData red)
       (Unsafe.wrap ctx)
 
-serialisableInitTokenPolicy :: Script
+serialisableInitTokenPolicy :: SerialisedScript
 serialisableInitTokenPolicy =
-  fromCompiledCode $$(PlutusTx.compile [||mkInitTokenPolicyUntyped||])
+  serialiseCompiledCode $$(PlutusTx.compile [||mkInitTokenPolicyUntyped||])

@@ -21,14 +21,13 @@ module TrustlessSidechain.PoCReferenceScript (
   serialisablePoCReferenceScriptValidator,
 ) where
 
-import Plutus.V2.Ledger.Api (
-  Script,
+import PlutusLedgerApi.Common (SerialisedScript, serialiseCompiledCode)
+import PlutusLedgerApi.V2 (
   ScriptContext (scriptContextTxInfo),
   ScriptHash,
   TxInInfo (txInInfoResolved),
   TxInfo (txInfoInputs),
   TxOut (txOutReferenceScript),
-  fromCompiledCode,
  )
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
@@ -49,8 +48,10 @@ mkPoCToReferenceScriptValidatorUntyped = mkUntypedValidator mkPoCToReferenceScri
 
 -- | 'serialisablePoCToReferenceScriptValidator' is a serialisable untyped script of
 -- 'mkPoCToReferenceScriptValidator'
-serialisablePoCToReferenceScriptValidator :: Script
-serialisablePoCToReferenceScriptValidator = fromCompiledCode $$(PlutusTx.compile [||mkPoCToReferenceScriptValidatorUntyped||])
+serialisablePoCToReferenceScriptValidator :: SerialisedScript
+serialisablePoCToReferenceScriptValidator =
+  serialiseCompiledCode
+    $$(PlutusTx.compile [||mkPoCToReferenceScriptValidatorUntyped||])
 
 -- * Reference
 
@@ -59,9 +60,9 @@ serialisablePoCToReferenceScriptValidator = fromCompiledCode $$(PlutusTx.compile
 -- given 'Address''s witness datum is the redeemer.
 mkPoCReferenceScriptValidator :: () -> ScriptHash -> ScriptContext -> Bool
 mkPoCReferenceScriptValidator _dat red ctx =
-  traceIfFalse "error 'mkPoCReferenceScriptValidator': no tx with given reference script's script hash" $
-    any (\txin -> txOutReferenceScript (txInInfoResolved txin) == Just red) $
-      txInfoInputs info
+  traceIfFalse "error 'mkPoCReferenceScriptValidator': no tx with given reference script's script hash"
+    $ any (\txin -> txOutReferenceScript (txInInfoResolved txin) == Just red)
+    $ txInfoInputs info
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
@@ -72,5 +73,7 @@ mkPoCReferenceScriptValidatorUntyped = mkUntypedValidator mkPoCReferenceScriptVa
 
 -- | 'serialisablePoCReferenceScriptValidator' is a serialisable untyped script of
 -- 'mkPoCReferenceScriptValidator'
-serialisablePoCReferenceScriptValidator :: Script
-serialisablePoCReferenceScriptValidator = fromCompiledCode $$(PlutusTx.compile [||mkPoCReferenceScriptValidatorUntyped||])
+serialisablePoCReferenceScriptValidator :: SerialisedScript
+serialisablePoCReferenceScriptValidator =
+  serialiseCompiledCode
+    $$(PlutusTx.compile [||mkPoCReferenceScriptValidatorUntyped||])

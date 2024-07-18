@@ -57,13 +57,13 @@ import Options.Applicative (
   subparser,
  )
 import Options.Applicative qualified as OptParse
-import Plutus.V2.Ledger.Api (
+import PlutusLedgerApi.V2 (
   FromData (fromBuiltinData),
   LedgerBytes (LedgerBytes),
   PubKeyHash (PubKeyHash),
+  ScriptHash (..),
   TxId (TxId),
   TxOutRef (TxOutRef),
-  ValidatorHash (ValidatorHash),
   toBuiltin,
  )
 import PlutusTx.Builtins qualified as Builtins
@@ -187,7 +187,7 @@ data GenCliCommand
       , -- | previous merkle root that was just stored on chain.
         -- This is needed to create the message we wish to sign
         uchcPreviousMerkleRoot :: Maybe LedgerBytes
-      , uchcValidatorHash :: ValidatorHash
+      , uchcScriptHash :: ScriptHash
       }
   | -- | CLI arguments for saving a new merkle root
     SaveRootCommand
@@ -525,14 +525,14 @@ newCommitteePublicKeysParser =
 
 -- | Parser for parsing a hex encoded CBOR encoded
 -- 'Plutus.V2.Ledger.Api.Address'
-parseValidatorHash :: OptParse.ReadM ValidatorHash
-parseValidatorHash = eitherReader $ \(str :: HString.String) -> do
+parseScriptHash :: OptParse.ReadM ScriptHash
+parseScriptHash = eitherReader $ \(str :: HString.String) -> do
   decoded <-
     Bifunctor.first ("Invalid hex: " <>)
       . Base16.decode
       . Char8.pack
       $ str
-  return $ ValidatorHash $ toBuiltin decoded
+  return $ ScriptHash $ toBuiltin decoded
 
 -- | 'initCommitteePublicKeysParser' is essentially identical to
 -- 'newCommitteePublicKeysParser' except the help strings / command line flag
@@ -758,8 +758,8 @@ updateCommitteeHashCommand =
                 , metavar "PREVIOUS_MERKLE_ROOT"
                 , help "Hex encoded previous merkle root (if it exists)"
                 ]
-        uchcValidatorHash <-
-          option parseValidatorHash $
+        uchcScriptHash <-
+          option parseScriptHash $
             mconcat
               [ long "--new-committee-validator-script-hash"
               , metavar "VALIDATOR_HASH"

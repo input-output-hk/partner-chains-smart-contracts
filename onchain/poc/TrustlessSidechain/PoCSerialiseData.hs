@@ -14,7 +14,8 @@ module TrustlessSidechain.PoCSerialiseData (
   serialisablePoCSerialiseData,
 ) where
 
-import Plutus.V2.Ledger.Api (Script, ScriptContext, fromCompiledCode)
+import PlutusLedgerApi.Common (SerialisedScript, serialiseCompiledCode)
+import PlutusLedgerApi.V2 (ScriptContext)
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Prelude
@@ -35,5 +36,7 @@ mkPoCSerialiseDataUntyped = mkUntypedValidator mkPoCSerialiseData
 
 -- | 'serialisablePoCSerialiseData' is a serialisable untyped script of
 -- 'mkPoCSerialiseData'
-serialisablePoCSerialiseData :: Script
-serialisablePoCSerialiseData = fromCompiledCode $$(PlutusTx.compile [||mkPoCSerialiseDataUntyped||])
+serialisablePoCSerialiseData :: SerialisedScript
+serialisablePoCSerialiseData =
+  serialiseCompiledCode
+    $$(PlutusTx.compile [||mkPoCSerialiseDataUntyped||])
