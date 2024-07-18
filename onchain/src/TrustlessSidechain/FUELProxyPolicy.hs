@@ -20,7 +20,7 @@ module TrustlessSidechain.FUELProxyPolicy (
   ),
 ) where
 
-import Plutus.V2.Ledger.Api
+import PlutusLedgerApi.V2
 import PlutusTx
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
@@ -42,8 +42,8 @@ data FuelProxyRedeemer
   = FuelProxyMint {version :: Integer}
   | FuelProxyBurn
       { version :: Integer
-      , -- | Recipient's sidechain address
-        recipient :: BuiltinByteString
+      , recipient :: BuiltinByteString
+      -- ^ Recipient's sidechain address
       }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
@@ -129,11 +129,11 @@ mkFuelProxyPolicyUntyped ::
   BuiltinData ->
   ()
 mkFuelProxyPolicyUntyped params versioningConfig =
-  mkUntypedMintingPolicy $
-    mkFuelProxyPolicy
+  mkUntypedMintingPolicy
+    $ mkFuelProxyPolicy
       (unsafeFromBuiltinData params)
       (unsafeFromBuiltinData versioningConfig)
 
-serialisableFuelProxyPolicy :: Script
+serialisableFuelProxyPolicy :: SerialisedScript
 serialisableFuelProxyPolicy =
-  fromCompiledCode $$(PlutusTx.compile [||mkFuelProxyPolicyUntyped||])
+  serialiseCompiledCode $$(PlutusTx.compile [||mkFuelProxyPolicyUntyped||])

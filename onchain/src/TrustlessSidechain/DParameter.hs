@@ -8,9 +8,9 @@ module TrustlessSidechain.DParameter (
   mkMintingPolicy,
 ) where
 
-import Plutus.V2.Ledger.Api (
-  Script,
-  fromCompiledCode,
+import PlutusLedgerApi.V2 (
+  SerialisedScript,
+  serialiseCompiledCode,
  )
 import PlutusTx qualified
 import TrustlessSidechain.Governance.Admin qualified as Governance
@@ -114,9 +114,9 @@ mkValidatorUntyped sp dat redeemer ctx =
       redeemer
       (Unsafe.wrap ctx)
 
-serialisableValidator :: Script
+serialisableValidator :: SerialisedScript
 serialisableValidator =
-  fromCompiledCode $$(PlutusTx.compile [||mkValidatorUntyped||])
+  serialiseCompiledCode $$(PlutusTx.compile [||mkValidatorUntyped||])
 
 mkMintingPolicyUntyped ::
   BuiltinData ->
@@ -132,6 +132,6 @@ mkMintingPolicyUntyped sp validatorAddress redeemer ctx =
       redeemer
       (Unsafe.wrap ctx)
 
-serialisableMintingPolicy :: Script
+serialisableMintingPolicy :: SerialisedScript
 serialisableMintingPolicy =
-  fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
+  serialiseCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])

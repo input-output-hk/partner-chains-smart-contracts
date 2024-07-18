@@ -11,12 +11,12 @@ module TrustlessSidechain.FUELMintingPolicy (
   bech32AddrToPubKeyHash,
 ) where
 
-import Plutus.V1.Ledger.Value qualified as Value
-import Plutus.V2.Ledger.Api (
+import PlutusLedgerApi.Common (SerialisedScript)
+import PlutusLedgerApi.V1.Value qualified as Value
+import PlutusLedgerApi.V2 (
   CurrencySymbol,
   LedgerBytes (LedgerBytes),
   PubKeyHash (PubKeyHash),
-  Script,
   ScriptContext (ScriptContext, scriptContextTxInfo),
   ScriptPurpose (Minting),
   TokenName (TokenName, unTokenName),
@@ -24,9 +24,9 @@ import Plutus.V2.Ledger.Api (
   TxInfo (txInfoMint, txInfoReferenceInputs),
   TxOut (txOutValue),
   Value (getValue),
-  fromCompiledCode,
+  serialiseCompiledCode,
  )
-import Plutus.V2.Ledger.Contexts qualified as Contexts
+import PlutusLedgerApi.V2.Contexts qualified as Contexts
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins (divideInteger, modInteger)
@@ -183,8 +183,8 @@ mkMintingPolicy _ _ _ _ = False
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkMintingPolicyUntyped sp versioningConfig = mkUntypedMintingPolicy $ mkMintingPolicy (unsafeFromBuiltinData sp) (unsafeFromBuiltinData versioningConfig)
 
-serialisableMintingPolicy :: Script
-serialisableMintingPolicy = fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
+serialisableMintingPolicy :: SerialisedScript
+serialisableMintingPolicy = serialiseCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
 
 -- Burning policy defines the criteria for burrning FUEL Proxy token.
 -- Currently there is no requirement that would prevent user from burning their
@@ -199,8 +199,8 @@ mkBurningPolicy _ _ _ = True
 mkBurningPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkBurningPolicyUntyped _ _ _ = check $ mkBurningPolicy () () ()
 
-serialisableBurningPolicy :: Script
-serialisableBurningPolicy = fromCompiledCode $$(PlutusTx.compile [||mkBurningPolicyUntyped||])
+serialisableBurningPolicy :: SerialisedScript
+serialisableBurningPolicy = serialiseCompiledCode $$(PlutusTx.compile [||mkBurningPolicyUntyped||])
 
 -- | Deriving the public key hash from a bech32 binary
 -- -   For more details on the bech32 format refer to https://github.com/cardano-foundation/CIPs/tree/master/CIP-0019

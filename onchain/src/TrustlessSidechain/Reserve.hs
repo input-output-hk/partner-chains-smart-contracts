@@ -15,7 +15,7 @@ module TrustlessSidechain.Reserve (
   reserveAuthTokenTokenName,
 ) where
 
-import Plutus.V1.Ledger.Value (
+import PlutusLedgerApi.V1.Value (
   AssetClass (AssetClass, unAssetClass),
   CurrencySymbol,
   TokenName,
@@ -26,16 +26,16 @@ import Plutus.V1.Ledger.Value (
   flattenValue,
   valueOf,
  )
-import Plutus.V2.Ledger.Api (
+import PlutusLedgerApi.V2 (
   Address,
   Datum (getDatum),
   OutputDatum (OutputDatum),
-  Script,
+  SerialisedScript,
   TxOut (
     txOutDatum,
     txOutValue
   ),
-  fromCompiledCode,
+  serialiseCompiledCode,
  )
 import PlutusTx qualified
 import PlutusTx.Bool
@@ -325,9 +325,9 @@ mkReserveValidatorUntyped voc rd rr ctx =
       (PlutusTx.unsafeFromBuiltinData rr)
       (Unsafe.ScriptContext ctx)
 
-serialisableReserveValidator :: Script
+serialisableReserveValidator :: SerialisedScript
 serialisableReserveValidator =
-  fromCompiledCode $$(PlutusTx.compile [||mkReserveValidatorUntyped||])
+  serialiseCompiledCode $$(PlutusTx.compile [||mkReserveValidatorUntyped||])
 
 {-# INLINEABLE extractReserveUtxoDatum #-}
 extractReserveUtxoDatum :: TxOut -> Maybe ReserveDatum
@@ -434,6 +434,6 @@ mkReserveAuthPolicyUntyped voc red ctx =
       (PlutusTx.unsafeFromBuiltinData red)
       (Unsafe.wrap ctx)
 
-serialisableReserveAuthPolicy :: Script
+serialisableReserveAuthPolicy :: SerialisedScript
 serialisableReserveAuthPolicy =
-  fromCompiledCode $$(PlutusTx.compile [||mkReserveAuthPolicyUntyped||])
+  serialiseCompiledCode $$(PlutusTx.compile [||mkReserveAuthPolicyUntyped||])

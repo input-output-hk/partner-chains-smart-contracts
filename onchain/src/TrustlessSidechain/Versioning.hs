@@ -55,23 +55,22 @@ module TrustlessSidechain.Versioning (
   multiSigPolicyId,
 ) where
 
-import Plutus.V1.Ledger.Address (scriptHashAddress)
-import Plutus.V1.Ledger.Value (valueOf)
-import Plutus.V2.Ledger.Api (
+import PlutusLedgerApi.V1.Address (scriptHashAddress)
+import PlutusLedgerApi.V1.Value (valueOf)
+import PlutusLedgerApi.V2 (
   Address,
   CurrencySymbol (CurrencySymbol),
   Datum (Datum),
   OutputDatum (OutputDatum),
-  Script,
   ScriptContext (ScriptContext),
-  ScriptHash (ScriptHash),
+  ScriptHash (..),
+  SerialisedScript,
   TokenName (TokenName),
   TxInInfo (TxInInfo),
   TxOut (TxOut),
-  ValidatorHash (ValidatorHash),
-  fromCompiledCode,
+  serialiseCompiledCode,
  )
-import Plutus.V2.Ledger.Contexts (txInfoReferenceInputs)
+import PlutusLedgerApi.V2.Contexts (txInfoReferenceInputs)
 import PlutusTx qualified
 import TrustlessSidechain.Governance.Admin qualified as Governance
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
@@ -472,9 +471,9 @@ mkVersionOraclePolicyUntyped sp itac validatorAddress redeemer ctx =
       (Unsafe.wrap ctx)
 
 serialisableVersionOraclePolicy ::
-  Script
+  SerialisedScript
 serialisableVersionOraclePolicy =
-  fromCompiledCode
+  serialiseCompiledCode
     $$(PlutusTx.compile [||mkVersionOraclePolicyUntyped||])
 
 -- | Stores VersionOraclePolicy UTxOs, acting both as an oracle of available
@@ -537,9 +536,9 @@ mkVersionOracleValidatorUntyped params datum redeemer ctx =
       (Unsafe.wrap ctx)
 
 serialisableVersionOracleValidator ::
-  Script
+  SerialisedScript
 serialisableVersionOracleValidator =
-  fromCompiledCode
+  serialiseCompiledCode
     $$(PlutusTx.compile [||mkVersionOracleValidatorUntyped||])
 
 -- | Searches for a specified validator script passed as a reference input.
@@ -552,7 +551,7 @@ getVersionedValidatorAddress ::
   ScriptContext ->
   Address
 getVersionedValidatorAddress voConfig vo =
-  scriptHashAddress . ValidatorHash . getVersionedScriptHash voConfig vo
+  scriptHashAddress . ScriptHash . getVersionedScriptHash voConfig vo
 
 {-# INLINEABLE getVersionedValidatorAddressUnsafe #-}
 getVersionedValidatorAddressUnsafe ::
@@ -561,7 +560,7 @@ getVersionedValidatorAddressUnsafe ::
   Unsafe.ScriptContext ->
   Address
 getVersionedValidatorAddressUnsafe voConfig vo =
-  scriptHashAddress . ValidatorHash . getVersionedScriptHashUnsafe voConfig vo
+  scriptHashAddress . ScriptHash . getVersionedScriptHashUnsafe voConfig vo
 
 -- | Searches for a specified minting policy passed as a reference input.  Note
 -- that if requested script ID corresponds to a validator this function will

@@ -1,7 +1,7 @@
 module Main (main) where
 
 import Compiled qualified
-import Plutus.V1.Ledger.Api (fromCompiledCode)
+import PlutusLedgerApi.V1 (serialiseCompiledCode)
 import Sizer (scriptFitsInto, scriptFitsUnder)
 import Test.Tasty (defaultMain, testGroup)
 import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as CPMP
@@ -162,63 +162,63 @@ main =
         "Data rep"
         [ scriptFitsUnder
             "toBuiltinData"
-            ("handwritten", fromCompiledCode Compiled.toDataHandwritten)
-            ("generated", fromCompiledCode Compiled.toDataGenerated)
+            ("handwritten", serialiseCompiledCode Compiled.toDataHandwritten)
+            ("generated", serialiseCompiledCode Compiled.toDataGenerated)
         , scriptFitsUnder
             "fromBuiltinData"
-            ("handwritten", fromCompiledCode Compiled.fromDataHandwritten)
-            ("generated", fromCompiledCode Compiled.fromDataGenerated)
+            ("handwritten", serialiseCompiledCode Compiled.fromDataHandwritten)
+            ("generated", serialiseCompiledCode Compiled.fromDataGenerated)
         , scriptFitsUnder
             "unsafeFromBuiltinData"
-            ("handwritten", fromCompiledCode Compiled.unsafeFromDataHandwritten)
-            ("generated", fromCompiledCode Compiled.unsafeFromDataGenerated)
+            ("handwritten", serialiseCompiledCode Compiled.unsafeFromDataHandwritten)
+            ("generated", serialiseCompiledCode Compiled.unsafeFromDataGenerated)
         , scriptFitsUnder
             "toBuiltinData (pair)"
-            ("handwritten", fromCompiledCode Compiled.pairToDataHandwritten)
-            ("generated", fromCompiledCode Compiled.pairToDataGenerated)
+            ("handwritten", serialiseCompiledCode Compiled.pairToDataHandwritten)
+            ("generated", serialiseCompiledCode Compiled.pairToDataGenerated)
         , scriptFitsUnder
             "fromBuiltinData (pair)"
-            ("handwritten", fromCompiledCode Compiled.pairFromDataHandwritten)
-            ("generated", fromCompiledCode Compiled.pairFromDataGenerated)
+            ("handwritten", serialiseCompiledCode Compiled.pairFromDataHandwritten)
+            ("generated", serialiseCompiledCode Compiled.pairFromDataGenerated)
         , scriptFitsUnder
             "unsafeFromBuiltinData (pair)"
-            ("handwritten", fromCompiledCode Compiled.pairUnsafeFromDataHandwritten)
-            ("generated", fromCompiledCode Compiled.pairUnsafeFromDataGenerated)
+            ("handwritten", serialiseCompiledCode Compiled.pairUnsafeFromDataHandwritten)
+            ("generated", serialiseCompiledCode Compiled.pairUnsafeFromDataGenerated)
         , scriptFitsUnder
             "toBuiltinData (list)"
-            ("handwritten", fromCompiledCode Compiled.listToDataHandwritten)
-            ("generated", fromCompiledCode Compiled.listToDataGenerated)
+            ("handwritten", serialiseCompiledCode Compiled.listToDataHandwritten)
+            ("generated", serialiseCompiledCode Compiled.listToDataGenerated)
         , scriptFitsUnder
             "fromBuiltinData (list)"
-            ("handwritten", fromCompiledCode Compiled.listFromDataHandwritten)
-            ("generated", fromCompiledCode Compiled.listFromDataGenerated)
+            ("handwritten", serialiseCompiledCode Compiled.listFromDataHandwritten)
+            ("generated", serialiseCompiledCode Compiled.listFromDataGenerated)
         , scriptFitsUnder
             "unsafeFromBuiltinData (list)"
-            ("handwritten", fromCompiledCode Compiled.listUnsafeFromDataHandwritten)
-            ("generated", fromCompiledCode Compiled.listUnsafeFromDataGenerated)
+            ("handwritten", serialiseCompiledCode Compiled.listUnsafeFromDataHandwritten)
+            ("generated", serialiseCompiledCode Compiled.listUnsafeFromDataGenerated)
         , scriptFitsUnder
             "toBuiltinData (solution 3)"
-            ("using wrappers", fromCompiledCode Compiled.toDataWrapper)
-            ("direct", fromCompiledCode Compiled.toDataDirect)
+            ("using wrappers", serialiseCompiledCode Compiled.toDataWrapper)
+            ("direct", serialiseCompiledCode Compiled.toDataDirect)
         , scriptFitsUnder
             "fromBuiltinData (solution 3)"
-            ("using wrappers", fromCompiledCode Compiled.fromDataWrapper)
-            ("direct", fromCompiledCode Compiled.fromDataDirect)
+            ("using wrappers", serialiseCompiledCode Compiled.fromDataWrapper)
+            ("direct", serialiseCompiledCode Compiled.fromDataDirect)
         , scriptFitsUnder
             "unsafeFromBuiltinData (solution 3)"
-            ("using wrappers", fromCompiledCode Compiled.unsafeFromDataWrapper)
-            ("direct", fromCompiledCode Compiled.unsafeFromDataDirect)
+            ("using wrappers", serialiseCompiledCode Compiled.unsafeFromDataWrapper)
+            ("direct", serialiseCompiledCode Compiled.unsafeFromDataDirect)
         , scriptFitsUnder
             "toBuiltinData (CPS versus direct)"
-            ("cps", fromCompiledCode Compiled.toData3CPS)
-            ("direct", fromCompiledCode Compiled.toData3Direct)
+            ("cps", serialiseCompiledCode Compiled.toData3CPS)
+            ("direct", serialiseCompiledCode Compiled.toData3Direct)
         , scriptFitsUnder
             "fromBuiltinData (CPS versus direct)"
-            ("cps", fromCompiledCode Compiled.fromData3CPS)
-            ("direct", fromCompiledCode Compiled.fromData3Direct)
+            ("cps", serialiseCompiledCode Compiled.fromData3CPS)
+            ("direct", serialiseCompiledCode Compiled.fromData3Direct)
         , scriptFitsUnder
             "unsafeFromBuiltinData (CPS versus direct)"
-            ("cps", fromCompiledCode Compiled.unsafeFromData3CPS)
-            ("direct", fromCompiledCode Compiled.unsafeFromData3Direct)
+            ("cps", serialiseCompiledCode Compiled.unsafeFromData3CPS)
+            ("direct", serialiseCompiledCode Compiled.unsafeFromData3Direct)
         ]
     ]

@@ -14,16 +14,15 @@ module TrustlessSidechain.PoCInlineDatum (
   serialisablePoCInlineDatumValidator,
 ) where
 
-import Plutus.V2.Ledger.Api (
+import PlutusLedgerApi.Common (SerialisedScript, serialiseCompiledCode)
+import PlutusLedgerApi.V2 (
   Datum (getDatum),
   OutputDatum (NoOutputDatum, OutputDatum, OutputDatumHash),
-  Script,
   ScriptContext,
   TxInInfo (txInInfoResolved),
   TxOut (txOutDatum),
-  fromCompiledCode,
  )
-import Plutus.V2.Ledger.Contexts qualified as Contexts
+import PlutusLedgerApi.V2.Contexts qualified as Contexts
 import PlutusTx qualified
 import PlutusTx.IsData.Class qualified as IsData
 import TrustlessSidechain.PlutusPrelude
@@ -43,8 +42,8 @@ mkPoCInlineDatumValidator _dat red ctx =
             OutputDatumHash _ -> traceError "error 'mkPoCInlineDatum': unexpected 'OutputDatumHash'"
             OutputDatum dat
               | dat' <- getDatum dat
-                , Just i <- IsData.fromBuiltinData dat' ->
-                traceIfFalse "error 'mkPoCInlineDatum': redeemer and datum mismatch" $ i == red
+              , Just i <- IsData.fromBuiltinData dat' ->
+                  traceIfFalse "error 'mkPoCInlineDatum': redeemer and datum mismatch" $ i == red
               | otherwise -> traceError "error 'mkPoCInlineDatum': 'fromBuiltinData' failed"
     Nothing -> traceError "error 'mkPoCInlineDatum': 'findOwnInput' failed"
 
@@ -54,6 +53,7 @@ mkPoCInlineDatumValidatorUntyped = mkUntypedValidator mkPoCInlineDatumValidator
 
 -- | 'serialisablePoCInlineDatumValidator' is a serialisable untyped script of
 -- 'mkPoCInlineDatumValidator'
-serialisablePoCInlineDatumValidator :: Script
+serialisablePoCInlineDatumValidator :: SerialisedScript
 serialisablePoCInlineDatumValidator =
-  fromCompiledCode $$(PlutusTx.compile [||mkPoCInlineDatumValidatorUntyped||])
+  serialiseCompiledCode
+    $$(PlutusTx.compile [||mkPoCInlineDatumValidatorUntyped||])

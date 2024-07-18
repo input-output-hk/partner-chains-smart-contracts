@@ -41,24 +41,24 @@ module TrustlessSidechain.DistributedSet (
   serialisableDsKeyPolicy,
 ) where
 
-import Plutus.V1.Ledger.Address (scriptHashAddress)
-import Plutus.V1.Ledger.Value qualified as Value
-import Plutus.V2.Ledger.Api (
+import PlutusLedgerApi.V1.Address (scriptHashAddress)
+import PlutusLedgerApi.V1.Value qualified as Value
+import PlutusLedgerApi.V2 (
   CurrencySymbol,
   Datum (getDatum),
   Map,
   OutputDatum (OutputDatum),
-  Script,
+  SerialisedScript,
   ScriptContext (scriptContextTxInfo),
   TokenName (TokenName, unTokenName),
   TxInInfo (txInInfoResolved),
   TxInfo (txInfoMint, txInfoOutputs, txInfoReferenceInputs),
   TxOut (txOutAddress, txOutDatum, txOutValue),
-  ValidatorHash,
+  ScriptHash,
   Value (getValue),
-  fromCompiledCode,
+  serialiseCompiledCode,
  )
-import Plutus.V2.Ledger.Contexts qualified as Contexts
+import PlutusLedgerApi.V2.Contexts qualified as Contexts
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
@@ -110,14 +110,14 @@ data Node = Node
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
+-- | @since v4.0.0
+makeHasField ''Node
+
 instance Eq Node where
   {-# INLINEABLE (==) #-}
   a == b =
     get @"key" a == get @"key" b
       && get @"next" a == get @"next" b
-
--- | @since v4.0.0
-makeHasField ''Node
 
 -- | @since v4.0.0
 instance ToData Node where
@@ -149,14 +149,14 @@ data DsConfDatum = DsConfDatum
       TSPrelude.Show
     )
 
+-- | @since v4.0.0
+makeHasField ''DsConfDatum
+
 instance Eq DsConfDatum where
   {-# INLINEABLE (==) #-}
   a == b =
     get @"keyPolicy" a == get @"keyPolicy" b
       && get @"fuelPolicy" a == get @"fuelPolicy" b
-
--- | @since v4.0.0
-makeHasField ''DsConfDatum
 
 -- | @since v4.0.0
 instance ToData DsConfDatum where
@@ -210,7 +210,7 @@ data DsKeyMint = DsKeyMint
     -- | into an 'Address').
     -- |
     -- | @since v4.0.0
-    validatorHash :: ValidatorHash
+    validatorHash :: ScriptHash
   , -- | The currency symbol to identify a utxo with 'DsConfDatum'
     -- |
     -- | @since v4.0.0
@@ -622,8 +622,8 @@ mkInsertValidatorUntyped ds dat red ctx =
 
 -- | 'serialisableInsertValidator' is a serialisable version of the validator
 -- (this is needed for ctl)
-serialisableInsertValidator :: Script
-serialisableInsertValidator = fromCompiledCode $$(PlutusTx.compile [||mkInsertValidatorUntyped||])
+serialisableInsertValidator :: SerialisedScript
+serialisableInsertValidator = serialiseCompiledCode $$(PlutusTx.compile [||mkInsertValidatorUntyped||])
 
 -- | 'mkDsConfValidatorUntyped' creates an untyped 'mkDsConfValidator' (this is
 -- needed for ctl)
@@ -632,8 +632,8 @@ mkDsConfValidatorUntyped = mkDsConfValidator . PlutusTx.unsafeFromBuiltinData
 
 -- | 'serialisableDsConfValidator' creates a serialisable version of the
 -- validator (this is needed for ctl)
-serialisableDsConfValidator :: Script
-serialisableDsConfValidator = fromCompiledCode $$(PlutusTx.compile [||mkDsConfValidatorUntyped||])
+serialisableDsConfValidator :: SerialisedScript
+serialisableDsConfValidator = serialiseCompiledCode $$(PlutusTx.compile [||mkDsConfValidatorUntyped||])
 
 -- | 'mkDsConfPolicyUntyped' is an untyped version of 'mkDsConfPolicy' (this is
 -- needed for ctl)
@@ -647,8 +647,8 @@ mkDsConfPolicyUntyped keyMint redeemer ctx =
 
 -- | 'serialisableDsConfPolicy' creates a serialisable version of the minting
 -- policy (this is needed for ctl)
-serialisableDsConfPolicy :: Script
-serialisableDsConfPolicy = fromCompiledCode $$(PlutusTx.compile [||mkDsConfPolicyUntyped||])
+serialisableDsConfPolicy :: SerialisedScript
+serialisableDsConfPolicy = serialiseCompiledCode $$(PlutusTx.compile [||mkDsConfPolicyUntyped||])
 
 -- | 'mkDsKeyPolicy' is an untyped version of 'mkDsKeyPolicy' (this is
 -- needed for ctl)
@@ -662,5 +662,5 @@ mkDsKeyPolicyUntyped keyMint redeemer ctx =
 
 -- | 'serialisableDsKeyPolicy' creates a serialisable version of the minting
 -- policy (this is needed for ctl)
-serialisableDsKeyPolicy :: Script
-serialisableDsKeyPolicy = fromCompiledCode $$(PlutusTx.compile [||mkDsKeyPolicyUntyped||])
+serialisableDsKeyPolicy :: SerialisedScript
+serialisableDsKeyPolicy = serialiseCompiledCode $$(PlutusTx.compile [||mkDsKeyPolicyUntyped||])
