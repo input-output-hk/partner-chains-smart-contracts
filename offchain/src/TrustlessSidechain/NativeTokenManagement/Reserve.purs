@@ -48,14 +48,11 @@ import JS.BigInt as BigInt
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT, throw)
-import TrustlessSidechain.Effects.Env (ask)
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError(..))
-import TrustlessSidechain.Governance(Governance(MultiSig))
-import TrustlessSidechain.Governance.MultiSig (MultiSigGovRedeemer(..))
 import TrustlessSidechain.NativeTokenManagement.Types
   ( ImmutableReserveSettings
   , MutableReserveSettings
@@ -112,10 +109,6 @@ illiquidCirculationSupplyVersionOracle =
   VersionOracle
     { version: BigNum.fromInt 1, scriptId: IlliquidCirculationSupplyValidator }
 
-governanceVersionOracle ∷ VersionOracle
-governanceVersionOracle = VersionOracle
-  { version: BigNum.fromInt 1, scriptId: GovernancePolicy }
-
 getReserveAuthCurrencySymbol ∷
   ∀ r.
   SidechainParams →
@@ -137,17 +130,6 @@ getReserveAddress sidechainParams =
   Versioning.getVersionedValidatorAddress
     sidechainParams
     reserveVersionOracle
-
-getGovernanceScriptRefUtxo ∷
-  ∀ r.
-  SidechainParams →
-  Run
-    (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    (TransactionInput /\ TransactionOutput)
-getGovernanceScriptRefUtxo sidechainParams =
-  Versioning.getVersionedScriptRefUtxo
-    sidechainParams
-    governanceVersionOracle
 
 getReserveScriptRefUtxo ∷
   ∀ r.
@@ -181,20 +163,6 @@ getIlliquidCirculationSupplyScriptRefUtxo sidechainParams =
   Versioning.getVersionedScriptRefUtxo
     sidechainParams
     illiquidCirculationSupplyVersionOracle
-
-getGovernancePolicy ∷
-  ∀ r.
-  SidechainParams →
-  Run
-    (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    PlutusScript
-getGovernancePolicy sidechainParams = do
-  (_ /\ refTxOutput) ← getGovernanceScriptRefUtxo sidechainParams
-
-  case (unwrap refTxOutput).scriptRef of
-    Just (PlutusScriptRef s) → pure s
-    _ → throw $ GenericInternalError
-      "Versioning system utxo does not carry governance script"
 
 getIlliquidCirculationSupplyValidator ∷
   ∀ r.
@@ -288,41 +256,6 @@ reserveLookupsAndConstraints sp = do
         reserveRefTxInput
     }
 
-governanceLookupsAndConstraints ∷
-  ∀ r.
-  SidechainParams →
-  Run (APP r)
-    { governanceLookups ∷ Lookups.ScriptLookups
-    , governanceConstraints ∷ TxConstraints.TxConstraints
-    }
-governanceLookupsAndConstraints sp = do
-  (governanceRefTxInput /\ governanceRefTxOutput) ←
-    getGovernanceScriptRefUtxo sp
-
-  governancePolicy ← getGovernancePolicy sp
-
-  env <- ask
-
-  let members = maybe [] (\(MultiSig x) -> (unwrap x).governanceMembers) env.governance
-
-  pure
-    { governanceLookups: Lookups.unspentOutputs
-        (Map.singleton governanceRefTxInput governanceRefTxOutput)
-    , governanceConstraints:
-        TxConstraints.mustReferenceOutput governanceRefTxInput
-          <> TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
-            (PlutusScript.hash governancePolicy)
-            (RedeemerDatum $ toData MultiSignatureCheck)
-            emptyAssetName
-            (Int.fromInt 1)
-            ( RefInput $ TransactionUnspentOutput
-                { input: governanceRefTxInput
-                , output: governanceRefTxOutput
-                }
-            )
-          <> (foldMap (\x -> TxConstraints.mustBeSignedBy $ wrap x) members)
-    }
-
 initialiseReserveUtxo ∷
   ∀ r.
   SidechainParams →
@@ -338,7 +271,7 @@ initialiseReserveUtxo
   do
     { governanceLookups
     , governanceConstraints
-    } ← governanceLookupsAndConstraints sidechainParams
+    } ← Versioning.multisigGovernanceLookupsAndConstraints sidechainParams
 
     { reserveLookups
     , reserveConstraints
@@ -433,7 +366,7 @@ depositToReserve sp asset amount = do
 
   { governanceLookups
   , governanceConstraints
-  } ← governanceLookupsAndConstraints sp
+  } ← Versioning.multisigGovernanceLookupsAndConstraints sp
 
   { reserveAuthLookups
   , reserveAuthConstraints
@@ -493,7 +426,7 @@ updateReserveUtxo ∷
 updateReserveUtxo sp updatedMutableSettings utxo = do
   { governanceLookups
   , governanceConstraints
-  } ← governanceLookupsAndConstraints sp
+  } ← Versioning.multisigGovernanceLookupsAndConstraints sp
 
   { reserveAuthLookups
   , reserveAuthConstraints
@@ -692,7 +625,7 @@ handover
 
   { governanceLookups
   , governanceConstraints
-  } ← governanceLookupsAndConstraints sp
+  } ← Versioning.multisigGovernanceLookupsAndConstraints sp
 
   { reserveLookups
   , reserveConstraints

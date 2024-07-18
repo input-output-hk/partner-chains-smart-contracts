@@ -11,6 +11,7 @@ module TrustlessSidechain.Versioning.Utils
   , versionOracleTokenName
   , versionOracleInitTokenName
   , versionOracleValidator
+  , multisigGovernanceLookupsAndConstraints
   ) where
 
 import Contract.Prelude
@@ -53,14 +54,25 @@ import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT, throw)
 import Run.Except as Run
+import Run.Reader (READER)
 import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Env (Env, ask)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Transaction (utxosAt) as Effect
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
-  ( OffchainError(NotFoundReferenceScript, NotFoundUtxo, InvalidAddress)
+  ( OffchainError
+    ( NotFoundReferenceScript
+    , NotFoundUtxo
+    , InvalidAddress
+    , GenericInternalError
+    )
   )
+import TrustlessSidechain.Governance(Governance(MultiSig))
 import TrustlessSidechain.Governance.Admin as Governance
+import TrustlessSidechain.Governance.MultiSig
+  ( MultiSigGovRedeemer(MultiSignatureCheck)
+  )
 import TrustlessSidechain.InitSidechain.Types
   ( InitTokenAssetClass(InitTokenAssetClass)
   )
@@ -71,14 +83,18 @@ import TrustlessSidechain.InitSidechain.Utils
 import TrustlessSidechain.ScriptCache as ScriptCache
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (toAddress)
-import TrustlessSidechain.Utils.Asset (getScriptHash) as Asset
+import TrustlessSidechain.Utils.Asset (getScriptHash, emptyAssetName) as Asset
 import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   , mkValidatorWithParams
   )
 import TrustlessSidechain.Versioning.ScriptId
-  ( ScriptId(VersionOracleValidator, VersionOraclePolicy)
+  ( ScriptId
+    ( GovernancePolicy
+    , VersionOracleValidator
+    , VersionOraclePolicy
+    )
   )
 import TrustlessSidechain.Versioning.Types
   ( ScriptId
@@ -520,3 +536,68 @@ getVersionedValidatorAddress sp versionOracle = do
             versionOracle
           <> ". Script reference is not a PlutusScriptRef."
       )
+
+multisigGovernanceLookupsAndConstraints ∷
+  ∀ r.
+  SidechainParams →
+  Run
+    (EXCEPT OffchainError + WALLET + TRANSACTION + READER Env + r)
+    { governanceLookups ∷ Lookups.ScriptLookups
+    , governanceConstraints ∷ TxConstraints
+    }
+multisigGovernanceLookupsAndConstraints sp = do
+  (governanceRefTxInput /\ governanceRefTxOutput) ←
+    getGovernanceScriptRefUtxo sp
+
+  governancePolicy ← getGovernancePolicy sp
+
+  env <- ask
+
+  let members = maybe [] (\(MultiSig x) -> (unwrap x).governanceMembers) env.governance
+
+  pure
+    { governanceLookups: Lookups.unspentOutputs
+        (Map.singleton governanceRefTxInput governanceRefTxOutput)
+    , governanceConstraints:
+        Constraints.mustReferenceOutput governanceRefTxInput
+          <> Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
+            (PlutusScript.hash governancePolicy)
+            (RedeemerDatum $ toData MultiSignatureCheck)
+            Asset.emptyAssetName
+            (Int.fromInt 1)
+            ( RefInput $ TransactionUnspentOutput
+                { input: governanceRefTxInput
+                , output: governanceRefTxOutput
+                }
+            )
+          <> (foldMap (\x -> Constraints.mustBeSignedBy $ wrap x) members)
+    }
+
+getGovernanceScriptRefUtxo ∷
+  ∀ r.
+  SidechainParams →
+  Run
+    (EXCEPT OffchainError + WALLET + TRANSACTION + r)
+    (TransactionInput /\ TransactionOutput)
+getGovernanceScriptRefUtxo sidechainParams =
+  getVersionedScriptRefUtxo
+    sidechainParams
+    governanceVersionOracle
+
+governanceVersionOracle ∷ VersionOracle
+governanceVersionOracle = VersionOracle
+  { version: BigNum.fromInt 1, scriptId: GovernancePolicy }
+
+getGovernancePolicy ∷
+  ∀ r.
+  SidechainParams →
+  Run
+    (EXCEPT OffchainError + WALLET + TRANSACTION + r)
+    PlutusScript
+getGovernancePolicy sidechainParams = do
+  (_ /\ refTxOutput) ← getGovernanceScriptRefUtxo sidechainParams
+
+  case (unwrap refTxOutput).scriptRef of
+    Just (PlutusScriptRef s) → pure s
+    _ → throw $ GenericInternalError
+      "Versioning system utxo does not carry governance script"
