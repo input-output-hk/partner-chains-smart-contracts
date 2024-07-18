@@ -16,6 +16,7 @@ module TrustlessSidechain.Versioning (
   getVersionedValidatorAddressUnsafe,
   getVersionedCurrencySymbol,
   getVersionedCurrencySymbolUnsafe,
+  approvedByMultiSigGovernance,
   VersionOracle (..),
   VersionOracleDatum (..),
   VersionOracleConfig (..),
@@ -56,7 +57,7 @@ module TrustlessSidechain.Versioning (
 ) where
 
 import Plutus.V1.Ledger.Address (scriptHashAddress)
-import Plutus.V1.Ledger.Value (valueOf)
+import Plutus.V1.Ledger.Value (Value(getValue), valueOf)
 import Plutus.V2.Ledger.Api (
   Address,
   CurrencySymbol (CurrencySymbol),
@@ -73,6 +74,7 @@ import Plutus.V2.Ledger.Api (
  )
 import Plutus.V2.Ledger.Contexts (txInfoReferenceInputs)
 import PlutusTx qualified
+import PlutusTx.AssocMap (lookup, toList)
 import TrustlessSidechain.Governance.Admin qualified as Governance
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
@@ -452,12 +454,14 @@ mkVersionOracleValidator
   sp
   (VersionOracleDatum versionOracle currencySymbol)
   versionOracle'
-  ctx
-    | isJust $ Unsafe.getSpending $ Unsafe.scriptContextPurpose ctx =
-      traceIfFalse "ERROR-VERSION-ORACLE-01" signedByGovernanceAuthority
-        && traceIfFalse "ERROR-VERSION-ORACLE-02" versionOraclesMatch
-        && traceIfFalse "ERROR-VERSION-ORACLE-03" versionOutputAbsent
+  ctx =
+    traceIfFalse "ERROR-VERSION-ORACLE-01" signedByGovernanceAuthority
+      && traceIfFalse "ERROR-VERSION-ORACLE-02" versionOraclesMatch
+      && traceIfFalse "ERROR-VERSION-ORACLE-03" versionOutputAbsent
+      && traceIfFalse "ERROR-VERSION-ORACLE-04" isSpending
     where
+      isSpending = isJust $ Unsafe.getSpending $ Unsafe.scriptContextPurpose ctx
+
       txInfo = Unsafe.scriptContextTxInfo ctx
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority =
@@ -474,8 +478,6 @@ mkVersionOracleValidator
           | txOut <- Unsafe.txInfoOutputs txInfo
           , valueOf (Unsafe.decode $ Unsafe.txOutValue txOut) currencySymbol versionOracleTokenName > 0
           ]
-mkVersionOracleValidator _ _ _ _ =
-  trace "ERROR-VERSION-ORACLE-04" False
 
 {-# INLINEABLE mkVersionOracleValidatorUntyped #-}
 mkVersionOracleValidatorUntyped ::
@@ -609,3 +611,33 @@ getVersionedScriptHashUnsafe
       , -- 2. Contains exactly one VersionOraclePolicy token.
       valueOf value versionOracleCurrencySymbol versionOracleTokenName == 1
       ]
+
+-- | Check whether a given transaction is approved by sidechain governance.  The
+-- actual check is delegated to a governance minting policy stored in the
+-- versioning system.  Caller specifies the requested governance version.  The
+-- transaction must mint at least one token of the governance minting policy to
+-- signify transaction approval.
+{-# INLINEABLE approvedByMultiSigGovernance #-}
+approvedByMultiSigGovernance
+  :: VersionOracleConfig
+  -> Integer -- ^ Governance version
+  -> Unsafe.ScriptContext
+  -> Bool
+approvedByMultiSigGovernance voc version ctx =
+  case ofGovernanceCs of
+    Just [(_, amount)] | amount > 0 -> True -- must mint at least one token, any name
+    _ -> False
+  where
+    ofGovernanceCs :: Maybe [(TokenName, Integer)]
+    ofGovernanceCs =
+      fmap toList . lookup governanceTokenCurrencySymbol . getValue $ minted
+
+    governanceTokenCurrencySymbol :: CurrencySymbol
+    governanceTokenCurrencySymbol =
+      getVersionedCurrencySymbolUnsafe
+        voc
+        (VersionOracle {version, scriptId = governancePolicyId})
+        ctx
+
+    minted :: Value
+    minted = Unsafe.decode . Unsafe.txInfoMint . Unsafe.scriptContextTxInfo $ ctx
