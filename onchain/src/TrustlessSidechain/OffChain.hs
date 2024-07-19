@@ -49,13 +49,11 @@ import Codec.Binary.Bech32 (DataPart, HumanReadablePart)
 import Codec.Binary.Bech32 qualified as Bech32
 import Crypto.Random qualified as Random
 import Crypto.Secp256k1 qualified as SECP
-import Crypto.Secp256k1.Internal.Base qualified as SECP.Internal (importPubKey)
 import Crypto.Secp256k1.Internal.BaseOps qualified as SECP.Internal (
   ecSecKeyVerify,
  )
 import Crypto.Secp256k1.Internal.Context qualified as SECP.Internal (
   contextCreate,
-  createContext,
   signVerify,
  )
 import Crypto.Secp256k1.Internal.Util qualified as SECP.Internal (
@@ -239,7 +237,7 @@ strToSecpPubKey raw = do
     Bifunctor.first ("Invalid sidechain public key hex: " <>)
       . Base16.decode
       $ raw
-  maybe (Left "Unable to parse sidechain public key") Right $ SECP.Internal.importPubKey ctx decoded
+  maybe (Left "Unable to parse sidechain public key") Right $ SECP.importPubKey ctx decoded
 
 -- * Generating a private sidechain key
 
@@ -282,8 +280,9 @@ generateRandomSecpPrivKey = do
   go
 
 -- | A local context.
+{-# NOINLINE ctx #-}
 ctx :: SECP.Ctx
-ctx = unsafePerformIO SECP.Internal.createContext
+ctx = unsafePerformIO SECP.createContext
 
 -- * Signing a message
 

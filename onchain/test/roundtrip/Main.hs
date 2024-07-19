@@ -3,7 +3,6 @@
 module Main (main) where
 
 import Crypto.Secp256k1 qualified as SECP
-import Crypto.Secp256k1.Internal.Context qualified as SECP.Internal (createContext)
 import Data.Bits (unsafeShiftL)
 import GHC.Exts (fromList)
 import Laws (toDataSafeLaws', toDataUnsafeLaws')
@@ -557,9 +556,11 @@ genBPR = do
       pkh
       auraKey
       grandpaKey
+
 -- | A local context.
+{-# NOINLINE ctx #-}
 ctx :: SECP.Ctx
-ctx = unsafePerformIO SECP.Internal.createContext
+ctx = unsafePerformIO SECP.createContext
 
 genPK :: Gen EcdsaSecp256k1PubKey
 genPK = do

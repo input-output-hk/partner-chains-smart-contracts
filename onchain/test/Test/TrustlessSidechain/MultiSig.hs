@@ -5,7 +5,6 @@ module Test.TrustlessSidechain.MultiSig (test) where
 import Control.Applicative ((<|>))
 import Control.Monad (fail, guard)
 import Crypto.Secp256k1 qualified as SECP
-import Crypto.Secp256k1.Internal.Context qualified as SECP.Internal (createContext)
 
 import Data.List qualified as List
 import Data.String qualified as HString
@@ -133,7 +132,9 @@ instance Arbitrary SufficientVerification where
   arbitrary = do
     privKeys <- Gen.listOf1 $ QCExtra.suchThatMap (Gen.vectorOf 32 arbitrary) mkPrivKey
     -- need a function that lifts IO Ctx to
-    let ctx = unsafePerformIO SECP.Internal.createContext
+    let
+      {-# NOINLINE ctx #-}
+      ctx = unsafePerformIO SECP.createContext
     let pubKeys = TSPrelude.fmap (SECP.derivePubKey ctx) privKeys
     (message, messageBS) <- QCExtra.suchThatMap (Gen.vectorOf 32 arbitrary) $ \bytes -> do
       let bs = fromListN 32 bytes
