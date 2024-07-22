@@ -43,6 +43,7 @@ balanceSignAndSubmit ∷
   Run (EXCEPT OffchainError + TRANSACTION + LOG + r) TransactionHash
 balanceSignAndSubmit txName { lookups, constraints } = do
   ubTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups constraints
+  Effect.logInfo' ("UNBALANCED TX: " <> show ubTx)
   bsTx ← mapError BalanceTxError $ Effect.balanceTx ubTx
   signedTx ← Effect.signTransaction bsTx
   txId ← Effect.submit signedTx
