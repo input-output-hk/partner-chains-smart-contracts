@@ -16,7 +16,21 @@
 
     cardano-transaction-lib = {
       url = "github:Plutonomicon/cardano-transaction-lib/3279526b028c26a6ccb871b7bba4a0cc4a1f2299";
+      inputs.ogmios.follows = "ogmios";
+      inputs.kupo.follows = "kupo";
     };
+
+    ogmios = {
+        url = "github:CardanoSolutions/ogmios/v6.5.0";
+        flake = false;
+    };
+
+    kupo = {
+        url = "github:CardanoSolutions/kupo/v2.9.0";
+        flake = false;
+    };
+
+
     plutip.follows = "cardano-transaction-lib/plutip";
     iohk-nix.follows = "cardano-transaction-lib/plutip/iohk-nix";
 
