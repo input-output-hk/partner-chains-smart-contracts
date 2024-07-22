@@ -61,7 +61,7 @@ in [
         };
     };
     packages = repoRoot.nix.packages;
-    checks = repoRoot.nix.checks;
+    _checks = repoRoot.nix.checks;
 
     # This is used for nix build .#check.<system> because nix flake check
     # does not work with haskell.nix import-from-derivtion.
@@ -69,7 +69,7 @@ in [
       pkgs.runCommand "combined-check"
       {
         nativeBuildInputs =
-          builtins.attrValues inputs.self.checks.${system}
+          builtins.attrValues inputs.self._checks.${system}
           ++ builtins.attrValues inputs.self.packages.${system}
           ++ inputs.self.devShells.${system}.hs.nativeBuildInputs
           ++ inputs.self.devShells.${system}.ps.nativeBuildInputs
