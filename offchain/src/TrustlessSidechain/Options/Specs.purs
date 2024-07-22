@@ -6,12 +6,14 @@ import Cardano.AsCbor (decodeCbor)
 import Cardano.Types.Asset (Asset (..))
 import Cardano.Types.BigNum (BigNum)
 import Cardano.Types.TransactionInput (TransactionInput)
+import Cardano.Types.NetworkId (NetworkId(MainnetId))
 import Contract.Config
   ( PrivateStakeKeySource(PrivateStakeKeyFile)
   , ServerConfig
   , defaultOgmiosWsConfig
   , mkCtlBackendParams
   , testnetConfig
+  , mainnetConfig
   )
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Scripts (ValidatorHash)
@@ -420,11 +422,15 @@ withCommonOpts maybeConfig endpointParser = ado
     fromMaybe defaultKupoServerConfig
       (maybeConfig >>= _.runtimeConfig >>= _.kupo)
 
+  config <- case maybeConfig of
+    Just {runtimeConfig: Just {network: Just MainnetId}} -> pure mainnetConfig
+    _                                                    -> pure testnetConfig
+
   in
     TxOptions
       { sidechainEndpointParams
       , endpoint
-      , contractParams: testnetConfig
+      , contractParams: config
           { logLevel = environment.logLevel
           , suppressLogs = not environment.isTTY
           , customLogger = Just

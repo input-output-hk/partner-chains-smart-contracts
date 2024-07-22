@@ -17,7 +17,12 @@
       "secure": false,
       "path": null
     },
-    "kupo": null
+    "kupo": {
+      "host": "localhost",
+      "port": 1442,
+      "secure": false,
+      "path": null
+    }
   },
   "paymentSigningKeyFile": "/absolute/path/to/payment.skey",
   "stakeSigningKeyFile": null
