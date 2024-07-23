@@ -42,12 +42,14 @@ module TrustlessSidechain.Options.Parsers
   , transactionInput
   , uint
   , validatorHashParser
+  , networkId
   ) where
 
 import Contract.Prelude
 
 import Cardano.AsCbor (decodeCbor)
 import Cardano.FromData (fromData)
+import Cardano.Types.NetworkId (NetworkId(MainnetId, TestnetId))
 import Cardano.Plutus.Types.Address (fromCardano)
 import Cardano.Plutus.Types.Credential (Credential(ScriptCredential))
 import Cardano.Serialization.Lib (fromBytes, toBytes)
@@ -264,6 +266,14 @@ pubKeyHash = maybeReader
 governanceAuthority ∷ ReadM Governance.GovernanceAuthority
 governanceAuthority =
   Governance.mkGovernanceAuthority <$> pubKeyHash
+
+networkId :: ReadM NetworkId
+networkId = eitherReader
+  ( \str → case str of
+      "mainnet"  → pure MainnetId
+      "testnet" -> pure TestnetId
+      _         -> Left "network-id must be either 'mainnet' or 'testnet'"
+  )
 
 -- | Parse only CBOR encoded hexadecimal
 -- Note: This assumes there will be some validation with the CborBytes, otherwise

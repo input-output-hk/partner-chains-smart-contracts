@@ -93,6 +93,7 @@ import TrustlessSidechain.Options.Parsers
   , sidechainAddress
   , uint
   , validatorHashParser
+  , networkId
   )
 import TrustlessSidechain.Options.Parsers as Parsers
 import TrustlessSidechain.Options.Types
@@ -422,9 +423,19 @@ withCommonOpts maybeConfig endpointParser = ado
     fromMaybe defaultKupoServerConfig
       (maybeConfig >>= _.runtimeConfig >>= _.kupo)
 
-  config <- case maybeConfig of
-    Just {runtimeConfig: Just {network: Just MainnetId}} -> pure mainnetConfig
-    _                                                    -> pure testnetConfig
+
+  network <- option networkId $ fold
+    [ long "network"
+    , metavar "NETWORK"
+    , help "Network ID of the sidechain"
+    , maybe mempty value
+        ( maybeConfig >>= _.runtimeConfig >>= _.network )
+    ]
+
+
+  let config = case network of
+        MainnetId -> mainnetConfig
+        _         -> testnetConfig
 
   in
     TxOptions
