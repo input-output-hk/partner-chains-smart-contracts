@@ -22,3 +22,5 @@ test-show-details: direct
 allow-newer:
     *:aeson
   , size-based:template-haskell
+constraints:
+  plutus-tx ^>= 1.27

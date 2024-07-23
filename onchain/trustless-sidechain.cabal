@@ -25,6 +25,7 @@ common common-lang
     -Wall -Wcompat -Wincomplete-record-updates
     -Wincomplete-uni-patterns -Wredundant-constraints -Werror
     -fexpose-all-unfoldings
+    -fplugin-opt PlutusTx.Plugin:target-version=1.0.0
 
   build-depends:      base
   default-extensions:
