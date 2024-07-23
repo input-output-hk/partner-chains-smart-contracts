@@ -253,93 +253,92 @@ makeHasField name = do
 
   -- A bunch of helper definitions common for all instances for a given data
   -- type
-  let
-    -- get and modify function names
-    getName = mkName "get"
-    modifyName = mkName "modify"
+  let -- get and modify function names
+      getName = mkName "get"
+      modifyName = mkName "modify"
 
-    -- parent data type Name
-    conName = constructorName constructorInfo
+      -- parent data type Name
+      conName = constructorName constructorInfo
 
-    -- type variables passed to a type
-    tyVars = map tyVarBndrName (datatypeVars dataTypeInfo)
+      -- type variables passed to a type
+      tyVars = map tyVarBndrName (datatypeVars dataTypeInfo)
 
-    -- Parent data type TyCon.  Make sure to apply type variables for
-    -- paremeterized data types.
-    parentTyCon =
-      foldl AppT (ConT (datatypeName dataTypeInfo)) (map VarT tyVars)
+      -- Parent data type TyCon.  Make sure to apply type variables for
+      -- paremeterized data types.
+      parentTyCon =
+        foldl AppT (ConT (datatypeName dataTypeInfo)) (map VarT tyVars)
 
-    -- Takes two names.  If there are equal constructs an application of f to
-    -- that field, otherwise leaves it unchanged.  This function is intended
-    -- to be partially applied and used to construct body of "modify"
-    -- function.
-    applyToField field field' =
-      if field' == field
-        then AppE (VarE fName) (VarE field)
-        else VarE field'
+      -- Takes two names.  If there are equal constructs an application of f to
+      -- that field, otherwise leaves it unchanged.  This function is intended
+      -- to be partially applied and used to construct body of "modify"
+      -- function.
+      applyToField field field' =
+        if field' == field
+          then AppE (VarE fName) (VarE field)
+          else VarE field'
 
-    -- Takes two names.  If ther are equal constructs a pattern with variable
-    -- name, otherwise replaces the pattern with a wildcard.  This function is
-    -- intended to be partially applied and used to construct pattern in "get"
-    -- function.
-    mkWildCards field field' =
-      if field' == field
-        then VarP field
-        else WildP
+      -- Takes two names.  If ther are equal constructs a pattern with variable
+      -- name, otherwise replaces the pattern with a wildcard.  This function is
+      -- intended to be partially applied and used to construct pattern in "get"
+      -- function.
+      mkWildCards field field' =
+        if field' == field
+          then VarP field
+          else WildP
 
-    -- A pattern builder function.  For "get" we need to replace all but one
-    -- field with a wildcard.  For "modify" we just turn field names into
-    -- patterns.  This function provides a uniform way of doing it.
-    mkPat f = ParensP $ ConP conName [] (map f fieldPatNames)
+      -- A pattern builder function.  For "get" we need to replace all but one
+      -- field with a wildcard.  For "modify" we just turn field names into
+      -- patterns.  This function provides a uniform way of doing it.
+      mkPat f = ParensP $ ConP conName [] (map f fieldPatNames)
 
-    -- pair record fields with their pattern variables and types
-    fieldsWithTypes =
-      zip3 fieldNames fieldPatNames (constructorFields constructorInfo)
+      -- pair record fields with their pattern variables and types
+      fieldsWithTypes =
+        zip3 fieldNames fieldPatNames (constructorFields constructorInfo)
 
-    -- Worker that constructs a HasField instance definition for each field.
-    decls = flip map fieldsWithTypes $ \(fieldName, fieldPatName, ty) ->
-      let
-        -- field name as type literal.
-        fieldLit = LitT $ StrTyLit $ nameBase fieldName
-        -- type of instance: HasField "someField" FooDataType Integer
-        instanceT =
-          foldl1
-            AppT
-            [ ConT (mkName "HasField")
-            , fieldLit
-            , parentTyCon
-            , ty
+      -- Worker that constructs a HasField instance definition for each field.
+      decls = flip map fieldsWithTypes $ \(fieldName, fieldPatName, ty) ->
+        let
+          -- field name as type literal.
+          fieldLit = LitT $ StrTyLit $ nameBase fieldName
+          -- type of instance: HasField "someField" FooDataType Integer
+          instanceT =
+            foldl1
+              AppT
+              [ ConT (mkName "HasField")
+              , fieldLit
+              , parentTyCon
+              , ty
+              ]
+          -- body of modify function
+          modifyB field =
+            foldl
+              AppE
+              (ConE conName)
+              (map (applyToField field) fieldPatNames)
+        in
+          -- Build instance declaration that contains definition of "get" and
+          -- "modify", together with their corresponding INLINE pragmas.
+          InstanceD
+            Nothing
+            []
+            instanceT
+            [ PragmaD (InlineP getName Inline FunLike AllPhases)
+            , FunD
+                getName
+                [ Clause
+                    [mkPat (mkWildCards fieldPatName)]
+                    (NormalB (VarE fieldPatName))
+                    []
+                ]
+            , PragmaD (InlineP modifyName Inline FunLike AllPhases)
+            , FunD
+                modifyName
+                [ Clause
+                    [VarP fName, mkPat VarP]
+                    (NormalB (modifyB fieldPatName))
+                    []
+                ]
             ]
-        -- body of modify function
-        modifyB field =
-          foldl
-            AppE
-            (ConE conName)
-            (map (applyToField field) fieldPatNames)
-       in
-        -- Build instance declaration that contains definition of "get" and
-        -- "modify", together with their corresponding INLINE pragmas.
-        InstanceD
-          Nothing
-          []
-          instanceT
-          [ PragmaD (InlineP getName Inline FunLike AllPhases)
-          , FunD
-              getName
-              [ Clause
-                  [mkPat (mkWildCards fieldPatName)]
-                  (NormalB (VarE fieldPatName))
-                  []
-              ]
-          , PragmaD (InlineP modifyName Inline FunLike AllPhases)
-          , FunD
-              modifyName
-              [ Clause
-                  [VarP fName, mkPat VarP]
-                  (NormalB (modifyB fieldPatName))
-                  []
-              ]
-          ]
 
   pure decls
 

@@ -135,11 +135,11 @@ bech32RecipientFromText str =
     Left err -> Left $ "Failed decoding bech32: " <> Text.pack (show err)
     Right (bech32HumanReadablePart, bech32DataPart)
       | isAddr -> case bech32DataPartBytes Bech32 {..} of
-          Just bs -> Right $ Bech32Recipient $ Builtins.Internal.BuiltinByteString bs
-          Nothing -> Left "Failed decoding bytes in bech32 recipient"
+        Just bs -> Right $ Bech32Recipient $ Builtins.Internal.BuiltinByteString bs
+        Nothing -> Left "Failed decoding bytes in bech32 recipient"
       | otherwise ->
-          Left
-            $ Text.unwords
+          Left $
+            Text.unwords
               [ "Expected human readable part to be either:"
               , surroundAndShowTextWithBackticks $ Bech32.humanReadablePartToText Bech32.Prefixes.addr
               , "or"
@@ -150,10 +150,8 @@ bech32RecipientFromText str =
         surroundAndShowTextWithBackticks t = "`" <> t <> "`"
         isAddr :: Bool
         isAddr =
-          bech32HumanReadablePart
-            == Bech32.Prefixes.addr
-            || bech32HumanReadablePart
-            == Bech32.Prefixes.addr_test
+          bech32HumanReadablePart == Bech32.Prefixes.addr
+            || bech32HumanReadablePart == Bech32.Prefixes.addr_test
 
 instance FromJSON Bech32Recipient where
   parseJSON = Aeson.withText "bech32" $ \str -> case bech32RecipientFromText str of
@@ -167,8 +165,8 @@ instance FromJSON Bech32Recipient where
 -- | SidechainCommitteeMember is a sidechain (SECP) public and private key pair
 data SidechainCommitteeMember = SidechainCommitteeMember
   { scmPrivateKey :: SECP.SecKey
-  , scmPublicKey :: EcdsaSecp256k1PubKey
-  -- ^ @since v4.0.0
+  , -- ^ @since v4.0.0
+    scmPublicKey :: EcdsaSecp256k1PubKey
   }
 
 -- | 'SidechainCommittee' is a newtype wrapper around a lsit of
@@ -383,7 +381,7 @@ encodeHexCombinedMerkleProof = encodeHexOfCborBuiltinData
 -- Many serialization mechanisms are an alias of this.
 encodeHexOfCborBuiltinData ::
   forall (a :: Type).
-  (ToData a) =>
+  ToData a =>
   a ->
   ByteString
 encodeHexOfCborBuiltinData = encodeHexBuiltinBS . Builtins.serialiseData . toBuiltinData

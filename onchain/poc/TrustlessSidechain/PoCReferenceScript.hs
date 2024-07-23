@@ -50,8 +50,7 @@ mkPoCToReferenceScriptValidatorUntyped = mkUntypedValidator mkPoCToReferenceScri
 -- 'mkPoCToReferenceScriptValidator'
 serialisablePoCToReferenceScriptValidator :: SerialisedScript
 serialisablePoCToReferenceScriptValidator =
-  serialiseCompiledCode
-    $$(PlutusTx.compile [||mkPoCToReferenceScriptValidatorUntyped||])
+  serialiseCompiledCode $$(PlutusTx.compile [||mkPoCToReferenceScriptValidatorUntyped||])
 
 -- * Reference
 
@@ -60,9 +59,9 @@ serialisablePoCToReferenceScriptValidator =
 -- given 'Address''s witness datum is the redeemer.
 mkPoCReferenceScriptValidator :: () -> ScriptHash -> ScriptContext -> Bool
 mkPoCReferenceScriptValidator _dat red ctx =
-  traceIfFalse "error 'mkPoCReferenceScriptValidator': no tx with given reference script's script hash"
-    $ any (\txin -> txOutReferenceScript (txInInfoResolved txin) == Just red)
-    $ txInfoInputs info
+  traceIfFalse "error 'mkPoCReferenceScriptValidator': no tx with given reference script's script hash" $
+    any (\txin -> txOutReferenceScript (txInInfoResolved txin) == Just red) $
+      txInfoInputs info
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
@@ -75,5 +74,4 @@ mkPoCReferenceScriptValidatorUntyped = mkUntypedValidator mkPoCReferenceScriptVa
 -- 'mkPoCReferenceScriptValidator'
 serialisablePoCReferenceScriptValidator :: SerialisedScript
 serialisablePoCReferenceScriptValidator =
-  serialiseCompiledCode
-    $$(PlutusTx.compile [||mkPoCReferenceScriptValidatorUntyped||])
+  serialiseCompiledCode $$(PlutusTx.compile [||mkPoCReferenceScriptValidatorUntyped||])

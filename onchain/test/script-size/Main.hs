@@ -57,106 +57,106 @@ main =
         [ scriptFitsInto
             "mkMintingPolicy (FUEL) serialized"
             FUEL.serialisableMintingPolicy
-            2_977
+            3_259
         , scriptFitsInto
             "mkBurningPolicy (FUEL) serialized"
             FUEL.serialisableBurningPolicy
-            8
+            9
         , scriptFitsInto
             "mkMintingPolicy (MerkleRoot) serialized"
             MerkleRoot.serialisableMintingPolicy
-            2_657
+            2_934
         , scriptFitsInto
             "mkCommitteeCandidateValidator (serialized)"
             CCV.serialisableValidator
-            276
+            315
         , scriptFitsInto
             "mkCandidatePermissionMintingPolicy (serialized)"
             CPMP.serialisableCandidatePermissionMintingPolicy
-            347
+            396
         , scriptFitsInto
             "mkCommitteeOraclePolicy (serialized)"
             UCH.serialisableCommitteeOraclePolicy
-            1_761
+            1_988
         , scriptFitsInto
             "mkUpdateCommitteeHashValidator (serialized)"
             UCH.serialisableCommitteeHashValidator
-            2_483
+            2_763
         , scriptFitsInto
             "mkCheckpointValidator (serialized)"
             CV.serialisableCheckpointValidator
-            2_313
+            2_536
         , scriptFitsInto
             "mkCheckpointPolicy (serialized)"
             CV.serialisableCheckpointPolicy
-            756
+            604
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy) serialized"
             CPEATMSP.serialisableMintingPolicy
-            2_203
+            2_390
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainSchnorrSecp256k1ATMSPolicy) serialized"
             CPSATMSP.serialisableMintingPolicy
-            2_203
+            2_390
         , scriptFitsInto
             "mkDParameterValidatorCode (DParameter) serialized"
             DParameter.serialisableValidator
-            438
+            498
         , scriptFitsInto
             "mkDParameterPolicyCode (DParameter) serialized"
             DParameter.serialisableMintingPolicy
-            1277
+            984
         , scriptFitsInto
             "mkFuelProxyPolicyCode (FUELProxyPolicy) serialized"
             FUELProxyPolicy.serialisableFuelProxyPolicy
-            2_493
+            2_765
         , scriptFitsInto
             "mkPermissionedCandidatePolicyCode (PermissionedCandidates) serialized"
             PermissionedCandidates.serialisableCandidatePermissionMintingPolicy
-            347
+            396
         , scriptFitsInto
             "mkPermissionedCandidatesValidatorCode (PermissionedCandidates) serialized"
             PermissionedCandidates.serialisableValidator
-            502
+            565
         , scriptFitsInto
             "mkVersionOraclePolicyCode (Versioning) serialized"
             Versioning.serialisableVersionOraclePolicy
-            3_477
+            3_715
         , scriptFitsInto
             "mkVersionOracleValidatorCode (Versioning) serialized"
             Versioning.serialisableVersionOracleValidator
-            847
+            929
         , scriptFitsInto
             "mkInitTokenPolicy (InitToken) serialized"
             InitToken.serialisableInitTokenPolicy
-            736
+            803
         , scriptFitsInto
             "mkReserveValidator (Reserve) serialized"
             Reserve.serialisableReserveValidator
-            5_730
+            6_013
         , scriptFitsInto
             "mkReserveAuthPolicy (Reserve) serialized"
             Reserve.serialisableReserveAuthPolicy
-            3_967
+            2_693
         , scriptFitsInto
             "mkIlliquidCirculationSupplyValidator (IlliquidCirculationSupply) serialized"
             IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyValidator
-            3_049
+            3_268
         ]
     , testGroup
         "Distributed set"
         [ scriptFitsInto
             "mkInsertValidator (serialized)"
             DS.serialisableInsertValidator
-            2_390
+            2_704
         , scriptFitsInto
             "mkDsConfPolicy (serialized)"
             DS.serialisableDsConfPolicy
-            592
+            645
         , scriptFitsInto
             "mkDsKeyPolicy (serialized)"
             DS.serialisableDsKeyPolicy
-            1_258
+            1_374
         ]
     , testGroup
         "Data rep"

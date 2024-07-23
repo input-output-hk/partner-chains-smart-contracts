@@ -50,8 +50,8 @@ mkCandidatePermissionMintingPolicyUntyped ::
   BuiltinData ->
   ()
 mkCandidatePermissionMintingPolicyUntyped initTokenAssetClass a scriptContext =
-  check
-    $ mkCandidatePermissionMintingPolicy
+  check $
+    mkCandidatePermissionMintingPolicy
       (PlutusTx.unsafeFromBuiltinData initTokenAssetClass)
       a
       (Unsafe.wrap scriptContext)

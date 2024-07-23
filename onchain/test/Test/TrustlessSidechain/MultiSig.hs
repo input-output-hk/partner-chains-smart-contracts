@@ -47,17 +47,16 @@ verifyMultisig = CommitteePlainATMSPolicy.verifyPlainMultisig verifyEcdsaSecp256
 
 unitTests :: TestTree
 unitTests =
-  let
-    -- blake2b_256 "msg"
-    msg = "96a7ed8861db0abc006f473f9e64687875f3d9df8e723adae9f53a02b2aec378"
-    -- skey1 = genKeyDSIGN . mkSeedFromBytes $ blake2b_256 "321"
-    -- skey2 = ... "123"
-    -- rawSerialiseVerKeyDSIGN $ deriveVerKeyDSIGN skeyN
-    key1 = "031fcd8941891fa49e0e1710a83c552f5fa528a9e279007c4d700d5105ef9ec3fa"
-    key2 = "037df15cfd5ca49c1ed1b04d23f27979840e47bec1fed3c2251adf4d2a0262ed48"
-    -- rawSerialiseSigDSIGN $ signDSIGN () msg skeyN
-    sig1 = "947b717935180c9a4e69903249ab1a0b94e549018ca3d124098bf2488bcc931478ee252fb23ec15bbeb8e5d837d6eb99e164d87420848acff6369ad1852f7446"
-    sig2 = "bea04eef29ee7e6a020b18180de2715c387473132167e9646d0a6594cd7a27074ddadae2cdd13899395fa12e08393176d3640359fedc66501fd82589c9f953b8"
+  let -- blake2b_256 "msg"
+      msg = "96a7ed8861db0abc006f473f9e64687875f3d9df8e723adae9f53a02b2aec378"
+      -- skey1 = genKeyDSIGN . mkSeedFromBytes $ blake2b_256 "321"
+      -- skey2 = ... "123"
+      -- rawSerialiseVerKeyDSIGN $ deriveVerKeyDSIGN skeyN
+      key1 = "031fcd8941891fa49e0e1710a83c552f5fa528a9e279007c4d700d5105ef9ec3fa"
+      key2 = "037df15cfd5ca49c1ed1b04d23f27979840e47bec1fed3c2251adf4d2a0262ed48"
+      -- rawSerialiseSigDSIGN $ signDSIGN () msg skeyN
+      sig1 = "947b717935180c9a4e69903249ab1a0b94e549018ca3d124098bf2488bcc931478ee252fb23ec15bbeb8e5d837d6eb99e164d87420848acff6369ad1852f7446"
+      sig2 = "bea04eef29ee7e6a020b18180de2715c387473132167e9646d0a6594cd7a27074ddadae2cdd13899395fa12e08393176d3640359fedc66501fd82589c9f953b8"
    in
     testGroup
       "Unit tests"
@@ -99,20 +98,20 @@ propertyTests =
 
 sufficientVerification :: Property
 sufficientVerification =
-  forAllShrinkShow arbitrary shrink showSufficientVerification
-    $ \(SufficientVerification pubKeys enough message signatures) ->
+  forAllShrinkShow arbitrary shrink showSufficientVerification $
+    \(SufficientVerification pubKeys enough message signatures) ->
       let sigLen = TSPrelude.length signatures
           densityRatio :: TSPrelude.Double =
             TSPrelude.fromIntegral enough TSPrelude./ TSPrelude.fromIntegral sigLen
-       in classify (densityRatio TSPrelude.< 0.5) "sparse (less than half signatures needed)"
+      in classify (densityRatio TSPrelude.< 0.5) "sparse (less than half signatures needed)"
             . classify (densityRatio TSPrelude.>= 0.5) "dense (at least half signatures neeeded)"
             . property
             $ verifyMultisig pubKeys enough message signatures
 
 insufficientVerification :: Property
 insufficientVerification =
-  forAllShrinkShow arbitrary shrink showInsufficientVerification
-    $ \(InsufficientVerification pubKeys enough message signatures) ->
+  forAllShrinkShow arbitrary shrink showInsufficientVerification $
+    \(InsufficientVerification pubKeys enough message signatures) ->
       let sigLen = TSPrelude.fromIntegral . TSPrelude.length $ signatures
        in label ("shortfall of " <> TSPrelude.show (enough - sigLen))
             . property

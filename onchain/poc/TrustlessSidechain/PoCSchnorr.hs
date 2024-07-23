@@ -122,12 +122,12 @@ import TrustlessSidechain.Utils (
  )
 
 data SchnorrRedeemer = SchnorrRedeemer
-  { message :: BuiltinByteString
-  -- ^ arbitrary byte array
-  , signature :: BuiltinByteString
-  -- ^ 64 bytes
-  , publicKey :: BuiltinByteString
-  -- ^ 32 bytes
+  { -- | arbitrary byte array
+    message :: BuiltinByteString
+  , -- ^ 64 bytes
+    signature :: BuiltinByteString
+  , -- ^ 32 bytes
+    publicKey :: BuiltinByteString
   }
   deriving stock (TSPrelude.Eq, TSPrelude.Show)
 
@@ -147,5 +147,4 @@ untypedPolicy = mkUntypedMintingPolicy mkPolicy
 
 serialisablePolicy :: SerialisedScript
 serialisablePolicy =
-  serialiseCompiledCode
-    $$(PlutusTx.compile [||untypedPolicy||])
+  serialiseCompiledCode $$(PlutusTx.compile [||untypedPolicy||])

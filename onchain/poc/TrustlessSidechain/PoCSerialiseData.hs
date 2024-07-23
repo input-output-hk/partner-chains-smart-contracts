@@ -38,5 +38,4 @@ mkPoCSerialiseDataUntyped = mkUntypedValidator mkPoCSerialiseData
 -- 'mkPoCSerialiseData'
 serialisablePoCSerialiseData :: SerialisedScript
 serialisablePoCSerialiseData =
-  serialiseCompiledCode
-    $$(PlutusTx.compile [||mkPoCSerialiseDataUntyped||])
+  serialiseCompiledCode $$(PlutusTx.compile [||mkPoCSerialiseDataUntyped||])

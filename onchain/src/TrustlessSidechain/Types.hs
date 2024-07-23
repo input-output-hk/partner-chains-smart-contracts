@@ -50,7 +50,7 @@ import PlutusLedgerApi.V2 (
   BuiltinData (BuiltinData),
   CurrencySymbol,
   LedgerBytes (LedgerBytes),
-  POSIXTime (..),
+  POSIXTime,
   ScriptHash,
   TokenName,
   TxOutRef,
