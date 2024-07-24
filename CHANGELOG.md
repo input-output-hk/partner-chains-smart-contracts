@@ -5,6 +5,10 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 # Unreleased
 
+## Added
+
+  * Added `--network` paremeter which takes either `testnet` or `mainnet`
+
 # v6.0.0
 
 ## Added
