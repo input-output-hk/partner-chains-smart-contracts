@@ -37,7 +37,14 @@ test1 =
               { paymentSigningKeyFile: (Just "/absolute/path/to/payment.skey")
               , runtimeConfig:
                   ( Just
-                      { kupo: Nothing
+                      { kupo:
+                          ( Just
+                              { host: "localhost"
+                              , path: Nothing
+                              , port: UInt.fromInt 1442
+                              , secure: false
+                              }
+                          )
                       , network: (Just TestnetId)
                       , ogmios:
                           ( Just
