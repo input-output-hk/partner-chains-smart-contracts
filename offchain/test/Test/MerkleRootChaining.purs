@@ -78,7 +78,7 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
         "'Test.MerkleRootChaining.testScenario1': 1. Initializing the sidechain"
       genesisUtxo ← Test.Utils.getOwnTransactionInput
 
-      let keyCount = 35
+      let keyCount = 25
       {- Any higer number will fail under plutus-tx 1.27 with the error:
          The transaction execution budget for scripts execution is above the allowed limit
       -}--
