@@ -57,7 +57,7 @@ main =
         [ scriptFitsInto
             "mkMintingPolicy (FUEL) serialized"
             FUEL.serialisableMintingPolicy
-            3_234
+            3_243
         , scriptFitsInto
             "mkBurningPolicy (FUEL) serialized"
             FUEL.serialisableBurningPolicy
@@ -65,7 +65,7 @@ main =
         , scriptFitsInto
             "mkMintingPolicy (MerkleRoot) serialized"
             MerkleRoot.serialisableMintingPolicy
-            2_607
+            2_616
         , scriptFitsInto
             "mkCommitteeCandidateValidator (serialized)"
             CCV.serialisableValidator
@@ -81,11 +81,11 @@ main =
         , scriptFitsInto
             "mkUpdateCommitteeHashValidator (serialized)"
             UCH.serialisableCommitteeHashValidator
-            2_641
+            2_650
         , scriptFitsInto
             "mkCheckpointValidator (serialized)"
             CV.serialisableCheckpointValidator
-            2_409
+            2_418
         , scriptFitsInto
             "mkCheckpointPolicy (serialized)"
             CV.serialisableCheckpointPolicy
@@ -93,11 +93,11 @@ main =
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy) serialized"
             CPEATMSP.serialisableMintingPolicy
-            2_254
+            2_263
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainSchnorrSecp256k1ATMSPolicy) serialized"
             CPSATMSP.serialisableMintingPolicy
-            2_254
+            2_263
         , scriptFitsInto
             "mkDParameterValidatorCode (DParameter) serialized"
             DParameter.serialisableValidator
@@ -109,7 +109,7 @@ main =
         , scriptFitsInto
             "mkFuelProxyPolicyCode (FUELProxyPolicy) serialized"
             FUELProxyPolicy.serialisableFuelProxyPolicy
-            2_461
+            2_470
         , scriptFitsInto
             "mkPermissionedCandidatePolicyCode (PermissionedCandidates) serialized"
             PermissionedCandidates.serialisableCandidatePermissionMintingPolicy
@@ -121,7 +121,7 @@ main =
         , scriptFitsInto
             "mkVersionOraclePolicyCode (Versioning) serialized"
             Versioning.serialisableVersionOraclePolicy
-            2_489
+            2_494
         , scriptFitsInto
             "mkVersionOracleValidatorCode (Versioning) serialized"
             Versioning.serialisableVersionOracleValidator
@@ -133,15 +133,15 @@ main =
         , scriptFitsInto
             "mkReserveValidator (Reserve) serialized"
             Reserve.serialisableReserveValidator
-            5_154
+            5_176
         , scriptFitsInto
             "mkReserveAuthPolicy (Reserve) serialized"
             Reserve.serialisableReserveAuthPolicy
-            2_530
+            2_551
         , scriptFitsInto
             "mkIlliquidCirculationSupplyValidator (IlliquidCirculationSupply) serialized"
             IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyValidator
-            2_611
+            2_619
         ]
     , testGroup
         "Distributed set"
