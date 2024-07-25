@@ -74,7 +74,7 @@ main =
           , scriptFitsInto
               "mkVersionOraclePolicyCode (Versioning) serialized"
               Versioning.serialisableVersionOraclePolicy
-              3_103
+              3_125
           , scriptFitsInto
               "mkVersionOracleValidatorCode (Versioning) serialized"
               Versioning.serialisableVersionOracleValidator
@@ -86,15 +86,15 @@ main =
           , scriptFitsInto
               "mkReserveValidator (Reserve) serialized"
               Reserve.serialisableReserveValidator
-              5_987
+              6_013
           , scriptFitsInto
               "mkReserveAuthPolicy (Reserve) serialized"
               Reserve.serialisableReserveAuthPolicy
-              2_670
+              2_692
           , scriptFitsInto
               "mkIlliquidCirculationSupplyValidator (IlliquidCirculationSupply) serialized"
               IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyValidator
-              3_268
+              3_279
           ]
       , testGroup
           "Data rep"
