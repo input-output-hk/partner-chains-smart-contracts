@@ -18,7 +18,6 @@ import Contract.Prelude
 
 import Cardano.FromData (fromData)
 import Cardano.Plutus.Types.Address as PlutusAddress
-import Cardano.ToData (toData)
 import Cardano.Types.Asset (Asset(Asset))
 import Cardano.Types.AssetName (AssetName)
 import Cardano.Types.Int as Int
@@ -33,9 +32,10 @@ import Cardano.Types.TransactionUnspentOutput
   ( TransactionUnspentOutput(TransactionUnspentOutput)
   )
 import Contract.Address (Address)
-import Contract.Numeric.BigNum as BigNum
+import Contract.Numeric.BigNum (fromInt) as BigNum
 import Contract.PlutusData
   ( RedeemerDatum(RedeemerDatum)
+  , toData
   )
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
@@ -69,7 +69,6 @@ import TrustlessSidechain.Error
     )
   )
 import TrustlessSidechain.Governance(Governance(MultiSig))
-import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.Governance.MultiSig
   ( MultiSigGovRedeemer(MultiSignatureCheck)
   )
@@ -81,7 +80,7 @@ import TrustlessSidechain.InitSidechain.Utils
   , initTokenCurrencyInfo
   )
 import TrustlessSidechain.ScriptCache as ScriptCache
-import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
+import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (toAddress)
 import TrustlessSidechain.Utils.Asset (getScriptHash, emptyAssetName) as Asset
 import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
@@ -221,7 +220,9 @@ initializeVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
           , scriptId
           }
         versionOracleDatum = VersionOracleDatum
-          { versionOracle, versionCurrencySymbol: versionOracleCurrencySymbol }
+          { versionOracle
+          , versionCurrencySymbol: versionOracleCurrencySymbol
+          }
         oneVersionOracleAsset = Value.singleton versionOracleCurrencySymbol
           versionOracleTokenName
           (BigNum.fromInt 1)
@@ -293,28 +294,29 @@ insertVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
           , scriptId
           }
         versionOracleDatum = VersionOracleDatum
-          { versionOracle, versionCurrencySymbol: versionOracleCurrencySymbol }
+          { versionOracle
+          , versionCurrencySymbol: versionOracleCurrencySymbol
+          }
         oneVersionOracleAsset = Value.singleton versionOracleCurrencySymbol
           versionOracleTokenName
           (BigNum.fromInt 1)
-        SidechainParams { governanceAuthority } = sp
 
-      let
-        { lookups: governanceAuthorityLookups
-        , constraints: governanceAuthorityConstraints
-        } = Governance.governanceAuthorityLookupsAndConstraints
-          governanceAuthority
+      { governanceLookups
+      , governanceConstraints
+      } <- multisigGovernanceLookupsAndConstraints sp
 
       scriptReftxInput /\ scriptReftxOutput ← ScriptCache.getScriptRefUtxo
         sp
         (PlutusScriptRef versionOracleMintingPolicy)
+
+      voc <- getVersionOracleConfig sp
 
       let
         mintVersioningTokensConstraints ∷ TxConstraints
         mintVersioningTokensConstraints =
           Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
             (PlutusScript.hash versionOracleMintingPolicy)
-            ( RedeemerDatum $ toData $ MintVersionOracle versionOracle
+            ( RedeemerDatum $ toData $ MintVersionOracle voc (BigNum.fromInt 1) versionOracle -- TODO fix hardcoded version 1
                 versionedScriptHash
             )
             versionOracleTokenName
@@ -326,7 +328,7 @@ insertVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
         lookups ∷ ScriptLookups
         lookups = Lookups.plutusMintingPolicy versionOracleMintingPolicy
           <> Lookups.validator vValidator
-          <> governanceAuthorityLookups
+          <> governanceLookups
 
         constraints ∷ TxConstraints
         constraints =
@@ -338,7 +340,7 @@ insertVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
             DatumInline
             (PlutusScriptRef versionedScript)
             oneVersionOracleAsset
-            <> governanceAuthorityConstraints
+            <> governanceConstraints
             <> mintVersioningTokensConstraints
 
       pure { lookups, constraints }
@@ -355,6 +357,7 @@ invalidateVersionLookupsAndConstraints ∷
     ( EXCEPT OffchainError
         + WALLET
         + TRANSACTION
+        + READER Env
         + r
     )
     { lookups ∷ ScriptLookups
@@ -382,7 +385,6 @@ invalidateVersionLookupsAndConstraints sp ver scriptId = do
     oneVersionOracleMint = Mint.singleton versionOracleCurrencySymbol
       versionOracleTokenName
       (Int.fromInt (-1))
-    SidechainParams { governanceAuthority } = sp
 
   -- Find UTxO that stores script to be removed.  UTxO must contain a single
   -- version oracle token equipped with VersionOracle datum that matches script
@@ -409,30 +411,32 @@ invalidateVersionLookupsAndConstraints sp ver scriptId = do
           )
           $ Map.toUnfoldable scriptUtxos
       )
-  let
-    { lookups: governanceAuthorityLookups
-    , constraints: governanceAuthorityConstraints
-    } = Governance.governanceAuthorityLookupsAndConstraints governanceAuthority
+
+  voc <- getVersionOracleConfig sp
+
+  { governanceLookups
+  , governanceConstraints
+  } <- multisigGovernanceLookupsAndConstraints sp
 
   let
     lookups ∷ ScriptLookups
     lookups = Lookups.plutusMintingPolicy versionOracleMintingPolicy
       <> Lookups.validator vValidator
       <> Lookups.unspentOutputs (Map.singleton txInput txOutput)
-      <> governanceAuthorityLookups
+      <> governanceLookups
 
     constraints ∷ TxConstraints
     constraints =
       -- Burn a single versioning token.
       Constraints.mustMintValueWithRedeemer
-        (RedeemerDatum $ toData (BurnVersionOracle versionOracle))
+        (RedeemerDatum $ toData (BurnVersionOracle voc (BigNum.fromInt 1) versionOracle)) -- TODO fix hardcoded version 1
         oneVersionOracleMint
         <> -- Spend from script
 
           Constraints.mustSpendScriptOutput
             txInput
             (RedeemerDatum $ toData versionOracle)
-        <> governanceAuthorityConstraints
+        <> governanceConstraints
 
   pure { lookups, constraints }
 
