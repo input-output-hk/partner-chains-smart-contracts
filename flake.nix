@@ -15,10 +15,8 @@
     };
 
     cardano-transaction-lib = {
-      url = "github:Plutonomicon/cardano-transaction-lib/3279526b028c26a6ccb871b7bba4a0cc4a1f2299";
+      url = "github:Plutonomicon/cardano-transaction-lib/f9f2ab632b87150d8cc1497a38276a8699635837";
     };
-    plutip.follows = "cardano-transaction-lib/plutip";
-    iohk-nix.follows = "cardano-transaction-lib/plutip/iohk-nix";
 
     nixpkgs.follows = "haskell-nix/nixpkgs";
 
@@ -50,7 +48,6 @@
       outputs = import ./nix/outputs.nix;
       nixpkgsArgs = {
         overlays = [
-          inputs.iohk-nix.overlays.crypto
           inputs.haskell-nix.overlay
           inputs.cardano-transaction-lib.overlays.runtime
           inputs.cardano-transaction-lib.overlays.purescript

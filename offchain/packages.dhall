@@ -1,6 +1,6 @@
 let upstream =
-      https://github.com/purescript/package-sets/releases/download/psc-0.15.8-20230617/packages.dhall
-        sha256:292a92e32db0272db2089f3234140287c9eaf2fc15b6790a3c51f41471050eeb
+      https://github.com/purescript/package-sets/releases/download/psc-0.15.4-20230105/packages.dhall
+        sha256:3e9fbc9ba03e9a1fcfd895f65e2d50ee2f5e86c4cd273f3d5c841b655a0e1bda
 
 let additions =
       { aeson =
@@ -212,6 +212,79 @@ let additions =
         , repo = "https://github.com/mlabs-haskell/purescript-plutus-types"
         , version = "v1.0.1"
         }
+      , cip30-mock =
+        { dependencies =
+          [ "aff-promise", "console", "effect", "functions", "prelude" ]
+        , repo = "https://github.com/mlabs-haskell/purescript-cip30-mock"
+        , version = "v1.0.0"
+        }
+      , cardano-collateral-select =
+        { dependencies =
+          [ "arrays"
+          , "cardano-types"
+          , "console"
+          , "effect"
+          , "exceptions"
+          , "foldable-traversable"
+          , "lists"
+          , "maybe"
+          , "newtype"
+          , "ordered-collections"
+          , "partial"
+          , "prelude"
+          , "tuples"
+          ]
+        , repo =
+            "https://github.com/mlabs-haskell/purescript-cardano-collateral-select"
+        , version = "v1.0.0"
+        }
+      , cardano-key-wallet =
+        { dependencies =
+          [ "aeson"
+          , "aff"
+          , "arrays"
+          , "cardano-collateral-select"
+          , "cardano-message-signing"
+          , "cardano-types"
+          , "console"
+          , "effect"
+          , "either"
+          , "foldable-traversable"
+          , "maybe"
+          , "newtype"
+          , "prelude"
+          , "profunctor-lenses"
+          , "typelevel-prelude"
+          ]
+        , repo =
+            "https://github.com/mlabs-haskell/purescript-cardano-key-wallet"
+        , version = "v1.0.0"
+        }
+      , uplc-apply-args =
+        { dependencies =
+          [ "aff"
+          , "bytearrays"
+          , "cardano-serialization-lib"
+          , "cardano-types"
+          , "effect"
+          , "either"
+          , "foldable-traversable"
+          , "foreign-object"
+          , "js-bigints"
+          , "lists"
+          , "maybe"
+          , "mote"
+          , "mote-testplan"
+          , "partial"
+          , "prelude"
+          , "profunctor"
+          , "spec"
+          , "transformers"
+          , "tuples"
+          ]
+        , repo = "https://github.com/mlabs-haskell/purescript-uplc-apply-args"
+        , version = "v1.0.0"
+        }
       , cardano-types =
         { dependencies =
           [ "aeson"
@@ -256,7 +329,7 @@ let additions =
           , "unsafe-coerce"
           ]
         , repo = "https://github.com/mlabs-haskell/purescript-cardano-types"
-        , version = "1191ac9c1e8b3eca65880679d59d24be74379029"
+        , version = "v1.0.2"
         }
       , cardano-message-signing =
         { dependencies =
@@ -284,6 +357,61 @@ let additions =
         , repo = "https://github.com/mlabs-haskell/purescript-cardano-hd-wallet"
         , version = "v1.0.0"
         }
+      , cardano-transaction-builder =
+        { dependencies =
+          [ "aeson"
+          , "aff"
+          , "arraybuffer-types"
+          , "arrays"
+          , "bifunctors"
+          , "bytearrays"
+          , "cardano-plutus-data-schema"
+          , "cardano-serialization-lib"
+          , "cardano-types"
+          , "console"
+          , "control"
+          , "datetime"
+          , "effect"
+          , "either"
+          , "encoding"
+          , "exceptions"
+          , "foldable-traversable"
+          , "foreign-object"
+          , "integers"
+          , "js-bigints"
+          , "lattice"
+          , "lists"
+          , "literals"
+          , "maybe"
+          , "monad-logger"
+          , "mote"
+          , "mote-testplan"
+          , "newtype"
+          , "nonempty"
+          , "nullable"
+          , "ordered-collections"
+          , "partial"
+          , "prelude"
+          , "profunctor"
+          , "profunctor-lenses"
+          , "quickcheck"
+          , "rationals"
+          , "record"
+          , "safe-coerce"
+          , "spec"
+          , "strings"
+          , "these"
+          , "transformers"
+          , "tuples"
+          , "typelevel-prelude"
+          , "uint"
+          , "unfoldable"
+          , "unsafe-coerce"
+          ]
+        , repo =
+            "https://github.com/mlabs-haskell/purescript-cardano-transaction-builder"
+        , version = "v1.0.0"
+        }
       , mote-testplan =
         { dependencies =
           [ "aff"
@@ -303,6 +431,32 @@ let additions =
         , repo = "https://github.com/mlabs-haskell/purescript-mote-testplan"
         , version = "v1.0.0"
         }
+      , node-streams =
+        { dependencies =
+            [  "aff"
+            ,  "effect"
+            ,  "either"
+            ,  "exceptions"
+            ,  "node-buffer"
+            ,  "node-event-emitter"
+            ,  "nullable"
+            ]
+        , repo = "https://github.com/purescript-node/purescript-node-streams"
+        , version = "v9.0.0"
+        }
+      , node-event-emitter =
+        { dependencies =
+            [ "effect"
+            , "either"
+            , "functions"
+            , "maybe"
+            , "nullable"
+            , "prelude"
+            , "unsafe-coerce"
+            ]
+        , repo = "https://github.com/purescript-node/purescript-node-event-emitter"
+        , version = "v3.0.0"
+        }
       , cardano-transaction-lib =
         { dependencies =
           [ "aeson"
@@ -319,13 +473,16 @@ let additions =
           , "bignumber"
           , "bytearrays"
           , "cardano-hd-wallet"
+          , "cardano-key-wallet"
           , "cardano-message-signing"
           , "cardano-plutus-data-schema"
           , "cardano-serialization-lib"
           , "cardano-types"
+          , "cardano-transaction-builder"
           , "checked-exceptions"
           , "cip30"
           , "cip30-typesafe"
+          , "cip30-mock"
           , "console"
           , "control"
           , "crypto"
@@ -405,7 +562,7 @@ let additions =
           , "web-storage"
           ]
         , repo = "https://github.com/Plutonomicon/cardano-transaction-lib.git"
-        , version = "3279526b028c26a6ccb871b7bba4a0cc4a1f2299"
+        , version = "f9f2ab632b87150d8cc1497a38276a8699635837"
         }
       }
 
