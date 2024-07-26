@@ -1,4 +1,4 @@
-# Trustless Sidechain CLI
+# Off-chain Operations
 
 ## 1. Development
 
@@ -56,7 +56,6 @@ The arguments for each service are using the following scheme:
 
 So in case you want to use a remote ogmios service on `https://1.2.3.4:5678`,
 you want to use the following arguments:
-
 ```
 nix run .#sidechain-main-cli -- burn-v1 --amount 100 --recipient aabb --ogmios-host 1.2.3.4 --ogmios-port 5678 --ogmios-secure
 ```
@@ -73,13 +72,11 @@ You can call the contract endpoints with the following CLI command
 (you need to add `--` before the arguments):
 
 **Running with nix:**
-
 ```
 nix run .#sidechain-main-cli -- --help
 ```
 
 **Bundle to a JavaScript file and run using node:**
-
 ```shell
 nix build .#ctl-bundle-cli
 ```
@@ -87,7 +84,6 @@ nix build .#ctl-bundle-cli
 This will produce a package `trustless-sidechain-cli-<version>.tar` with the
 compiled `main.js` script that can be run using Node and all necessary
 dependencies in `node_modules` directory.
-
 ```
 node main.js --help
 ```
@@ -116,7 +112,6 @@ file `$CWD/config.json` in the following format:
 ```
 
 This allows to shorten a CLI call from:
-
 ```
 nix run .#sidechain-main-cli -- burn-v1 \
   --sidechain-id 123 \
@@ -132,7 +127,6 @@ nix run .#sidechain-main-cli -- burn-v1 \
 ```
 
 to:
-
 ```
 nix run .#sidechain-main-cli -- burn-v1 \
   --amount 5 \
@@ -155,7 +149,6 @@ You can set the network configuration of the runtime dependecies in the
 configuration file using the following format:
 
 _$CWD/config.json_
-
 ```json
 {
   "sidechainParameters": null,
@@ -190,7 +183,6 @@ Notes:
 
 - If not using a config file, prior to running the contracts it may be desirable
   to have available your signing key in the environment. Example:
-
   ```bash
   export SIGNING_KEY=/Users/gergo/Dev/cardano/testnets/addresses/server.skey
   ```
@@ -199,7 +191,6 @@ Notes:
   $SIGNING_KEY`.
 
 Available commands:
-
 ```
   init                     Initialise sidechain
   init-tokens-mint         Mint all sidechain initialisation tokens
@@ -250,7 +241,6 @@ sidechain:
   * candidate permission tokens (optional - see below)
 
 To initialise the sidechain, we run the following command:
-
 ```
 nix run .#sidechain-main-cli -- init \
   --committee-pub-key aabbcc \
@@ -263,7 +253,6 @@ To use permissioned registrations, i.e. such registrations that require a
 distinguished token, pass the optional `--candidate-permission-token-amount`
 parameter followed by an integer to denote how many permission tokens should be
 minted:
-
 ```
 nix run .#sidechain-main-cli -- init \
   --committee-pub-key aabbcc \
@@ -396,7 +385,6 @@ Note: at the moment there also exists `claim-v2` command, which works with
 scripts in version 2 - see below for how versions are managed.  `claim-v2`
 exists for demonstration purposes only and does not require any proofs, allowing
 to claim FUEL out of thin air:
-
 ```
 nix run .#sidechain-main-cli -- claim-v2 \
   --amount 13
@@ -413,7 +401,6 @@ nix run .#sidechain-main-cli -- burn-v1 \
 Note: at the moment there also exists `burn-v2` command, which works with
 scripts in version 2 - see below for how versions are managed.  `burn-v2` exists
 for demonstration purposes only and uses same arguments as `burn-v1`.
-
 ```
 nix run .#sidechain-main-cli -- burn-v2 \
   --amount 5 \
@@ -423,15 +410,14 @@ nix run .#sidechain-main-cli -- burn-v2 \
 #### 3.3.6. Register committee candidate
 
 In order to generate the signatures, you can use the signature generator tool:
-
 ```
 cabal run trustless-sidechain-gen-signatures -- register \
   --spo-signing-key c460e6d00d5e4e11240469046a988cecd136f10e12e6115ddc46566e01d199f4 \
   --sidechain-signing-key c460e6d00d5e4e11240469046a988cecd136f10e12e6115ddc46566e01d199f4 \
   --registration-utxo a03ebf281ed96549f74d0e724841fcf928194c44f6ff9a8056d1829598042c62#1
 ```
-And use it's output for the registration:
 
+And use it's output for the registration:
 ```
 nix run .#sidechain-main-cli -- register \
   --spo-public-key 67663ee94098ceca0dacbf7f947946bfdc4de1848d76da5249b1c3a18a41a57a \
@@ -477,7 +463,7 @@ nix run .#sidechain-main-cli -- committee-hash \
   --previous-merkle-root abcdef
 ```
 
-where we note that `--new-committee-validator-cbor-encoded-address` can be found
+Note that `--new-committee-validator-cbor-encoded-address` can be found
 from the JSON key `cborEncodedAddresses` from the output of the `addresses`
 subcommand.
 
@@ -530,9 +516,8 @@ nix run .#sidechain-main-cli -- save-checkpoint \
 #### 3.3.13 Insert new protocol version
 
 This command is only for testing purposes and shouldn't be used.
-
 ```
-nix run .#sidechain-main-cli -- insert-version-2
+nix run .#sidechain-main-cli --insert-version-2
 ```
 
 #### 3.3.14 Update existing protocol version
@@ -688,7 +673,6 @@ nix run .#sidechain-main-cli -- utils sign ecdsa-secp256k1 \
 ```
 
 Sample output:
-
 ```
 { "endpoint": "EcdsaSecp256k1Sign",
   "rawHexPublicKey":"03303e8f4b884b97349c39a5011d7e2cc8dca0a0cf7898a29d0e37524ee5ffb5f0",
@@ -700,7 +684,6 @@ Sample output:
 ##### 3.3.21.4 Sign a message with a Schnorr SECP256k1 private key
 
 Arguments and the output format are the same as in 3.3.21.3.
-
 ```
 nix run .#sidechain-main-cli -- utils sign schnorr-secp256k1 \
   --private-key "d2a77accb66f065001dc225fb0b0e570aac266241ab9358e823cb909ad62e07f" \

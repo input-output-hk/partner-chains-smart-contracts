@@ -1,10 +1,10 @@
-# Testing without tears
+# Testing
 
 ## What is this about?
 
 QuickCheck, and property testing in general, are a quagmire of bad documentation
 and folklore. A lot of what material exists on the topic of either, or both,
-is old, vague, overly-general or straight-up wrong, sometimes at the same time.
+is old, vague, overly-general or just wrong, sometimes at the same time.
 This makes it difficult for newcomers to understand how to use the tools
 provided, or leads to common errors that lead to frustration or bad test quality.
 
