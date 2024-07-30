@@ -30,7 +30,7 @@ import TrustlessSidechain.Utils.Address
 import Type.Row (type (+))
 import Cardano.Types.PlutusScript (PlutusScript)
 import TrustlessSidechain.Effects.App (APP)
-import Cardano.Types.ScriptRef (ScriptRef(..))
+import Cardano.Types.ScriptRef (ScriptRef(PlutusScriptRef))
 import TrustlessSidechain.Effects.Log (logWarn')
 
 -- | `findUtxoAtByValue addr p` finds all utxos at the validator address `addr`

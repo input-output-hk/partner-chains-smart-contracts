@@ -13,13 +13,16 @@ import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction (TransactionHash)
-import Contract.TxConstraints (DatumPresence(..), TxConstraints)
+import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
 import Contract.TxConstraints as Constraints
 import Contract.Value as Value
 import JS.BigInt as BigInt
 import Run (Run)
 import Run.Except (EXCEPT)
-import TrustlessSidechain.Checkpoint (CheckpointDatum(..), checkpointNftTn)
+import TrustlessSidechain.Checkpoint
+  ( CheckpointDatum(CheckpointDatum)
+  , checkpointNftTn
+  )
 import TrustlessSidechain.Checkpoint.Types as Checkpoint.Types
 import TrustlessSidechain.Checkpoint.Utils as Checkpoint
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
