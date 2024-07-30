@@ -18,15 +18,12 @@ module Test.PlutipTest
 
 import Contract.Prelude
 
-
+import Contract.Test.Testnet (class UtxoDistribution, runTestnetContract)
+import Ctl.Internal.Spawn as PortCheck
+import Ctl.Internal.Testnet.Types (TestnetConfig)
+import Data.Const (Const)
 import Effect.Aff (delay)
 import Effect.Console as Console
-import Contract.Test.Plutip
-  ( class UtxoDistribution
-  , PlutipConfig
-  , runPlutipContract
-  )
-import Data.Const (Const)
 import Mote.Monad (Mote)
 import Mote.Monad as Mote.Monad
 import Mote.Plan as Mote.Plan
@@ -36,14 +33,13 @@ import Test.Config as Test.Config
 import Test.Unit (Test, TestSuite)
 import Test.Unit as Test.Unit
 import TrustlessSidechain.Effects.Contract (CONTRACT)
+import TrustlessSidechain.Effects.Env (Env, READER, emptyEnv)
 import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Run (unliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
-import TrustlessSidechain.Effects.Env (Env, READER, emptyEnv)
 import TrustlessSidechain.Error (OffchainError)
 import Type.Row (type (+))
-import Ctl.Internal.Plutip.PortCheck as PortCheck
 
 -- | `PlutipTest` is a convenient alias for a `Mote` type of
 -- | `PlutipConfigTest`s which require no bracketting (i.e., setup)
@@ -51,7 +47,7 @@ type PlutipTest = Mote (Const Void) PlutipConfigTest Unit
 
 -- | `PlutipConfigTest` is a newtype wrapper for a method which has
 -- | the required configuration to create a `Test`
-newtype PlutipConfigTest = PlutipConfigTest (PlutipConfig → Test)
+newtype PlutipConfigTest = PlutipConfigTest (TestnetConfig → Test)
 
 -- | `interpretPlutipTest` maps `PlutipTest` to `TestSuite` suitable for
 -- | running.
@@ -62,24 +58,24 @@ interpretPlutipTest = go <<< Mote.Monad.plan
     Mote.Plan.foldPlan
       ( \{ label, value } → do
 
-
           Test.Unit.test label $ do
             liftAff $ delay $ wrap 3000.0
-            _ <- whileMMax 10 (do
+            _ ← whileMMax 10
+              ( do
+                  -- Internal functionality
 
-              isPlutipAvailable <- liftAff $ PortCheck.isPortAvailable
-                Test.Config.config.port
+                  isKupoAvailable ← liftAff $ PortCheck.isPortAvailable
+                    Test.Config.config.kupoConfig.port
 
-              isKupoAvailable <- liftAff $ PortCheck.isPortAvailable
-                Test.Config.config.kupoConfig.port
+                  isOgmiosAvailable ← liftAff $ PortCheck.isPortAvailable
+                    Test.Config.config.ogmiosConfig.port
 
-              isOgmiosAvailable <- liftAff $ PortCheck.isPortAvailable
-                Test.Config.config.ogmiosConfig.port
-
-              pure $ (not isPlutipAvailable || not isKupoAvailable || not isOgmiosAvailable))
-               (do
+                  pure (not isKupoAvailable || not isOgmiosAvailable)
+              )
+              ( do
                   liftEffect $ Console.log "Waiting for services to be available"
-                  liftAff $ delay $ wrap 3000.0)
+                  liftAff $ delay $ wrap 3000.0
+              )
 
             runPlutipConfigTest
               Test.Config.config
@@ -89,13 +85,12 @@ interpretPlutipTest = go <<< Mote.Monad.plan
       (\{ label, value } → Test.Unit.suite label (go value))
       sequence_
 
-whileMMax ∷ forall m a. Monad m ⇒ Int -> m Boolean → m a → m Unit
+whileMMax ∷ ∀ m a. Monad m ⇒ Int → m Boolean → m a → m Unit
 whileMMax 0 _ _ = pure unit
 whileMMax n p m | n > 0 = do
-  b <- p
-  if b
-    then m *> whileMMax (n-1) p m
-    else pure unit
+  b ← p
+  if b then m *> whileMMax (n - 1) p m
+  else pure unit
 whileMMax _ _ _ = pure unit
 
 -- | `mkPlutipConfigTest` provides a mechanism to create a `PlutipConfigTest`
@@ -106,19 +101,20 @@ mkPlutipConfigTest ∷
   distr →
   ( wallets →
     Run
-      ( EXCEPT OffchainError + WALLET + TRANSACTION + LOG + READER Env + AFF + EFFECT
+      ( EXCEPT OffchainError + WALLET + TRANSACTION + LOG + READER Env + AFF
+          + EFFECT
           + CONTRACT
           + ()
       )
       Unit
   ) →
   PlutipConfigTest
-mkPlutipConfigTest d t = PlutipConfigTest \c → runPlutipContract c d
+mkPlutipConfigTest d t = PlutipConfigTest \c → runTestnetContract c d
   (unliftApp emptyEnv <<< t)
 
 -- | `runPlutipConfigTest` provides a mechanism to turn a `PlutipConfigTest` into a `Test`
 runPlutipConfigTest ∷
-  PlutipConfig →
+  TestnetConfig →
   PlutipConfigTest →
   Test
 runPlutipConfigTest config (PlutipConfigTest run) = run config

@@ -7,8 +7,8 @@ module Test.CandidatePermissionToken
 
 import Contract.Prelude
 
-import Cardano.Types.BigNum as BigNum
 import Cardano.Types.Asset (Asset(Asset))
+import Cardano.Types.BigNum as BigNum
 import Cardano.Types.PlutusScript as PlutusScript
 import Contract.Wallet as Wallet
 import JS.BigInt as BigInt

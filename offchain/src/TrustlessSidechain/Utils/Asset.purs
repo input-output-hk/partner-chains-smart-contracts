@@ -8,19 +8,19 @@ module TrustlessSidechain.Utils.Asset
 
 import Contract.Prelude
 
+import Cardano.AsCbor (encodeCbor)
+import Cardano.Types.Asset (Asset(..))
 import Cardano.Types.AssetClass (AssetClass(AssetClass))
-import Cardano.Types.Asset (Asset(AdaAsset, Asset))
 import Cardano.Types.AssetName (AssetName, mkAssetName)
-import Cardano.Types.ScriptHash (ScriptHash)
-import Contract.Prim.ByteArray (hexToByteArrayUnsafe, byteArrayToHex)
-import Data.ByteArray (byteArrayFromAscii)
 import Cardano.Types.BigNum (BigNum)
+import Cardano.Types.MultiAsset as MultiAsset
+import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.Value as Value
+import Contract.Prim.ByteArray (byteArrayToHex, hexToByteArrayUnsafe)
+import Contract.Value (CurrencySymbol, Value)
+import Data.ByteArray (byteArrayFromAscii)
 import Data.Maybe (fromJust)
 import Partial.Unsafe (unsafePartial)
-import Contract.Value (CurrencySymbol, Value)
-import Cardano.Types.MultiAsset as MultiAsset
-import Cardano.Types.Value as Value
-import Cardano.AsCbor (encodeCbor)
 
 emptyAssetName ∷ AssetName
 emptyAssetName =
@@ -41,6 +41,7 @@ getScriptHash (AssetClass sc _) = sc
 currencySymbolToHex ∷ CurrencySymbol → String
 currencySymbolToHex cs = byteArrayToHex $ unwrap $ encodeCbor cs
 
-singletonFromAsset :: Asset -> BigNum -> Value
-singletonFromAsset AdaAsset amount = Value.mkValue (wrap amount) MultiAsset.empty
+singletonFromAsset ∷ Asset → BigNum → Value
+singletonFromAsset AdaAsset amount = Value.mkValue (wrap amount)
+  MultiAsset.empty
 singletonFromAsset (Asset cs tn) amount = Value.singleton cs tn amount

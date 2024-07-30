@@ -81,8 +81,10 @@ import TrustlessSidechain.GetSidechainAddresses
   ( SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
   )
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
-import TrustlessSidechain.Governance(Governance(MultiSig))
-import TrustlessSidechain.Governance.MultiSig (MultiSigGovParams(MultiSigGovParams))
+import TrustlessSidechain.Governance (Governance(MultiSig))
+import TrustlessSidechain.Governance.MultiSig
+  ( MultiSigGovParams(MultiSigGovParams)
+  )
 import TrustlessSidechain.InitSidechain (initSidechain, toSidechainParams)
 import TrustlessSidechain.InitSidechain.CandidatePermissionToken
   ( initCandidatePermissionToken
@@ -99,8 +101,8 @@ import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.NativeTokenManagement.Reserve
   ( depositToReserve
-  , handover
   , findOneReserveUtxo
+  , handover
   , initialiseReserveUtxo
   , transferToIlliquidCirculationSupply
   , updateReserveUtxo
@@ -169,9 +171,9 @@ import TrustlessSidechain.Utils.Transaction
   , balanceSignAndSubmitWithoutSpendingUtxo
   , txHashToByteArray
   )
+import TrustlessSidechain.Utils.Utxos (plutusScriptFromTxIn)
 import TrustlessSidechain.Versioning as Versioning
 import Type.Row (type (+))
-import TrustlessSidechain.Utils.Utxos (plutusScriptFromTxIn)
 
 -- | Main entrypoint for the CTL CLI
 main ∷ Effect Unit
@@ -201,12 +203,17 @@ main = do
         <> "\nDenominator: "
         <> BigInt.toString denominator
 
-      let governance = Just $ MultiSig $ MultiSigGovParams { governanceMembers: [unwrap $ unwrap $ (unwrap scParams).governanceAuthority], requiredSignatures: BigInt.fromInt 1 }
+      let
+        governance = Just $ MultiSig $ MultiSigGovParams
+          { governanceMembers:
+              [ unwrap $ unwrap $ (unwrap scParams).governanceAuthority ]
+          , requiredSignatures: BigInt.fromInt 1
+          }
 
       -- Running the program
       -----------------------
       launchAff_ $ do
-        endpointResp ← runAppLive opts.contractParams {governance}
+        endpointResp ← runAppLive opts.contractParams { governance }
           $ runTxEndpoint
               opts.sidechainEndpointParams
               opts.endpoint
@@ -716,33 +723,33 @@ runTxEndpoint sidechainEndpointParams endpoint =
           depositAmount
         pure $ ReserveResp { transactionHash: txHashToByteArray txHash }
 
-      UpdateReserveSettings { mutableReserveSettings } -> do
-        utxo <- findOneReserveUtxo scParams
-        txHash <- updateReserveUtxo scParams mutableReserveSettings utxo
+      UpdateReserveSettings { mutableReserveSettings } → do
+        utxo ← findOneReserveUtxo scParams
+        txHash ← updateReserveUtxo scParams mutableReserveSettings utxo
         pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
 
-      DepositReserve { asset, depositAmount } -> do
-        txHash <- depositToReserve scParams asset depositAmount
+      DepositReserve { asset, depositAmount } → do
+        txHash ← depositToReserve scParams asset depositAmount
         pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
 
       ReleaseReserveFunds
         { totalAccruedTillNow
         , transactionInput
-        } -> do
-        utxo <- findOneReserveUtxo scParams
-        plutusScript <- Effect.fromMaybeThrow
+        } → do
+        utxo ← findOneReserveUtxo scParams
+        plutusScript ← Effect.fromMaybeThrow
           (NotFoundUtxo "No Reserved UTxO exists for the given asset")
           (plutusScriptFromTxIn transactionInput)
-        txHash <- transferToIlliquidCirculationSupply
+        txHash ← transferToIlliquidCirculationSupply
           scParams
           totalAccruedTillNow
           plutusScript
           utxo
         pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
 
-      HandoverReserve -> do
-        utxo <- findOneReserveUtxo scParams
-        txHash <- handover scParams utxo
+      HandoverReserve → do
+        utxo ← findOneReserveUtxo scParams
+        txHash ← handover scParams utxo
         pure $ ReserveResp { transactionHash: txHashToByteArray txHash }
 
 -- | Executes an endpoint for the `utils` subcommand. Note that this does _not_

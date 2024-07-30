@@ -3,6 +3,7 @@ module Test.PoCReferenceInput (tests, testScenario1, testScenario2) where
 
 import Contract.Prelude
 
+import Cardano.Plutus.ApplyArgs as Scripts
 import Cardano.Plutus.Types.Address as PlutusAddress
 import Cardano.ToData as ToData
 import Cardano.Types.PlutusScript as PlutusScript
@@ -10,7 +11,6 @@ import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData (RedeemerDatum(RedeemerDatum))
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as ScriptLookups
-import Contract.Scripts as Scripts
 import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptFromEnvelope)
 import Contract.TxConstraints (DatumPresence(DatumWitness), TxConstraints)
 import Contract.TxConstraints as TxConstraints
@@ -158,6 +158,7 @@ testScenario1 = Mote.Monad.test "PoCReferenceInput: testScenario1"
               <> ScriptLookups.unspentOutputs
                 (Map.singleton toReferenceIn toReferenceOut)
               <> ScriptLookups.validator referenceValidator
+              <> ScriptLookups.datum referenceValidatorDat
 
         unbalancedTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups
           constraints

@@ -33,8 +33,8 @@ import TrustlessSidechain.CommitteeATMSSchemes
   , ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
 import TrustlessSidechain.Effects.Contract (liftContract)
-import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Env (ask)
+import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain
@@ -520,7 +520,7 @@ committeeChangeCheckpointTest =
         newCommitteeKeys ← Run.liftEffect $ sequence $ Array.replicate 5
           generatePrivKey
 
-        env <- ask
+        env ← ask
 
         liftContract $ updateCommitteeHash
           { sidechainParams

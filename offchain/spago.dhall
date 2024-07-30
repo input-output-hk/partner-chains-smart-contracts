@@ -50,6 +50,7 @@
   , "typelevel-prelude"
   , "uint"
   , "unfoldable"
+  , "uplc-apply-args"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]

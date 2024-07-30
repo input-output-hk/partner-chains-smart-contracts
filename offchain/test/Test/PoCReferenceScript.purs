@@ -185,6 +185,7 @@ testScenario1 = Mote.Monad.test "PoCReferenceScript: testScenario1"
               <> ScriptLookups.unspentOutputs
                 (Map.singleton toReferenceIn toReferenceOut)
               <> ScriptLookups.validator toReferenceValidator
+              <> ScriptLookups.datum referenceValidatorDat
 
         unbalancedTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups
           constraints

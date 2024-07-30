@@ -32,8 +32,8 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   , ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
 import TrustlessSidechain.Effects.Contract (liftContract)
-import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
 import TrustlessSidechain.Effects.Env (Env, ask)
+import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
 import TrustlessSidechain.GarbageCollector as GarbageCollector
 import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
@@ -75,7 +75,7 @@ generateUchmSignatures ∷
   , -- the sidechain epoch
     sidechainEpoch ∷ BigInt
   , -- the Reader Env
-    env :: Env
+    env ∷ Env
   } →
   Contract (Array (Tuple EcdsaSecp256k1PubKey EcdsaSecp256k1Signature))
 generateUchmSignatures
@@ -139,7 +139,7 @@ updateCommitteeHash ∷
   , -- sidechain epoch of the new committee
     sidechainEpoch ∷ BigInt
   , -- the Reader Env
-    env :: Env
+    env ∷ Env
   } →
   Contract Unit
 updateCommitteeHash params = updateCommitteeHashWith params pure
@@ -161,7 +161,7 @@ updateCommitteeHashWith ∷
     previousMerkleRoot ∷ Maybe RootHash
   , -- sidechain epoch of the new committee
     sidechainEpoch ∷ BigInt
-  , env :: Env
+  , env ∷ Env
   } →
   ( UpdateCommitteeHashParams PlutusData →
     Contract (UpdateCommitteeHashParams PlutusData)
@@ -241,7 +241,7 @@ testScenario1 = Mote.Monad.test "Simple update committee hash"
       nextCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
         generatePrivKey
 
-      env <- ask
+      env ← ask
       liftContract $ updateCommitteeHash
         { sidechainParams
         , currentCommitteePrvKeys: initCommitteePrvKeys
@@ -301,7 +301,7 @@ testScenario2 =
         nextCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
           generatePrivKey
 
-        env <- ask
+        env ← ask
         liftContract $ Test.Utils.fails
           $ updateCommitteeHashWith
               { sidechainParams: scParams
@@ -316,14 +316,14 @@ testScenario2 =
                 $ UpdateCommitteeHashParams
                 $ params
                     { aggregateSignature =
-                          unsafePartial $
-                            case params.aggregateSignature of
+                        unsafePartial $
+                          case params.aggregateSignature of
+                            PlainEcdsaSecp256k1
+                              [ c1 /\ _s1, c2 /\ s2 ] →
                               PlainEcdsaSecp256k1
-                                [ c1 /\ _s1, c2 /\ s2 ] →
-                                PlainEcdsaSecp256k1
-                                  [ c1 /\ Nothing
-                                  , c2 /\ s2
-                                  ]
+                                [ c1 /\ Nothing
+                                , c2 /\ s2
+                                ]
                     }
 
 -- | `testScenario3` initialises the committee with an out of order committee
@@ -395,7 +395,7 @@ testScenario3 =
                               Array.reverse sigs
                   }
               )
-        env <- ask
+        env ← ask
         -- the first update
         liftContract $ updateCommitteeHashWith
           { sidechainParams
@@ -484,7 +484,7 @@ testScenario4 =
 
         { sidechainParams } ← initSidechain initScParams 1
 
-        env <- ask
+        env ← ask
         liftContract $ updateCommitteeHashWith
           { sidechainParams
           , currentCommitteePrvKeys: initCommitteePrvKeys
@@ -560,7 +560,7 @@ testScenario5 =
           $ sequence
           $ Array.replicate keyCount generatePrivKey
 
-        env <- ask
+        env ← ask
         liftContract
           $ updateCommitteeHashWith
               { sidechainParams: scParams

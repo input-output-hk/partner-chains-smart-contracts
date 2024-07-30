@@ -36,11 +36,11 @@ import TrustlessSidechain.CommitteeCandidateValidator
   , register
   )
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
+import TrustlessSidechain.Effects.Env (Env, READER)
 import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
-import TrustlessSidechain.Effects.Env (READER, Env)
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (getOwnWalletAddress)
@@ -64,7 +64,11 @@ tests = plutipGroup "Committe candidate registration/deregistration" $ do
 runRegister ∷
   ∀ r.
   SidechainParams →
-  Run (READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + EFFECT + r)
+  Run
+    ( READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT
+        + EFFECT
+        + r
+    )
     TransactionHash
 runRegister = runRegisterWithCandidatePermissionInfo false
 
@@ -73,7 +77,10 @@ runRegister = runRegisterWithCandidatePermissionInfo false
 runRegisterWithFixedKeys ∷
   ∀ r.
   SidechainParams →
-  Run (READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + r)
+  Run
+    ( READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT +
+        r
+    )
     TransactionHash
 runRegisterWithFixedKeys =
   runRegisterWithCandidatePermissionInfoWithFixedKeys false
@@ -82,7 +89,10 @@ runRegisterWithCandidatePermissionInfoWithFixedKeys ∷
   ∀ r.
   Boolean →
   SidechainParams →
-  Run (READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + r)
+  Run
+    ( READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT +
+        r
+    )
     TransactionHash
 runRegisterWithCandidatePermissionInfoWithFixedKeys usePermissionToken scParams =
   do
@@ -111,7 +121,11 @@ runRegisterWithCandidatePermissionInfo ∷
   ∀ r.
   Boolean →
   SidechainParams →
-  Run (READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + EFFECT + r)
+  Run
+    ( READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT
+        + EFFECT
+        + r
+    )
     TransactionHash
 runRegisterWithCandidatePermissionInfo usePermissionToken scParams = do
   let

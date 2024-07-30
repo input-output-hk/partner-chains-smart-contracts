@@ -3,7 +3,7 @@ module TrustlessSidechain.Options.Specs (options) where
 import Contract.Prelude
 
 import Cardano.AsCbor (decodeCbor)
-import Cardano.Types.Asset (Asset (AdaAsset, Asset))
+import Cardano.Types.Asset (Asset(..))
 import Cardano.Types.BigNum (BigNum)
 import Cardano.Types.TransactionInput (TransactionInput)
 import Cardano.Types.NetworkId (NetworkId(MainnetId))
@@ -17,6 +17,7 @@ import Contract.Config
   )
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Scripts (ValidatorHash)
+import Contract.Time (POSIXTime)
 import Contract.Value (AssetName)
 import Contract.Wallet
   ( PrivatePaymentKeySource(PrivatePaymentKeyFile)
@@ -24,7 +25,6 @@ import Contract.Wallet
   )
 import Control.Alternative ((<|>))
 import Ctl.Internal.Helpers (logWithLevel)
-import Contract.Time(POSIXTime)
 import Data.List (List)
 import Data.List.Types (NonEmptyList)
 import Data.UInt (UInt)
@@ -312,7 +312,6 @@ optSpec maybeConfig =
         )
 
     ]
-
 
 -- | `utilsSpec` provides CLI options for utilities in the sidechain that do
 -- | not submit a tx to the blockchain
@@ -1037,8 +1036,8 @@ parseGenesisHash =
 
 -- | `initCandidatePermissionTokenMintHelper` helps mint candidate permission
 -- | tokens from initializing the sidechain
-initCandidatePermissionTokenMintHelper
-  ∷ Parser BigInt
+initCandidatePermissionTokenMintHelper ∷
+  Parser BigInt
 initCandidatePermissionTokenMintHelper =
   option bigInt $ fold
     [ long "candidate-permission-token-amount"
@@ -1559,20 +1558,20 @@ parseDepositAmount = option Parsers.tokenAmount
 parseIncentiveAmount ∷ Parser BigInt
 parseIncentiveAmount =
   let
-     fparser =
-       Parsers.positiveAmount
-       "failed to parse incentive-amount"
-       "incentive-amount amount must be non-negative"
+    fparser =
+      Parsers.positiveAmount
+        "failed to parse incentive-amount"
+        "incentive-amount amount must be non-negative"
   in
-   option fparser
-  ( fold
-      [ long "reserve-initial-incentive-amount"
-      , metavar "RESERVE-INCENTIVE-AMOUNT"
-      , help "Incentive amount of tokens"
-      , (value (BigInt.fromInt 0))
-      , showDefault
-      ]
-  )
+    option fparser
+      ( fold
+          [ long "reserve-initial-incentive-amount"
+          , metavar "RESERVE-INCENTIVE-AMOUNT"
+          , help "Incentive amount of tokens"
+          , (value (BigInt.fromInt 0))
+          , showDefault
+          ]
+      )
 
 -- `parsePOSIXTime`
 parserT0 ∷ Parser POSIXTime
@@ -1598,7 +1597,7 @@ parseAssetName =
       )
   )
 
-handOverReserveSpec :: Parser TxEndpoint
+handOverReserveSpec ∷ Parser TxEndpoint
 handOverReserveSpec = flag' HandoverReserve $ fold
   [ long "hand-over"
   , help "Hand Over Reserve Tokens"
@@ -1610,24 +1609,22 @@ parseAdaAsset = flag' AdaAsset $ fold
   , help "Use Ada for reserve asset"
   ]
 
-parseAsset ∷ String -> String -> Parser Asset
+parseAsset ∷ String → String → Parser Asset
 parseAsset long' metavar' =
-  (
-    Asset
-    <$>
-    ( option validatorHashParser
-      ( fold
-        [ long long'
-        , metavar metavar'
-        , help "Hex encoded hash string"
-        ]
-      )
-    )
-    <*> parseAssetName
+  ( Asset
+      <$>
+        ( option validatorHashParser
+            ( fold
+                [ long long'
+                , metavar metavar'
+                , help "Hex encoded hash string"
+                ]
+            )
+        )
+      <*> parseAssetName
   )
-  <|>
-  parseAdaAsset
-
+    <|>
+      parseAdaAsset
 
 parseImmutableReserveSettings ∷ Parser ImmutableReserveSettings
 parseImmutableReserveSettings = ado
@@ -1637,13 +1634,15 @@ parseImmutableReserveSettings = ado
 
 parseMutableReserveSettings ∷ Parser MutableReserveSettings
 parseMutableReserveSettings = ado
-  vFunctionTotalAccrued ← (option validatorHashParser
-                            (fold
-                              [ long "total-accrued-function-script-hash"
-                              , metavar "SCRIPT-HASH"
-                              , help "Hex encoded hash string"
-                              ]
-                            ))
+  vFunctionTotalAccrued ←
+    ( option validatorHashParser
+        ( fold
+            [ long "total-accrued-function-script-hash"
+            , metavar "SCRIPT-HASH"
+            , help "Hex encoded hash string"
+            ]
+        )
+    )
 
   incentiveAmount ← parseIncentiveAmount
   in MutableReserveSettings { vFunctionTotalAccrued, incentiveAmount }
@@ -1660,34 +1659,35 @@ createReserveSpec = ado
       , depositAmount
       }
 
-depositReserveSpec :: Parser TxEndpoint
+depositReserveSpec ∷ Parser TxEndpoint
 depositReserveSpec = ado
-  asset <- parseAsset "deposit-reserve-asset" "ASSET-SCRIPT-HASH"
-  depositAmount <- parseDepositAmount
+  asset ← parseAsset "deposit-reserve-asset" "ASSET-SCRIPT-HASH"
+  depositAmount ← parseDepositAmount
   in
     DepositReserve { asset, depositAmount }
 
-parseUnit :: Parser UInt
+parseUnit ∷ Parser UInt
 parseUnit = option uint $ fold
   [ long "total-accrued-till-now"
   , metavar "INT"
   , help "Computerd integer for the v(t)"
   ]
 
-releaseReserveFundsSpec :: Parser TxEndpoint
+releaseReserveFundsSpec ∷ Parser TxEndpoint
 releaseReserveFundsSpec = ado
-  totalAccruedTillNow <- UInt.toInt <$> parseUnit
-  transactionInput <- parseTransactionInput
+  totalAccruedTillNow ← UInt.toInt <$> parseUnit
+  transactionInput ← parseTransactionInput
   in
     ReleaseReserveFunds
       { totalAccruedTillNow
       , transactionInput
       }
 
-parseTransactionInput :: Parser TransactionInput
+parseTransactionInput ∷ Parser TransactionInput
 parseTransactionInput =
   option Parsers.transactionInput $ fold
     [ long "reserve-transaction-input"
     , metavar "RESERVE-TRANSACTION-INPUT"
-    , help "Transaction input of the policy script for to transfer illiquid circulation"
+    , help
+        "Transaction input of the policy script for to transfer illiquid circulation"
     ]

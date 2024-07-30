@@ -29,14 +29,15 @@ import TrustlessSidechain.CommitteeCandidateValidator
   )
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet as DistributedSet
-import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Effects.Env (Env, READER, ask)
-import TrustlessSidechain.Governance.MultiSig
-  ( multisigGovPolicy
-  )
+import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.FUELBurningPolicy.V1 as FUELBurningPolicy.V1
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
+import TrustlessSidechain.Governance (Governance(MultiSig))
+import TrustlessSidechain.Governance.MultiSig
+  ( multisigGovPolicy
+  )
 import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.NativeTokenManagement.IlliquidCirculationSupply
   ( illiquidCirculationSupplyValidator
@@ -68,7 +69,6 @@ import TrustlessSidechain.Versioning.Types
       )
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
-import TrustlessSidechain.Governance(Governance(MultiSig))
 import Type.Row (type (+))
 
 getVersionedPoliciesAndValidators ∷
@@ -201,11 +201,11 @@ getNativeTokenManagementPoliciesAndValidators ∷
     , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
     }
 getNativeTokenManagementPoliciesAndValidators sp = do
-  governance <- (_.governance) <$> ask
+  governance ← (_.governance) <$> ask
   case governance of
     -- The native token management system can only be used if the user specified
     -- parameters for the governance (currently only multisignature governance)
-    Just (MultiSig msgp) -> do
+    Just (MultiSig msgp) → do
       versionOracleConfig ← Versioning.getVersionOracleConfig sp
       reserveAuthPolicy' ← reserveAuthPolicy versionOracleConfig
       reserveValidator' ← reserveValidator versionOracleConfig
@@ -214,19 +214,18 @@ getNativeTokenManagementPoliciesAndValidators sp = do
       governancePolicy ← multisigGovPolicy msgp
 
       let
-          versionedPolicies = List.fromFoldable
-            [ ReserveAuthPolicy /\ reserveAuthPolicy'
-            , GovernancePolicy /\ governancePolicy
-            ]
-          versionedValidators = List.fromFoldable
-            [ ReserveValidator /\ reserveValidator'
-            , IlliquidCirculationSupplyValidator /\
+        versionedPolicies = List.fromFoldable
+          [ ReserveAuthPolicy /\ reserveAuthPolicy'
+          , GovernancePolicy /\ governancePolicy
+          ]
+        versionedValidators = List.fromFoldable
+          [ ReserveValidator /\ reserveValidator'
+          , IlliquidCirculationSupplyValidator /\
               illiquidCirculationSupplyValidator'
-            ]
+          ]
 
       pure $ { versionedPolicies, versionedValidators }
-    _ -> pure { versionedPolicies: mempty, versionedValidators: mempty }
-
+    _ → pure { versionedPolicies: mempty, versionedValidators: mempty }
 
 -- | Return policies and validators needed for FUEL minting
 -- | and burning.

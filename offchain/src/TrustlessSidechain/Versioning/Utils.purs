@@ -188,63 +188,63 @@ initializeVersionLookupsAndConstraints ∷
     }
 initializeVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
   do
-      burnVersionInitToken ← burnOneVersionInitToken sp
+    burnVersionInitToken ← burnOneVersionInitToken sp
 
-      -- Preparing versioning scripts and tokens
-      -----------------------------------
-      { versionOracleMintingPolicy, versionOracleCurrencySymbol } ←
-        getVersionOraclePolicy sp
-      vValidator ← versionOracleValidator sp
+    -- Preparing versioning scripts and tokens
+    -----------------------------------
+    { versionOracleMintingPolicy, versionOracleCurrencySymbol } ←
+      getVersionOraclePolicy sp
+    vValidator ← versionOracleValidator sp
 
-      -- Prepare datum and other boilerplate
-      -----------------------------------
-      let
-        versionedScriptHash = PlutusScript.hash versionedScript
-        versionOracle = VersionOracle
-          { version: BigNum.fromInt ver
-          , scriptId
-          }
-        versionOracleDatum = VersionOracleDatum
-          { versionOracle, versionCurrencySymbol: versionOracleCurrencySymbol }
-        oneVersionOracleAsset = Value.singleton versionOracleCurrencySymbol
+    -- Prepare datum and other boilerplate
+    -----------------------------------
+    let
+      versionedScriptHash = PlutusScript.hash versionedScript
+      versionOracle = VersionOracle
+        { version: BigNum.fromInt ver
+        , scriptId
+        }
+      versionOracleDatum = VersionOracleDatum
+        { versionOracle, versionCurrencySymbol: versionOracleCurrencySymbol }
+      oneVersionOracleAsset = Value.singleton versionOracleCurrencySymbol
+        versionOracleTokenName
+        (BigNum.fromInt 1)
+
+    scriptReftxInput /\ scriptReftxOutput ← ScriptCache.getScriptRefUtxo
+      sp
+      (PlutusScriptRef versionOracleMintingPolicy)
+
+    let
+      initializeVersioningTokensConstraints ∷ TxConstraints
+      initializeVersioningTokensConstraints =
+        Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
+          (PlutusScript.hash versionOracleMintingPolicy)
+          ( RedeemerDatum $ toData $ InitializeVersionOracle versionOracle
+              versionedScriptHash
+          )
           versionOracleTokenName
-          (BigNum.fromInt 1)
+          (Int.fromInt 1)
+          ( RefInput $ TransactionUnspentOutput
+              { input: scriptReftxInput, output: scriptReftxOutput }
+          )
 
-      scriptReftxInput /\ scriptReftxOutput ← ScriptCache.getScriptRefUtxo
-        sp
-        (PlutusScriptRef versionOracleMintingPolicy)
+      lookups ∷ ScriptLookups
+      lookups = Lookups.plutusMintingPolicy versionOracleMintingPolicy
+        <> Lookups.validator vValidator
 
-      let
-        initializeVersioningTokensConstraints ∷ TxConstraints
-        initializeVersioningTokensConstraints =
-          Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
-            (PlutusScript.hash versionOracleMintingPolicy)
-            ( RedeemerDatum $ toData $ InitializeVersionOracle versionOracle
-                versionedScriptHash
-            )
-            versionOracleTokenName
-            (Int.fromInt 1)
-            ( RefInput $ TransactionUnspentOutput
-                { input: scriptReftxInput, output: scriptReftxOutput }
-            )
+      constraints ∷ TxConstraints
+      constraints =
+        -- Pay versioning token to the versioning script with datum
+        -- and reference script attached.
+        Constraints.mustPayToScriptWithScriptRef
+          (PlutusScript.hash vValidator)
+          (toData versionOracleDatum)
+          DatumInline
+          (PlutusScriptRef versionedScript)
+          oneVersionOracleAsset
+          <> initializeVersioningTokensConstraints
 
-        lookups ∷ ScriptLookups
-        lookups = Lookups.plutusMintingPolicy versionOracleMintingPolicy
-          <> Lookups.validator vValidator
-
-        constraints ∷ TxConstraints
-        constraints =
-          -- Pay versioning token to the versioning script with datum
-          -- and reference script attached.
-          Constraints.mustPayToScriptWithScriptRef
-            (PlutusScript.hash vValidator)
-            (toData versionOracleDatum)
-            DatumInline
-            (PlutusScriptRef versionedScript)
-            oneVersionOracleAsset
-            <> initializeVersioningTokensConstraints
-
-      pure $ burnVersionInitToken <> { lookups, constraints }
+    pure $ burnVersionInitToken <> { lookups, constraints }
 
 -- | Take a versionable script (either a validator or a minting policy) with its
 -- | ID and initial version, and construct transaction lookups and constraints
@@ -262,70 +262,70 @@ insertVersionLookupsAndConstraints ∷
     }
 insertVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
   do
-      -- Preparing versioning scripts and tokens
-      -----------------------------------
-      { versionOracleMintingPolicy, versionOracleCurrencySymbol } ←
-        getVersionOraclePolicy sp
-      vValidator ← versionOracleValidator sp
+    -- Preparing versioning scripts and tokens
+    -----------------------------------
+    { versionOracleMintingPolicy, versionOracleCurrencySymbol } ←
+      getVersionOraclePolicy sp
+    vValidator ← versionOracleValidator sp
 
-      -- Prepare datum and other boilerplate
-      -----------------------------------
-      let
-        versionedScriptHash = PlutusScript.hash versionedScript
-        versionOracle = VersionOracle
-          { version: BigNum.fromInt ver
-          , scriptId
-          }
-        versionOracleDatum = VersionOracleDatum
-          { versionOracle, versionCurrencySymbol: versionOracleCurrencySymbol }
-        oneVersionOracleAsset = Value.singleton versionOracleCurrencySymbol
+    -- Prepare datum and other boilerplate
+    -----------------------------------
+    let
+      versionedScriptHash = PlutusScript.hash versionedScript
+      versionOracle = VersionOracle
+        { version: BigNum.fromInt ver
+        , scriptId
+        }
+      versionOracleDatum = VersionOracleDatum
+        { versionOracle, versionCurrencySymbol: versionOracleCurrencySymbol }
+      oneVersionOracleAsset = Value.singleton versionOracleCurrencySymbol
+        versionOracleTokenName
+        (BigNum.fromInt 1)
+      SidechainParams { governanceAuthority } = sp
+
+    let
+      { lookups: governanceAuthorityLookups
+      , constraints: governanceAuthorityConstraints
+      } = Governance.governanceAuthorityLookupsAndConstraints
+        governanceAuthority
+
+    scriptReftxInput /\ scriptReftxOutput ← ScriptCache.getScriptRefUtxo
+      sp
+      (PlutusScriptRef versionOracleMintingPolicy)
+
+    let
+      mintVersioningTokensConstraints ∷ TxConstraints
+      mintVersioningTokensConstraints =
+        Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
+          (PlutusScript.hash versionOracleMintingPolicy)
+          ( RedeemerDatum $ toData $ MintVersionOracle versionOracle
+              versionedScriptHash
+          )
           versionOracleTokenName
-          (BigNum.fromInt 1)
-        SidechainParams { governanceAuthority } = sp
+          (Int.fromInt 1)
+          ( RefInput $ TransactionUnspentOutput
+              { input: scriptReftxInput, output: scriptReftxOutput }
+          )
 
-      let
-        { lookups: governanceAuthorityLookups
-        , constraints: governanceAuthorityConstraints
-        } = Governance.governanceAuthorityLookupsAndConstraints
-          governanceAuthority
+      lookups ∷ ScriptLookups
+      lookups = Lookups.plutusMintingPolicy versionOracleMintingPolicy
+        <> Lookups.validator vValidator
+        <> governanceAuthorityLookups
 
-      scriptReftxInput /\ scriptReftxOutput ← ScriptCache.getScriptRefUtxo
-        sp
-        (PlutusScriptRef versionOracleMintingPolicy)
+      constraints ∷ TxConstraints
+      constraints =
+        -- Pay versioning token to the versioning script with datum
+        -- and reference script attached.
+        Constraints.mustPayToScriptWithScriptRef
+          (PlutusScript.hash vValidator)
+          (toData versionOracleDatum)
+          DatumInline
+          (PlutusScriptRef versionedScript)
+          oneVersionOracleAsset
+          <> governanceAuthorityConstraints
+          <> mintVersioningTokensConstraints
 
-      let
-        mintVersioningTokensConstraints ∷ TxConstraints
-        mintVersioningTokensConstraints =
-          Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
-            (PlutusScript.hash versionOracleMintingPolicy)
-            ( RedeemerDatum $ toData $ MintVersionOracle versionOracle
-                versionedScriptHash
-            )
-            versionOracleTokenName
-            (Int.fromInt 1)
-            ( RefInput $ TransactionUnspentOutput
-                { input: scriptReftxInput, output: scriptReftxOutput }
-            )
-
-        lookups ∷ ScriptLookups
-        lookups = Lookups.plutusMintingPolicy versionOracleMintingPolicy
-          <> Lookups.validator vValidator
-          <> governanceAuthorityLookups
-
-        constraints ∷ TxConstraints
-        constraints =
-          -- Pay versioning token to the versioning script with datum
-          -- and reference script attached.
-          Constraints.mustPayToScriptWithScriptRef
-            (PlutusScript.hash vValidator)
-            (toData versionOracleDatum)
-            DatumInline
-            (PlutusScriptRef versionedScript)
-            oneVersionOracleAsset
-            <> governanceAuthorityConstraints
-            <> mintVersioningTokensConstraints
-
-      pure { lookups, constraints }
+    pure { lookups, constraints }
 
 -- | Take a script ID and version, and construct transaction lookups and
 -- | constraints for removing that version of a script from the versioning
