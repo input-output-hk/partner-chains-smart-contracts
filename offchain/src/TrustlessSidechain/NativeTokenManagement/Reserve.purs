@@ -14,7 +14,6 @@ module TrustlessSidechain.NativeTokenManagement.Reserve
 import Contract.Prelude
 
 import TrustlessSidechain.Utils.Asset (emptyAssetName, singletonFromAsset)
-import Contract.Address (Address)
 import Cardano.Types.Mint as Mint
 import Cardano.Types.BigNum as BigNum
 import Cardano.Types.BigNum (BigNum)
@@ -24,7 +23,6 @@ import Cardano.Types.OutputDatum (outputDatumDatum)
 import Cardano.Types.PlutusData (unit) as PlutusData
 import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.PlutusScript (PlutusScript)
-import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Types.AssetName (AssetName)
 import Cardano.Types.Value (valueOf)
 import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
@@ -35,12 +33,15 @@ import Contract.PlutusData
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction
-  ( ScriptRef(..)
+  ( ScriptRef(PlutusScriptRef)
   , TransactionInput
   , TransactionOutput
   , TransactionHash
   )
-import Contract.TxConstraints (DatumPresence(..), InputWithScriptRef(..))
+import Contract.TxConstraints
+  ( DatumPresence(DatumInline)
+  , InputWithScriptRef(RefInput)
+  )
 import Contract.TxConstraints as TxConstraints
 import Contract.Utxos (UtxoMap)
 import Contract.Value (add, getMultiAsset, minus, singleton) as Value
@@ -53,16 +54,28 @@ import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow)
 import TrustlessSidechain.Effects.Wallet (WALLET)
-import TrustlessSidechain.Error (OffchainError(..))
+import TrustlessSidechain.Error
+  ( OffchainError
+      ( InvalidData
+      , NotFoundUtxo
+      , GenericInternalError
+      )
+  )
 import TrustlessSidechain.Governance(Governance(MultiSig))
-import TrustlessSidechain.Governance.MultiSig (MultiSigGovRedeemer(..))
+import TrustlessSidechain.Governance.MultiSig
+  ( MultiSigGovRedeemer(MultiSignatureCheck) )
 import TrustlessSidechain.NativeTokenManagement.Types
   ( ImmutableReserveSettings
   , MutableReserveSettings
-  , ReserveDatum(..)
-  , ReserveRedeemer(..)
-  , ReserveStats(..)
-  , ReserveAuthPolicyRedeemer(..)
+  , ReserveDatum(ReserveDatum)
+  , ReserveRedeemer
+      ( DepositToReserve
+      , TransferToIlliquidCirculationSupply
+      , UpdateReserve
+      , Handover
+      )
+  , ReserveStats(ReserveStats)
+  , ReserveAuthPolicyRedeemer(ReserveAuthPolicyRedeemer)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Scripts
@@ -70,9 +83,16 @@ import TrustlessSidechain.Utils.Scripts
   , mkValidatorWithParams
   )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
-import TrustlessSidechain.Versioning.ScriptId (ScriptId(..))
+import TrustlessSidechain.Versioning.ScriptId
+  ( ScriptId
+      ( GovernancePolicy
+      , IlliquidCirculationSupplyValidator
+      , ReserveAuthPolicy
+      , ReserveValidator
+      )
+  )
 import TrustlessSidechain.Versioning.Types
-  ( VersionOracle(..)
+  ( VersionOracle(VersionOracle)
   , VersionOracleConfig
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
@@ -98,90 +118,6 @@ reserveAuthTokenName = emptyAssetName
 vFunctionTotalAccruedTokenName ∷ AssetName
 vFunctionTotalAccruedTokenName = emptyAssetName
 
-reserveVersionOracle ∷ VersionOracle
-reserveVersionOracle = VersionOracle
-  { version: BigNum.fromInt 1, scriptId: ReserveValidator }
-
-reserveAuthVersionOracle ∷ VersionOracle
-reserveAuthVersionOracle =
-  VersionOracle
-    { version: BigNum.fromInt 1, scriptId: ReserveAuthPolicy }
-
-illiquidCirculationSupplyVersionOracle ∷ VersionOracle
-illiquidCirculationSupplyVersionOracle =
-  VersionOracle
-    { version: BigNum.fromInt 1, scriptId: IlliquidCirculationSupplyValidator }
-
-governanceVersionOracle ∷ VersionOracle
-governanceVersionOracle = VersionOracle
-  { version: BigNum.fromInt 1, scriptId: GovernancePolicy }
-
-getReserveAuthCurrencySymbol ∷
-  ∀ r.
-  SidechainParams →
-  Run
-    (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    ScriptHash
-getReserveAuthCurrencySymbol sidechainParams =
-  Versioning.getVersionedCurrencySymbol
-    sidechainParams
-    reserveAuthVersionOracle
-
-getReserveAddress ∷
-  ∀ r.
-  SidechainParams →
-  Run
-    (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    Address
-getReserveAddress sidechainParams =
-  Versioning.getVersionedValidatorAddress
-    sidechainParams
-    reserveVersionOracle
-
-getGovernanceScriptRefUtxo ∷
-  ∀ r.
-  SidechainParams →
-  Run
-    (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    (TransactionInput /\ TransactionOutput)
-getGovernanceScriptRefUtxo sidechainParams =
-  Versioning.getVersionedScriptRefUtxo
-    sidechainParams
-    governanceVersionOracle
-
-getReserveScriptRefUtxo ∷
-  ∀ r.
-  SidechainParams →
-  Run
-    (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    (TransactionInput /\ TransactionOutput)
-getReserveScriptRefUtxo sidechainParams =
-  Versioning.getVersionedScriptRefUtxo
-    sidechainParams
-    reserveVersionOracle
-
-getReserveAuthScriptRefUtxo ::
-  ∀ r.
-  SidechainParams →
-  Run
-    (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    (TransactionInput /\ TransactionOutput)
-getReserveAuthScriptRefUtxo sidechainParams =
-  Versioning.getVersionedScriptRefUtxo
-    sidechainParams
-    reserveAuthVersionOracle
-
-getIlliquidCirculationSupplyScriptRefUtxo ∷
-  ∀ r.
-  SidechainParams →
-  Run
-    (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    (TransactionInput /\ TransactionOutput)
-getIlliquidCirculationSupplyScriptRefUtxo sidechainParams =
-  Versioning.getVersionedScriptRefUtxo
-    sidechainParams
-    illiquidCirculationSupplyVersionOracle
-
 getGovernancePolicy ∷
   ∀ r.
   SidechainParams →
@@ -189,7 +125,13 @@ getGovernancePolicy ∷
     (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     PlutusScript
 getGovernancePolicy sidechainParams = do
-  (_ /\ refTxOutput) ← getGovernanceScriptRefUtxo sidechainParams
+  (_ /\ refTxOutput) ←
+    Versioning.getVersionedScriptRefUtxo
+      sidechainParams
+      (VersionOracle { version: BigNum.fromInt 1
+                     , scriptId: GovernancePolicy
+                     }
+      )
 
   case (unwrap refTxOutput).scriptRef of
     Just (PlutusScriptRef s) → pure s
@@ -203,7 +145,13 @@ getIlliquidCirculationSupplyValidator ∷
     (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     PlutusScript
 getIlliquidCirculationSupplyValidator sidechainParams = do
-  (_ /\ refTxOutput) ← getIlliquidCirculationSupplyScriptRefUtxo sidechainParams
+  (_ /\ refTxOutput) ←
+    Versioning.getVersionedScriptRefUtxo
+      sidechainParams
+      (VersionOracle { version: BigNum.fromInt 1
+                     , scriptId: IlliquidCirculationSupplyValidator
+                     }
+      )
 
   case (unwrap refTxOutput).scriptRef of
     Just (PlutusScriptRef s) → pure s
@@ -215,9 +163,21 @@ findReserveUtxos ∷
   SidechainParams →
   Run (APP r) UtxoMap
 findReserveUtxos sidechainParams = do
-  reserveAuthCurrencySymbol ← getReserveAuthCurrencySymbol sidechainParams
+  reserveAuthCurrencySymbol ←
+    Versioning.getVersionedCurrencySymbol
+      sidechainParams
+      (VersionOracle { version: BigNum.fromInt 1
+                     , scriptId: ReserveAuthPolicy
+                     }
+      )
 
-  reserveAddress ← getReserveAddress sidechainParams
+  reserveAddress ←
+    Versioning.getVersionedValidatorAddress
+      sidechainParams
+      (VersionOracle { version: BigNum.fromInt 1
+                     , scriptId: ReserveValidator
+                     }
+      )
 
   utxos ← utxosAt reserveAddress
 
@@ -243,7 +203,12 @@ reserveAuthLookupsAndConstraints ∷
     }
 reserveAuthLookupsAndConstraints sp = do
   (reserveAuthRefTxInput /\ reserveAuthRefTxOutput) ←
-    getReserveAuthScriptRefUtxo sp
+    Versioning.getVersionedScriptRefUtxo
+      sp
+      ( VersionOracle { version: BigNum.fromInt 1
+                      , scriptId: ReserveAuthPolicy
+                      }
+      )
 
   pure
     { reserveAuthLookups: Lookups.unspentOutputs
@@ -261,7 +226,12 @@ illiquidCirculationSupplyLookupsAndConstraints ∷
     }
 illiquidCirculationSupplyLookupsAndConstraints sp = do
   (icsRefTxInput /\ icsRefTxOutput) ←
-    getIlliquidCirculationSupplyScriptRefUtxo sp
+    Versioning.getVersionedScriptRefUtxo
+      sp
+      (VersionOracle { version: BigNum.fromInt 1
+                     , scriptId: IlliquidCirculationSupplyValidator
+                     }
+      )
 
   pure
     { icsLookups: Lookups.unspentOutputs
@@ -279,7 +249,12 @@ reserveLookupsAndConstraints ∷
     }
 reserveLookupsAndConstraints sp = do
   (reserveRefTxInput /\ reserveRefTxOutput) ←
-    getReserveScriptRefUtxo sp
+    Versioning.getVersionedScriptRefUtxo
+      sp
+      (VersionOracle { version: BigNum.fromInt 1
+                     , scriptId: ReserveValidator
+                     }
+      )
 
   pure
     { reserveLookups: Lookups.unspentOutputs
@@ -297,7 +272,12 @@ governanceLookupsAndConstraints ∷
     }
 governanceLookupsAndConstraints sp = do
   (governanceRefTxInput /\ governanceRefTxOutput) ←
-    getGovernanceScriptRefUtxo sp
+    Versioning.getVersionedScriptRefUtxo
+      sp
+      (VersionOracle { version: BigNum.fromInt 1
+                     , scriptId: GovernancePolicy
+                     }
+      )
 
   governancePolicy ← getGovernancePolicy sp
 
@@ -344,7 +324,13 @@ initialiseReserveUtxo
     , reserveConstraints
     } ← reserveLookupsAndConstraints sidechainParams
 
-    reserveAuthCurrencySymbol ← getReserveAuthCurrencySymbol sidechainParams
+    reserveAuthCurrencySymbol ←
+      Versioning.getVersionedCurrencySymbol
+        sidechainParams
+        (VersionOracle { version: BigNum.fromInt 1
+                       , scriptId: ReserveAuthPolicy
+                       }
+        )
 
     versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
 
@@ -709,10 +695,21 @@ handover
     $ snd
     $ utxo
 
-  (reserveAuthRefTxInput /\ reserveAuthRefTxOutput) ← getReserveAuthScriptRefUtxo
-    sp
+  (reserveAuthRefTxInput /\ reserveAuthRefTxOutput) ←
+    Versioning.getVersionedScriptRefUtxo
+      sp
+      (VersionOracle { version: BigNum.fromInt 1
+                     , scriptId: ReserveAuthPolicy
+                     }
+      )
 
-  (reserveRefTxInput /\ reserveRefTxOutput) ← getReserveScriptRefUtxo sp
+  (reserveRefTxInput /\ reserveRefTxOutput) ←
+    Versioning.getVersionedScriptRefUtxo
+      sp
+      (VersionOracle { version: BigNum.fromInt 1
+                     , scriptId: ReserveValidator
+                     }
+      )
 
   let
     tokenKindAsset =

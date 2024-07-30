@@ -19,6 +19,7 @@ import Contract.Transaction (TransactionInput, TransactionOutput)
 import Contract.TxConstraints (DatumPresence(DatumInline))
 import Contract.TxConstraints as TxConstraints
 import Cardano.Types.Value (valueOf)
+import Contract.Utxos (UtxoMap)
 import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Control.Monad.Error.Class (throwError)
@@ -41,16 +42,18 @@ import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
 import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
-import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Effects.Env (Env, READER)
-import TrustlessSidechain.Error (OffchainError(..))
+import TrustlessSidechain.Error (OffchainError(NotFoundUtxo))
 import TrustlessSidechain.Governance.Admin as Governance
-import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
+import TrustlessSidechain.InitSidechain
+  ( InitSidechainParams(InitSidechainParams)
+  , initSidechain
+  )
 import TrustlessSidechain.NativeTokenManagement.IlliquidCirculationSupply
   ( depositMoreToSupply
-  , findIlliquidCirculationSupplyUtxos
   , illiquidCirculationSupplyValidator
   , withdrawFromSupply
   )
@@ -65,7 +68,15 @@ import TrustlessSidechain.Utils.Crypto
   )
 import TrustlessSidechain.Utils.Asset (emptyAssetName, singletonFromAsset)
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
-import TrustlessSidechain.Versioning.ScriptId (ScriptId(..))
+import TrustlessSidechain.Versioning.ScriptId
+  ( ScriptId
+      ( IlliquidCirculationSupplyValidator
+      , IlliquidCirculationSupplyWithdrawalPolicy
+      )
+  )
+import TrustlessSidechain.Versioning.Types
+  ( VersionOracle(VersionOracle)
+  )
 import TrustlessSidechain.Versioning.Utils (insertVersionLookupsAndConstraints)
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
@@ -199,6 +210,19 @@ insertFakeIcsWithdrawalPolicy sidechainParams =
         "Insert illiquid circulation withdrawal minting policy"
 
     pure $ PlutusScript.hash icsFakePolicy
+
+findIlliquidCirculationSupplyUtxos ∷
+  ∀ r.
+  SidechainParams →
+  Run
+    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+    UtxoMap
+findIlliquidCirculationSupplyUtxos sidechainParams =
+    Versioning.getVersionedValidatorAddress
+    sidechainParams
+    (VersionOracle { version: BigNum.fromInt 1
+                   , scriptId: IlliquidCirculationSupplyValidator })
+      >>= utxosAt
 
 findICSUtxo ∷
   ∀ r.
