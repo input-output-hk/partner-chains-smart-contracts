@@ -7,11 +7,11 @@ import Run (AFF, EFFECT)
 import Run.Except (EXCEPT)
 import Run.Reader (READER)
 import TrustlessSidechain.Effects.Contract (CONTRACT)
+import TrustlessSidechain.Effects.Env (Env)
 import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
-import TrustlessSidechain.Effects.Env (Env)
 import Type.Row (type (+))
 
 -- | The top level effects

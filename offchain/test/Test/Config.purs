@@ -2,15 +2,13 @@ module Test.Config (config) where
 
 import Contract.Prelude
 
-import Contract.Test.Plutip (PlutipConfig)
+import Ctl.Internal.Testnet.Types (Era(Babbage), TestnetConfig)
 import Data.Time.Duration (Seconds(Seconds))
 import Data.UInt as UInt
 
-config ∷ PlutipConfig
+config ∷ TestnetConfig
 config =
-  { host: "127.0.0.1"
-  , port: UInt.fromInt 8082
-  , logLevel: Info
+  { logLevel: Info
   , ogmiosConfig:
       { port: UInt.fromInt 1338
       , host: "127.0.0.1"
@@ -29,7 +27,7 @@ config =
   , clusterConfig:
       { slotLength: Seconds 0.05
       , epochSize: Nothing
-      , maxTxSize: Nothing
-      , raiseExUnitsToMax: false
+      , testnetMagic: 2
+      , era: Babbage
       }
   }

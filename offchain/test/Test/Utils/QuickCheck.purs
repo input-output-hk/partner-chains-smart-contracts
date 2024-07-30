@@ -25,12 +25,10 @@ import Contract.Prelude hiding (oneOf)
 
 import Aeson (decodeAeson, encodeAeson)
 import Cardano.AsCbor (decodeCbor, encodeCbor)
+import Cardano.Plutus.ApplyArgs (applyArgs)
 import Cardano.Plutus.Types.Address (Address, pubKeyHashAddress)
 import Cardano.Plutus.Types.Credential
-  ( Credential
-      ( PubKeyCredential
-      , ScriptCredential
-      )
+  ( Credential(PubKeyCredential, ScriptCredential)
   )
 import Cardano.Plutus.Types.PaymentPubKeyHash
   ( PaymentPubKeyHash(PaymentPubKeyHash)
@@ -44,28 +42,15 @@ import Cardano.Types.BigNum (fromInt, toString) as BigNum
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.PlutusScript (hash) as PlutusScript
 import Cardano.Types.ScriptHash (ScriptHash)
-import Contract.PlutusData
-  ( class FromData
-  , class ToData
-  , toData
-  )
-import Contract.Scripts
-  ( applyArgs
-  )
+import Contract.PlutusData (class FromData, class ToData, toData)
 import Contract.Transaction
   ( TransactionHash
   , TransactionInput(TransactionInput)
   )
-import Control.Monad.Rec.Class
-  ( Step(Loop, Done)
-  , tailRecM
-  )
+import Control.Monad.Rec.Class (Step(Loop, Done), tailRecM)
 import Data.Array.NonEmpty (fromNonEmpty) as NonEmptyArray
 import Data.Array.NonEmpty as NEA
-import Data.ByteArray
-  ( byteArrayFromIntArrayUnsafe
-  , byteArrayToIntArray
-  )
+import Data.ByteArray (byteArrayFromIntArrayUnsafe, byteArrayToIntArray)
 import Data.NonEmpty (NonEmpty(NonEmpty))
 import Data.Ord (abs)
 import Data.Tuple (Tuple(Tuple))

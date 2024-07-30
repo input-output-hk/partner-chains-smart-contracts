@@ -9,6 +9,8 @@ module TrustlessSidechain.Utils.Utxos
 import Contract.Prelude
 
 import Cardano.Types.Address (Address)
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.ScriptRef (ScriptRef(PlutusScriptRef))
 import Cardano.Types.TransactionInput (TransactionInput)
 import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
 import Cardano.Types.Value (Value)
@@ -20,6 +22,8 @@ import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT)
 import Run.Except (note) as Run
+import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Log (logWarn')
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Transaction as Effect
 import TrustlessSidechain.Effects.Wallet (WALLET)
@@ -28,10 +32,6 @@ import TrustlessSidechain.Utils.Address
   ( getOwnWalletAddress
   )
 import Type.Row (type (+))
-import Cardano.Types.PlutusScript (PlutusScript)
-import TrustlessSidechain.Effects.App (APP)
-import Cardano.Types.ScriptRef (ScriptRef(PlutusScriptRef))
-import TrustlessSidechain.Effects.Log (logWarn')
 
 -- | `findUtxoAtByValue addr p` finds all utxos at the validator address `addr`
 -- | using `Contract.Utxos.utxosAt`, then looks for the first utxo which satisfies
@@ -39,11 +39,11 @@ import TrustlessSidechain.Effects.Log (logWarn')
 -- |
 -- | Note: this does a linear scan over all utxos at the given address `addr`
 findUtxoByValueAt ∷
-  ∀ r
-  . Address
-  → (Value → Boolean)
-  → Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-      (Maybe { index ∷ TransactionInput, value ∷ TransactionOutput })
+  ∀ r.
+  Address →
+  (Value → Boolean) →
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
+    (Maybe { index ∷ TransactionInput, value ∷ TransactionOutput })
 findUtxoByValueAt addr p = do
   scriptUtxos ← Effect.utxosAt addr
   let
@@ -70,14 +70,15 @@ getOwnUTxOs = do
   Effect.utxosAt ownAddr
 
 -- | Retrieve plutusScript from TransactionInput
-plutusScriptFromTxIn ::
-  forall r. TransactionInput ->
+plutusScriptFromTxIn ∷
+  ∀ r.
+  TransactionInput →
   Run (APP r) (Maybe PlutusScript)
 plutusScriptFromTxIn txIn = do
   m ← Effect.getUtxo txIn
   case m of
-    Just (TransactionOutput { scriptRef: Just (PlutusScriptRef plutusScript) }) ->
+    Just (TransactionOutput { scriptRef: Just (PlutusScriptRef plutusScript) }) →
       pure $ Just plutusScript
-    _ ->
+    _ →
       logWarn' "Failed to retrieve PlutusScript from TransactionInput" *>
         pure Nothing

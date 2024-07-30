@@ -15,17 +15,23 @@ import Run.Except (EXCEPT)
 import Test.PlutipTest (PlutipTest)
 import Test.PlutipTest as Test.PlutipTest
 import Test.Unit.Assert (assert)
-import Test.Utils (WrappedTests, fails, getOwnTransactionInput, plutipGroup, withSingleMultiSig)
+import Test.Utils
+  ( WrappedTests
+  , fails
+  , getOwnTransactionInput
+  , plutipGroup
+  , withSingleMultiSig
+  )
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
 import TrustlessSidechain.CommitteeCandidateValidator
   ( getCommitteeCandidateValidator
   )
+import TrustlessSidechain.Effects.Env (Env, READER)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
-import TrustlessSidechain.Effects.Env (READER, Env)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.FUELMintingPolicy.V2 as FUELMintingPolicy.V2
 import TrustlessSidechain.Governance.Admin as Governance
@@ -546,7 +552,9 @@ assertNumberOfActualVersionedScripts ∷
   Int →
   -- | Number of expected versionned validator scripts
   Int →
-  Run (EXCEPT OffchainError + TRANSACTION + WALLET + READER Env + AFF + EFFECT + r) Unit
+  Run
+    (EXCEPT OffchainError + TRANSACTION + WALLET + READER Env + AFF + EFFECT + r)
+    Unit
 assertNumberOfActualVersionedScripts
   sidechainParamsWithATMSKind
   version

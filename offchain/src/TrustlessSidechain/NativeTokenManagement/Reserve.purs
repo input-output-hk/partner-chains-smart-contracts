@@ -13,19 +13,22 @@ module TrustlessSidechain.NativeTokenManagement.Reserve
 
 import Contract.Prelude
 
-import TrustlessSidechain.Utils.Asset (emptyAssetName, singletonFromAsset)
-import Cardano.Types.Mint as Mint
-import Cardano.Types.BigNum as BigNum
-import Cardano.Types.BigNum (BigNum)
-import Cardano.Types.Int as Int
 import Cardano.Types.Asset (Asset(Asset))
+import Cardano.Types.AssetName (AssetName)
+import Cardano.Types.BigNum (BigNum)
+import Cardano.Types.BigNum as BigNum
+import Cardano.Types.Int as Int
+import Cardano.Types.Mint as Mint
 import Cardano.Types.OutputDatum (outputDatumDatum)
 import Cardano.Types.PlutusData (unit) as PlutusData
-import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.PlutusScript (PlutusScript)
-import Cardano.Types.AssetName (AssetName)
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.TransactionUnspentOutput
+  ( TransactionUnspentOutput(TransactionUnspentOutput)
+  )
 import Cardano.Types.Value (valueOf)
-import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(TransactionUnspentOutput))
+import Contract.Address (Address)
 import Contract.PlutusData
   ( RedeemerDatum(RedeemerDatum)
   , fromData
@@ -33,10 +36,10 @@ import Contract.PlutusData
   )
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction
-  ( ScriptRef(PlutusScriptRef)
+  ( ScriptRef(..)
+  , TransactionHash
   , TransactionInput
   , TransactionOutput
-  , TransactionHash
   )
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
@@ -45,39 +48,28 @@ import Contract.TxConstraints
 import Contract.TxConstraints as TxConstraints
 import Contract.Utxos (UtxoMap)
 import Contract.Value (add, getMultiAsset, minus, singleton) as Value
-import JS.BigInt as BigInt
 import Data.Map as Map
+import JS.BigInt as BigInt
 import Run (Run)
 import Run.Except (EXCEPT, throw)
-import TrustlessSidechain.Effects.Env (ask)
 import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Env (ask)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow)
 import TrustlessSidechain.Effects.Wallet (WALLET)
-import TrustlessSidechain.Error
-  ( OffchainError
-      ( InvalidData
-      , NotFoundUtxo
-      , GenericInternalError
-      )
-  )
-import TrustlessSidechain.Governance(Governance(MultiSig))
-import TrustlessSidechain.Governance.MultiSig
-  ( MultiSigGovRedeemer(MultiSignatureCheck) )
+import TrustlessSidechain.Error (OffchainError(..))
+import TrustlessSidechain.Governance (Governance(MultiSig))
+import TrustlessSidechain.Governance.MultiSig (MultiSigGovRedeemer(..))
 import TrustlessSidechain.NativeTokenManagement.Types
   ( ImmutableReserveSettings
   , MutableReserveSettings
-  , ReserveDatum(ReserveDatum)
-  , ReserveRedeemer
-      ( DepositToReserve
-      , TransferToIlliquidCirculationSupply
-      , UpdateReserve
-      , Handover
-      )
-  , ReserveStats(ReserveStats)
-  , ReserveAuthPolicyRedeemer(ReserveAuthPolicyRedeemer)
+  , ReserveAuthPolicyRedeemer(..)
+  , ReserveDatum(..)
+  , ReserveRedeemer(..)
+  , ReserveStats(..)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Asset (emptyAssetName, singletonFromAsset)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   , mkValidatorWithParams
@@ -117,6 +109,90 @@ reserveAuthTokenName = emptyAssetName
 
 vFunctionTotalAccruedTokenName ∷ AssetName
 vFunctionTotalAccruedTokenName = emptyAssetName
+
+reserveVersionOracle ∷ VersionOracle
+reserveVersionOracle = VersionOracle
+  { version: BigNum.fromInt 1, scriptId: ReserveValidator }
+
+reserveAuthVersionOracle ∷ VersionOracle
+reserveAuthVersionOracle =
+  VersionOracle
+    { version: BigNum.fromInt 1, scriptId: ReserveAuthPolicy }
+
+illiquidCirculationSupplyVersionOracle ∷ VersionOracle
+illiquidCirculationSupplyVersionOracle =
+  VersionOracle
+    { version: BigNum.fromInt 1, scriptId: IlliquidCirculationSupplyValidator }
+
+governanceVersionOracle ∷ VersionOracle
+governanceVersionOracle = VersionOracle
+  { version: BigNum.fromInt 1, scriptId: GovernancePolicy }
+
+getReserveAuthCurrencySymbol ∷
+  ∀ r.
+  SidechainParams →
+  Run
+    (EXCEPT OffchainError + WALLET + TRANSACTION + r)
+    ScriptHash
+getReserveAuthCurrencySymbol sidechainParams =
+  Versioning.getVersionedCurrencySymbol
+    sidechainParams
+    reserveAuthVersionOracle
+
+getReserveAddress ∷
+  ∀ r.
+  SidechainParams →
+  Run
+    (EXCEPT OffchainError + WALLET + TRANSACTION + r)
+    Address
+getReserveAddress sidechainParams =
+  Versioning.getVersionedValidatorAddress
+    sidechainParams
+    reserveVersionOracle
+
+getGovernanceScriptRefUtxo ∷
+  ∀ r.
+  SidechainParams →
+  Run
+    (EXCEPT OffchainError + WALLET + TRANSACTION + r)
+    (TransactionInput /\ TransactionOutput)
+getGovernanceScriptRefUtxo sidechainParams =
+  Versioning.getVersionedScriptRefUtxo
+    sidechainParams
+    governanceVersionOracle
+
+getReserveScriptRefUtxo ∷
+  ∀ r.
+  SidechainParams →
+  Run
+    (EXCEPT OffchainError + WALLET + TRANSACTION + r)
+    (TransactionInput /\ TransactionOutput)
+getReserveScriptRefUtxo sidechainParams =
+  Versioning.getVersionedScriptRefUtxo
+    sidechainParams
+    reserveVersionOracle
+
+getReserveAuthScriptRefUtxo ∷
+  ∀ r.
+  SidechainParams →
+  Run
+    (EXCEPT OffchainError + WALLET + TRANSACTION + r)
+    (TransactionInput /\ TransactionOutput)
+getReserveAuthScriptRefUtxo sidechainParams =
+  Versioning.getVersionedScriptRefUtxo
+    sidechainParams
+    reserveAuthVersionOracle
+
+getIlliquidCirculationSupplyScriptRefUtxo ∷
+  ∀ r.
+  SidechainParams →
+  Run
+    (EXCEPT OffchainError + WALLET + TRANSACTION + r)
+    (TransactionInput /\ TransactionOutput)
+getIlliquidCirculationSupplyScriptRefUtxo sidechainParams =
+  Versioning.getVersionedScriptRefUtxo
+    sidechainParams
+    illiquidCirculationSupplyVersionOracle
 
 getGovernancePolicy ∷
   ∀ r.
@@ -191,8 +267,8 @@ findOneReserveUtxo ∷
   Run (APP r) (TransactionInput /\ TransactionOutput)
 findOneReserveUtxo scParams =
   fromMaybeThrow (NotFoundUtxo "No Reserved UTxO exists for the given asset")
-  $ Map.toUnfoldable
-  <$> findReserveUtxos scParams
+    $ Map.toUnfoldable
+    <$> findReserveUtxos scParams
 
 reserveAuthLookupsAndConstraints ∷
   ∀ r.
@@ -281,9 +357,11 @@ governanceLookupsAndConstraints sp = do
 
   governancePolicy ← getGovernancePolicy sp
 
-  env <- ask
+  env ← ask
 
-  let members = maybe [] (\(MultiSig x) -> (unwrap x).governanceMembers) env.governance
+  let
+    members = maybe [] (\(MultiSig x) → (unwrap x).governanceMembers)
+      env.governance
 
   pure
     { governanceLookups: Lookups.unspentOutputs
@@ -300,7 +378,7 @@ governanceLookupsAndConstraints sp = do
                 , output: governanceRefTxOutput
                 }
             )
-          <> (foldMap (\x -> TxConstraints.mustBeSignedBy $ wrap x) members)
+          <> (foldMap (\x → TxConstraints.mustBeSignedBy $ wrap x) members)
     }
 
 initialiseReserveUtxo ∷
@@ -339,7 +417,8 @@ initialiseReserveUtxo
     reserveAuthPolicy' ← reserveAuthPolicy versionOracleConfig
 
     let
-      valueToPay = singletonFromAsset (unwrap immutableSettings).tokenKind numOfTokens
+      valueToPay = singletonFromAsset (unwrap immutableSettings).tokenKind
+        numOfTokens
 
       reserveAuthTokenValue =
         Value.singleton
@@ -347,7 +426,7 @@ initialiseReserveUtxo
           reserveAuthTokenName
           (BigNum.fromInt 1)
 
-    totalValueToPay <- fromMaybeThrow
+    totalValueToPay ← fromMaybeThrow
       (GenericInternalError "Could not calculate total value to pay")
       (pure (valueToPay `Value.add` reserveAuthTokenValue))
 
@@ -362,8 +441,8 @@ initialiseReserveUtxo
         governanceConstraints
           <> reserveConstraints
           <> TxConstraints.mustMintValueWithRedeemer
-               (RedeemerDatum $ toData reserveAuthPolicyRedeemer)
-               (Mint.fromMultiAsset $ Value.getMultiAsset reserveAuthTokenValue)
+            (RedeemerDatum $ toData reserveAuthPolicyRedeemer)
+            (Mint.fromMultiAsset $ Value.getMultiAsset reserveAuthTokenValue)
           <> TxConstraints.mustPayToScript
             reserveValidator'
             (toData initialReserveDatum)
@@ -383,7 +462,7 @@ initialiseReserveUtxo
     }
 
   --JSTOLAREK: parameterize version
-  reserveAuthPolicyRedeemer :: ReserveAuthPolicyRedeemer
+  reserveAuthPolicyRedeemer ∷ ReserveAuthPolicyRedeemer
   reserveAuthPolicyRedeemer = ReserveAuthPolicyRedeemer
     { governanceVersion: BigInt.fromInt 1
     }
@@ -438,7 +517,7 @@ depositToReserve sp asset amount = do
   let
     value = unwrap >>> _.amount $ snd utxo
 
-  newValue <-
+  newValue ←
     fromMaybeThrow
       (GenericInternalError "Could not calculate new reserve value")
       $ pure (value `Value.add` singletonFromAsset asset amount)
@@ -462,7 +541,9 @@ depositToReserve sp asset amount = do
           DatumInline
           newValue
         <> TxConstraints.mustSpendScriptOutput (fst utxo)
-          (RedeemerDatum $ toData $ DepositToReserve { governanceVersion: BigInt.fromInt 1 })
+          ( RedeemerDatum $ toData $ DepositToReserve
+              { governanceVersion: BigInt.fromInt 1 }
+          )
 
   balanceSignAndSubmit
     "Deposit to a reserve utxo"
@@ -521,7 +602,9 @@ updateReserveUtxo sp updatedMutableSettings utxo = do
           DatumInline
           value
         <> TxConstraints.mustSpendScriptOutput (fst utxo)
-          (RedeemerDatum $ toData $ UpdateReserve { governanceVersion: BigInt.fromInt 1 })
+          ( RedeemerDatum $ toData $ UpdateReserve
+              { governanceVersion: BigInt.fromInt 1 }
+          )
 
   balanceSignAndSubmit
     "Update reserve mutable settings"
@@ -566,7 +649,7 @@ transferToIlliquidCirculationSupply
         >>> _.tokenKind
         $ datum
 
-  tokenTotalAmountTransferred <- fromMaybeThrow
+  tokenTotalAmountTransferred ← fromMaybeThrow
     (GenericInternalError "Could not calculate total amount transferred")
     ( unwrap
         >>> _.stats
@@ -584,17 +667,18 @@ transferToIlliquidCirculationSupply
         >>> _.vFunctionTotalAccrued
         $ datum
 
-  incentiveAmount <-
+  incentiveAmount ←
     fromMaybeThrow
       (GenericInternalError "Could not calculate incentive amount")
       $ pure
-        ( unwrap
-           >>> _.mutableSettings
-           >>> unwrap
-           >>> _.incentiveAmount
-           >>> BigInt.toString
-           >>> BigNum.fromString
-           $ datum)
+          ( unwrap
+              >>> _.mutableSettings
+              >>> unwrap
+              >>> _.incentiveAmount
+              >>> BigInt.toString
+              >>> BigNum.fromString
+              $ datum
+          )
 
   unless
     ( (PlutusScript.hash vFunctionTotalAccruedMintingPolicy) ==
@@ -618,14 +702,16 @@ transferToIlliquidCirculationSupply
 
   let
     updatedDatum = ReserveDatum $ (unwrap datum)
-      { stats = ReserveStats { tokenTotalAmountTransferred: BigInt.fromInt totalAccruedTillNow }
+      { stats = ReserveStats
+          { tokenTotalAmountTransferred: BigInt.fromInt totalAccruedTillNow }
       }
     value = unwrap >>> _.amount $ snd utxo
 
-  newValue ← fromMaybeThrow (GenericInternalError "Could not calculate new reserve value")
+  newValue ← fromMaybeThrow
+    (GenericInternalError "Could not calculate new reserve value")
     (pure (value `Value.minus` toTransferAsValue))
 
-  illiquidCirculationNewValue <- fromMaybeThrow
+  illiquidCirculationNewValue ← fromMaybeThrow
     (GenericInternalError "Could not calculate new ICS value")
     (pure (toTransferAsValue `Value.minus` incentiveAsValue))
 
@@ -743,7 +829,9 @@ handover
           toHandover
         <> TxConstraints.mustSpendScriptOutputUsingScriptRef
           (fst utxo)
-          (RedeemerDatum $ toData $ Handover { governanceVersion: BigInt.fromInt 1 })
+          ( RedeemerDatum $ toData $ Handover
+              { governanceVersion: BigInt.fromInt 1 }
+          )
           ( RefInput $ TransactionUnspentOutput
               { input: reserveRefTxInput
               , output: reserveRefTxOutput
@@ -751,7 +839,9 @@ handover
           )
         <> TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
           (PlutusScript.hash reserveAuthPolicy')
-          (RedeemerDatum $ toData $ ReserveAuthPolicyRedeemer { governanceVersion: BigInt.fromInt 1 })
+          ( RedeemerDatum $ toData $ ReserveAuthPolicyRedeemer
+              { governanceVersion: BigInt.fromInt 1 }
+          )
           emptyAssetName
           (Int.fromInt (-1))
           ( RefInput $ TransactionUnspentOutput

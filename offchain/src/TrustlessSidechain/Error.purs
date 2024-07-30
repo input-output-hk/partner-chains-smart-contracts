@@ -7,7 +7,7 @@ import Contract.Prelude
 import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.Address (Address)
 import Contract.Transaction as Transaction
-import Contract.UnbalancedTx (MkUnbalancedTxError)
+import Ctl.Internal.ProcessConstraints.Error (MkUnbalancedTxError)
 import TrustlessSidechain.Versioning.ScriptId (ScriptId)
 
 -- | Error raised from the off-chain code of the application

@@ -9,7 +9,7 @@ module TrustlessSidechain.Utils.Address
   , getPlutusScriptHex
   , fromPaymentPubKeyHash
   , addressFromBech32Bytes
-    -- * pubkeyhash from/to address conversion
+  -- * pubkeyhash from/to address conversion
   , toPaymentPubKeyHash
   , toStakePubKeyHash
   ) where
@@ -23,7 +23,7 @@ import Cardano.Serialization.Lib
 import Cardano.Types.Address as Address
 import Cardano.Types.Credential
   ( Credential(PubKeyHashCredential, ScriptHashCredential)
-    , asPubKeyHash
+  , asPubKeyHash
   )
 import Cardano.Types.NetworkId (NetworkId)
 import Cardano.Types.PaymentCredential (PaymentCredential(PaymentCredential))

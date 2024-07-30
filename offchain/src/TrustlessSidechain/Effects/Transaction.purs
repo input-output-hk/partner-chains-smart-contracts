@@ -3,6 +3,9 @@ module TrustlessSidechain.Effects.Transaction
   , TransactionF
   , awaitTxConfirmed
   , balanceTx
+  , UnbalancedTx(UnbalancedTx)
+  , UnindexedRedeemer(UnindexedRedeemer)
+  , RedeemerPurpose(ForSpend, ForMint, ForReward, ForCert)
   , balanceTxWithConstraints
   , getUtxo
   , handleTransactionLive
@@ -15,28 +18,33 @@ module TrustlessSidechain.Effects.Transaction
 
 import Contract.Prelude
 
+import Aeson (class EncodeAeson, encodeAeson)
+import Cardano.Types (Certificate, RewardAddress, ScriptHash)
 import Cardano.Types.Address (Address)
+import Cardano.Types.PlutusData (PlutusData)
 import Contract.BalanceTxConstraints (BalanceTxConstraintsBuilder)
-import Contract.ScriptLookups (ScriptLookups, UnbalancedTx)
+import Contract.Monad (Contract)
+import Contract.ScriptLookups (ScriptLookups)
 import Contract.Transaction
   ( Transaction
   , TransactionHash
   , TransactionInput
   , TransactionOutput
+  , explainBalanceTxError
   )
-import Contract.Transaction
-  ( awaitTxConfirmed
-  , balanceTxWithConstraints
-  , signTransaction
-  , submit
-  ) as Transaction
+import Contract.Transaction (awaitTxConfirmed, signTransaction, submit) as Transaction
 import Contract.Transaction as BalanceTxError
 import Contract.TxConstraints (TxConstraints)
-import Contract.UnbalancedTx (MkUnbalancedTxError)
 import Contract.UnbalancedTx (mkUnbalancedTx) as UnbalancedTx
 import Contract.Utxos (UtxoMap)
 import Contract.Utxos (getUtxo, utxosAt) as Transaction
+import Control.Monad.Error.Class (throwError)
+import Ctl.Internal.BalanceTx (balanceTxWithConstraints) as Transaction
+import Ctl.Internal.ProcessConstraints.Error (MkUnbalancedTxError)
+import Data.Map (Map)
+import Data.Show.Generic (genericShow)
 import Effect.Aff (Error)
+import Effect.Exception (error)
 import Run (Run, interpret, on, send)
 import Run as Run
 import Run.Except (EXCEPT)
@@ -52,6 +60,61 @@ import TrustlessSidechain.Effects.Errors.Parser
 import TrustlessSidechain.Error (OffchainError)
 import Type.Proxy (Proxy(Proxy))
 import Type.Row (type (+))
+
+-- | A newtype for the unbalanced transaction after creating one with datums
+-- | and redeemers not attached.
+newtype UnbalancedTx = UnbalancedTx
+  { transaction ∷ Transaction -- the unbalanced tx created
+  , usedUtxos ∷ Map TransactionInput TransactionOutput
+  , datums ∷
+      Array PlutusData -- the array of ordered datums that require attaching
+  , redeemers ∷ Array UnindexedRedeemer
+  }
+
+derive instance Generic UnbalancedTx _
+derive instance Newtype UnbalancedTx _
+derive newtype instance Eq UnbalancedTx
+
+instance Show UnbalancedTx where
+  show = genericShow
+
+-- | Redeemer that hasn't yet been indexed, that tracks its purpose info
+-- | that is enough to find its index given a `RedeemersContext`.
+newtype UnindexedRedeemer = UnindexedRedeemer
+  { datum ∷ PlutusData
+  , purpose ∷ RedeemerPurpose
+  }
+
+derive instance Generic UnindexedRedeemer _
+derive instance Newtype UnindexedRedeemer _
+derive newtype instance Eq UnindexedRedeemer
+derive newtype instance EncodeAeson UnindexedRedeemer
+
+instance Show UnindexedRedeemer where
+  show = genericShow
+
+-- | Contains a value redeemer corresponds to, different for each possible
+-- | `RedeemerTag`.
+-- | Allows to uniquely compute redeemer index, given a `RedeemersContext` that
+-- | is valid for the transaction.
+data RedeemerPurpose
+  = ForSpend TransactionInput
+  | ForMint ScriptHash
+  | ForReward RewardAddress
+  | ForCert Certificate
+
+derive instance Generic RedeemerPurpose _
+derive instance Eq RedeemerPurpose
+
+instance EncodeAeson RedeemerPurpose where
+  encodeAeson = case _ of
+    ForSpend txo → encodeAeson { tag: "ForSpend", value: encodeAeson txo }
+    ForMint mps → encodeAeson { tag: "ForMint", value: encodeAeson mps }
+    ForReward addr → encodeAeson { tag: "ForReward", value: encodeAeson addr }
+    ForCert cert → encodeAeson { tag: "ForCert", value: encodeAeson cert }
+
+instance Show RedeemerPurpose where
+  show = genericShow
 
 data TransactionF a
   = UtxosAt Address (UtxoMap → a)
@@ -134,6 +197,18 @@ balanceTx ∷
     Transaction
 balanceTx = flip balanceTxWithConstraints mempty
 
+balanceTxWithConstraintsTx ∷
+  UnbalancedTx →
+  BalanceTxConstraintsBuilder →
+  Contract Transaction
+balanceTxWithConstraintsTx unbalancedTx constraintsBuilder =
+  Transaction.balanceTxWithConstraints (unwrap unbalancedTx).transaction
+    (unwrap unbalancedTx).usedUtxos
+    constraintsBuilder >>=
+    case _ of
+      Left err → throwError $ error $ explainBalanceTxError err
+      Right res → pure res
+
 handleTransactionLive ∷
   ∀ r. TransactionF ~> Run (EXCEPT OffchainError + CONTRACT + r)
 handleTransactionLive =
@@ -146,11 +221,12 @@ handleTransactionLive =
     MkUnbalancedTx lookups constraints f →
       f <$> withTry
         (fromError "mkUnabalancedTx: ")
-        (UnbalancedTx.mkUnbalancedTx lookups constraints)
+        (toUnbalancedTx <$> UnbalancedTx.mkUnbalancedTx lookups constraints)
     BalanceTxWithConstraints unbalancedTx constraints f →
       f <$> withTry
         (fromError "balancedTxWithConstraints: ")
-        (Transaction.balanceTxWithConstraints unbalancedTx constraints)
+        ( balanceTxWithConstraintsTx unbalancedTx constraints
+        )
     SignTransaction tx f → f <$> withTry (fromError "signTransaction: ")
       (Transaction.signTransaction tx)
     Submit tx f → f <$> withTry (fromError "submit: ") (Transaction.submit tx)
@@ -161,3 +237,11 @@ handleTransactionLive =
   fromError ∷ String → Error → OffchainError
   fromError ctx = parseFromError parseDefaultError
     (Just (ErrorContext Transaction ctx))
+
+  toUnbalancedTx ∷ (Transaction /\ UtxoMap) → UnbalancedTx
+  toUnbalancedTx (tx /\ utxoMap) = UnbalancedTx
+    { transaction: tx
+    , usedUtxos: utxoMap
+    , datums: []
+    , redeemers: []
+    }

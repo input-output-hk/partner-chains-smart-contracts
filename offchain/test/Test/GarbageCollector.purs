@@ -4,8 +4,8 @@ import Contract.Prelude
 
 import Cardano.AsCbor (encodeCbor)
 import Cardano.ToData (toData)
-import Cardano.Types.AssetName (mkAssetName)
 import Cardano.Types.Asset (Asset(Asset))
+import Cardano.Types.AssetName (mkAssetName)
 import Cardano.Types.BigNum as BigNum
 import Cardano.Types.NetworkId (NetworkId(TestnetId))
 import Contract.Log (logInfo')
@@ -35,11 +35,11 @@ import TrustlessSidechain.CommitteeATMSSchemes
   )
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
+import TrustlessSidechain.Effects.Env (Env, READER)
 import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
-import TrustlessSidechain.Effects.Env (Env, READER)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.FUELBurningPolicy.V1 as BurningV1
 import TrustlessSidechain.FUELBurningPolicy.V2 as BurningV2
@@ -110,23 +110,30 @@ testScenarioSuccess =
           sidechainParams
 
         Test.Utils.assertIHaveOutputWithAsset
-          (Asset fuelMintingCurrencySymbol
-            MintingV1.fuelAssetName)
+          ( Asset fuelMintingCurrencySymbol
+              MintingV1.fuelAssetName
+          )
           # withUnliftApp fails
 
         Test.Utils.assertIHaveOutputWithAsset
-          (Asset fuelBurningCurrencySymbol
-            BurningV1.fuelAssetName)
+          ( Asset fuelBurningCurrencySymbol
+              BurningV1.fuelAssetName
+          )
           # withUnliftApp fails
 
         Test.Utils.assertIHaveOutputWithAsset
-          (Asset committeePlainEcdsaSecp256k1ATMSCurrencySymbol
-            atmsTokenName)
+          ( Asset committeePlainEcdsaSecp256k1ATMSCurrencySymbol
+              atmsTokenName
+          )
           # withUnliftApp fails
 
 initializeSidechain ∷
   ∀ r.
-  Run (READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + EFFECT + r)
+  Run
+    ( READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT
+        + EFFECT
+        + r
+    )
     { sidechainParams ∷ SidechainParams
     , initCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
     }
@@ -167,7 +174,10 @@ mintATMSTokens ∷
   { sidechainParams ∷ SidechainParams
   , initCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
   } →
-  Run (READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + r)
+  Run
+    ( READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT +
+        r
+    )
     TokenName
 mintATMSTokens { sidechainParams, initCommitteePrvKeys } = do
   -- Grabbing the CommitteePlainEcdsaSecp256k1ATMSPolicy on chain parameters / minting policy
@@ -230,7 +240,11 @@ mintFuelMintingAndFuelBurningTokens ∷
   { sidechainParams ∷ SidechainParams
   , initCommitteePrvKeys ∷ Array EcdsaSecp256k1PrivateKey
   } →
-  Run (READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT + r) Unit
+  Run
+    ( READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT +
+        r
+    )
+    Unit
 mintFuelMintingAndFuelBurningTokens { sidechainParams, initCommitteePrvKeys } =
   do
     pkh ← getOwnPaymentPubKeyHash

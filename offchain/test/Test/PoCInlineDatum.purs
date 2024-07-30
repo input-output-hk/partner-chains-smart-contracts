@@ -122,6 +122,7 @@ testScenario1 = Mote.Monad.test "PoCInlineDatum: testScenario1"
             lookups ∷ ScriptLookups
             lookups = ScriptLookups.unspentOutputs (Map.singleton txIn txOut)
               <> ScriptLookups.validator validator
+              <> ScriptLookups.datum validatorDat
 
           unbalancedTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups
             constraints

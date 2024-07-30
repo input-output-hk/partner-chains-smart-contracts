@@ -25,8 +25,8 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   , ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
 import TrustlessSidechain.Effects.Contract (liftContract)
-import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Env (ask)
+import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.FUELMintingPolicy.V1
   ( MerkleTreeEntry(MerkleTreeEntry)
@@ -127,7 +127,7 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
         "'Test.MerkleRootChaining.testScenario1': 3. updating the committee hash"
       committee3PrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
         Utils.Crypto.generatePrivKey
-      env <- ask
+      env ← ask
       liftContract $ Test.UpdateCommitteeHash.updateCommitteeHash
         { sidechainParams
         , currentCommitteePrvKeys: committee1PrvKeys

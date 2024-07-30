@@ -7,9 +7,9 @@ module TrustlessSidechain.Utils.Scripts
 
 import Contract.Prelude hiding (note)
 
+import Cardano.Plutus.ApplyArgs (applyArgs) as Scripts
 import Cardano.Types.PlutusScript (PlutusScript)
 import Contract.PlutusData (PlutusData)
-import Contract.Scripts as Scripts
 import Contract.TextEnvelope (decodeTextEnvelope, plutusScriptFromEnvelope)
 import Data.Array as Array
 import Data.Bifunctor (lmap)
@@ -17,11 +17,7 @@ import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT, note, rethrow)
 import TrustlessSidechain.Error
-  ( OffchainError
-      ( InvalidScript
-      , InvalidScriptArgs
-      , InvalidScriptId
-      )
+  ( OffchainError(InvalidScript, InvalidScriptArgs, InvalidScriptId)
   )
 import TrustlessSidechain.RawScripts (rawScripts)
 import TrustlessSidechain.Versioning.ScriptId (ScriptId)

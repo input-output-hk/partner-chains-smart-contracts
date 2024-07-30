@@ -291,9 +291,9 @@ register
           (BigNum.fromInt 1)
         else Value.empty
 
-  val <- case mVal of
-    Just x -> pure x
-    Nothing -> throw (GenericInternalError "Invalid value")
+  val ← case mVal of
+    Just x → pure x
+    Nothing → throw (GenericInternalError "Invalid value")
 
   let
     lookups ∷ Lookups.ScriptLookups
