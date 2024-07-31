@@ -72,9 +72,9 @@ data VersionOraclePolicyRedeemer
     InitializeVersionOracle VersionOracle ScriptHash
   | -- | Mint a new version token ensuring it contains correct datum and
     -- | reference script.
-    MintVersionOracle VersionOracle ScriptHash
+    MintVersionOracle VersionOracleConfig BigNum VersionOracle ScriptHash
   | -- | Burn existing version token.
-    BurnVersionOracle VersionOracle
+    BurnVersionOracle VersionOracleConfig BigNum VersionOracle
 
 derive instance Eq VersionOraclePolicyRedeemer
 
@@ -86,19 +86,19 @@ instance Show VersionOraclePolicyRedeemer where
 instance FromData VersionOraclePolicyRedeemer where
   fromData (Constr n [ vo, sh ]) | n == (BigNum.fromInt 0) =
     InitializeVersionOracle <$> fromData vo <*> fromData sh
-  fromData (Constr n [ vo, sh ]) | n == (BigNum.fromInt 1) =
-    MintVersionOracle <$> fromData vo <*> fromData sh
-  fromData (Constr n [ vo ]) | n == (BigNum.fromInt 2) =
-    BurnVersionOracle <$> fromData vo
+  fromData (Constr n [ voc, gv, vo, sh ]) | n == (BigNum.fromInt 1) =
+    MintVersionOracle <$> fromData voc <*> fromData gv <*> fromData vo <*> fromData sh
+  fromData (Constr n [ voc, gv, vo ]) | n == (BigNum.fromInt 2) =
+    BurnVersionOracle <$> fromData voc <*> fromData gv <*> fromData vo
   fromData _ = Nothing
 
 instance ToData VersionOraclePolicyRedeemer where
   toData (InitializeVersionOracle vo sh) =
     Constr (BigNum.fromInt 0) [ toData vo, toData sh ]
-  toData (MintVersionOracle vo sh) =
-    Constr (BigNum.fromInt 1) [ toData vo, toData sh ]
-  toData (BurnVersionOracle vo) =
-    Constr (BigNum.fromInt 2) [ toData vo ]
+  toData (MintVersionOracle voc gv vo sh) =
+    Constr (BigNum.fromInt 1) [ toData voc, toData gv, toData vo, toData sh ]
+  toData (BurnVersionOracle voc gv vo) =
+    Constr (BigNum.fromInt 2) [ toData voc, toData gv, toData vo ]
 
 -- | Configuration of the versioning system.  Contains currency symbol of
 -- | VersionOraclePolicy tokens.  Required to identify version tokens that can

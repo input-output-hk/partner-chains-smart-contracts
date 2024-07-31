@@ -52,7 +52,7 @@ import PlutusTx (
   ToData (toBuiltinData),
   UnsafeFromData (unsafeFromBuiltinData),
  )
-import PlutusTx.Builtins (matchList)
+import PlutusTx.Builtins (matchList, chooseData)
 import PlutusTx.Builtins.Internal qualified as Unsafe
 import PlutusTx.Prelude hiding (fromInteger, toList)
 import TrustlessSidechain.PlutusPrelude.TH as PlutusPrelude.TH
@@ -342,7 +342,14 @@ productFromData2' ::
   BuiltinData ->
   Maybe c
 productFromData2' f dat =
-  Unsafe.chooseData dat Nothing Nothing (go (Unsafe.unsafeDataAsList dat)) Nothing Nothing
+  chooseData
+    dat
+    (\_ -> Nothing)
+    (\_ -> Nothing)
+    (\_ -> go (Unsafe.unsafeDataAsList dat))
+    (\_ -> Nothing)
+    (\_ -> Nothing)
+    ()
   where
     go :: Unsafe.BuiltinList BuiltinData -> Maybe c
     go =
@@ -382,7 +389,14 @@ productFromData3' ::
   BuiltinData ->
   Maybe d
 productFromData3' f dat =
-  Unsafe.chooseData dat Nothing Nothing (go (Unsafe.unsafeDataAsList dat)) Nothing Nothing
+  chooseData
+    dat
+    (\_ -> Nothing)
+    (\_ -> Nothing)
+    (\_ -> go (Unsafe.unsafeDataAsList dat))
+    (\_ -> Nothing)
+    (\_ -> Nothing)
+    ()
   where
     go :: Unsafe.BuiltinList BuiltinData -> Maybe d
     go =
@@ -426,7 +440,14 @@ productFromData4' ::
   BuiltinData ->
   Maybe e
 productFromData4' f dat =
-  Unsafe.chooseData dat Nothing Nothing (go (Unsafe.unsafeDataAsList dat)) Nothing Nothing
+  chooseData
+    dat
+    (\_ -> Nothing)
+    (\_ -> Nothing)
+    (\_ -> go (Unsafe.unsafeDataAsList dat))
+    (\_ -> Nothing)
+    (\_ -> Nothing)
+    ()
   where
     go :: Unsafe.BuiltinList BuiltinData -> Maybe e
     go =
@@ -498,7 +519,14 @@ productFromData5' ::
   BuiltinData ->
   Maybe f
 productFromData5' f dat =
-  Unsafe.chooseData dat Nothing Nothing (go (Unsafe.unsafeDataAsList dat)) Nothing Nothing
+  chooseData
+    dat
+    (\_ -> Nothing)
+    (\_ -> Nothing)
+    (\_ -> go (Unsafe.unsafeDataAsList dat))
+    (\_ -> Nothing)
+    (\_ -> Nothing)
+    ()
   where
     go :: Unsafe.BuiltinList BuiltinData -> Maybe f
     go =
@@ -578,7 +606,14 @@ productFromData6' ::
   BuiltinData ->
   Maybe g
 productFromData6' f dat =
-  Unsafe.chooseData dat Nothing Nothing (go (Unsafe.unsafeDataAsList dat)) Nothing Nothing
+  chooseData
+    dat
+    (\_ -> Nothing)
+    (\_ -> Nothing)
+    (\_ -> go (Unsafe.unsafeDataAsList dat))
+    (\_ -> Nothing)
+    (\_ -> Nothing)
+    ()
   where
     go :: Unsafe.BuiltinList BuiltinData -> Maybe g
     go =
