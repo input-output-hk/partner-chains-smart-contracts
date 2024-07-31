@@ -20,8 +20,8 @@ import Data.Map as Map
 import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Run.Except (note) as Run
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
 import Test.PoCRawScripts as RawScripts
 import Test.Utils as Test.Utils
 import TrustlessSidechain.Effects.Contract (liftContract)
@@ -40,7 +40,7 @@ import TrustlessSidechain.Error
   )
 import TrustlessSidechain.Utils.Address (toAddress)
 
-tests ∷ PlutipTest
+tests ∷ TestnetTest
 tests = Mote.Monad.group "PoCSerialiseData tests" do
   testScenario1
   testScenario2
@@ -54,9 +54,9 @@ tests = Mote.Monad.group "PoCSerialiseData tests" do
 -- |     integer 69 as a datum.
 -- |
 -- |    3. Spend the transaction created in 2., with redeemer the builtin data of 69.
-testScenario1 ∷ PlutipTest
+testScenario1 ∷ TestnetTest
 testScenario1 = Mote.Monad.test "PoCSerialiseData: testScenario1"
-  $ Test.PlutipTest.mkPlutipConfigTest
+  $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 50_000_000
       , BigNum.fromInt 50_000_000
       , BigNum.fromInt 50_000_000
@@ -144,9 +144,9 @@ testScenario1 = Mote.Monad.test "PoCSerialiseData: testScenario1"
 -- |      70 (but this will fail because 70 is very clearly not 69).
 -- |
 -- | Note: This function is almost entirely duplicated code from 'testScenario1'
-testScenario2 ∷ PlutipTest
+testScenario2 ∷ TestnetTest
 testScenario2 = Mote.Monad.test "PoCSerialiseData: testScenario2"
-  $ Test.PlutipTest.mkPlutipConfigTest
+  $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 10_000_000, BigNum.fromInt 10_000_000 ]
   $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       -- 1.

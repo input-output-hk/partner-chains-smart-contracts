@@ -1,19 +1,19 @@
--- |` Test.PlutipTest` includes support functions for writing plutip tests.
--- | For writing a `PlutipTest`, one may write:
+-- |` Test.TestnetTest` includes support functions for writing cardano-testnet tests.
+-- | For writing a `TestnetTest`, one may write:
 -- | ```
--- | myTest ∷ PlutipTest
+-- | myTest ∷ TestnetTest
 -- | myTest = Mote.Monad.test "myTest is here!" $
--- |   Test.PlutipTest.mkPlutipConfigTest [BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000] $ \alice ->
+-- |   Test.TestnetTest.mkTestnetConfigTest [BigInt.fromInt 5_000_000, BigInt.fromInt 5_000_000] $ \alice ->
 -- |    {- tests here -}
 -- | ```
 -- In a future version of ctl, I believe that there are systems in place that
 -- implement the same functionality.
-module Test.PlutipTest
-  ( PlutipConfigTest
-  , PlutipTest
-  , interpretPlutipTest
-  , mkPlutipConfigTest
-  , runPlutipConfigTest
+module Test.TestnetTest
+  ( TestnetConfigTest
+  , TestnetTest
+  , interpretTestnetTest
+  , mkTestnetConfigTest
+  , runTestnetConfigTest
   ) where
 
 import Contract.Prelude
@@ -41,18 +41,18 @@ import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
 import Type.Row (type (+))
 
--- | `PlutipTest` is a convenient alias for a `Mote` type of
--- | `PlutipConfigTest`s which require no bracketting (i.e., setup)
-type PlutipTest = Mote (Const Void) PlutipConfigTest Unit
+-- | `TestnetTest` is a convenient alias for a `Mote` type of
+-- | `TestnetConfigTest`s which require no bracketting (i.e., setup)
+type TestnetTest = Mote (Const Void) TestnetConfigTest Unit
 
--- | `PlutipConfigTest` is a newtype wrapper for a method which has
+-- | `TestnetConfigTest` is a newtype wrapper for a method which has
 -- | the required configuration to create a `Test`
-newtype PlutipConfigTest = PlutipConfigTest (TestnetConfig → Test)
+newtype TestnetConfigTest = TestnetConfigTest (TestnetConfig → Test)
 
--- | `interpretPlutipTest` maps `PlutipTest` to `TestSuite` suitable for
+-- | `interpretTestnetTest` maps `TestnetTest` to `TestSuite` suitable for
 -- | running.
-interpretPlutipTest ∷ PlutipTest → TestSuite
-interpretPlutipTest = go <<< Mote.Monad.plan
+interpretTestnetTest ∷ TestnetTest → TestSuite
+interpretTestnetTest = go <<< Mote.Monad.plan
   where
   go =
     Mote.Plan.foldPlan
@@ -77,7 +77,7 @@ interpretPlutipTest = go <<< Mote.Monad.plan
                   liftAff $ delay $ wrap 3000.0
               )
 
-            runPlutipConfigTest
+            runTestnetConfigTest
               Test.Config.config
               value
       )
@@ -93,9 +93,9 @@ whileMMax n p m | n > 0 = do
   else pure unit
 whileMMax _ _ _ = pure unit
 
--- | `mkPlutipConfigTest` provides a mechanism to create a `PlutipConfigTest`
+-- | `mkTestnetConfigTest` provides a mechanism to create a `TestnetConfigTest`
 -- It sets up Env as empty value, that has to be later udpated with `Run.Reader.local`
-mkPlutipConfigTest ∷
+mkTestnetConfigTest ∷
   ∀ (distr ∷ Type) (wallets ∷ Type).
   UtxoDistribution distr wallets ⇒
   distr →
@@ -108,13 +108,13 @@ mkPlutipConfigTest ∷
       )
       Unit
   ) →
-  PlutipConfigTest
-mkPlutipConfigTest d t = PlutipConfigTest \c → runTestnetContract c d
+  TestnetConfigTest
+mkTestnetConfigTest d t = TestnetConfigTest \c → runTestnetContract c d
   (unliftApp emptyEnv <<< t)
 
--- | `runPlutipConfigTest` provides a mechanism to turn a `PlutipConfigTest` into a `Test`
-runPlutipConfigTest ∷
+-- | `runTestnetConfigTest` provides a mechanism to turn a `TestnetConfigTest` into a `Test`
+runTestnetConfigTest ∷
   TestnetConfig →
-  PlutipConfigTest →
+  TestnetConfigTest →
   Test
-runPlutipConfigTest config (PlutipConfigTest run) = run config
+runTestnetConfigTest config (TestnetConfigTest run) = run config

@@ -25,9 +25,9 @@ import Run (EFFECT, Run)
 import Run (liftEffect) as Run
 import Run.Except (EXCEPT)
 import Run.Except (note) as Run
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
-import Test.Utils (WrappedTests, dummySidechainParams, fails, plutipGroup)
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
+import Test.Utils (WrappedTests, dummySidechainParams, fails, testnetGroup)
 import TrustlessSidechain.CommitteeCandidateValidator
   ( DeregisterParams(DeregisterParams)
   , RegisterParams(RegisterParams)
@@ -52,7 +52,7 @@ mockSpoPubKey = hexToByteArrayUnsafe
 
 -- | `tests` wraps up all the committee candidate validator tests conveniently
 tests ∷ WrappedTests
-tests = plutipGroup "Committe candidate registration/deregistration" $ do
+tests = testnetGroup "Committe candidate registration/deregistration" $ do
   testScenarioSuccess1
   testScenarioSuccess2
   testScenarioFailure1
@@ -166,19 +166,19 @@ runDeregister scParams =
     { sidechainParams: scParams, spoPubKey: Just mockSpoPubKey }
 
 -- Register then Deregister
-testScenarioSuccess1 ∷ PlutipTest
+testScenarioSuccess1 ∷ TestnetTest
 testScenarioSuccess1 = Mote.Monad.test "Register followed by deregister"
-  $ Test.PlutipTest.mkPlutipConfigTest
+  $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ]
   $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       void $ runRegister dummySidechainParams
       runDeregister dummySidechainParams
 
 -- Register multipe times then Deregister
-testScenarioSuccess2 ∷ PlutipTest
+testScenarioSuccess2 ∷ TestnetTest
 testScenarioSuccess2 =
   Mote.Monad.test "10 registrations followed by 1 deregister"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 5_000_000
         , BigNum.fromInt 5_000_000
@@ -189,19 +189,19 @@ testScenarioSuccess2 =
         runDeregister dummySidechainParams
 
 -- Deregister without prior registeration (i.e. no registration utxo present)
-testScenarioFailure1 ∷ PlutipTest
+testScenarioFailure1 ∷ TestnetTest
 testScenarioFailure1 = Mote.Monad.test "Deregister in isolation (should fail)"
-  $ Test.PlutipTest.mkPlutipConfigTest
+  $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ]
   $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       runDeregister dummySidechainParams # withUnliftApp fails
 
 -- alice registers, bob deregisters. not allowed & should fail
-testScenarioFailure2 ∷ PlutipTest
+testScenarioFailure2 ∷ TestnetTest
 testScenarioFailure2 =
   Mote.Monad.test
     "Register followed by a deregister from a distinct wallet (should fail)"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         ( [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ] /\
             [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ]
         )
@@ -214,11 +214,11 @@ testScenarioFailure2 =
           # withUnliftApp fails
 
 -- alice registers, then tries to register again with the same set of keys. not allowed & should fail
-testScenarioFailure3 ∷ PlutipTest
+testScenarioFailure3 ∷ TestnetTest
 testScenarioFailure3 =
   Mote.Monad.test
     "Register followed by a register with the same set of keys (should fail)"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         ( [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ]
         )
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) $ do

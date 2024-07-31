@@ -23,9 +23,9 @@ import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe (unsafePartial)
 import Partial.Unsafe as Unsafe
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
-import Test.Utils (WrappedTests, plutipGroup)
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
+import Test.Utils (WrappedTests, testnetGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSAggregateSignatures(PlainEcdsaSecp256k1)
@@ -194,7 +194,7 @@ updateCommitteeHashWith params f = void do
 
 -- | `tests` aggregates all UpdateCommitteeHash the tests.
 tests ∷ WrappedTests
-tests = plutipGroup "Committee handover (committe hash update)" $ do
+tests = testnetGroup "Committee handover (committe hash update)" $ do
   testScenario1
   testScenario2
   testScenario3
@@ -202,9 +202,9 @@ tests = plutipGroup "Committee handover (committe hash update)" $ do
   testScenario5
 
 -- | 'testScenario1' updates the committee hash
-testScenario1 ∷ PlutipTest
+testScenario1 ∷ TestnetTest
 testScenario1 = Mote.Monad.test "Simple update committee hash"
-  $ Test.PlutipTest.mkPlutipConfigTest
+  $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 50_000_000
       , BigNum.fromInt 50_000_000
       , BigNum.fromInt 50_000_000
@@ -258,10 +258,10 @@ testScenario1 = Mote.Monad.test "Simple update committee hash"
 -- | `testScenario2` updates the committee hash with a threshold ratio of 1/1,
 -- | but should fail because there isn't enough committee members signing the update
 -- | off.
-testScenario2 ∷ PlutipTest
+testScenario2 ∷ TestnetTest
 testScenario2 =
   Mote.Monad.test "Update committee hash without honest majority (should fail)"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -330,10 +330,10 @@ testScenario2 =
 -- | (by moving the smallest committee member to the end), and updates the committee
 -- | hash when the signatures / new committee are given out of order (in
 -- | reverse order actually); and updates it again
-testScenario3 ∷ PlutipTest
+testScenario3 ∷ TestnetTest
 testScenario3 =
   Mote.Monad.test "Update committee hash with out of order committee"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -422,10 +422,10 @@ testScenario3 =
           >>= balanceSignAndSubmit "Test: burn NFTs"
 
 -- | `testScenario4` is given in #277
-testScenario4 ∷ PlutipTest
+testScenario4 ∷ TestnetTest
 testScenario4 =
   Mote.Monad.test "Unsorted committee members (issue #277)"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -516,11 +516,11 @@ testScenario4 =
 
 -- | `testScenario5` is essentially `testScenario2` but updates the committee
 -- | with exactly the required signatures instead.
-testScenario5 ∷ PlutipTest
+testScenario5 ∷ TestnetTest
 testScenario5 =
   Mote.Monad.test
     "Update committee hash with the exact amount of signatures needed"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000

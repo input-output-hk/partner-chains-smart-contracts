@@ -25,9 +25,9 @@ import Run (liftEffect) as Run
 import Run.Except (EXCEPT)
 import Test.CommitteePlainEcdsaSecp256k1ATMSPolicy (generateSignatures)
 import Test.MerkleRoot as Test.MerkleRoot
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
-import Test.Utils (WrappedTests, fails, getOwnTransactionInput, plutipGroup)
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
+import Test.Utils (WrappedTests, fails, getOwnTransactionInput, testnetGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
@@ -74,14 +74,14 @@ import Type.Row (type (+))
 -- | `tests` aggregate all the FUELMintingPolicy tests in one convenient
 -- | function
 tests ∷ WrappedTests
-tests = plutipGroup "Burning waste NFTs using GarbageCollector"
+tests = testnetGroup "Burning waste NFTs using GarbageCollector"
   $ do
       testScenarioSuccess
 
-testScenarioSuccess ∷ PlutipTest
+testScenarioSuccess ∷ TestnetTest
 testScenarioSuccess =
   Mote.Monad.test "Mint atms, fuel mint and fuel burn tokens, then burn them all"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 150_000_000, BigNum.fromInt 150_000_000 ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         { sidechainParams, initCommitteePrvKeys } ← initializeSidechain

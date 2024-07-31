@@ -24,9 +24,9 @@ import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Run.Except (note) as Run
 import Run.Except (throw)
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
 import Test.PoCRawScripts as RawScripts
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
 import Test.Utils as Test.Utils
 import TrustlessSidechain.Effects.Log (logInfo') as Effect
 import TrustlessSidechain.Effects.Run (withUnliftApp)
@@ -50,7 +50,7 @@ import TrustlessSidechain.Error
 import TrustlessSidechain.Utils.Address (toAddress)
 
 -- | `tests` aggregates all the PoCInlineDatums together conveniently
-tests ∷ PlutipTest
+tests ∷ TestnetTest
 tests = Mote.Monad.group "PoCInlineDatum tests" do
   testScenario1
   testScenario2
@@ -65,9 +65,9 @@ tests = Mote.Monad.group "PoCInlineDatum tests" do
 -- |
 -- |    3. Build / submit another transaction to consume the previous utxo and verify that
 -- |     the inline datum really was 69
-testScenario1 ∷ PlutipTest
+testScenario1 ∷ TestnetTest
 testScenario1 = Mote.Monad.test "PoCInlineDatum: testScenario1"
-  $ Test.PlutipTest.mkPlutipConfigTest
+  $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 10_000_000, BigNum.fromInt 10_000_000 ]
   $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       -- 1.
@@ -145,9 +145,9 @@ testScenario1 = Mote.Monad.test "PoCInlineDatum: testScenario1"
 -- |
 -- | 3. Build / submit another transaction to consume the previous utxo and verify this
 -- |     transaction should fail because there is no inline datum.
-testScenario2 ∷ PlutipTest
+testScenario2 ∷ TestnetTest
 testScenario2 = Mote.Monad.test "PoCInlineDatum: testScenario2"
-  $ Test.PlutipTest.mkPlutipConfigTest
+  $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 10_000_000, BigNum.fromInt 10_000_000 ]
   $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       -- 1.

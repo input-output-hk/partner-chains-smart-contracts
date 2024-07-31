@@ -18,9 +18,9 @@ import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe as Unsafe
 import Run as Run
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
-import Test.Utils (WrappedTests, plutipGroup)
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
+import Test.Utils (WrappedTests, testnetGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
@@ -74,16 +74,16 @@ generateSignatures
 -- | `tests` aggregates all the `CommitteePlainEcdsaSecp256k1ATMSPolicy` tests together in
 -- | one convenient function.
 tests ∷ WrappedTests
-tests = plutipGroup "CommitteePlainEcdsaSecp256k1ATMSPolicy minting" $ do
+tests = testnetGroup "CommitteePlainEcdsaSecp256k1ATMSPolicy minting" $ do
   testScenario1
 
 -- | 'testScenario1' includes various tests for `CommitteePlainEcdsaSecp256k1ATMSPolicy` from
 -- | the same sidechain.
-testScenario1 ∷ PlutipTest
+testScenario1 ∷ TestnetTest
 testScenario1 =
   Mote.Monad.test
     "Various tests for the CommitteePlainEcdsaSecp256k1ATMSPolicy token"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000

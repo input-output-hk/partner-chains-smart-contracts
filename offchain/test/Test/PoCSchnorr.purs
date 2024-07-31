@@ -37,9 +37,9 @@ import Run (Run)
 import Run (liftEffect) as Run
 import Run.Except (EXCEPT)
 import Run.Except (note, throw) as Run
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
 import Test.PoCRawScripts as RawScripts
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
 import Test.Utils as Test.Utils
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
@@ -105,15 +105,15 @@ mustMintPocSchnorrSecp256k1 schnorrRedeemer = do
   pure { lookups, constraints }
 
 -- | `tests` aggregates all the PoCSchnorrSecp256k1 tests together conveniently
-tests ∷ PlutipTest
+tests ∷ TestnetTest
 tests = Mote.Monad.group "PoCSchnorrSecp256k1 tests" do
   testScenario1
   testScenario2
   testScenario3
 
-testScenario1 ∷ PlutipTest
+testScenario1 ∷ TestnetTest
 testScenario1 = Mote.Monad.test "PoCSchnorrSecp256k1: valid test scenario"
-  $ Test.PlutipTest.mkPlutipConfigTest
+  $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 10_000_000, BigNum.fromInt 10_000_000 ]
   $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       privateKey ← Run.liftEffect $
@@ -134,9 +134,9 @@ testScenario1 = Mote.Monad.test "PoCSchnorrSecp256k1: valid test scenario"
         Utils.Transaction.balanceSignAndSubmit "PoCSchnorrSecp256k1"
       pure unit
 
-testScenario2 ∷ PlutipTest
+testScenario2 ∷ TestnetTest
 testScenario2 = Mote.Monad.test "PoCSchnorrSecp256k1: invalid test scenario"
-  $ Test.PlutipTest.mkPlutipConfigTest
+  $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 10_000_000, BigNum.fromInt 10_000_000 ]
   $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       privateKey ← Run.liftEffect $
@@ -162,11 +162,11 @@ testScenario2 = Mote.Monad.test "PoCSchnorrSecp256k1: invalid test scenario"
           Utils.Transaction.balanceSignAndSubmit "PoCSchnorrSecp256k1"
       pure unit
 
-testScenario3 ∷ PlutipTest
+testScenario3 ∷ TestnetTest
 testScenario3 =
   Mote.Monad.test
     "PoCSchnorrSecp256k1: valid test scenario which includes parsing / serialization of keys"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 10_000_000, BigNum.fromInt 10_000_000 ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         privateKey ← Run.liftEffect $

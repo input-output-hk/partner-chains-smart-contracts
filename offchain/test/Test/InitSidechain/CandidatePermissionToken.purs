@@ -9,10 +9,10 @@ import JS.BigInt (fromInt)
 import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Test.InitSidechain.Utils (failMsg)
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
 import Test.Unit.Assert (assert)
-import Test.Utils (WrappedTests, plutipGroup)
+import Test.Utils (WrappedTests, testnetGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
@@ -29,19 +29,20 @@ import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 
 -- | `tests` aggregates all the tests together in one convenient function
 tests ∷ WrappedTests
-tests = plutipGroup "Initialising the candidate permission token mechanism" $ do
-  -- InitCandidatePermissionToken endpoint
-  testInitCandidatePermissionToken
-  testInitCandidatePermissionTokenIdempotent
+tests = testnetGroup "Initialising the candidate permission token mechanism" $
+  do
+    -- InitCandidatePermissionToken endpoint
+    testInitCandidatePermissionToken
+    testInitCandidatePermissionTokenIdempotent
 
 -- | Test `initCandidatePermissionToken` having run `initTokensMint`, expecting
 -- | no failure
 -- Note that this test isn't great. If we want to keep the
 -- `initCandidatePermissionToken` machinery, we should improve this test.
-testInitCandidatePermissionToken ∷ PlutipTest
+testInitCandidatePermissionToken ∷ TestnetTest
 testInitCandidatePermissionToken =
   Mote.Monad.test "Calling `InitCandidatePermissionToken`"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -76,11 +77,11 @@ testInitCandidatePermissionToken =
 
 -- | Test running `initCandidatePermissionToken` twice, having run
 -- | `initTokensMint`, expecting idempotency
-testInitCandidatePermissionTokenIdempotent ∷ PlutipTest
+testInitCandidatePermissionTokenIdempotent ∷ TestnetTest
 testInitCandidatePermissionTokenIdempotent =
   Mote.Monad.test
     "Calling `InitCandidatePermissionToken` twice, expecting idempotency"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
