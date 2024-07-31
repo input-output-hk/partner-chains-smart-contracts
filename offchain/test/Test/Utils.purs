@@ -9,7 +9,7 @@ module Test.Utils
   , interpretConstVoidTest
   , interpretWrappedTest
   , pureGroup
-  , plutipGroup
+  , testnetGroup
   , WithTestRunner(..)
   , WrappedTests
   , assertHasOutputWithAsset
@@ -63,7 +63,7 @@ import Partial.Unsafe as Unsafe
 import Run (Run)
 import Run.Except (EXCEPT, throw)
 import Run.Reader (local)
-import Test.PlutipTest (PlutipConfigTest, interpretPlutipTest)
+import Test.TestnetTest (TestnetConfigTest, interpretTestnetTest)
 import Test.Unit (Test, TestSuite)
 import Test.Unit as Test.Unit
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
@@ -200,7 +200,7 @@ interpretConstVoidTest = go <<< Mote.Monad.plan
 
 -- | Test wrapper, to distinguish between different test interpreters
 data WithTestRunner
-  = WithPlutipRunner (Mote (Const Void) PlutipConfigTest Unit)
+  = WithTestnetRunner (Mote (Const Void) TestnetConfigTest Unit)
   | PureRunner (Mote (Const Void) Test Unit)
 
 -- | A type synonym for wrapped tests
@@ -214,7 +214,7 @@ interpretWrappedTest = go <<< Mote.Monad.plan
     Mote.Plan.foldPlan
       ( \{ label, value } → Test.Unit.suite label $
           case value of
-            WithPlutipRunner testCase → interpretPlutipTest testCase
+            WithTestnetRunner testCase → interpretTestnetTest testCase
             PureRunner testCase → interpretConstVoidTest testCase
 
       )
@@ -223,10 +223,10 @@ interpretWrappedTest = go <<< Mote.Monad.plan
       sequence_
 
 -- | A test group function to conveniently wrap multiple Mote tests using `WithTestRunner`
--- | Tests in this group will be executed by Plutip
-plutipGroup ∷ String → Mote (Const Void) PlutipConfigTest Unit → WrappedTests
-plutipGroup label tests =
-  Mote.Monad.test label $ WithPlutipRunner tests
+-- | Tests in this group will be executed in Cardano Testnet
+testnetGroup ∷ String → Mote (Const Void) TestnetConfigTest Unit → WrappedTests
+testnetGroup label tests =
+  Mote.Monad.test label $ WithTestnetRunner tests
 
 -- | A test group function to conveniently wrap multiple Mote tests using `WithTestRunner`
 -- | Tests in this group will be executed purely

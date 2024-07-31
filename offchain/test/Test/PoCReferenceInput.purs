@@ -20,9 +20,9 @@ import Data.Map as Map
 import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Run.Except (note) as Run
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
 import Test.PoCRawScripts as RawScripts
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
 import Test.Utils as Test.Utils
 import TrustlessSidechain.Effects.Contract (liftContract)
 import TrustlessSidechain.Effects.Log (logInfo') as Effect
@@ -47,7 +47,7 @@ import TrustlessSidechain.Error
 import TrustlessSidechain.Utils.Address (toAddress)
 
 -- | `tests` aggregates all the PoCReferenceInput together conveniently
-tests ∷ PlutipTest
+tests ∷ TestnetTest
 tests = Mote.Monad.group "PoCReferenceInput tests" do
   testScenario1
   testScenario2
@@ -63,9 +63,9 @@ tests = Mote.Monad.group "PoCReferenceInput tests" do
 -- |     Build / submit another transaction such that the `RawScripts.rawPoCReferenceInput`
 -- |     references the `RawScripts.rawPoCToReferenceInput` script and verifies that the
 -- |     (witness) datum really is 69
-testScenario1 ∷ PlutipTest
+testScenario1 ∷ TestnetTest
 testScenario1 = Mote.Monad.test "PoCReferenceInput: testScenario1"
-  $ Test.PlutipTest.mkPlutipConfigTest
+  $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 10_000_000, BigNum.fromInt 10_000_000 ]
   $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       -- 1.
@@ -182,9 +182,9 @@ testScenario1 = Mote.Monad.test "PoCReferenceInput: testScenario1"
 -- |    3. Build / submit another transaction such that the
 -- |    `RawScripts.rawPoCReferenceInput` CONSUMES the `RawScripts.rawPoCToReferenceInput`
 -- |    script and verifies that the (witness) datum really is 69. This should fail!
-testScenario2 ∷ PlutipTest
+testScenario2 ∷ TestnetTest
 testScenario2 = Mote.Monad.test "PoCReferenceInput: testScenario2"
-  $ Test.PlutipTest.mkPlutipConfigTest
+  $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 10_000_000, BigNum.fromInt 10_000_000 ]
   $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       -- START of duplicated code from `testScenario1`.

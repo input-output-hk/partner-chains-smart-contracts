@@ -10,9 +10,9 @@ import Data.Array as Array
 import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Run as Run
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
-import Test.Utils (WrappedTests, fails, getOwnTransactionInput, plutipGroup)
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
+import Test.Utils (WrappedTests, fails, getOwnTransactionInput, testnetGroup)
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
@@ -37,15 +37,15 @@ import TrustlessSidechain.Utils.Transaction
 -- | `tests` aggregate all the PermissionedCandidatesPolicy tests in one convenient
 -- | function
 tests ∷ WrappedTests
-tests = plutipGroup "Minting, and burning a PermissionedCandidates Token" $
+tests = testnetGroup "Minting, and burning a PermissionedCandidates Token" $
   do
     testScenarioSuccess
     testScenarioFailure
 
-testScenarioSuccess ∷ PlutipTest
+testScenarioSuccess ∷ TestnetTest
 testScenarioSuccess =
   Mote.Monad.test "Minting, updating and removing a PermissionedCandidates Token"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 1_000_000
         , BigNum.fromInt 5_000_000
         , BigNum.fromInt 150_000_000
@@ -140,11 +140,11 @@ testScenarioSuccess =
         _ ← initSidechain initScParams 1
         pure unit
 
-testScenarioFailure ∷ PlutipTest
+testScenarioFailure ∷ TestnetTest
 testScenarioFailure =
   Mote.Monad.test
     "Minting PermissionedCandidates, and then updating with the same values (should fail)"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 1_000_000
         , BigNum.fromInt 5_000_000
         , BigNum.fromInt 150_000_000

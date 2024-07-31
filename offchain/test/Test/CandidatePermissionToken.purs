@@ -16,8 +16,8 @@ import Mote.Monad as Mote.Monad
 import Run (Run)
 import Run.Except (EXCEPT)
 import Test.CommitteeCandidateValidator as Test.CommitteeCandidateValidator
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
 import Test.Utils (WrappedTests)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
@@ -34,7 +34,8 @@ import Type.Row (type (+))
 -- | `tests` wraps up all the tests conveniently
 tests ∷ WrappedTests
 tests =
-  Test.Utils.plutipGroup "Candidate permission token register / deregister tests"
+  Test.Utils.testnetGroup
+    "Candidate permission token register / deregister tests"
     $ do
         testScenarioSuccess1
         testScenarioFailure1
@@ -42,11 +43,11 @@ tests =
 -- | Mint a single permission token, then register and verify that the
 -- | permission token is at the committee validator address.... Then we
 -- | deregister and if we get the permission token back.
-testScenarioSuccess1 ∷ PlutipTest
+testScenarioSuccess1 ∷ TestnetTest
 testScenarioSuccess1 =
   Mote.Monad.test
     "Mint permission token, register (check if register validator has permission token), deregister (check if we get permission token back)"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 5_000_000
         , BigNum.fromInt 5_000_000
         , BigNum.fromInt 5_000_000
@@ -134,11 +135,11 @@ assertIHaveCandidatePermissionToken sidechainParams = do
 -- | Check if there are no permission tokens paid to the register validator,
 -- | then there are no tokens in the regsiter validator (this is essentialy
 -- | tautology)
-testScenarioFailure1 ∷ PlutipTest
+testScenarioFailure1 ∷ TestnetTest
 testScenarioFailure1 =
   Mote.Monad.test
     "Register, check if register output doesn't have permission token"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 5_000_000
         , BigNum.fromInt 5_000_000
         , BigNum.fromInt 5_000_000

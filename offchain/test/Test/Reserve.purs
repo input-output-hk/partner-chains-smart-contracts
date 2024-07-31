@@ -33,9 +33,9 @@ import Partial.Unsafe (unsafePartial)
 import Run (EFFECT, Run)
 import Run.Except (EXCEPT)
 import Test.AlwaysPassingScripts (alwaysPassingPolicy)
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
-import Test.Utils (WrappedTests, plutipGroup)
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
+import Test.Utils (WrappedTests, testnetGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
@@ -96,7 +96,7 @@ immutableAdaSettings = ImmutableReserveSettings
 
 -- | `tests` aggregates all UpdateCommitteeHash the tests.
 tests ∷ WrappedTests
-tests = plutipGroup "Reserve" $ do
+tests = testnetGroup "Reserve" $ do
   testScenario1
   testScenario2
   testScenario3
@@ -198,10 +198,10 @@ initialDistribution =
   , BigNum.fromInt 40_000_000
   ]
 
-testScenario1 ∷ PlutipTest
+testScenario1 ∷ TestnetTest
 testScenario1 =
   Mote.Monad.test "Successful reserve initialization with ADA as reserve token"
-    $ Test.PlutipTest.mkPlutipConfigTest initialDistribution
+    $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         pkh ← getOwnPaymentPubKeyHash
         Test.Utils.withSingleMultiSig (unwrap pkh) $ do
@@ -221,11 +221,11 @@ testScenario1 =
             $ throwError
             $ error "Reserve utxo not found"
 
-testScenario2 ∷ PlutipTest
+testScenario2 ∷ TestnetTest
 testScenario2 =
   Mote.Monad.test
     "Successful reserve initialization with non-ADA as reserve token"
-    $ Test.PlutipTest.mkPlutipConfigTest initialDistribution
+    $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         pkh ← getOwnPaymentPubKeyHash
         Test.Utils.withSingleMultiSig (unwrap pkh) $ do
@@ -255,11 +255,11 @@ testScenario2 =
             $ throwError
             $ error "Reserve utxo not found"
 
-testScenario3 ∷ PlutipTest
+testScenario3 ∷ TestnetTest
 testScenario3 =
   Mote.Monad.test
     "Deposit more non-ADA to a reserve"
-    $ Test.PlutipTest.mkPlutipConfigTest initialDistribution
+    $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         pkh ← getOwnPaymentPubKeyHash
         Test.Utils.withSingleMultiSig (unwrap pkh) $ do
@@ -305,11 +305,11 @@ testScenario3 =
             )
             (liftContract $ throwError $ error "Deposit not sucessful")
 
-testScenario4 ∷ PlutipTest
+testScenario4 ∷ TestnetTest
 testScenario4 =
   Mote.Monad.test
     "Update reserve utxo mutable settings"
-    $ Test.PlutipTest.mkPlutipConfigTest initialDistribution
+    $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         pkh ← getOwnPaymentPubKeyHash
         Test.Utils.withSingleMultiSig (unwrap pkh) $ do
@@ -361,11 +361,11 @@ testScenario4 =
             )
             (liftContract $ throwError $ error "Update not sucessful")
 
-testScenario5 ∷ PlutipTest
+testScenario5 ∷ TestnetTest
 testScenario5 =
   Mote.Monad.test
     "Transfer to illiquid circulation supply with non-ADA as reserve token"
-    $ Test.PlutipTest.mkPlutipConfigTest initialDistribution
+    $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         pkh ← getOwnPaymentPubKeyHash
         Test.Utils.withSingleMultiSig (unwrap pkh) $ do
@@ -433,11 +433,11 @@ testScenario5 =
 
           pure unit
 
-testScenario8 ∷ PlutipTest
+testScenario8 ∷ TestnetTest
 testScenario8 =
   Mote.Monad.test
     "Transfer to illiquid circulation supply with ADA as reserve token"
-    $ Test.PlutipTest.mkPlutipConfigTest initialDistribution
+    $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         pkh ← getOwnPaymentPubKeyHash
         Test.Utils.withSingleMultiSig (unwrap pkh) $ do
@@ -498,11 +498,11 @@ testScenario8 =
 
           pure unit
 
-testScenario6 ∷ PlutipTest
+testScenario6 ∷ TestnetTest
 testScenario6 =
   Mote.Monad.test
     "Handover with non-ADA as reserve token"
-    $ Test.PlutipTest.mkPlutipConfigTest initialDistribution
+    $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
 
         pkh ← getOwnPaymentPubKeyHash
@@ -551,11 +551,11 @@ testScenario6 =
                 "Reserve tokens not transferred to illiquid circulation supply"
             )
 
-testScenario7 ∷ PlutipTest
+testScenario7 ∷ TestnetTest
 testScenario7 =
   Mote.Monad.test
     "Handover with ADA as reserve token"
-    $ Test.PlutipTest.mkPlutipConfigTest initialDistribution
+    $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         pkh ← getOwnPaymentPubKeyHash
         Test.Utils.withSingleMultiSig (unwrap pkh) $ do

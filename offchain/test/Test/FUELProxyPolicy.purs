@@ -14,9 +14,9 @@ import Mote.Monad as Mote.Monad
 import Partial.Unsafe (unsafePartial)
 import Run (liftEffect) as Run
 import Test.MerkleRoot as Test.MerkleRoot
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
-import Test.Utils (WrappedTests, fails, getOwnTransactionInput, plutipGroup)
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
+import Test.Utils (WrappedTests, fails, getOwnTransactionInput, testnetGroup)
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
@@ -50,7 +50,7 @@ import TrustlessSidechain.Versioning as Versioning
 -- | `tests` aggregate all the FUELProxyPolicy tests in one convenient
 -- | function
 tests ∷ WrappedTests
-tests = plutipGroup "Claiming and burning FUEL tokens using proxy mechanism" $
+tests = testnetGroup "Claiming and burning FUEL tokens using proxy mechanism" $
   do
     testScenarioSuccess
     testScenarioSuccess2
@@ -64,10 +64,10 @@ tests = plutipGroup "Claiming and burning FUEL tokens using proxy mechanism" $
 -- |   - burn 10
 -- |   - update burning strategy
 -- |   - burn 2
-testScenarioSuccess ∷ PlutipTest
+testScenarioSuccess ∷ TestnetTest
 testScenarioSuccess =
   Mote.Monad.test "Multiple minting and burning, updating policies in between"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 150_000_000, BigNum.fromInt 150_000_000 ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
 
@@ -181,10 +181,10 @@ testScenarioSuccess =
           >>=
             balanceSignAndSubmit "Test: burn fuel via v2 proxy"
 
-testScenarioSuccess2 ∷ PlutipTest
+testScenarioSuccess2 ∷ TestnetTest
 testScenarioSuccess2 =
   Mote.Monad.test "Minting FUELProxy, and then minting again"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 150_000_000, BigNum.fromInt 150_000_000 ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
 
@@ -292,11 +292,11 @@ testScenarioSuccess2 =
 
 -- | Mint using version 1, update to version 2, burn using version 2
 -- | this should fail
-testScenarioFailure ∷ PlutipTest
+testScenarioFailure ∷ TestnetTest
 testScenarioFailure =
   Mote.Monad.test
     "Attempt to burn tokens using invalidated version (should fail)"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 150_000_000, BigNum.fromInt 150_000_000 ]
     $ \alice →
         withUnliftApp (Wallet.withKeyWallet alice) do

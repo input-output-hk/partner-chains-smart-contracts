@@ -14,10 +14,10 @@ import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Run (liftEffect) as Run
 import Test.InitSidechain.Utils (expectedInitTokens, failMsg, unorderedEq)
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
 import Test.Unit.Assert (assert)
-import Test.Utils (WrappedTests, plutipGroup)
+import Test.Utils (WrappedTests, testnetGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint.Utils as Checkpoint
@@ -56,16 +56,16 @@ import TrustlessSidechain.Versioning.Types
 
 -- | `tests` aggregates all the tests together in one convenient function
 tests ∷ WrappedTests
-tests = plutipGroup "Initialising FUEL" $ do
+tests = testnetGroup "Initialising FUEL" $ do
   -- InitFuel endpoint
   initFuelSucceeds
   initFuelIdempotent
 
 -- | A call to `initTokensMint` is followed by `initFuel`, resulting in success.
-initFuelSucceeds ∷ PlutipTest
+initFuelSucceeds ∷ TestnetTest
 initFuelSucceeds =
   Mote.Monad.test "`initFuel` succeeds"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -192,10 +192,10 @@ initFuelSucceeds =
               )
 
 -- | Second call to `initFuel` should return `Nothing`.
-initFuelIdempotent ∷ PlutipTest
+initFuelIdempotent ∷ TestnetTest
 initFuelIdempotent =
   Mote.Monad.test "`initFuel` called a second time returns Nothing"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000

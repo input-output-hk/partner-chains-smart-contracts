@@ -35,7 +35,7 @@ import Test.PoCSerialiseData as PoCSerialiseData
 import Test.Reserve as Reserve
 import Test.Unit.Main as Test.Unit.Main
 import Test.UpdateCommitteeHash as UpdateCommitteeHash
-import Test.Utils (interpretWrappedTest, plutipGroup)
+import Test.Utils (interpretWrappedTest, testnetGroup)
 import Test.Utils.Address as AddressUtils
 import Test.Versioning as Versioning
 
@@ -82,7 +82,7 @@ main = do
           PermissionedCandidates.tests
           GarbageCollector.tests
 
-        plutipGroup "POC Testnet tests" do
+        testnetGroup "POC Testnet tests" do
           PoCInlineDatum.tests
           PoCReferenceInput.tests
           PoCReferenceScript.tests

@@ -33,9 +33,9 @@ import Mote.Monad as Mote.Monad
 import Run (EFFECT, Run)
 import Run.Except (EXCEPT)
 import Test.AlwaysPassingScripts (alwaysPassingPolicy)
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
-import Test.Utils (WrappedTests, plutipGroup)
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
+import Test.Utils (WrappedTests, testnetGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
@@ -83,7 +83,7 @@ import Type.Row (type (+))
 
 -- | `tests` aggregates all UpdateCommitteeHash the tests.
 tests ∷ WrappedTests
-tests = plutipGroup "IlliquidCirculationSupply" $ do
+tests = testnetGroup "IlliquidCirculationSupply" $ do
   testScenario1
   testScenario2
 
@@ -238,11 +238,11 @@ findICSUtxo
       ( Map.toUnfoldable <$> findIlliquidCirculationSupplyUtxos sidechainParams
       )
 
-testScenario1 ∷ PlutipTest
+testScenario1 ∷ TestnetTest
 testScenario1 =
   Mote.Monad.test
     "Deposit to ICS"
-    $ Test.PlutipTest.mkPlutipConfigTest initialDistribution
+    $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         pkh ← getOwnPaymentPubKeyHash
         Test.Utils.withSingleMultiSig (unwrap pkh) $ do
@@ -280,11 +280,11 @@ testScenario1 =
             )
             (liftContract $ throwError $ error "Deposit not sucessful")
 
-testScenario2 ∷ PlutipTest
+testScenario2 ∷ TestnetTest
 testScenario2 =
   Mote.Monad.test
     "Withdraw from ICS"
-    $ Test.PlutipTest.mkPlutipConfigTest initialDistribution
+    $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         pkh ← getOwnPaymentPubKeyHash
         Test.Utils.withSingleMultiSig (unwrap pkh) $ do

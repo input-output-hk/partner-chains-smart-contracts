@@ -12,10 +12,10 @@ import Data.List (head)
 import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Test.InitSidechain.Utils (expectedInitTokens, failMsg, unorderedEq)
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
 import Test.Unit.Assert (assert)
-import Test.Utils (WrappedTests, plutipGroup)
+import Test.Utils (WrappedTests, testnetGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.CommitteeATMSSchemes
@@ -41,17 +41,17 @@ import TrustlessSidechain.Versioning.ScriptId (ScriptId(..))
 
 -- | `tests` aggregates all the tests together in one convenient function
 tests ∷ WrappedTests
-tests = plutipGroup "Initialising the checkpoint mechanism" $ do
+tests = testnetGroup "Initialising the checkpoint mechanism" $ do
   -- InitCheckpoint endpoint
   testInitCheckpointUninitialised
   testInitCheckpoint
   testInitCheckpointIdempotent
 
 -- | Test `InitCheckpoint` without having run `initTokensMint`, expecting failure
-testInitCheckpointUninitialised ∷ PlutipTest
+testInitCheckpointUninitialised ∷ TestnetTest
 testInitCheckpointUninitialised =
   Mote.Monad.test "Calling `InitCheckpoint` with no init token"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -85,10 +85,10 @@ testInitCheckpointUninitialised =
 
 -- | Test `InitCheckpoint` having run `initTokensMint`, expecting success and for the
 -- | `checkpointInitToken` to be spent
-testInitCheckpoint ∷ PlutipTest
+testInitCheckpoint ∷ TestnetTest
 testInitCheckpoint =
   Mote.Monad.test "Calling `InitCheckpoint`"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -171,10 +171,10 @@ testInitCheckpoint =
 
 -- | Test running `initCheckpoint` twice, having run `initTokensMint`, expecting idempotency
 -- | and for the `checkpointInitToken` to be spent
-testInitCheckpointIdempotent ∷ PlutipTest
+testInitCheckpointIdempotent ∷ TestnetTest
 testInitCheckpointIdempotent =
   Mote.Monad.test "Calling `InitCheckpoint` twice, expecting idempotency"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000

@@ -24,9 +24,9 @@ import Data.Set as Set
 import Mote.Monad as Mote.Monad
 import Prelude (unit) as Prelude
 import Run.Except (note) as Run
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
 import Test.PoCRawScripts (rawPoCECDSA)
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
 import TrustlessSidechain.Effects.Log (logInfo') as Effect
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Transaction
@@ -58,9 +58,9 @@ instance ToData ECDSARed where
     [ toData msg, toData sig, toData pk ]
 
 -- | Testing ECDSA verification function on-chain
-testScenario ∷ PlutipTest
+testScenario ∷ TestnetTest
 testScenario = Mote.Monad.test "PoCECDSA: testScenario"
-  $ Test.PlutipTest.mkPlutipConfigTest
+  $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 10_000_000, BigNum.fromInt 10_000_000 ]
   $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       -- Prep test

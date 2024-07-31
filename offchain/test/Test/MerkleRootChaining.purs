@@ -15,10 +15,10 @@ import Mote.Monad as Mote.Monad
 import Run (liftEffect) as Run
 import Run.Except (note) as Run
 import Test.MerkleRoot as Test.MerkleRoot
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
 import Test.UpdateCommitteeHash as Test.UpdateCommitteeHash
-import Test.Utils (WrappedTests, plutipGroup)
+import Test.Utils (WrappedTests, testnetGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSAggregateSignatures(PlainEcdsaSecp256k1)
@@ -43,7 +43,7 @@ import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
 -- | `tests` aggregates all MerkleRootChaining tests together conveniently
 tests ∷ WrappedTests
-tests = plutipGroup "MerkleRootChaining tests" $ do
+tests = testnetGroup "MerkleRootChaining tests" $ do
   testScenario1
   testScenario2
 
@@ -58,9 +58,9 @@ tests = plutipGroup "MerkleRootChaining tests" $ do
 -- | Note how this demonstrates "working" behavior for arbitrarily many (well,
 -- | 0-2) "saving merkle root" actions between the update committee hash
 -- | actions
-testScenario1 ∷ PlutipTest
+testScenario1 ∷ TestnetTest
 testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
-  $ Test.PlutipTest.mkPlutipConfigTest
+  $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 100_000_000
       , BigNum.fromInt 100_000_000
       , BigNum.fromInt 100_000_000
@@ -216,9 +216,9 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
 -- |    2. Saving a merkle root
 -- |    3. Attempt (but fail) to update the committee hash with the merkle root
 -- |    as `Nothing`
-testScenario2 ∷ PlutipTest
+testScenario2 ∷ TestnetTest
 testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
-  $ Test.PlutipTest.mkPlutipConfigTest
+  $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 100_000_000
       , BigNum.fromInt 100_000_000
       , BigNum.fromInt 100_000_000
