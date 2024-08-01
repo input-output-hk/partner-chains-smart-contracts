@@ -81,7 +81,7 @@
   trustless-sidechain-ctl = let
     project = repoRoot.nix.offchain;
   in
-    project.runPlutipTest {
+    project.runLocalTestnetTest {
       testMain = "Test.Main";
       builtProject = project.compiled;
     };
