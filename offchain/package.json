@@ -15,7 +15,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "blakejs": "^1.2.1",
+    "blakejs": "1.2.1",
     "secp256k1": "^4.0.3",
     "big-integer": "1.6.51",
     "@mlabs-haskell/cardano-message-signing": "^1.0.1",
@@ -38,7 +38,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.7.0",
-    "blakejs": "1.2.1",
     "buffer": "6.0.3",
     "doctoc": "^2.2.1",
     "esbuild": "0.18.11",
