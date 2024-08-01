@@ -69,9 +69,10 @@
 
       touch $out
     '';
-  trustless-sidechain-ctl =
-    let project = repoRoot.nix.offchain;
-    in project.runPlutipTest {
+  trustless-sidechain-ctl = let
+    project = repoRoot.nix.offchain;
+  in
+    project.runLocalTestnetTest {
       testMain = "Test.Main";
       builtProject = project.compiled;
     };
