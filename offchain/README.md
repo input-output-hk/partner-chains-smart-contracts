@@ -1,9 +1,17 @@
 # Off-chain Operations
 
+This document describes usage of the partner chains CLI.  This command line tool
+provides a set of commands (also known as "endpoints"), that are used to manage
+the Cardano components of a partner chain by submitting transactions to the
+Cardano network.
+
+**NOTE:** terms _partner chain_ and _sidechain_ are used interchangeably in this
+document.
+
 ## 1. Development
 
-If you want to develop for this submodule, please before setting up an environment
-consult the notes on [CONTRIBUTING.md](./CONTRIBUTING.md) first.
+If you want to develop for this submodule, please consult the notes in
+[CONTRIBUTING.md](./CONTRIBUTING.md) before setting up your environment.
 
 ## 2. Environment setup
 
@@ -32,6 +40,9 @@ To change the testnet you're using, you have to change the network name in the `
       };
 ```
 
+**TODO**: the above statement is incorrect, we no longer seem to have testnet
+configuration in `flake.nix`.
+
 You can also run these components directly without using Docker, more about these
 can be found [here](https://github.com/Plutonomicon/cardano-transaction-lib/blob/develop/doc/runtime.md).
 
@@ -39,13 +50,17 @@ Or by using a nix derivation, that brings required runtime dependencies into
 scope:
 https://github.com/szg251/cardano-dev-shell
 
+**TODO:** Do we consider the above a valid method of running the runtime
+dependencies?  If so, shouldn't we somehow pull this into the project (if
+license permits?) instead of relying on someone's private repo?
+
 ### 2.1. Configuring hosted runtime dependencies
 
 In case you are running the runtime dependencies (ogmios and kupo) on a hosted
 environment, or anything else than the default settings, you can either configure
-it via CLI arguments, or set these in the configuration.
+it via CLI arguments, or set these in the configuration file (see Section 3.1).
 
-The arguments for each service are using the following scheme:
+The arguments for ogmios and kupo are using the following scheme:
 
 ```
   --ogmios-host localhost  Address host of ogmios (default: "localhost")
@@ -57,24 +72,28 @@ The arguments for each service are using the following scheme:
 So in case you want to use a remote ogmios service on `https://1.2.3.4:5678`,
 you want to use the following arguments:
 ```
-nix run .#sidechain-main-cli -- burn-v1 --amount 100 --recipient aabb --ogmios-host 1.2.3.4 --ogmios-port 5678 --ogmios-secure
+nix run .#sidechain-main-cli -- [...] --ogmios-host 1.2.3.4 --ogmios-port 5678 --ogmios-secure
 ```
+where `[...]` represents a command and command-specific flags and options.
 
-For more information about the arguments, please refer to
-`nix run .#sidechain-main-cli -- burn-v1 --help`
-
-To use a configuration file instead, see
-[3.3. Configuring hosted runtime dependencies](#3.3.-configuring-hosted-runtime-dependencies)
+See [3.1. Using a configuration file](#3.1.-using-a-configuration-file) on how
+to use a configuration file instead of command-line options.
 
 ## 3. Running the CLI
 
-You can call the contract endpoints with the following CLI command
-(you need to add `--` before the arguments):
+You can run the CLI tool either through Nix or by directly running the compiled
+executables (these take the form of JavaScript files).
 
-**Running with nix:**
+When using `nix`, commands and options passed to the CLI must be preceeded by
+`--`.  For example, to display the list of all available commands one needs to
+execute:
+
 ```
 nix run .#sidechain-main-cli -- --help
 ```
+
+**TODO**: instructions below on bundling and running JavaScript do not work and
+need to be updated/rewritten.
 
 **Bundle to a JavaScript file and run using node:**
 ```shell
@@ -91,24 +110,39 @@ node main.js --help
 ### 3.1. Using a configuration file
 
 When running the CLI one needs to pass a single command (see section 3.3 below)
-followed by options.  A set of options related to defining the sidechain
+followed by options.  A set of options related to defining the partner chain
 parameters is used by all commands.  Instead of having to pass these options on
 the command line with every call, it is easier to put them in a configuration
 file `$CWD/config.json` in the following format:
 
 ```json
-{
   "sidechainParameters": {
     "chainId": 123,
     "genesisUtxo": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1",
-    "threshold": { "numerator": 2, "denominator": 3 },
+    "threshold": {
+      "numerator": 2,
+      "denominator": 3
+    },
     "atmsKind": "plain-ecdsa-secp256k1",
-    "governanceAuthority": "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c"
+    "governanceAuthority": "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
   },
-  "runtimeConfig": null,
+  "runtimeConfig": {
+    "network": "testnet",
+    "ogmios": {
+      "host": "localhost",
+      "port": 1337,
+      "secure": false,
+      "path": null
+    },
+    "kupo": {
+      "host": "localhost",
+      "port": 1442,
+      "secure": false,
+      "path": null
+    }
+  },
   "paymentSigningKeyFile": "/absolute/path/to/payment.skey",
-  "stakeSigningKeyFile": null
-}
+  "stakeSigningKeyFile": "/optional/path/to/stake.skey"
 ```
 
 This allows to shorten a CLI call from:
@@ -120,6 +154,13 @@ nix run .#sidechain-main-cli -- burn-v1 \
   --threshold-denominator 3 \
   --atms-kind plain-ecdsa-secp256k1 \
   --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
+  --network testnet \
+  --ogmios-host localhost \
+  --ogmios-port 1442 \
+  --ogmios-secure false \
+  --kupo-host localhost \
+  --kupo-port 1337 \
+  --kupo-secure false \
   --payment-signing-key-file payment.skey \
   --stake-signing-key-file stake.skey \
   --amount 5 \
@@ -127,6 +168,7 @@ nix run .#sidechain-main-cli -- burn-v1 \
 ```
 
 to:
+
 ```
 nix run .#sidechain-main-cli -- burn-v1 \
   --amount 5 \
@@ -134,51 +176,22 @@ nix run .#sidechain-main-cli -- burn-v1 \
 ```
 
 **We henceforth assume that these common options are located in the
-configuration file and omit them from any further examples.**
+configuration file and omit them from any further examples.  Thus, all provided
+options are specific to a particular command being demonstrated.**
 
 You can find a sample configuration file in `config.example.json`.
 
-When using the CLI argument and the configuration file together, the **CLI
-arguments override** these configuration values. You can also set any of the
-above values to null, if you don't want to set a default value for that
-property.
+When using the CLI arguments and the configuration file together, the **CLI
+arguments override** values in the configuration file. You can also set any of
+the above values to null, if you don't want to set a value for that property.
+Any configuration entry where no configuration is defined will fallback to its
+default value.
 
-### 3.2. Configuring hosted runtime dependencies
-
-You can set the network configuration of the runtime dependecies in the
-configuration file using the following format:
-
-_$CWD/config.json_
-```json
-{
-  "sidechainParameters": null,
-  "runtimeConfig": {
-    "network": "testnet",
-    "ogmios": {
-      "host": "1.2.3.4.5",
-      "port": 1337,
-      "secure": true,
-      "path": null
-    },
-    "ogmiosDatumCache": {
-      "host": "2.3.4.5.6",
-      "port": 9999,
-      "secure": false,
-      "path": null
-    },
-    "kupo": null
-  }
-}
-```
-
-Any service where no configuration is defined will fallback to its default value
-(localhost).
-
-### 3.3. Using the CLI commands
+### 3.2. Using the CLI commands
 
 Notes:
 
-- `genesis-committee-hash-utxo` is pinned to the sidechain parameters, so we
+- `genesis-committee-hash-utxo` is pinned to the partner chain parameters, so we
   have to add an arbitrary UTxO here.
 
 - If not using a config file, prior to running the contracts it may be desirable
@@ -194,10 +207,12 @@ Available commands:
 ```
   init                     Initialise sidechain
   init-tokens-mint         Mint all sidechain initialisation tokens
-  init-checkpoint          Initialise the checkpointing mechanism
-  init-fuel                Initialise the FUEL and committee selection mechanisms
+  init-reserve-management  Initialise native token reserve management system
+  init-checkpoint          Initialise checkpoint
+  init-fuel                Initialise the FUEL and committee selection
+                           mechanisms
   init-candidate-permission-token
-                           Initialise the candidate permission token mechanism
+                           Initialise candidate permission token
   addresses                Get the script addresses for a given sidechain
   claim-v1                 Claim a FUEL tokens from a proof
   burn-v1                  Burn a certain amount of FUEL tokens
@@ -212,13 +227,16 @@ Available commands:
   committee-handover       An alias for saving the merkle root, followed by
                            updating the committee hash
   save-checkpoint          Saving a new checkpoint
-  insert-version-2         Initialize protocol version 2
+  reserve-create           Create a new token reserve
+  reserve-handover         Empty and remove an existing reserve
+  reserve-deposit          Deposit assets to existing reserve
+  reserve-release-funds    Release currently available funds from an existing
+                           reserve
+  insert-version-2         Initialize version 2 of a protocol
   update-version           Update an existing protocol version
   invalidate-version       Invalidate a protocol version
   list-versioned-scripts   Get scripts (validators and minting policies) that
                            are currently being versioned
-  utils                    Utility functions for cryptographic primitives and
-                           messages.
   insert-d-parameter       Insert new D parameter
   update-d-parameter       Update a D parameter
   update-permissioned-candidates
@@ -227,9 +245,11 @@ Available commands:
   init-token-status        List the number of each init token the wallet still
                            holds
   cli-version              Display semantic version of the CLI and its git hash
+  utils                    Utility functions for cryptographic primitives and
+                           messages.
 ```
 
-#### 3.3.1.1 Initialising the sidechain in full
+#### 3.2.1.1 Initialising the sidechain in full
 
 The `init` command initializes all components of a sidechain.  It first burns
 the genesis UTxO and mints required initialization tokens, and then uses these
@@ -239,6 +259,7 @@ sidechain:
   * claiming and burning the fuel as well as the committee selection mechanism
   * checkpointing
   * candidate permission tokens (optional - see below)
+  * native token reserve management system
 
 To initialise the sidechain, we run the following command:
 ```
@@ -258,24 +279,24 @@ nix run .#sidechain-main-cli -- init \
   --committee-pub-key aabbcc \
   --committee-pub-key ccbbaa \
   --sidechain-epoch 0 \
-  --version 1
+  --version 1 \
   --candidate-permission-token-amount 42
 ```
 
 The `init` command is idempotent, i.e. in case of failure it can safely be
 re-run to finish an interrupted sidechain initialization.
 
-#### 3.3.1.2 Initialising the sidechain in parts
+#### 3.2.1.2 Initialising the sidechain in parts
 
 As an alternative to using the `init` command, the user might want to perform
 each initialization step individually.
 
 ##### Mint initialization tokens
 
-Mint the tokens to be used in subsequent commands.
-
-This will mint all tokens, regardless of whether there's an intention to use all
-of them.
+A mandatory first step is to mint the so called "initialization tokens" (or
+"init tokens" for short).  These tokens are required to subsequently initialize
+desired components of a partner chain.  The command mints all tokens, regardless
+of whether there's an intention to use all of them.
 
 Spends Genesis Utxo
 
@@ -284,7 +305,7 @@ Mints:
 * `"DistributedSet InitToken"`
 * `"CandidatePermission InitToken"`
 * `"Committee oracle InitToken"`
-* `"Version oracle InitToken"`
+* `"Version oracle InitToken"` (multiple tokens)
 
 ```
 nix run .#sidechain-main-cli -- init-tokens-mint --version 1
@@ -344,7 +365,7 @@ nix run .#sidechain-main-cli -- init-candidate-permission-token \
   --candidate-permission-token-amount 42
 ```
 
-#### 3.3.2. List currently versioned scripts
+#### 3.2.2. List currently versioned scripts
 
 ```
 nix run .#sidechain-main-cli -- list-versioned-scripts \
@@ -358,7 +379,7 @@ oracle. This includes an initial set of scripts that were added by the `init`
 command, and the scripts that were added when inserting a new protocol version
 using the `insert-version`.
 
-#### 3.3.3. Get script addresses of a sidechain
+#### 3.2.3. Get script addresses of a sidechain
 
 Script addresses depend on the sidechain parameters, so we get different
 addresses for different parameters. To get the script addresses for a given
@@ -372,7 +393,7 @@ nix run .#sidechain-main-cli -- addresses \
 An optional `--use-candidate-permission-token` flag can be used to also display
 policy of the candidate permission tokens.
 
-#### 3.3.4. Claim FUEL tokens
+#### 3.2.4. Claim FUEL tokens
 
 ```
 nix run .#sidechain-main-cli -- claim-v1 \
@@ -390,7 +411,7 @@ nix run .#sidechain-main-cli -- claim-v2 \
   --amount 13
 ```
 
-#### 3.3.5. Burn user owned FUEL tokens
+#### 3.2.5. Burn user owned FUEL tokens
 
 ```
 nix run .#sidechain-main-cli -- burn-v1 \
@@ -407,7 +428,7 @@ nix run .#sidechain-main-cli -- burn-v2 \
   --recipient aabbcc
 ```
 
-#### 3.3.6. Register committee candidate
+#### 3.2.6. Register committee candidate
 
 In order to generate the signatures, you can use the signature generator tool:
 ```
@@ -439,14 +460,14 @@ nix run .#sidechain-main-cli -- register \
   --use-candidate-permission-token
 ```
 
-#### 3.3.7. Deregister committee candidate
+#### 3.2.7. Deregister committee candidate
 
 ```
 nix run .#sidechain-main-cli -- deregister \
   --spo-public-key aabbcc
 ```
 
-#### 3.3.8. Committee hash update
+#### 3.2.8. Committee hash update
 
 ```
 nix run .#sidechain-main-cli -- committee-hash \
@@ -467,7 +488,7 @@ Note that `--new-committee-validator-cbor-encoded-address` can be found
 from the JSON key `cborEncodedAddresses` from the output of the `addresses`
 subcommand.
 
-#### 3.3.9. Save merkle root
+#### 3.2.9. Save merkle root
 
 ```
 nix run .#sidechain-main-cli -- save-root \
@@ -479,7 +500,7 @@ nix run .#sidechain-main-cli -- save-root \
   --previous-merkle-root abcdef
 ```
 
-#### 3.3.10 Committee handover
+#### 3.2.10 Committee handover
 
 ```
 nix run .#sidechain-main-cli -- committee-handover \
@@ -497,14 +518,14 @@ nix run .#sidechain-main-cli -- committee-handover \
   --committee-pub-key-and-new-merkle-root-signature aabbcc03:bbbbbb
 ```
 
-#### 3.3.11 Candidiate permission token
+#### 3.2.11 Candidiate permission token
 
 ```
 nix run .#sidechain-main-cli -- candidate-permission-token \
   --candidate-permission-token-amount 10
 ```
 
-#### 3.3.12 Save checkpoint
+#### 3.2.12 Save checkpoint
 
 ```
 nix run .#sidechain-main-cli -- save-checkpoint \
@@ -513,14 +534,64 @@ nix run .#sidechain-main-cli -- save-checkpoint \
   --sidechain-epoch 5
 ```
 
-#### 3.3.13 Insert new protocol version
+#### 3.2.13 Create a new token reserve
+
+```
+nix run .#sidechain-main-cli -- reserve-create \
+   --total-accrued-function-script-hash SCRIPT-HASH \
+   --reserve-posixtime-t0 POSIXTIME \
+   --reserve-asset-script-hash ASSET-SCRIPT-HASH \
+   --reserve-asset-name RESERVE_ASSET_NAME \
+   --reserve-initial-deposit-amount RESERVE-DEPOSIT-AMOUNT
+```
+
+Instead of `--reserve-asset-script-hash` and `--reserve-asset-name` one might
+specify `--reserve-ada-asset` flag to indicate that Ada is to be used as the
+reserve asset.
+
+Optionally one might also pass `--reserve-initial-incentive-amount
+RESERVE-INCENTIVE-AMOUNT` option to set the incentive, i.e. the amount of tokens
+awarded for a reserve release.
+
+#### 3.2.14 Empty and remove an existing reserve
+
+```
+nix run .#sidechain-main-cli -- reserve-handover
+```
+
+Perform the reserve handover.
+
+#### 3.2.15 Deposit assets to existing reserve
+
+```
+nix run .#sidechain-main-cli -- reserve-deposit \
+  --deposit-reserve-asset ASSET-SCRIPT-HASH \
+  --reserve-asset-name RESERVE_ASSET_NAME \
+  --reserve-initial-deposit-amount RESERVE-DEPOSIT-AMOUNT
+```
+
+Instead of `--deposit-reserve-asset` and `--reserve-asset-name` one might
+specify `--reserve-ada-asset` flag to indicate that Ada is being used as the
+reserve asset.
+
+#### 3.2.16 Release currently available funds from an existing reserve
+
+
+```
+nix run .#sidechain-main-cli -- reserve-release-funds \
+  --total-accrued-till-now INT \
+  --reserve-transaction-input RESERVE-TRANSACTION-INPUT
+```
+
+#### 3.2.17 Insert new protocol version
 
 This command is only for testing purposes and shouldn't be used.
+
 ```
 nix run .#sidechain-main-cli --insert-version-2
 ```
 
-#### 3.3.14 Update existing protocol version
+#### 3.2.18 Update existing protocol version
 
 ```
 nix run .#sidechain-main-cli -- update-version \
@@ -528,14 +599,14 @@ nix run .#sidechain-main-cli -- update-version \
   --new-version 2
 ```
 
-#### 3.3.15 Invalidate protocol version
+#### 3.2.19 Invalidate protocol version
 
 ```
 nix run .#sidechain-main-cli -- invalidate-version \
   --version 1
 ```
 
-#### 3.3.16 Insert a D parameter value
+#### 3.2.20 Insert a D parameter value
 
 ```
 nix run .#sidechain-main-cli -- insert-d-parameter \
@@ -547,7 +618,7 @@ where N and M are integers.  Note that this should be only done once and then
 `update-d-parameter` value should be used (see below).  However, there is no
 safeguard against inserting multiple D parameter values.
 
-#### 3.3.17 Update a D parameter value
+#### 3.2.21 Update a D parameter value
 
 ```
 nix run .#sidechain-main-cli -- update-d-parameter \
@@ -559,7 +630,7 @@ where N and M are integers.  If more than one D parameter value was inserted
 this will remove all inserted values first and then replace them with a single
 new value.
 
-#### 3.3.18 Insert a list of permissioned candidates
+#### 3.2.22 Insert a list of permissioned candidates
 
 ```
 nix run .#sidechain-main-cli -- update-permissioned-candidates \
@@ -575,7 +646,7 @@ only be used once to initialize the list.  All subsequent updates should be done
 using the `update-permissioned-candidates` command below, though there is no
 safeguard against calling `insert-permissioned-candidates` multiple times.
 
-#### 3.3.19 Update a list of permissioned candidates
+#### 3.2.23 Update a list of permissioned candidates
 
 ```
 nix run .#sidechain-main-cli -- update-permissioned-candidates \
@@ -588,7 +659,7 @@ You can add and remove candidates in a single transaction.  Each candidate is
 listed separately using the `--add-candidate` or `--remove-candidate` flag
 followed by a string of four keys separated from each other by a single colon.
 
-#### 3.3.20 Remove all permissioned candidates
+#### 3.2.24 Remove all permissioned candidates
 
 ```
 nix run .#sidechain-main-cli -- update-permissioned-candidates \
@@ -599,7 +670,7 @@ Remove all currently registered permissioned candidates. You can also remove all
 candidates and add new ones in a single transaction. Just provide
 `--add-candidate` as described above.
 
-#### 3.3.21 Garbage collect redundant tokens
+#### 3.2.25 Garbage collect redundant tokens
 
 ```
 nix run .#sidechain-main-cli -- collect-garbage
@@ -611,7 +682,7 @@ the system after they are minted. Their only purpose is to be minted alongside
 some other tokens, as a proof that some kind of check has passed. After that
 there is no other way to use them.
 
-#### 3.3.22 Utils
+#### 3.2.26 Utils
 
 All commands in this section are supposed to be used mostly by developers.
 
@@ -626,7 +697,7 @@ Utils commands that start with `encode` allow for producing messages in CBOR for
 One needs to provide all necessary fields of a message as CLI arguments and the command
 produces CBOR encoded message of a desired type.
 
-##### 3.3.21.1 Generate an ECDSA SECP256k1 public / private key pair
+##### 3.2.26.1 Generate an ECDSA SECP256k1 public / private key pair
 
 ```
 nix run .#sidechain-main-cli -- utils key-gen ecdsa-secp256k1
@@ -641,7 +712,7 @@ Sample output:
 }
 ```
 
-##### 3.3.21.2 Generate an Schnorr SECP256k1 public / private key pair
+##### 3.2.26.2 Generate an Schnorr SECP256k1 public / private key pair
 
 ```
 nix run .#sidechain-main-cli -- utils key-gen schnorr-secp256k1
@@ -656,7 +727,7 @@ Sample output:
 }
 ```
 
-##### 3.3.21.3 Sign a message with an ECDSA SECP256k1 private key
+##### 3.2.26.3 Sign a message with an ECDSA SECP256k1 private key
 
 Available options:
   - `--private-key SIDECHAIN_PRIVATE_KEY` \
@@ -681,16 +752,16 @@ Sample output:
 }
 ```
 
-##### 3.3.21.4 Sign a message with a Schnorr SECP256k1 private key
+##### 3.2.26.4 Sign a message with a Schnorr SECP256k1 private key
 
-Arguments and the output format are the same as in 3.3.21.3.
+Arguments and the output format are the same as in 3.2.26.3.
 ```
 nix run .#sidechain-main-cli -- utils sign schnorr-secp256k1 \
   --private-key "d2a77accb66f065001dc225fb0b0e570aac266241ab9358e823cb909ad62e07f" \
   --message "0xab40"
 ```
 
-##### 3.3.21.5 Produce a CBOR encoded aggregated public key of the sidechain committee
+##### 3.2.26.5 Produce a CBOR encoded aggregated public key of the sidechain committee
 
 The result corresponds to `UpdateCommitteeHashMessage` type in the code.
 
@@ -718,11 +789,6 @@ Available options:
 
 ```
 nix run .#sidechain-main-cli -- utils encode cbor-update-committee-message \
-  --sidechain-id 123 \
-  --genesis-committee-hash-utxo 3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1 \
-  --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
   --sidechain-epoch 5 \
   --cbor-aggregated-public-keys aabb \
   --new-committee-validator-hash ab2d6145e1700cd11dc074cad9f4194cc53b0dbab6bd25dfea6c501c
@@ -732,7 +798,7 @@ where we note that `--cbor-aggregated-public-keys` can be found
 from the JSON key `cborEncodedAddresses` from the output of the `addresses`
 subcommand.
 
-##### 3.3.21.6 Produce a CBOR encoded block producer registration message
+##### 3.2.26.6 Produce a CBOR encoded block producer registration message
 
 The result corresponds to `BlockProducerRegistrationMsg` type in the code.
 
@@ -754,16 +820,11 @@ Available options:
 
 ```
 nix run .#sidechain-main-cli -- utils encode cbor-block-producer-registration-message \
-  --sidechain-id 123 \
-  --genesis-committee-hash-utxo 3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1 \
-  --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
   --sidechain-public-key 02599181389043ba0b83e53d3d665c2dfaa187453a24a4538723766f8f0509c55d \
   --input-utxo ab24c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#5
 ```
 
-##### 3.3.21.7 Produce a CBOR of a Merkle tree entry
+##### 3.2.26.7 Produce a CBOR of a Merkle tree entry
 
 The result corresponds to `MerkleTreeEntry` type in the code.
 
@@ -785,7 +846,7 @@ nix run .#sidechain-main-cli -- utils encode cbor-merkle-tree-entry \
   --recipient aabbcc
 ```
 
-##### 3.3.21.8 Produce a CBOR of a Merkle tree and the Merkle root hash from the provided Merkle tree entries
+##### 3.2.26.8 Produce a CBOR of a Merkle tree and the Merkle root hash from the provided Merkle tree entries
 
 The result corresponds to `List MerkleTreeEntry` type in the code.
 
@@ -798,7 +859,7 @@ nix run .#sidechain-main-cli -- utils encode cbor-merkle-tree \
   --cbor-merkle-tree-entry abababababababaabababababababaababababababababbbabababababababab
 ```
 
-##### 3.3.21.9 Produce a CBOR of a combined Merkle proof from the provided Merkle tree and Merkle tree entry
+##### 3.2.26.9 Produce a CBOR of a combined Merkle proof from the provided Merkle tree and Merkle tree entry
 
 The result corresponds to `(MerkleTreeEntry, MerkleTree)` type in the code.
 
@@ -814,7 +875,7 @@ nix run .#sidechain-main-cli -- utils encode cbor-combined-merkle-proof \
   --cbor-merkle-tree abababababababaabababababababaababababababababbbabababababababab
 ```
 
-##### 3.3.21.10 Produce a CBOR of a Merkle root insertion message
+##### 3.2.26.10 Produce a CBOR of a Merkle root insertion message
 
 The result corresponds to `MerkleRootInsertionMessage` type in the code.
 
@@ -836,16 +897,11 @@ Available options:
 
 ```
 nix run .#sidechain-main-cli -- utils encode cbor-merkle-root-insertion-message \
-  --sidechain-id 123 \
-  --genesis-committee-hash-utxo 3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1 \
-  --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
   --merkle-root 0xabababababababaabababababababaababababababababbbabababababababab \
   --previous-merkle-root 0xabababababababaabababababababaababababababababbbabababababababab
 ```
 
-##### 3.3.21.11 Aggregate the raw hex encoded public keys with the plain ATMS scheme which sorts, concatenates, and hashes
+##### 3.2.26.11 Aggregate the raw hex encoded public keys with the plain ATMS scheme which sorts, concatenates, and hashes
 
 Available options:
   - `--public-key PUBLIC_KEY` \
