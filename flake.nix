@@ -16,15 +16,6 @@
 
     cardano-transaction-lib = {
       url = "github:Plutonomicon/cardano-transaction-lib/3279526b028c26a6ccb871b7bba4a0cc4a1f2299";
-      inputs.kupo-nixos.follows = "kupo-nixos";
-    };
-
-    kupo-nixos = {
-      url = "github:Fourierlabs/kupo-nixos/add-conway";
-      inputs = {
-        CHaP.follows = "CHaP";
-        kupo.url = "github:klarkc/kupo/d95a324f6a94a963cd91cb5d5f88ef50640e7b8d";
-      };
     };
 
     plutip.follows = "cardano-transaction-lib/plutip";
