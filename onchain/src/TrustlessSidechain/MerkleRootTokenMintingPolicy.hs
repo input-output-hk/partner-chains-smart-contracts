@@ -10,21 +10,21 @@ module TrustlessSidechain.MerkleRootTokenMintingPolicy (
   serialisableMintingPolicy,
 ) where
 
-import Plutus.V1.Ledger.Value qualified as Value
-import Plutus.V2.Ledger.Api (
+import PlutusLedgerApi.Common (SerialisedScript)
+import PlutusLedgerApi.V1.Value qualified as Value
+import PlutusLedgerApi.V2 (
   CurrencySymbol,
   LedgerBytes (LedgerBytes, getLedgerBytes),
-  Script,
   ScriptContext,
   TokenName (TokenName, unTokenName),
   TxInInfo (txInInfoResolved),
   TxInfo (txInfoMint, txInfoOutputs, txInfoReferenceInputs),
   TxOut (txOutAddress, txOutValue),
   Value (getValue),
-  fromCompiledCode,
   scriptContextTxInfo,
+  serialiseCompiledCode,
  )
-import Plutus.V2.Ledger.Contexts qualified as Contexts
+import PlutusLedgerApi.V2.Contexts qualified as Contexts
 import PlutusTx (compile)
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
@@ -167,15 +167,15 @@ mkMintingPolicy
                                     > 0
                                 )
                                   || go txOuts
-                              )
+                             )
                          in go $ txInfoOutputs info
-                      )
+                    )
           _ -> False
 
 mkMintingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkMintingPolicyUntyped sp versioningConfig =
   mkUntypedMintingPolicy $ mkMintingPolicy (IsData.unsafeFromBuiltinData sp) (IsData.unsafeFromBuiltinData versioningConfig)
 
-serialisableMintingPolicy :: Script
+serialisableMintingPolicy :: SerialisedScript
 serialisableMintingPolicy =
-  fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
+  serialiseCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])

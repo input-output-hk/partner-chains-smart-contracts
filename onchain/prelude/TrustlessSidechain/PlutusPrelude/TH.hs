@@ -289,7 +289,7 @@ makeHasField name = do
       -- A pattern builder function.  For "get" we need to replace all but one
       -- field with a wildcard.  For "modify" we just turn field names into
       -- patterns.  This function provides a uniform way of doing it.
-      mkPat f = ParensP $ ConP conName (map f fieldPatNames)
+      mkPat f = ParensP $ ConP conName [] (map f fieldPatNames)
 
       -- pair record fields with their pattern variables and types
       fieldsWithTypes =
@@ -362,6 +362,6 @@ getNameUnqualified :: Name -> String
 getNameUnqualified (Name (OccName n) _) = n
 
 -- | Get name of a type variable binder
-tyVarBndrName :: TyVarBndr -> Name
-tyVarBndrName (PlainTV name) = name
-tyVarBndrName (KindedTV name _) = name
+tyVarBndrName :: TyVarBndr () -> Name
+tyVarBndrName (PlainTV name ()) = name
+tyVarBndrName (KindedTV name () _) = name

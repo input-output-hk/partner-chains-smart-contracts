@@ -51,12 +51,12 @@ import GetOpts (
   uchcNewCommitteePubKeys,
   uchcPreviousMerkleRoot,
   uchcSidechainEpoch,
-  uchcValidatorHash,
+  uchcScriptHash,
  )
-import Plutus.V1.Ledger.Bytes qualified as Plutus
-import Plutus.V2.Ledger.Api (
+import PlutusLedgerApi.V1.Bytes qualified as Plutus
+import PlutusLedgerApi.V2 (
+  ScriptHash (..),
   ToData (toBuiltinData),
-  ValidatorHash (ValidatorHash),
  )
 import PlutusTx.Builtins qualified as Builtins
 import System.IO (FilePath)
@@ -183,7 +183,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} atmsKind cliCommand =
                     , previousMerkleRoot = uchcPreviousMerkleRoot
                     , sidechainEpoch = uchcSidechainEpoch
                     , validatorHash =
-                        uchcValidatorHash
+                        uchcScriptHash
                     }
                 currentCommitteePubKeysAndSigsFlags =
                   fmap
@@ -204,7 +204,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} atmsKind cliCommand =
                     )
                     uchcNewCommitteePubKeys
                 serialisedValidatorHash =
-                  let ValidatorHash bs = uchcValidatorHash
+                  let ScriptHash bs = uchcScriptHash
                    in encodeHexBuiltinBS bs
              in ["nix run .#sidechain-main-cli -- committee-hash"] :
                 sidechainParamFlags
