@@ -18,7 +18,6 @@ import Cardano.Types.TransactionOutput (TransactionOutput)
 import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(..))
 import Cardano.Types.Value (Value)
 import Cardano.Types.Value as Value
-import Contract.Address (Address)
 import Contract.PlutusData
   ( RedeemerDatum(RedeemerDatum)
   , toData
@@ -29,12 +28,11 @@ import Contract.TxConstraints
   , InputWithScriptRef(RefInput)
   )
 import Contract.TxConstraints as TxConstraints
-import Contract.Utxos (UtxoMap)
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.Effects.Log (LOG)
-import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
@@ -76,9 +74,10 @@ illiquidCirculationSupplyLookupsAndConstraints ∷
 illiquidCirculationSupplyLookupsAndConstraints sp = do
   (icsRefTxInput /\ icsRefTxOutput) ←
     Versioning.getVersionedScriptRefUtxo sp
-      (VersionOracle { version: BigNum.fromInt 1
-                     , scriptId: IlliquidCirculationSupplyWithdrawalPolicy
-                     }
+      ( VersionOracle
+          { version: BigNum.fromInt 1
+          , scriptId: IlliquidCirculationSupplyWithdrawalPolicy
+          }
       )
 
   pure
@@ -153,9 +152,10 @@ withdrawFromSupply sp mintingPolicyHash withdrawnValue utxo = do
   (withdrawalPolicyInput /\ withdrawalPolicyOutput) ←
     Versioning.getVersionedScriptRefUtxo
       sp
-      (VersionOracle { version: BigNum.fromInt 1
-                     , scriptId: IlliquidCirculationSupplyWithdrawalPolicy
-                     }
+      ( VersionOracle
+          { version: BigNum.fromInt 1
+          , scriptId: IlliquidCirculationSupplyWithdrawalPolicy
+          }
       )
 
   let
