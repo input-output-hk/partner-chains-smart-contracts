@@ -234,8 +234,8 @@ hashInternalNode = hash . Builtins.consByteString 1
 {-# INLINEABLE mergeRootHashes #-}
 mergeRootHashes :: RootHash -> RootHash -> RootHash
 mergeRootHashes l r =
-  hashInternalNode $
-    (Builtins.appendByteString `on` (getLedgerBytes . unRootHash)) l r
+  hashInternalNode
+    $ (Builtins.appendByteString `on` (getLedgerBytes . unRootHash)) l r
 
 -- | 'MerkleTree' is a tree of hashes. See 'fromList' and 'fromNonEmpty' for
 -- building a 'MerkleTree', and see 'lookupMp' and 'memberMp' for creating and

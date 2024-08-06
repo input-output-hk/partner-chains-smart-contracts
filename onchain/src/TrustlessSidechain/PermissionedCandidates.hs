@@ -62,37 +62,37 @@ mkMintingPolicy
   ctx
     | Just currSym <-
         Unsafe.decode <$> (Unsafe.getMinting . Unsafe.scriptContextPurpose $ ctx) =
-      let txInfo = Unsafe.scriptContextTxInfo ctx
-          -- Check that transaction was approved by governance authority
-          signedByGovernanceAuthority :: Bool
-          signedByGovernanceAuthority =
-            txInfo `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
+        let txInfo = Unsafe.scriptContextTxInfo ctx
+            -- Check that transaction was approved by governance authority
+            signedByGovernanceAuthority :: Bool
+            signedByGovernanceAuthority =
+              txInfo `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
 
-          -- Amount of PermissionedCandidatesToken sent to the
-          -- PermissionedCandidatesValidator address
-          outAmount :: Integer
-          outAmount =
-            sum
-              [ currencySymbolValueOf value currSym
-              | (TxOut address value _ _) <-
-                  Unsafe.decode <$> Unsafe.txInfoOutputs txInfo
-              , -- look at UTxOs that are sent to the
-              -- PermissionedCandidatesValidatorAddress
-              address == permissionedCandidatesValidatorAddress
-              ]
+            -- Amount of PermissionedCandidatesToken sent to the
+            -- PermissionedCandidatesValidator address
+            outAmount :: Integer
+            outAmount =
+              sum
+                [ currencySymbolValueOf value currSym
+                | (TxOut address value _ _) <-
+                    Unsafe.decode <$> Unsafe.txInfoOutputs txInfo
+                , -- look at UTxOs that are sent to the
+                -- PermissionedCandidatesValidatorAddress
+                address == permissionedCandidatesValidatorAddress
+                ]
 
-          -- Amount of PermissionedCandidatesToken minted by this transaction
-          mintAmount :: Integer
-          mintAmount = currencySymbolValueOf (Unsafe.decode $ Unsafe.txInfoMint txInfo) currSym
+            -- Amount of PermissionedCandidatesToken minted by this transaction
+            mintAmount :: Integer
+            mintAmount = currencySymbolValueOf (Unsafe.decode $ Unsafe.txInfoMint txInfo) currSym
 
-          -- Check wether the amount of tokens minted equal to the amount of tokens
-          -- sent to the PermissionedCandidatesValidator address
-          allTokensSentToPermissionedCandidatesValidator :: Bool
-          allTokensSentToPermissionedCandidatesValidator = mintAmount == outAmount
-       in traceIfFalse "ERROR-DPARAMETER-POLICY-01" signedByGovernanceAuthority
-            && traceIfFalse
-              "ERROR-PERMISSIONED-CANDIDATES-POLICY-02"
-              allTokensSentToPermissionedCandidatesValidator
+            -- Check wether the amount of tokens minted equal to the amount of tokens
+            -- sent to the PermissionedCandidatesValidator address
+            allTokensSentToPermissionedCandidatesValidator :: Bool
+            allTokensSentToPermissionedCandidatesValidator = mintAmount == outAmount
+         in traceIfFalse "ERROR-DPARAMETER-POLICY-01" signedByGovernanceAuthority
+              && traceIfFalse
+                "ERROR-PERMISSIONED-CANDIDATES-POLICY-02"
+                allTokensSentToPermissionedCandidatesValidator
 mkMintingPolicy
   sp
   _
@@ -100,30 +100,30 @@ mkMintingPolicy
   ctx
     | Just currSym <-
         Unsafe.decode <$> (Unsafe.getMinting . Unsafe.scriptContextPurpose $ ctx) =
-      let txInfo = Unsafe.scriptContextTxInfo ctx
-          -- Check that transaction was approved by governance authority
-          signedByGovernanceAuthority :: Bool
-          signedByGovernanceAuthority =
-            txInfo `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
+        let txInfo = Unsafe.scriptContextTxInfo ctx
+            -- Check that transaction was approved by governance authority
+            signedByGovernanceAuthority :: Bool
+            signedByGovernanceAuthority =
+              txInfo `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
 
-          -- Amount of PermissionedCandidatesToken sent output by this transaction
-          outAmount :: Integer
-          outAmount =
-            sum
-              [ currencySymbolValueOf value currSym
-              | (TxOut _ value _ _) <-
-                  Unsafe.decode <$> Unsafe.txInfoOutputs txInfo
-              ]
+            -- Amount of PermissionedCandidatesToken sent output by this transaction
+            outAmount :: Integer
+            outAmount =
+              sum
+                [ currencySymbolValueOf value currSym
+                | (TxOut _ value _ _) <-
+                    Unsafe.decode <$> Unsafe.txInfoOutputs txInfo
+                ]
 
-          -- Check wether this transaction output any PermissionedCandidates tokens
-          noOutputsWithPermissionedCandidatesToken :: Bool
-          noOutputsWithPermissionedCandidatesToken = outAmount == 0
-       in traceIfFalse
-            "ERROR-PERMISSIONED-CANDIDATES-POLICY-03"
-            signedByGovernanceAuthority
-            && traceIfFalse
-              "ERROR-PERMISSIONED-CANDIDATES-POLICY-04"
-              noOutputsWithPermissionedCandidatesToken
+            -- Check wether this transaction output any PermissionedCandidates tokens
+            noOutputsWithPermissionedCandidatesToken :: Bool
+            noOutputsWithPermissionedCandidatesToken = outAmount == 0
+         in traceIfFalse
+              "ERROR-PERMISSIONED-CANDIDATES-POLICY-03"
+              signedByGovernanceAuthority
+              && traceIfFalse
+                "ERROR-PERMISSIONED-CANDIDATES-POLICY-04"
+                noOutputsWithPermissionedCandidatesToken
 mkMintingPolicy _ _ _ _ = traceError "ERROR-PERMISSIONED-CANDIDATES-POLICY-05"
 
 -- OnChain error descriptions:
@@ -173,8 +173,8 @@ permissionedCandidatesValidator
 mkMintingPolicyUntyped ::
   BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkMintingPolicyUntyped sp validatorAddress redeemer ctx =
-  check $
-    mkMintingPolicy
+  check
+    $ mkMintingPolicy
       (unsafeFromBuiltinData sp)
       (unsafeFromBuiltinData validatorAddress)
       (unsafeFromBuiltinData redeemer)
@@ -187,8 +187,8 @@ serialisableMintingPolicy =
 mkValidatorUntyped ::
   BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkValidatorUntyped sp address redeemer ctx =
-  check $
-    permissionedCandidatesValidator
+  check
+    $ permissionedCandidatesValidator
       (unsafeFromBuiltinData sp)
       address
       (unsafeFromBuiltinData redeemer)

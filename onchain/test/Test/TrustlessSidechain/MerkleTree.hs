@@ -60,7 +60,8 @@ logProofLength = forAllHelper $ \lst ->
       measuredHeight = MT.height tree
    in counterexample (go heightLimit measuredHeight)
         . property
-        $ measuredHeight <= heightLimit
+        $ measuredHeight
+        <= heightLimit
   where
     go :: Integer -> Integer -> HString.String
     go heightLimit measuredHeight =

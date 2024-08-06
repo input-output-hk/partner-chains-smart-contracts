@@ -43,37 +43,37 @@ mkMintingPolicy
   ctx
     | Just currSym <-
         Unsafe.decode <$> (Unsafe.getMinting . Unsafe.scriptContextPurpose $ ctx) =
-      let txInfo = Unsafe.scriptContextTxInfo ctx
+        let txInfo = Unsafe.scriptContextTxInfo ctx
 
-          -- Check that transaction was approved by governance authority
-          signedByGovernanceAuthority :: Bool
-          signedByGovernanceAuthority =
-            txInfo `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
+            -- Check that transaction was approved by governance authority
+            signedByGovernanceAuthority :: Bool
+            signedByGovernanceAuthority =
+              txInfo `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
 
-          -- Amount of DParameterToken sent to the DParameterValidator address
-          outAmount :: Integer
-          outAmount =
-            sum
-              [ currencySymbolValueOf value currSym
-              | txOut <- Unsafe.txInfoOutputs txInfo
-              , let address = Unsafe.txOutAddress txOut
-              , let value = Unsafe.decode $ Unsafe.txOutValue txOut
-              , -- look at UTxOs that are sent to the dParameterValidatorAddress
-              address == dParameterValidatorAddress
-              ]
+            -- Amount of DParameterToken sent to the DParameterValidator address
+            outAmount :: Integer
+            outAmount =
+              sum
+                [ currencySymbolValueOf value currSym
+                | txOut <- Unsafe.txInfoOutputs txInfo
+                , let address = Unsafe.txOutAddress txOut
+                , let value = Unsafe.decode $ Unsafe.txOutValue txOut
+                , -- look at UTxOs that are sent to the dParameterValidatorAddress
+                address == dParameterValidatorAddress
+                ]
 
-          -- Amount of DParameterToken minted by this transaction
-          mintAmount :: Integer
-          mintAmount = currencySymbolValueOf (Unsafe.decode $ Unsafe.txInfoMint txInfo) currSym
+            -- Amount of DParameterToken minted by this transaction
+            mintAmount :: Integer
+            mintAmount = currencySymbolValueOf (Unsafe.decode $ Unsafe.txInfoMint txInfo) currSym
 
-          -- Check wether the amount of tokens minted equal to the amount of tokens
-          -- sent to the DParameterValidator address
-          allTokensSentToDParameterValidator :: Bool
-          allTokensSentToDParameterValidator = mintAmount == outAmount
-       in traceIfFalse "ERROR-DPARAMETER-POLICY-01" signedByGovernanceAuthority
-            && traceIfFalse
-              "ERROR-DPARAMETER-POLICY-02"
-              allTokensSentToDParameterValidator
+            -- Check wether the amount of tokens minted equal to the amount of tokens
+            -- sent to the DParameterValidator address
+            allTokensSentToDParameterValidator :: Bool
+            allTokensSentToDParameterValidator = mintAmount == outAmount
+         in traceIfFalse "ERROR-DPARAMETER-POLICY-01" signedByGovernanceAuthority
+              && traceIfFalse
+                "ERROR-DPARAMETER-POLICY-02"
+                allTokensSentToDParameterValidator
 mkMintingPolicy _ _ _ _ = traceError "ERROR-DPARAMETER-POLICY-03"
 
 -- OnChain error descriptions:
@@ -107,8 +107,8 @@ mkValidatorUntyped ::
   BuiltinData ->
   ()
 mkValidatorUntyped sp dat redeemer ctx =
-  check $
-    dParameterValidator
+  check
+    $ dParameterValidator
       (unsafeFromBuiltinData sp)
       dat
       redeemer
@@ -125,8 +125,8 @@ mkMintingPolicyUntyped ::
   BuiltinData ->
   ()
 mkMintingPolicyUntyped sp validatorAddress redeemer ctx =
-  check $
-    mkMintingPolicy
+  check
+    $ mkMintingPolicy
       (unsafeFromBuiltinData sp)
       (Unsafe.wrap validatorAddress)
       redeemer

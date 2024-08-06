@@ -122,12 +122,12 @@ import TrustlessSidechain.Utils (
  )
 
 data SchnorrRedeemer = SchnorrRedeemer
-  { -- | arbitrary byte array
-    message :: BuiltinByteString
-  , -- | 64 bytes
-    signature :: BuiltinByteString
-  , -- | 32 bytes
-    publicKey :: BuiltinByteString
+  { message :: BuiltinByteString
+  -- ^ arbitrary byte array
+  , signature :: BuiltinByteString
+  -- ^ 64 bytes
+  , publicKey :: BuiltinByteString
+  -- ^ 32 bytes
   }
   deriving stock (TSPrelude.Eq, TSPrelude.Show)
 

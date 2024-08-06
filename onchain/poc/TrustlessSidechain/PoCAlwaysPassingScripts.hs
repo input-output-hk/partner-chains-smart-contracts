@@ -39,8 +39,8 @@ mkAlwaysPassingValidator _ _ _ _ = True
 
 mkAlwaysPassingValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkAlwaysPassingValidatorUntyped seed datum redeemer ctx =
-  check $
-    mkAlwaysPassingValidator
+  check
+    $ mkAlwaysPassingValidator
       (PlutusTx.unsafeFromBuiltinData seed)
       (PlutusTx.unsafeFromBuiltinData datum)
       (PlutusTx.unsafeFromBuiltinData redeemer)
@@ -57,8 +57,8 @@ mkAlwaysPassingPolicy _ _ _ = True
 {-# INLINEABLE mkAlwaysPassingPolicyUntyped #-}
 mkAlwaysPassingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkAlwaysPassingPolicyUntyped seed redeemer ctx =
-  check $
-    mkAlwaysPassingPolicy
+  check
+    $ mkAlwaysPassingPolicy
       (PlutusTx.unsafeFromBuiltinData seed)
       (PlutusTx.unsafeFromBuiltinData redeemer)
       (Unsafe.wrap ctx)

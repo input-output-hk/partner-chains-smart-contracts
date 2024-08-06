@@ -1,16 +1,9 @@
-{
-  repoRoot,
-  inputs,
-  pkgs,
-  lib,
-  system,
-  ...
-}: let
-  project = repoRoot.nix.offchain;
+{ repoRoot, inputs, pkgs, lib, system, ... }:
+let project = repoRoot.nix.offchain;
 in rec {
   sidechain-main-cli = pkgs.writeShellApplication {
     name = "sidechain-main-cli";
-    runtimeInputs = [project.nodejs];
+    runtimeInputs = [ project.nodejs ];
     text = ''
       ${project.nodejs}/bin/node --enable-source-maps -e 'import("${project.compiled}/output/Main/index.js").then(m => m.main())' sidechain-main-cli "$@"
     '';
@@ -22,11 +15,11 @@ in rec {
     browserRuntime = false;
   };
 
-  sidechain-release-bundle = let
-    jsContents = builtins.readFile "${sidechain-main-cli-bundle-esbuild}/index.js";
-    wrappedNodeScript =
-      pkgs.writeScript "sidechain-main-cli"
-      ''
+  sidechain-release-bundle =
+    let
+      jsContents =
+        builtins.readFile "${sidechain-main-cli-bundle-esbuild}/index.js";
+      wrappedNodeScript = pkgs.writeScript "sidechain-main-cli" ''
         #!/usr/bin/env bash
 
         SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
@@ -40,13 +33,9 @@ in rec {
 
         node "$CLI_TMP" "$@"
       '';
-    prunedNodeModules = project.mkNodeModules {withDevDeps = false;};
-  in
-    pkgs.runCommand "bundled-cli"
-    {
-      buildInputs = [pkgs.zip];
-    }
-    ''
+      prunedNodeModules = project.mkNodeModules { withDevDeps = false; };
+    in
+    pkgs.runCommand "bundled-cli" { buildInputs = [ pkgs.zip ]; } ''
       cp -R ${prunedNodeModules}/lib/node_modules .
       chmod -R u+rw ./node_modules
       cp ${wrappedNodeScript} ./sidechain-cli
@@ -57,13 +46,11 @@ in rec {
   sidechain-main-cli-image = inputs.n2c.packages.nix2container.buildImage {
     name = "sidechain-main-cli-docker";
     tag = "${inputs.self.shortRev or inputs.self.dirtyShortRev}";
-    config = {
-      Cmd = ["sidechain-main-cli"];
-    };
+    config = { Cmd = [ "sidechain-main-cli" ]; };
     copyToRoot = pkgs.buildEnv {
       name = "root";
-      paths = [pkgs.bashInteractive pkgs.coreutils sidechain-main-cli];
-      pathsToLink = ["/bin"];
+      paths = [ pkgs.bashInteractive pkgs.coreutils sidechain-main-cli ];
+      pathsToLink = [ "/bin" ];
     };
   };
 }
