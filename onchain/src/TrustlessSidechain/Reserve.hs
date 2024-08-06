@@ -39,10 +39,11 @@ import PlutusLedgerApi.V2 (
  )
 import PlutusTx qualified
 import PlutusTx.Bool
-import TrustlessSidechain.HaskellPrelude (on)
 import TrustlessSidechain.Governance
+import TrustlessSidechain.HaskellPrelude (on)
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
+  ReserveAuthPolicyRedeemer (..),
   ReserveDatum (mutableSettings, stats),
   ReserveRedeemer (
     DepositToReserve,
@@ -51,7 +52,6 @@ import TrustlessSidechain.Types (
     UpdateReserve
   ),
   ReserveStats (ReserveStats),
-  ReserveAuthPolicyRedeemer(..),
  )
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Utils qualified as Utils
@@ -172,9 +172,10 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
           isAda cs tn = cs == adaSymbol && tn == adaToken
           isReserveToken cs tn = AssetClass (cs, tn) == tokenKind'
           diff =
-            sortBy ord $ -- sorting to have ADA at the head of the list
-              flattenValue $
-                (Unsafe.decode . Unsafe.txOutValue $ outputReserveUtxo) - (Unsafe.decode . Unsafe.txOutValue $ inputReserveUtxo)
+            sortBy ord
+              $ flattenValue -- sorting to have ADA at the head of the list
+              $ (Unsafe.decode . Unsafe.txOutValue $ outputReserveUtxo)
+              - (Unsafe.decode . Unsafe.txOutValue $ inputReserveUtxo)
           adaAsReserveToken = tokenKind' == AssetClass (adaSymbol, adaToken)
        in case diff of
             -- in two following cases reserve tokens do not change
@@ -183,16 +184,17 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
             -- in two following cases reserve tokens do change
             [(cs1, tn1, _), (cs2, tn2, num2)]
               | isAda cs1 tn1 && isReserveToken cs2 tn2 ->
-                Just num2
+                  Just num2
             [(cs, tn, num)] | isReserveToken cs tn -> Just num
             -- every other change is invalid
             _ -> Nothing
 
     inputReserveUtxo :: Unsafe.TxOut
     !inputReserveUtxo =
-      Utils.fromSingleton "ERROR-RESERVE-05" $
-        filter carriesAuthToken $
-          Unsafe.txInInfoResolved <$> Unsafe.txInfoInputs info
+      Utils.fromSingleton "ERROR-RESERVE-05"
+        $ filter carriesAuthToken
+        $ Unsafe.txInInfoResolved
+        <$> Unsafe.txInfoInputs info
 
     outputReserveUtxo :: Unsafe.TxOut
     outputReserveUtxo =
@@ -238,8 +240,8 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
 
     outputIlliquidCirculationSupplyUtxo :: Unsafe.TxOut
     outputIlliquidCirculationSupplyUtxo =
-      Utils.fromSingleton "ERROR-RESERVE-16" $
-        Unsafe.getOutputsAt info illiquidCirculationSupplyAddress
+      Utils.fromSingleton "ERROR-RESERVE-16"
+        $ Unsafe.getOutputsAt info illiquidCirculationSupplyAddress
 
     vFunctionTotalAccrued' :: CurrencySymbol
     vFunctionTotalAccrued' =
@@ -284,15 +286,18 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
     -- from reserve.  All the remaining funds must be sent to ICS.
     correctAmountOfReserveTokensTransferredToICS :: Bool
     correctAmountOfReserveTokensTransferredToICS =
-      reserveTokensOnOutputICSUtxo + incentiveAmount
-        == (numOfVtTokensMinted - tokensTransferredUpUntilNow) + reserveTokensOnICSInputUtxos
+      reserveTokensOnOutputICSUtxo
+        + incentiveAmount
+        == (numOfVtTokensMinted - tokensTransferredUpUntilNow)
+        + reserveTokensOnICSInputUtxos
 
     -- This check is performed during handover.  At this point claiming any
     -- incentive is disallowed.
     allReserveTokensTransferredToICS :: Bool
     allReserveTokensTransferredToICS =
       reserveTokensOnOutputICSUtxo
-        == reserveTokensOn inputReserveUtxo + reserveTokensOnICSInputUtxos
+        == reserveTokensOn inputReserveUtxo
+        + reserveTokensOnICSInputUtxos
 
     reserveTokensOnOutputICSUtxo :: Integer
     reserveTokensOnOutputICSUtxo =
@@ -318,8 +323,8 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
 
 mkReserveValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkReserveValidatorUntyped voc rd rr ctx =
-  check $
-    mkReserveValidator
+  check
+    $ mkReserveValidator
       (PlutusTx.unsafeFromBuiltinData voc)
       rd
       (PlutusTx.unsafeFromBuiltinData rr)
@@ -350,12 +355,12 @@ extractReserveUtxoDatumUnsafe txOut =
 --   ERROR-RESERVE-AUTH-06: No unique output UTxO at the reserve address
 --   ERROR-RESERVE-AUTH-07: Output reserve UTxO carries no inline datum or malformed datum
 {-# INLINEABLE mkReserveAuthPolicy #-}
-mkReserveAuthPolicy
-  :: VersionOracleConfig
-  -> ReserveAuthPolicyRedeemer
-  -> Unsafe.ScriptContext
-  -> Bool
-mkReserveAuthPolicy voc ReserveAuthPolicyRedeemer{..} ctx =
+mkReserveAuthPolicy ::
+  VersionOracleConfig ->
+  ReserveAuthPolicyRedeemer ->
+  Unsafe.ScriptContext ->
+  Bool
+mkReserveAuthPolicy voc ReserveAuthPolicyRedeemer {..} ctx =
   if valueOf minted ownCurrencySymbol reserveAuthTokenTokenName < 0
     then True -- delegating to reserve validator
     else
@@ -383,9 +388,9 @@ mkReserveAuthPolicy voc ReserveAuthPolicyRedeemer{..} ctx =
 
     reserveUtxo :: TxOut
     reserveUtxo =
-      Unsafe.decode $
-        Utils.fromSingleton "ERROR-RESERVE-AUTH-06" $
-          Unsafe.getOutputsAt info reserveAddress
+      Unsafe.decode
+        $ Utils.fromSingleton "ERROR-RESERVE-AUTH-06"
+        $ Unsafe.getOutputsAt info reserveAddress
 
     reserveUtxoValue :: Value
     reserveUtxoValue = txOutValue reserveUtxo
@@ -416,8 +421,10 @@ mkReserveAuthPolicy voc ReserveAuthPolicyRedeemer{..} ctx =
 
     reserveUtxoCarriesOnlyAdaTokenKindAndAuthToken :: Bool
     reserveUtxoCarriesOnlyAdaTokenKindAndAuthToken =
-      assetClassValueOf reserveUtxoValue tokenKind' /= 0
-        && (length . flattenValue $ reserveUtxoValue) == expectedNumOfAssets
+      assetClassValueOf reserveUtxoValue tokenKind'
+        /= 0
+        && (length . flattenValue $ reserveUtxoValue)
+        == expectedNumOfAssets
       where
         expectedNumOfAssets =
           if AssetClass (adaSymbol, adaToken) == tokenKind'
@@ -428,8 +435,8 @@ mkReserveAuthPolicy voc ReserveAuthPolicyRedeemer{..} ctx =
 {-# INLINEABLE mkReserveAuthPolicyUntyped #-}
 mkReserveAuthPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkReserveAuthPolicyUntyped voc red ctx =
-  check $
-    mkReserveAuthPolicy
+  check
+    $ mkReserveAuthPolicy
       (PlutusTx.unsafeFromBuiltinData voc)
       (PlutusTx.unsafeFromBuiltinData red)
       (Unsafe.wrap ctx)

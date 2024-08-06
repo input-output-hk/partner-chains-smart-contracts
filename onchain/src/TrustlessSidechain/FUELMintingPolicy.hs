@@ -102,8 +102,8 @@ mkMintingPolicy _ _ FUELBurningRedeemer (ScriptContext txInfo (Minting currSymbo
   where
     noTokensMinted :: Bool
     noTokensMinted =
-      case AssocMap.lookup currSymbol $
-        Value.getValue (txInfoMint txInfo) of
+      case AssocMap.lookup currSymbol
+        $ Value.getValue (txInfoMint txInfo) of
         Just tns -> AssocMap.all (< 0) tns
         _ -> traceError "ERROR-FUEL-MINTING-POLICY-01"
 mkMintingPolicy _sp versioningConfig (FUELMintingRedeemer mte mp) ctx =
@@ -114,8 +114,8 @@ mkMintingPolicy _sp versioningConfig (FUELMintingRedeemer mte mp) ctx =
       dsInserted :: BuiltinByteString
       dsInserted
         | Just tns <- AssocMap.lookup dsKeyCurrencySymbol $ getValue minted
-          , (tn, _amt) : _ <- AssocMap.toList tns =
-          unTokenName tn
+        , (tn, _amt) : _ <- AssocMap.toList tns =
+            unTokenName tn
         | otherwise = traceError "ERROR-FUEL-MINTING-POLICY-02"
 
       merkleRoot :: RootHash
@@ -123,9 +123,9 @@ mkMintingPolicy _sp versioningConfig (FUELMintingRedeemer mte mp) ctx =
         let go :: [TxInInfo] -> TokenName
             go (t : ts)
               | o <- txInInfoResolved t
-                , Just tns <- AssocMap.lookup merkleRootTnCurrencySymbol $ getValue $ txOutValue o
-                , [(tn, _amt)] <- AssocMap.toList tns =
-                tn
+              , Just tns <- AssocMap.lookup merkleRootTnCurrencySymbol $ getValue $ txOutValue o
+              , [(tn, _amt)] <- AssocMap.toList tns =
+                  tn
               -- If it's more clear, the @[(tn,_amt)] <- AssocMap.toList tns@
               -- can be rewritten as
               -- > [(tn,amt)] <- AssocMap.toList tns, amt == 1
@@ -171,9 +171,9 @@ mkMintingPolicy _sp versioningConfig (FUELMintingRedeemer mte mp) ctx =
     fuelAmount :: Integer
     fuelAmount
       | Just tns <- AssocMap.lookup ownCurrencySymbol $ getValue minted
-        , [(tn, amount)] <- AssocMap.toList tns
-        , tn == fuelTokenName =
-        amount
+      , [(tn, amount)] <- AssocMap.toList tns
+      , tn == fuelTokenName =
+          amount
       | otherwise = traceError "ERROR-FUEL-MINTING-POLICY-08"
 mkMintingPolicy _ _ _ _ = False
 

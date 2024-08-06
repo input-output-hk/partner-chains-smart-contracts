@@ -48,13 +48,13 @@ import PlutusLedgerApi.V2 (
   Datum (getDatum),
   Map,
   OutputDatum (OutputDatum),
-  SerialisedScript,
   ScriptContext (scriptContextTxInfo),
+  ScriptHash,
+  SerialisedScript,
   TokenName (TokenName, unTokenName),
   TxInInfo (txInInfoResolved),
   TxInfo (txInfoMint, txInfoOutputs, txInfoReferenceInputs),
   TxOut (txOutAddress, txOutDatum, txOutValue),
-  ScriptHash,
   Value (getValue),
   serialiseCompiledCode,
  )
@@ -69,8 +69,8 @@ import TrustlessSidechain.Types (
  )
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Utils (
-  oneTokenBurned,
   fromJust,
+  oneTokenBurned,
  )
 
 -- | Distributed Set (abbr. 'Ds') is the type which parameterizes the validator
@@ -78,10 +78,10 @@ import TrustlessSidechain.Utils (
 -- parameterizes the 'mkInsertValidator' and is used as the type which identifies
 -- the appropriate datum and redeemer type
 newtype Ds = Ds
-  { -- | The 'CurrencySymbol' which identifies the utxo with 'DsConfDatum'.
-    -- |
-    -- | @since v4.0.0
-    identitySymbol :: CurrencySymbol
+  { identitySymbol :: CurrencySymbol
+  -- ^ The 'CurrencySymbol' which identifies the utxo with 'DsConfDatum'.
+  -- |
+  -- | @since v4.0.0
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
   deriving newtype (FromData, ToData, UnsafeFromData)
@@ -91,8 +91,8 @@ makeHasField ''Ds
 
 -- | 'DsDatum' is the datum in the distributed set. See: Note [How This All Works]
 newtype DsDatum = DsDatum
-  { -- | @since v4.0.0
-    next :: BuiltinByteString
+  { next :: BuiltinByteString
+  -- ^ @since v4.0.0
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
   deriving newtype (Eq, FromData, ToData, UnsafeFromData)
@@ -103,10 +103,10 @@ makeHasField ''DsDatum
 -- | 'Node' is an internal data type of the tree node used in the validator.
 -- See: Note [How This All Works].
 data Node = Node
-  { -- | @since v4.0.0
-    key :: BuiltinByteString
-  , -- | @since v4.0.0
-    next :: BuiltinByteString
+  { key :: BuiltinByteString
+  -- ^ @since v4.0.0
+  , next :: BuiltinByteString
+  -- ^ @since v4.0.0
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
@@ -116,8 +116,10 @@ makeHasField ''Node
 instance Eq Node where
   {-# INLINEABLE (==) #-}
   a == b =
-    get @"key" a == get @"key" b
-      && get @"next" a == get @"next" b
+    get @"key" a
+      == get @"key" b
+      && get @"next" a
+      == get @"next" b
 
 -- | @since v4.0.0
 instance ToData Node where
@@ -137,10 +139,10 @@ instance UnsafeFromData Node where
 -- | 'DsConfDatum' is the datum which contains the 'CurrencySymbol's of various
 -- minting policies needed by the distributed set.
 data DsConfDatum = DsConfDatum
-  { -- | @since v4.0.0
-    keyPolicy :: CurrencySymbol
-  , -- | @since v4.0.0
-    fuelPolicy :: CurrencySymbol
+  { keyPolicy :: CurrencySymbol
+  -- ^ @since v4.0.0
+  , fuelPolicy :: CurrencySymbol
+  -- ^ @since v4.0.0
   }
   deriving stock
     ( -- | @since v4.0.0
@@ -155,8 +157,10 @@ makeHasField ''DsConfDatum
 instance Eq DsConfDatum where
   {-# INLINEABLE (==) #-}
   a == b =
-    get @"keyPolicy" a == get @"keyPolicy" b
-      && get @"fuelPolicy" a == get @"fuelPolicy" b
+    get @"keyPolicy" a
+      == get @"keyPolicy" b
+      && get @"fuelPolicy" a
+      == get @"fuelPolicy" b
 
 -- | @since v4.0.0
 instance ToData DsConfDatum where
@@ -202,19 +206,19 @@ instance (PlutusTx.UnsafeFromData a) => PlutusTx.UnsafeFromData (Ib a) where
 -- 'TokenName' of this 'CurrencySymbol' (from 'mkDsKeyPolicy') stores the key of
 -- the token. See Note [How This All Works] for more details.
 data DsKeyMint = DsKeyMint
-  { -- | The validator hash that the minting policy
-    -- | essentially "forwards" its checks to the validator.
-    -- |
-    -- | TODO: as an optimization, we can take the 'Address' as a parameter
-    -- | instead (since the offchain code will always immediately convert this
-    -- | into an 'Address').
-    -- |
-    -- | @since v4.0.0
-    validatorHash :: ScriptHash
-  , -- | The currency symbol to identify a utxo with 'DsConfDatum'
-    -- |
-    -- | @since v4.0.0
-    confCurrencySymbol :: CurrencySymbol
+  { validatorHash :: ScriptHash
+  -- ^ The validator hash that the minting policy
+  -- | essentially "forwards" its checks to the validator.
+  -- |
+  -- | TODO: as an optimization, we can take the 'Address' as a parameter
+  -- | instead (since the offchain code will always immediately convert this
+  -- | into an 'Address').
+  -- |
+  -- | @since v4.0.0
+  , confCurrencySymbol :: CurrencySymbol
+  -- ^ The currency symbol to identify a utxo with 'DsConfDatum'
+  -- |
+  -- | @since v4.0.0
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
@@ -245,7 +249,7 @@ instance UnsafeFromData DsKeyMint where
 --   ERROR-UNSAFE-GET-DATUM-01: tx output does not have an inline datum attached
 --   to it.
 {-# INLINEABLE unsafeGetDatum #-}
-unsafeGetDatum :: PlutusTx.UnsafeFromData a => TxOut -> a
+unsafeGetDatum :: (PlutusTx.UnsafeFromData a) => TxOut -> a
 unsafeGetDatum o = case txOutDatum o of
   OutputDatum d -> PlutusTx.unsafeFromBuiltinData (getDatum d)
   _ -> traceError "ERROR-UNSAFE-GET-DATUM-01"
@@ -335,8 +339,8 @@ lengthIb _ = 2
 insertNode :: BuiltinByteString -> Node -> Maybe (Ib Node)
 insertNode str node
   | get @"key" node < str && str < get @"next" node =
-    Just $
-      Ib {unIb = (put @"next" str node, Node {key = str, next = get @"next" node})}
+      Just
+        $ Ib {unIb = (put @"next" str node, Node {key = str, next = get @"next" node})}
   | otherwise = Nothing
 
 -- | 'mkInsertValidator' is rather complicated. Most of the heavy lifting is
@@ -374,49 +378,53 @@ mkInsertValidator :: Ds -> BuiltinData -> BuiltinData -> ScriptContext -> Bool
 mkInsertValidator ds _dat _red ctx =
   ( \nStr ->
       ( \nNodes ->
-          let -- the "continuing" nodes...
-              contNodes :: Ib Node
-              contNodes =
-                let normalizeIbNodes Ib {unIb = (a, b)}
-                      | get @"key" a < get @"key" b = Ib {unIb = (a, b)}
-                      | otherwise = Ib {unIb = (b, a)}
-                 in normalizeIbNodes $
-                      fromListIb $ case txOutAddress (txInInfoResolved ownInput) of
-                        ownAddr ->
-                          let go :: [TxOut] -> [Node]
-                              go (t : ts)
-                                | txOutAddress t == ownAddr = getTxOutNodeInfo t : go ts
-                                | otherwise = go ts
-                              go [] = []
-                           in go (txInfoOutputs info)
+          let
+            -- the "continuing" nodes...
+            contNodes :: Ib Node
+            contNodes =
+              let normalizeIbNodes Ib {unIb = (a, b)}
+                    | get @"key" a < get @"key" b = Ib {unIb = (a, b)}
+                    | otherwise = Ib {unIb = (b, a)}
+               in normalizeIbNodes
+                    $ fromListIb
+                    $ case txOutAddress (txInInfoResolved ownInput) of
+                      ownAddr ->
+                        let go :: [TxOut] -> [Node]
+                            go (t : ts)
+                              | txOutAddress t == ownAddr = getTxOutNodeInfo t : go ts
+                              | otherwise = go ts
+                            go [] = []
+                         in go (txInfoOutputs info)
 
-              -- the total number distributed set key tokens in this
-              -- transaction which is @1 + the number of minted tokens@ since
-              -- we know that there is only one input with this token; and we
-              -- mint the rest of the tokens
-              --
-              -- In erroneous cases, we return @-1@ which will always be
-              -- @False@ in the below predicate
-              totalKeys :: Integer
-              totalKeys = case AssocMap.lookup keyCurrencySymbol minted of
-                Just mp
-                  | [(_, amt)] <- AssocMap.toList mp
-                    , amt == 1 ->
+            -- the total number distributed set key tokens in this
+            -- transaction which is @1 + the number of minted tokens@ since
+            -- we know that there is only one input with this token; and we
+            -- mint the rest of the tokens
+            --
+            -- In erroneous cases, we return @-1@ which will always be
+            -- @False@ in the below predicate
+            totalKeys :: Integer
+            totalKeys = case AssocMap.lookup keyCurrencySymbol minted of
+              Just mp
+                | [(_, amt)] <- AssocMap.toList mp
+                , amt == 1 ->
                     2
-                _ -> -1
-           in traceIfFalse "ERROR-DS-INSERT-VALIDATOR-01" (contNodes == nNodes)
-                && traceIfFalse "ERROR-DS-INSERT-VALIDATOR-02" (totalKeys == lengthIb nNodes)
-                && traceIfFalse "ERROR-DS-INSERT-VALIDATOR-03" (AssocMap.member (get @"fuelPolicy" conf) minted)
+              _ -> -1
+           in
+            traceIfFalse "ERROR-DS-INSERT-VALIDATOR-01" (contNodes == nNodes)
+              && traceIfFalse "ERROR-DS-INSERT-VALIDATOR-02" (totalKeys == lengthIb nNodes)
+              && traceIfFalse "ERROR-DS-INSERT-VALIDATOR-03" (AssocMap.member (get @"fuelPolicy" conf) minted)
       )
-        ( fromJust "ERROR-DS-INSERT-VALIDATOR-04" $
-          insertNode nStr $ getTxOutNodeInfo (txInInfoResolved ownInput)
+        ( fromJust "ERROR-DS-INSERT-VALIDATOR-04"
+            $ insertNode nStr
+            $ getTxOutNodeInfo (txInInfoResolved ownInput)
         )
   )
     ( case AssocMap.lookup keyCurrencySymbol minted of
         Just mp
           | [(leaf, amt)] <- AssocMap.toList mp
-            , amt == 1 ->
-            unTokenName leaf
+          , amt == 1 ->
+              unTokenName leaf
         _ -> traceError "ERROR-DS-INSERT-VALIDATOR-05"
     )
   where
@@ -454,11 +462,11 @@ mkInsertValidator ds _dat _red ctx =
       [_, (cs, innerMap)] -> case AssocMap.toList innerMap of
         [(tn, amt)] ->
           if
-              | cs /= keyCurrencySymbol ->
+            | cs /= keyCurrencySymbol ->
                 traceError "ERROR-DS-INSERT-VALIDATOR-07"
-              | amt /= 1 ->
+            | amt /= 1 ->
                 traceError "ERROR-DS-INSERT-VALIDATOR-08"
-              | otherwise -> unTokenName tn
+            | otherwise -> unTokenName tn
         -- Note from Koz: It would seem to be a better idea to fuse these two
         -- error cases together, but it is not so: we'd have to drag in some way
         -- of mapping AssocMap.toList over the entire 'outer map', which
@@ -508,10 +516,10 @@ mkDsConfPolicy itac _red ctx =
     mintingChecks :: Bool
     mintingChecks
       | Just tns <- AssocMap.lookup ownCurSymb $ getValue mint
-        , [(tn, amt)] <- AssocMap.toList tns
-        , tn == dsConfTokenName
-        , amt == 1 =
-        True
+      , [(tn, amt)] <- AssocMap.toList tns
+      , tn == dsConfTokenName
+      , amt == 1 =
+          True
       | otherwise = False
 
 -- | 'dsConfTokenName' is the token name of the NFT which identifies the utxo
@@ -547,21 +555,21 @@ mkDsKeyPolicy dskm _red ctx = case ins of
     | -- If we are minting the NFT which configures everything, then we
       -- should mint only the empty prefix
       AssocMap.member (get @"confCurrencySymbol" dskm) $ getValue $ Unsafe.decode $ Unsafe.txInfoMint info ->
-      case mintedTns of
-        [tn] | unTokenName tn == get @"key" rootNode ->
-          traceIfFalse "ERROR-DS-CONF-POLICY-01" $
-            case find
-              (\txout -> Unsafe.decode (Unsafe.txOutAddress txout) == scriptHashAddress (get @"validatorHash" dskm))
-              (Unsafe.txInfoOutputs info) of
-              Just txout -> AssocMap.member ownCS $ getValue $ Unsafe.decode $ Unsafe.txOutValue txout
-              Nothing -> False
-        -- Note: Why don't we have to verify that the 'DsConf' validator has
-        -- 'ownCS' stored in the 'DsConfDatum' field 'dscKeyPolicy'? This is
-        -- because we assume that everyone knows the protocol to participate in
-        -- this system (and the 'DsConf' validator cannot be changed), so
-        -- everyone may independently verify offchain that the 'dscKeyPolicy'
-        -- is as expected.
-        _ -> traceError "ERROR-DS-CONF-POLICY-02"
+        case mintedTns of
+          [tn] | unTokenName tn == get @"key" rootNode ->
+            traceIfFalse "ERROR-DS-CONF-POLICY-01"
+              $ case find
+                (\txout -> Unsafe.decode (Unsafe.txOutAddress txout) == scriptHashAddress (get @"validatorHash" dskm))
+                (Unsafe.txInfoOutputs info) of
+                Just txout -> AssocMap.member ownCS $ getValue $ Unsafe.decode $ Unsafe.txOutValue txout
+                Nothing -> False
+          -- Note: Why don't we have to verify that the 'DsConf' validator has
+          -- 'ownCS' stored in the 'DsConfDatum' field 'dscKeyPolicy'? This is
+          -- because we assume that everyone knows the protocol to participate in
+          -- this system (and the 'DsConf' validator cannot be changed), so
+          -- everyone may independently verify offchain that the 'dscKeyPolicy'
+          -- is as expected.
+          _ -> traceError "ERROR-DS-CONF-POLICY-02"
   _ -> traceError "ERROR-DS-CONF-POLICY-03"
   where
     -- Aliases
@@ -578,14 +586,14 @@ mkDsKeyPolicy dskm _red ctx = case ins of
           go [] = []
           go (t : ts)
             | txout <- Unsafe.txInInfoResolved t
-              , Unsafe.decode (Unsafe.txOutAddress txout) == scriptHashAddress (get @"validatorHash" dskm)
-              , Just tns <- AssocMap.lookup ownCS $ getValue (Unsafe.decode $ Unsafe.txOutValue txout)
-              , -- If it's more clear, we're checking the following condition:
-                -- > [(tn,1)] <- AssocMap.toList tns
-                -- In our case, it is implicit that there is exactly one
-                -- 'TokenName' and that there will be only one distinct 'TokenName'.
-                (tn, _amt) : _ <- AssocMap.toList tns =
-              tn : go ts
+            , Unsafe.decode (Unsafe.txOutAddress txout) == scriptHashAddress (get @"validatorHash" dskm)
+            , Just tns <- AssocMap.lookup ownCS $ getValue (Unsafe.decode $ Unsafe.txOutValue txout)
+            , -- If it's more clear, we're checking the following condition:
+              -- > [(tn,1)] <- AssocMap.toList tns
+              -- In our case, it is implicit that there is exactly one
+              -- 'TokenName' and that there will be only one distinct 'TokenName'.
+              (tn, _amt) : _ <- AssocMap.toList tns =
+                tn : go ts
             -- Need to keep recursing to ensure that this transaction
             -- is only spending one input
             | otherwise = go ts -- otherwise, we skip the element
@@ -613,8 +621,8 @@ mkDsKeyPolicy dskm _red ctx = case ins of
 -- needed for ctl)
 mkInsertValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkInsertValidatorUntyped ds dat red ctx =
-  check $
-    mkInsertValidator
+  check
+    $ mkInsertValidator
       (PlutusTx.unsafeFromBuiltinData ds)
       dat
       red
@@ -639,8 +647,8 @@ serialisableDsConfValidator = serialiseCompiledCode $$(PlutusTx.compile [||mkDsC
 -- needed for ctl)
 mkDsConfPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkDsConfPolicyUntyped keyMint redeemer ctx =
-  check $
-    mkDsConfPolicy
+  check
+    $ mkDsConfPolicy
       (PlutusTx.unsafeFromBuiltinData keyMint)
       redeemer
       (Unsafe.wrap ctx)
@@ -654,8 +662,8 @@ serialisableDsConfPolicy = serialiseCompiledCode $$(PlutusTx.compile [||mkDsConf
 -- needed for ctl)
 mkDsKeyPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkDsKeyPolicyUntyped keyMint redeemer ctx =
-  check $
-    mkDsKeyPolicy
+  check
+    $ mkDsKeyPolicy
       (PlutusTx.unsafeFromBuiltinData keyMint)
       redeemer
       (Unsafe.wrap ctx)

@@ -350,7 +350,7 @@ import Witherable qualified
 {-# INLINEABLE mapAndUnzipA #-}
 mapAndUnzipA ::
   forall (a :: Type) (b :: Type) (c :: Type) (f :: Type -> Type).
-  Applicative f =>
+  (Applicative f) =>
   (a -> f (b, c)) ->
   [a] ->
   f ([b], [c])
@@ -362,7 +362,7 @@ mapAndUnzipA = Monad.mapAndUnzipM
 {-# INLINEABLE zipWithA #-}
 zipWithA ::
   forall (a :: Type) (b :: Type) (c :: Type) (f :: Type -> Type).
-  Applicative f =>
+  (Applicative f) =>
   (a -> b -> f c) ->
   [a] ->
   [b] ->
@@ -376,7 +376,7 @@ zipWithA = Monad.zipWithM
 {-# INLINEABLE zipWithA_ #-}
 zipWithA_ ::
   forall (a :: Type) (b :: Type) (c :: Type) (f :: Type -> Type).
-  Applicative f =>
+  (Applicative f) =>
   (a -> b -> f c) ->
   [a] ->
   [b] ->
@@ -390,7 +390,7 @@ zipWithA_ = Monad.zipWithM_
 {-# INLINEABLE replicateA #-}
 replicateA ::
   forall (a :: Type) (f :: Type -> Type).
-  Applicative f =>
+  (Applicative f) =>
   Int ->
   f a ->
   f [a]
@@ -403,7 +403,7 @@ replicateA = Monad.replicateM
 {-# INLINEABLE replicateA_ #-}
 replicateA_ ::
   forall (a :: Type) (f :: Type -> Type).
-  Applicative f =>
+  (Applicative f) =>
   Int ->
   f a ->
   f ()
@@ -415,7 +415,7 @@ replicateA_ = Monad.replicateM_
 {-# INLINEABLE equating #-}
 equating ::
   forall (a :: Type) (b :: Type).
-  Eq a =>
+  (Eq a) =>
   (b -> a) ->
   b ->
   b ->
@@ -476,9 +476,9 @@ abs :: forall (a :: Type). (Ord a, Ring a) => a -> a
 abs x =
   let sig = signum x
    in if
-          | sig == zero -> x
-          | sig == one -> x
-          | otherwise -> negate x
+        | sig == zero -> x
+        | sig == one -> x
+        | otherwise -> negate x
 
 -- Orphan instances
 

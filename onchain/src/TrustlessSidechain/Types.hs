@@ -86,21 +86,21 @@ PlutusTx.makeLift ''GovernanceAuthority
 -- The 'Data' serializations for this type /cannot/ change.
 data SidechainParams = SidechainParams
   { chainId :: Integer
-  , -- | 'genesisUtxo' is a 'TxOutRef' used to initialize the internal
-    -- policies in the side chain (e.g. for the 'UpdateCommitteeHash' endpoint)
-    genesisUtxo :: TxOutRef
-  , -- | 'thresholdNumerator' is the numerator for the ratio of the committee
-    -- needed to sign off committee handovers / merkle roots
-    thresholdNumerator :: Integer
-  , -- | 'thresholdDenominator' is the denominator for the ratio of the
-    -- committee needed to sign off committee handovers / merkle roots
-    thresholdDenominator :: Integer
-  , -- | 'governanceAuthority' stores credentials of a governing body allowed to
-    -- make updates to versioned scripts.  For now we just use a master public
-    -- key, whose owner is allowed to make any decisions about script versions.
-    --
-    -- @since v5.0.0
-    governanceAuthority :: GovernanceAuthority
+  , genesisUtxo :: TxOutRef
+  -- ^ 'genesisUtxo' is a 'TxOutRef' used to initialize the internal
+  -- policies in the side chain (e.g. for the 'UpdateCommitteeHash' endpoint)
+  , thresholdNumerator :: Integer
+  -- ^ 'thresholdNumerator' is the numerator for the ratio of the committee
+  -- needed to sign off committee handovers / merkle roots
+  , thresholdDenominator :: Integer
+  -- ^ 'thresholdDenominator' is the denominator for the ratio of the
+  -- committee needed to sign off committee handovers / merkle roots
+  , governanceAuthority :: GovernanceAuthority
+  -- ^ 'governanceAuthority' stores credentials of a governing body allowed to
+  -- make updates to versioned scripts.  For now we just use a master public
+  -- key, whose owner is allowed to make any decisions about script versions.
+  --
+  -- @since v5.0.0
   }
   deriving stock
     ( -- | @since v4.0.0
@@ -120,8 +120,8 @@ makeHasField ''SidechainParams
 --
 -- The 'Data' serializations for this type /cannot/ change.
 newtype EcdsaSecp256k1PubKey = EcdsaSecp256k1PubKey
-  { -- | @since v4.0.0
-    getEcdsaSecp256k1PubKey :: LedgerBytes
+  { getEcdsaSecp256k1PubKey :: LedgerBytes
+  -- ^ @since v4.0.0
   }
   deriving stock (TSPrelude.Eq, TSPrelude.Ord)
   deriving newtype
@@ -147,8 +147,8 @@ makeHasField ''EcdsaSecp256k1PubKey
 -- The 'Data' serializations for this type /cannot/ change.
 newtype PubKey = PubKey
   -- TODO: rename to Ed25519PubKEy
-  { -- | @since v4.0.0
-    getPubKey :: LedgerBytes
+  { getPubKey :: LedgerBytes
+  -- ^ @since v4.0.0
   }
   deriving stock (TSPrelude.Eq, TSPrelude.Ord)
   deriving newtype
@@ -171,8 +171,8 @@ newtype PubKey = PubKey
 -- The 'Data' serializations for this type /cannot/ change.
 newtype Signature = Signature
   -- TODO: rename to Ed25519Signature
-  { -- | @since v4.0.0
-    getSignature :: LedgerBytes
+  { getSignature :: LedgerBytes
+  -- ^ @since v4.0.0
   }
   deriving stock (TSPrelude.Eq, TSPrelude.Ord)
   deriving newtype
@@ -219,26 +219,26 @@ PlutusTx.makeIsDataIndexed
  The 'Data' serializations for this type /cannot/ change.
 -}
 data BlockProducerRegistration = BlockProducerRegistration
-  { -- | Verification keys required by the stake ownership model
-    -- | @since v4.0.0
-    stakeOwnership :: StakeOwnership
-  , -- | public key in the sidechain's desired format
-    sidechainPubKey :: LedgerBytes
-  , -- | Signature of the sidechain
-    -- | @since v4.0.0
-    sidechainSignature :: Signature
-  , -- | A UTxO that must be spent by th@ext:haskell.haskelltransaction
-    -- | @since v4.0.0
-    inputUtxo :: TxOutRef
-  , -- | Owner public key hash
-    -- | @since v4.0.0
-    ownPkh :: PubKeyHash
-  , -- | Sidechain authority discovery key
-    -- | @since v5.0.0
-    auraKey :: LedgerBytes
-  , -- | Sidechain grandpa key
-    -- | @since v5.0.0
-    grandpaKey :: LedgerBytes
+  { stakeOwnership :: StakeOwnership
+  -- ^ Verification keys required by the stake ownership model
+  -- | @since v4.0.0
+  , sidechainPubKey :: LedgerBytes
+  -- ^ public key in the sidechain's desired format
+  , sidechainSignature :: Signature
+  -- ^ Signature of the sidechain
+  -- | @since v4.0.0
+  , inputUtxo :: TxOutRef
+  -- ^ A UTxO that must be spent by th@ext:haskell.haskelltransaction
+  -- | @since v4.0.0
+  , ownPkh :: PubKeyHash
+  -- ^ Owner public key hash
+  -- | @since v4.0.0
+  , auraKey :: LedgerBytes
+  -- ^ Sidechain authority discovery key
+  -- | @since v5.0.0
+  , grandpaKey :: LedgerBytes
+  -- ^ Sidechain grandpa key
+  -- | @since v5.0.0
   }
   deriving stock
     ( -- | @since v4.0.0
@@ -258,9 +258,9 @@ makeHasField ''BlockProducerRegistration
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
   { sidechainParams :: SidechainParams
   , sidechainPubKey :: LedgerBytes
-  , -- | A UTxO that must be spent by the transaction
-    -- | @since v4.0.0
-    inputUtxo :: TxOutRef
+  , inputUtxo :: TxOutRef
+  -- ^ A UTxO that must be spent by the transaction
+  -- | @since v4.0.0
   }
   deriving stock
     ( -- | @since v4.0.0
@@ -283,20 +283,20 @@ makeHasField ''BlockProducerRegistrationMsg
 --
 -- The 'Data' serializations for this type /cannot/ change.
 data MerkleTreeEntry = MerkleTreeEntry
-  { -- | 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
-    -- | @since v4.0.0
-    index :: Integer
-  , -- | 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
-    -- | @since v4.0.0
-    amount :: Integer
-  , -- | arbitrary length bytestring that represents decoded bech32 cardano
-    -- | address. See [here](https://cips.cardano.org/cips/cip19/) for more details
-    -- | of bech32
-    -- | @since v4.0.0
-    recipient :: LedgerBytes
-  , -- | the previous merkle root to ensure that the hashed entry is unique
-    -- | @since v4.0.0
-    previousMerkleRoot :: Maybe LedgerBytes
+  { index :: Integer
+  -- ^ 32 bit unsigned integer, used to provide uniqueness among transactions within the tree
+  -- | @since v4.0.0
+  , amount :: Integer
+  -- ^ 256 bit unsigned integer that represents amount of tokens being sent out of the bridge
+  -- | @since v4.0.0
+  , recipient :: LedgerBytes
+  -- ^ arbitrary length bytestring that represents decoded bech32 cardano
+  -- | address. See [here](https://cips.cardano.org/cips/cip19/) for more details
+  -- | of bech32
+  -- | @since v4.0.0
+  , previousMerkleRoot :: Maybe LedgerBytes
+  -- ^ the previous merkle root to ensure that the hashed entry is unique
+  -- | @since v4.0.0
   }
   deriving stock
     ( -- | @since v4.0.0
@@ -318,12 +318,12 @@ makeHasField ''MerkleTreeEntry
 --
 -- The 'Data' serializations for this type /cannot/ change.
 data MerkleRootInsertionMessage = MerkleRootInsertionMessage
-  { -- | @since v4.0.0
-    sidechainParams :: SidechainParams
-  , -- | @since v4.0.0
-    merkleRoot :: LedgerBytes
-  , -- | @since v4.0.0
-    previousMerkleRoot :: Maybe LedgerBytes
+  { sidechainParams :: SidechainParams
+  -- ^ @since v4.0.0
+  , merkleRoot :: LedgerBytes
+  -- ^ @since v4.0.0
+  , previousMerkleRoot :: Maybe LedgerBytes
+  -- ^ @since v4.0.0
   }
   deriving stock
     ( -- | @since v4.0.0
@@ -371,10 +371,10 @@ makeHasField ''SignedMerkleRootRedeemer
 --
 -- The 'Data' serializations of this type /cannot/ change.
 data CombinedMerkleProof = CombinedMerkleProof
-  { -- | @since v4.0.0
-    transaction :: MerkleTreeEntry
-  , -- | @since v4.0.0
-    merkleProof :: MerkleProof
+  { transaction :: MerkleTreeEntry
+  -- ^ @since v4.0.0
+  , merkleProof :: MerkleProof
+  -- ^ @since v4.0.0
   }
   deriving stock
     ( -- | @since v4.0.0
@@ -432,18 +432,18 @@ data UpdateCommitteeDatum aggregatePubKeys = UpdateCommitteeDatum
     )
 
 -- | @since v4.0.0
-instance ToData aggregatePubKeys => ToData (UpdateCommitteeDatum aggregatePubKeys) where
+instance (ToData aggregatePubKeys) => ToData (UpdateCommitteeDatum aggregatePubKeys) where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (UpdateCommitteeDatum {..}) =
     productToData2 aggregateCommitteePubKeys sidechainEpoch
 
 -- | @since v4.0.0
-instance FromData aggregatePubKeys => FromData (UpdateCommitteeDatum aggregatePubKeys) where
+instance (FromData aggregatePubKeys) => FromData (UpdateCommitteeDatum aggregatePubKeys) where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData = productFromData2 UpdateCommitteeDatum
 
 -- | @since v4.0.0
-instance UnsafeFromData aggregatePubKeys => UnsafeFromData (UpdateCommitteeDatum aggregatePubKeys) where
+instance (UnsafeFromData aggregatePubKeys) => UnsafeFromData (UpdateCommitteeDatum aggregatePubKeys) where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 UpdateCommitteeDatum
 
@@ -480,13 +480,13 @@ newtype ATMSPlainAggregatePubKey = ATMSPlainAggregatePubKey LedgerBytes
 -- @since v4.0.0
 data UpdateCommitteeHashMessage aggregatePubKeys = UpdateCommitteeHashMessage
   { sidechainParams :: SidechainParams
-  , -- | 'newCommitteePubKeys' is the new aggregate committee public keys
-    -- | @since v4.0.0
-    newAggregateCommitteePubKeys :: aggregatePubKeys
+  , newAggregateCommitteePubKeys :: aggregatePubKeys
+  -- ^ 'newCommitteePubKeys' is the new aggregate committee public keys
+  -- | @since v4.0.0
   , previousMerkleRoot :: Maybe LedgerBytes
   , sidechainEpoch :: Integer
-  , -- | @since v5.0.0
-    validatorHash :: ScriptHash
+  , validatorHash :: ScriptHash
+  -- ^ @since v5.0.0
   }
   deriving stock
     ( -- | @since v4.0.0
@@ -496,18 +496,18 @@ data UpdateCommitteeHashMessage aggregatePubKeys = UpdateCommitteeHashMessage
     )
 
 -- | @since v4.0.0
-instance ToData aggregatePubKeys => ToData (UpdateCommitteeHashMessage aggregatePubKeys) where
+instance (ToData aggregatePubKeys) => ToData (UpdateCommitteeHashMessage aggregatePubKeys) where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (UpdateCommitteeHashMessage {..}) =
     productToData5 sidechainParams newAggregateCommitteePubKeys previousMerkleRoot sidechainEpoch validatorHash
 
 -- | @since v4.0.0
-instance FromData aggregatePubKeys => FromData (UpdateCommitteeHashMessage aggregatePubKeys) where
+instance (FromData aggregatePubKeys) => FromData (UpdateCommitteeHashMessage aggregatePubKeys) where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData = productFromData5 UpdateCommitteeHashMessage
 
 -- | @since v4.0.0
-instance UnsafeFromData aggregatePubKeys => UnsafeFromData (UpdateCommitteeHashMessage aggregatePubKeys) where
+instance (UnsafeFromData aggregatePubKeys) => UnsafeFromData (UpdateCommitteeHashMessage aggregatePubKeys) where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData5 UpdateCommitteeHashMessage
 
@@ -538,10 +538,10 @@ makeHasField ''UpdateCommitteeHashRedeemer
 
 -- | Datum for a checkpoint
 data CheckpointDatum = CheckpointDatum
-  { -- | @since v4.0.0
-    blockHash :: LedgerBytes
-  , -- | @since v4.0.0
-    blockNumber :: Integer
+  { blockHash :: LedgerBytes
+  -- ^ @since v4.0.0
+  , blockNumber :: Integer
+  -- ^ @since v4.0.0
   }
   deriving stock
     ( TSPrelude.Eq
@@ -638,13 +638,13 @@ PlutusTx.makeIsDataIndexed ''ATMSRedeemer [('ATMSMint, 0), ('ATMSBurn, 1)]
 --
 -- @since v4.0.0
 data CheckpointParameter = CheckpointParameter
-  { -- | @since v4.0.0
-    sidechainParams :: SidechainParams
-  , -- | The 'AssetClass' of the NFT that is used to
-    -- identify the transaction.
-    --
-    -- @since v4.0.0
-    assetClass :: AssetClass
+  { sidechainParams :: SidechainParams
+  -- ^ @since v4.0.0
+  , assetClass :: AssetClass
+  -- ^ The 'AssetClass' of the NFT that is used to
+  -- identify the transaction.
+  --
+  -- @since v4.0.0
   }
   deriving stock
     ( -- | @since v4.0.0
@@ -678,14 +678,14 @@ instance UnsafeFromData CheckpointParameter where
 --
 -- The 'Data' serializations of this type /cannot/ be changed.
 data CheckpointMessage = CheckpointMessage
-  { -- | @since v4.0.0
-    sidechainParams :: SidechainParams
-  , -- | @since v4.0.0
-    blockHash :: LedgerBytes
-  , -- | @since v4.0.0
-    blockNumber :: Integer
-  , -- | @since v4.0.0
-    sidechainEpoch :: Integer
+  { sidechainParams :: SidechainParams
+  -- ^ @since v4.0.0
+  , blockHash :: LedgerBytes
+  -- ^ @since v4.0.0
+  , blockNumber :: Integer
+  -- ^ @since v4.0.0
+  , sidechainEpoch :: Integer
+  -- ^ @since v4.0.0
   }
   deriving stock
     ( TSPrelude.Eq
@@ -698,15 +698,15 @@ PlutusTx.makeIsDataIndexed ''CheckpointMessage [('CheckpointMessage, 0)]
 makeHasField ''CheckpointMessage
 
 -- | 'DParameterValidatorDatum' stores the ratio of permissioned candidates.  This
---ratio is represented as a pair of integers - permissionedCandidatesCount and
---registeredCandidatesCount.
+-- ratio is represented as a pair of integers - permissionedCandidatesCount and
+-- registeredCandidatesCount.
 --
 -- @since v5.0.0
 data DParameterValidatorDatum = DParameterValidatorDatum
-  { -- | @since v5.0.0
-    permissionedCandidatesCount :: Integer
-  , -- | @since v5.0.0
-    registeredCandidatesCount :: Integer
+  { permissionedCandidatesCount :: Integer
+  -- ^ @since v5.0.0
+  , registeredCandidatesCount :: Integer
+  -- ^ @since v5.0.0
   }
   deriving stock
     ( TSPrelude.Eq
@@ -737,7 +737,7 @@ instance UnsafeFromData DParameterValidatorDatum where
   unsafeFromBuiltinData = productUnsafeFromData2 DParameterValidatorDatum
 
 -- | 'PermissionedCandidatesPolicyRedeemer' signals whether transaction is supposed to mint or
---burn PermissionedCandidates tokens
+-- burn PermissionedCandidates tokens
 --
 -- @since v5.0.0
 data PermissionedCandidatesPolicyRedeemer
@@ -780,12 +780,12 @@ instance UnsafeFromData PermissionedCandidatesPolicyRedeemer where
 --
 -- @since v5.0.0
 data PermissionedCandidateKeys = PermissionedCandidateKeys
-  { -- | @since v5.0.0
-    sidechainKey :: LedgerBytes
-  , -- | @since v5.0.0
-    auraKey :: LedgerBytes
-  , -- | @since v5.0.0
-    grandpaKey :: LedgerBytes
+  { sidechainKey :: LedgerBytes
+  -- ^ @since v5.0.0
+  , auraKey :: LedgerBytes
+  -- ^ @since v5.0.0
+  , grandpaKey :: LedgerBytes
+  -- ^ @since v5.0.0
   }
   deriving stock
     ( TSPrelude.Eq
@@ -938,11 +938,11 @@ instance UnsafeFromData InitTokenAssetClass where
   unsafeFromBuiltinData = productUnsafeFromData2 InitTokenAssetClass
 
 data ImmutableReserveSettings = ImmutableReserveSettings
-  { -- | `t0` is a POSIX time of a reserve UTxO initialization
-    t0 :: POSIXTime
-  , -- | `tokenKind` is an asset class of tokens that a reserve
-    -- UTxO is allowed to store
-    tokenKind :: AssetClass
+  { t0 :: POSIXTime
+  -- ^ `t0` is a POSIX time of a reserve UTxO initialization
+  , tokenKind :: AssetClass
+  -- ^ `tokenKind` is an asset class of tokens that a reserve
+  -- UTxO is allowed to store
   }
   deriving stock
     ( TSPrelude.Eq
@@ -965,14 +965,14 @@ instance UnsafeFromData ImmutableReserveSettings where
 makeHasField ''ImmutableReserveSettings
 
 data MutableReserveSettings = MutableReserveSettings
-  { -- | `vFunctionTotalAccrued` is a currency symbol of a minting policy
-    -- that dictates the upper bound on the number of `tokenKind` tokens that
-    -- can be transferred from a reserve utxo to an illiquid circulation supply
-    -- from `t0` till now
-    vFunctionTotalAccrued :: CurrencySymbol
-  , -- | The amount of `tokenKind` the user is allowed to claim when releasing
-    -- money from the reserve
-    incentiveAmount :: Integer
+  { vFunctionTotalAccrued :: CurrencySymbol
+  -- ^ `vFunctionTotalAccrued` is a currency symbol of a minting policy
+  -- that dictates the upper bound on the number of `tokenKind` tokens that
+  -- can be transferred from a reserve utxo to an illiquid circulation supply
+  -- from `t0` till now
+  , incentiveAmount :: Integer
+  -- ^ The amount of `tokenKind` the user is allowed to claim when releasing
+  -- money from the reserve
   }
   deriving stock
     ( TSPrelude.Eq
@@ -995,10 +995,10 @@ instance UnsafeFromData MutableReserveSettings where
 makeHasField ''MutableReserveSettings
 
 newtype ReserveStats = ReserveStats
-  { -- | `tokenTotalAmountTransferred` is the total number
-    -- of tokens that already have been transferred from a reserve utxo
-    -- to an illiquid circulation supply
-    tokenTotalAmountTransferred :: Integer
+  { tokenTotalAmountTransferred :: Integer
+  -- ^ `tokenTotalAmountTransferred` is the total number
+  -- of tokens that already have been transferred from a reserve utxo
+  -- to an illiquid circulation supply
   }
   deriving stock
     ( TSPrelude.Eq

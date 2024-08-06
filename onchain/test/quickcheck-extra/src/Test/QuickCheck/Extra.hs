@@ -744,9 +744,9 @@ suchThatRetrying limit gen p = sized (go 0)
     go !count !size =
       resize size gen >>= \x ->
         if
-            | p x -> pure x
-            | count == limit -> errorOut
-            | otherwise -> go (count + 1) (size + 1)
+          | p x -> pure x
+          | count == limit -> errorOut
+          | otherwise -> go (count + 1) (size + 1)
     errorOut :: Gen a
     errorOut = error $ "suchThat exceeded retry limit: " <> show limit
 
@@ -792,6 +792,6 @@ sublistOf = \case
       (x : xs) ->
         let !shift = min bitsLeft (countTrailingZeros encoding)
          in if
-                | shift > 0 -> go (drop shift rest) (bitsLeft - shift) (encoding `unsafeShiftR` shift)
-                | bitsLeft == 0 -> arbitrary >>= go rest (finiteBitSize @Word64 undefined)
-                | otherwise -> (x :) <$> go xs (bitsLeft - 1) (encoding `unsafeShiftR` 1)
+              | shift > 0 -> go (drop shift rest) (bitsLeft - shift) (encoding `unsafeShiftR` shift)
+              | bitsLeft == 0 -> arbitrary >>= go rest (finiteBitSize @Word64 undefined)
+              | otherwise -> (x :) <$> go xs (bitsLeft - 1) (encoding `unsafeShiftR` 1)

@@ -34,8 +34,8 @@ main =
   GetOpts.getOpts >>= \Args {..} -> case aCommand of
     GenCliCommand {..} -> do
       putStrLn "Please call sidechain-main-cli with the following arguments:"
-      ByteString.Char8.putStrLn $
-        GenOutput.genCliCommand
+      ByteString.Char8.putStrLn
+        $ GenOutput.genCliCommand
           gccSigningKeyFile
           gccSidechainParams
           gccATMSKind

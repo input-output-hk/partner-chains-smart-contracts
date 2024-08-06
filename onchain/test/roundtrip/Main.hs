@@ -36,9 +36,9 @@ import Test.QuickCheck.Extra (
   ArbitraryBytes (ArbitraryBytes),
   ArbitraryCurrencySymbol (ArbitraryCurrencySymbol),
   ArbitraryPubKeyHash (ArbitraryPubKeyHash),
+  ArbitraryScriptHash (ArbitraryScriptHash),
   ArbitraryTokenName (ArbitraryTokenName),
   ArbitraryTxOutRef (ArbitraryTxOutRef),
-  ArbitraryScriptHash (ArbitraryScriptHash),
   DA,
  )
 import Test.Tasty (adjustOption, defaultMain, testGroup)
@@ -54,8 +54,8 @@ import TrustlessSidechain.DistributedSet (
 import TrustlessSidechain.FUELProxyPolicy (FuelProxyRedeemer (FuelProxyBurn, FuelProxyMint))
 import TrustlessSidechain.Governance.Admin (GovernanceAuthority (GovernanceAuthority))
 import TrustlessSidechain.Governance.MultiSig (
-  MultiSigGovParams(MultiSigGovParams),
-  MultiSigGovRedeemer(MultiSignatureCheck, MultiSigTokenGC)
+  MultiSigGovParams (MultiSigGovParams),
+  MultiSigGovRedeemer (MultiSigTokenGC, MultiSignatureCheck),
  )
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.MerkleTree (
@@ -130,9 +130,9 @@ import TrustlessSidechain.Types (
   PermissionedCandidatesValidatorDatum (PermissionedCandidatesValidatorDatum),
   PermissionedCandidatesValidatorRedeemer (RemovePermissionedCandidates, UpdatePermissionedCandidates),
   PubKey (PubKey),
+  ReserveAuthPolicyRedeemer (ReserveAuthPolicyRedeemer),
   ReserveDatum (ReserveDatum),
   ReserveRedeemer (DepositToReserve, Handover, TransferToIlliquidCirculationSupply, UpdateReserve),
-  ReserveAuthPolicyRedeemer (ReserveAuthPolicyRedeemer),
   ReserveStats (ReserveStats),
   SidechainParams (
     SidechainParams,
@@ -163,102 +163,104 @@ import TrustlessSidechain.Versioning (
 
 main :: IO ()
 main =
-  defaultMain . adjustOption go . testGroup "Roundtrip" $
-    [ testProperty "SidechainParams (safe)" . toDataSafeLaws' genSP shrinkSP $ show
-    , testProperty "SidechainParams (unsafe)" . toDataUnsafeLaws' genSP shrinkSP $ show
-    , testProperty "EcdsaSecp256k1PubKey" . toDataSafeLaws' genPK shrinkPK $ show
-    , testProperty "EcdsaSecp256k1PubKey" . toDataUnsafeLaws' genPK shrinkPK $ show
-    , testProperty "BlockProducerRegistration (safe)" . toDataSafeLaws' genBPR shrinkBPR $ show
-    , testProperty "BlockProducerRegistration (unsafe)" . toDataUnsafeLaws' genBPR shrinkBPR $ show
-    , testProperty "BlockProducerRegistrationMsg (safe)" . toDataSafeLaws' genBPRM shrinkBPRM $ show
-    , testProperty "BlockProducerRegistrationMsg (unsafe)" . toDataUnsafeLaws' genBPRM shrinkBPRM $ show
-    , testProperty "MerkleTreeEntry (safe)" . toDataSafeLaws' genMTE shrinkMTE $ show
-    , testProperty "MerkleTreeEntry (unsafe)" . toDataUnsafeLaws' genMTE shrinkMTE $ show
-    , testProperty "MerkleTree (safe)" . toDataSafeLaws' genMT shrinkMT $ show
-    , testProperty "MerkleTree (unsafe)" . toDataUnsafeLaws' genMT shrinkMT $ show
-    , testProperty "MerkleRootInsertionMessage (safe)" . toDataSafeLaws' genMRIM shrinkMRIM $ show
-    , testProperty "MerkleRootInsertionMessage (unsafe)" . toDataUnsafeLaws' genMRIM shrinkMRIM $ show
-    , testProperty "SignedMerkleRootRedeemer (safe)" . toDataSafeLaws' genSMRR shrinkSMRR $ show
-    , testProperty "SignedMerkleRootRedeemer (unsafe)" . toDataUnsafeLaws' genSMRR shrinkSMRR $ show
-    , testProperty "RootHash (safe)" . toDataSafeLaws' genRH shrinkRH $ show
-    , testProperty "RootHash (unsafe)" . toDataUnsafeLaws' genRH shrinkRH $ show
-    , testProperty "Side (safe)" . toDataSafeLaws' genSide shrinkSide $ show
-    , testProperty "Side (unsafe)" . toDataUnsafeLaws' genSide shrinkSide $ show
-    , testProperty "Up (safe)" . toDataSafeLaws' genUp shrinkUp $ show
-    , testProperty "Up (unsafe)" . toDataUnsafeLaws' genUp shrinkUp $ show
-    , testProperty "MerkleProof (safe)" . toDataSafeLaws' genMP shrinkMP $ show
-    , testProperty "MerkleProof (unsafe)" . toDataUnsafeLaws' genMP shrinkMP $ show
-    , testProperty "VersionOracle (safe)" . toDataSafeLaws' genVO shrinkVO $ show
-    , testProperty "VersionOracle (unsafe)" . toDataUnsafeLaws' genVO shrinkVO $ show
-    , testProperty "VersionOracleConfig (safe)" . toDataSafeLaws' genVOC shrinkVOC $ show
-    , testProperty "VersionOracleConfig (unsafe)" . toDataUnsafeLaws' genVOC shrinkVOC $ show
-    , testProperty "FUELProxyRedeemer (safe)" . toDataSafeLaws' genFPR shrinkFPR $ show
-    , testProperty "FUELProxyRedeemer (unsafe)" . toDataUnsafeLaws' genFPR shrinkFPR $ show
-    , testProperty "CombinedMerkleProof (safe)" . toDataSafeLaws' genCMP shrinkCMP $ show
-    , testProperty "CombinedMerkleProof (unsafe)" . toDataUnsafeLaws' genCMP shrinkCMP $ show
-    , testProperty "UpdateCommitteeDatum (safe)" . toDataSafeLaws' genUPD shrinkUPD $ show
-    , testProperty "UpdateCommitteeDatum (unsafe)" . toDataUnsafeLaws' genUPD shrinkUPD $ show
-    , testProperty "ATMSPlainAggregatePubKey (safe)" . toDataSafeLaws' genAPAPK shrinkAPAPK $ show
-    , testProperty "ATMSPlainAggregatePubKey (unsafe)" . toDataUnsafeLaws' genAPAPK shrinkAPAPK $ show
-    , testProperty "UpdateCommitteeHashMessage (safe)" . toDataSafeLaws' genUCHM shrinkUCHM $ show
-    , testProperty "UpdateCommitteeHashMessage (unsafe)" . toDataUnsafeLaws' genUCHM shrinkUCHM $ show
-    , testProperty "UpdateCommitteeHashRedeemer (safe)" . toDataSafeLaws' genUCHR shrinkUCHR $ show
-    , testProperty "UpdateCommitteeHashRedeemer (unsafe)" . toDataUnsafeLaws' genUCHR shrinkUCHR $ show
-    , testProperty "CommitteeCertificateMint (safe)" . toDataSafeLaws' genCCM shrinkCCM $ show
-    , testProperty "CommitteeCertificateMint (unsafe)" . toDataUnsafeLaws' genCCM shrinkCCM $ show
-    , testProperty "InitTokenRedeemer (safe)" . toDataSafeLaws' genITR shrinkITR $ show
-    , testProperty "InitTokenRedeemer (unsafe)" . toDataUnsafeLaws' genITR shrinkITR $ show
-    , testProperty "InitTokenAssetClass (safe)" . toDataSafeLaws' genITAC shrinkITAC $ show
-    , testProperty "InitTokenAssetClass (unsafe)" . toDataUnsafeLaws' genITAC shrinkITAC $ show
-    , -- CheckpointDatum needs format clarification
-      testProperty "ATMSPlainMultisignature (safe)" . toDataSafeLaws' genAPM shrinkAPM $ show
-    , testProperty "ATMSPlainMultisignature (unsafe)" . toDataUnsafeLaws' genAPM shrinkAPM $ show
-    , testProperty "CheckpointParameter (safe)" . toDataSafeLaws' genCP shrinkCP $ show
-    , testProperty "CheckpointParameter (unsafe)" . toDataUnsafeLaws' genCP shrinkCP $ show
-    , -- CheckpointMessage needs format clarification
-      testProperty "Ds (safe)" . toDataSafeLaws' genDs shrinkDs $ show
-    , testProperty "Ds (unsafe)" . toDataUnsafeLaws' genDs shrinkDs $ show
-    , testProperty "DsDatum (safe)" . toDataSafeLaws' genDsDatum shrinkDsDatum $ show
-    , testProperty "DsDatum (unsafe)" . toDataUnsafeLaws' genDsDatum shrinkDsDatum $ show
-    , testProperty "Node (safe)" . toDataSafeLaws' genNode shrinkNode $ show
-    , testProperty "Node (unsafe)" . toDataUnsafeLaws' genNode shrinkNode $ show
-    , testProperty "DsConfDatum (safe)" . toDataSafeLaws' genDsConfDatum shrinkDsConfDatum $ show
-    , testProperty "DsConfDatum (unsafe)" . toDataUnsafeLaws' genDsConfDatum shrinkDsConfDatum $ show
-    , testProperty "Ib (safe)" . toDataSafeLaws' genIb shrinkIb $ show
-    , testProperty "Ib (unsafe)" . toDataUnsafeLaws' genIb shrinkIb $ show
-    , testProperty "DsKeyMint (safe)" . toDataSafeLaws' genDsKeyMint shrinkDsKeyMint $ show
-    , testProperty "DsKeyMint (unsafe)" . toDataUnsafeLaws' genDsKeyMint shrinkDsKeyMint $ show
-    , testProperty "ATMSRedeemer (safe)" . toDataSafeLaws' genATMSR shrinkATMSR $ show
-    , testProperty "ATMSRedeemer (unsafe)" . toDataUnsafeLaws' genATMSR shrinkATMSR $ show
-    , testProperty "CheckpointDatum (safe)" . toDataSafeLaws' genCHPD shrinkCHPD $ show
-    , testProperty "CheckpointDatum (unsafe)" . toDataUnsafeLaws' genCHPD shrinkCHPD $ show
-    , testProperty "CheckpointMessage (safe)" . toDataSafeLaws' genCHPM shrinkCHPM $ show
-    , testProperty "CheckpointMessage (unsafe)" . toDataUnsafeLaws' genCHPM shrinkCHPM $ show
-    , testProperty "DParameterValidatorDatum (safe)" . toDataSafeLaws' genDPVD shrinkDPVD $ show
-    , testProperty "DParameterValidatorDatum (unsafe)" . toDataUnsafeLaws' genDPVD shrinkDPVD $ show
-    , testProperty "FUELMintingRedeemer (safe)" . toDataSafeLaws' genFMR shrinkFRM $ show
-    , testProperty "FUELMintingRedeemer (unsafe)" . toDataUnsafeLaws' genFMR shrinkFRM $ show
-    , testProperty "PermissionedCandidateKeys (safe)" . toDataSafeLaws' genPCK shrinkPCK $ show
-    , testProperty "PermissionedCandidateKeys (unsafe)" . toDataUnsafeLaws' genPCK shrinkPCK $ show
-    , testProperty "PermissionedCandidatesPolicyRedeemer (safe)" . toDataSafeLaws' genPCPR shrinkPCPR $ show
-    , testProperty "PermissionedCandidatesPolicyRedeemer (unsafe)" . toDataUnsafeLaws' genPCPR shrinkPCPR $ show
-    , testProperty "PermissionedCandidatesValidatorDatum (safe)" . toDataSafeLaws' genPCVD shrinkPCVD $ show
-    , testProperty "PermissionedCandidatesValidatorDatum (unsafe)" . toDataUnsafeLaws' genPCVD shrinkPCVD $ show
-    , testProperty "PermissionedCandidatesValidatorRedeemer (safe)" . toDataSafeLaws' genPCVR shrinkPCVR $ show
-    , testProperty "PermissionedCandidatesValidatorRedeemer (unsafe)" . toDataUnsafeLaws' genPCVR shrinkPCVR $ show
-    , testProperty "ReserveDatum (safe)" . toDataSafeLaws' genRD shrinkRD $ show
-    , testProperty "ReserveDatum (unsafe)" . toDataUnsafeLaws' genRD shrinkRD $ show
-    , testProperty "ReserveRedeemer (safe)" . toDataSafeLaws' genRR shrinkRR $ show
-    , testProperty "ReserveRedeemer (unsafe)" . toDataUnsafeLaws' genRR shrinkRR $ show
-    , testProperty "ReserveAuthPolicyRedeemer (safe)" . toDataSafeLaws' genRAPR shrinkRAPR $ show
-    , testProperty "ReserveAuthPolicyRedeemer (unsafe)" . toDataUnsafeLaws' genRAPR shrinkRAPR $ show
-    , testProperty "IlliquidCirculationSupplyRedeemer (safe)" . toDataSafeLaws' genICSR shrinkICSR $ show
-    , testProperty "IlliquidCirculationSupplyRedeemer (unsafe)" . toDataUnsafeLaws' genICSR shrinkICSR $ show
-    , testProperty "MultiSigGovParams (safe)" . toDataSafeLaws' genMSGP shrinkMSGP $ show
-    , testProperty "MultiSigGovParams (unsafe)" . toDataUnsafeLaws' genMSGP shrinkMSGP $ show
-    , testProperty "MultiSigGovRedeemer (safe)" . toDataSafeLaws' genMSGR shrinkMSGR $ show
-    , testProperty "MultiSigGovRedeemer (unsafe)" . toDataUnsafeLaws' genMSGR shrinkMSGR $ show
-    ]
+  defaultMain
+    . adjustOption go
+    . testGroup "Roundtrip"
+    $ [ testProperty "SidechainParams (safe)" . toDataSafeLaws' genSP shrinkSP $ show
+      , testProperty "SidechainParams (unsafe)" . toDataUnsafeLaws' genSP shrinkSP $ show
+      , testProperty "EcdsaSecp256k1PubKey" . toDataSafeLaws' genPK shrinkPK $ show
+      , testProperty "EcdsaSecp256k1PubKey" . toDataUnsafeLaws' genPK shrinkPK $ show
+      , testProperty "BlockProducerRegistration (safe)" . toDataSafeLaws' genBPR shrinkBPR $ show
+      , testProperty "BlockProducerRegistration (unsafe)" . toDataUnsafeLaws' genBPR shrinkBPR $ show
+      , testProperty "BlockProducerRegistrationMsg (safe)" . toDataSafeLaws' genBPRM shrinkBPRM $ show
+      , testProperty "BlockProducerRegistrationMsg (unsafe)" . toDataUnsafeLaws' genBPRM shrinkBPRM $ show
+      , testProperty "MerkleTreeEntry (safe)" . toDataSafeLaws' genMTE shrinkMTE $ show
+      , testProperty "MerkleTreeEntry (unsafe)" . toDataUnsafeLaws' genMTE shrinkMTE $ show
+      , testProperty "MerkleTree (safe)" . toDataSafeLaws' genMT shrinkMT $ show
+      , testProperty "MerkleTree (unsafe)" . toDataUnsafeLaws' genMT shrinkMT $ show
+      , testProperty "MerkleRootInsertionMessage (safe)" . toDataSafeLaws' genMRIM shrinkMRIM $ show
+      , testProperty "MerkleRootInsertionMessage (unsafe)" . toDataUnsafeLaws' genMRIM shrinkMRIM $ show
+      , testProperty "SignedMerkleRootRedeemer (safe)" . toDataSafeLaws' genSMRR shrinkSMRR $ show
+      , testProperty "SignedMerkleRootRedeemer (unsafe)" . toDataUnsafeLaws' genSMRR shrinkSMRR $ show
+      , testProperty "RootHash (safe)" . toDataSafeLaws' genRH shrinkRH $ show
+      , testProperty "RootHash (unsafe)" . toDataUnsafeLaws' genRH shrinkRH $ show
+      , testProperty "Side (safe)" . toDataSafeLaws' genSide shrinkSide $ show
+      , testProperty "Side (unsafe)" . toDataUnsafeLaws' genSide shrinkSide $ show
+      , testProperty "Up (safe)" . toDataSafeLaws' genUp shrinkUp $ show
+      , testProperty "Up (unsafe)" . toDataUnsafeLaws' genUp shrinkUp $ show
+      , testProperty "MerkleProof (safe)" . toDataSafeLaws' genMP shrinkMP $ show
+      , testProperty "MerkleProof (unsafe)" . toDataUnsafeLaws' genMP shrinkMP $ show
+      , testProperty "VersionOracle (safe)" . toDataSafeLaws' genVO shrinkVO $ show
+      , testProperty "VersionOracle (unsafe)" . toDataUnsafeLaws' genVO shrinkVO $ show
+      , testProperty "VersionOracleConfig (safe)" . toDataSafeLaws' genVOC shrinkVOC $ show
+      , testProperty "VersionOracleConfig (unsafe)" . toDataUnsafeLaws' genVOC shrinkVOC $ show
+      , testProperty "FUELProxyRedeemer (safe)" . toDataSafeLaws' genFPR shrinkFPR $ show
+      , testProperty "FUELProxyRedeemer (unsafe)" . toDataUnsafeLaws' genFPR shrinkFPR $ show
+      , testProperty "CombinedMerkleProof (safe)" . toDataSafeLaws' genCMP shrinkCMP $ show
+      , testProperty "CombinedMerkleProof (unsafe)" . toDataUnsafeLaws' genCMP shrinkCMP $ show
+      , testProperty "UpdateCommitteeDatum (safe)" . toDataSafeLaws' genUPD shrinkUPD $ show
+      , testProperty "UpdateCommitteeDatum (unsafe)" . toDataUnsafeLaws' genUPD shrinkUPD $ show
+      , testProperty "ATMSPlainAggregatePubKey (safe)" . toDataSafeLaws' genAPAPK shrinkAPAPK $ show
+      , testProperty "ATMSPlainAggregatePubKey (unsafe)" . toDataUnsafeLaws' genAPAPK shrinkAPAPK $ show
+      , testProperty "UpdateCommitteeHashMessage (safe)" . toDataSafeLaws' genUCHM shrinkUCHM $ show
+      , testProperty "UpdateCommitteeHashMessage (unsafe)" . toDataUnsafeLaws' genUCHM shrinkUCHM $ show
+      , testProperty "UpdateCommitteeHashRedeemer (safe)" . toDataSafeLaws' genUCHR shrinkUCHR $ show
+      , testProperty "UpdateCommitteeHashRedeemer (unsafe)" . toDataUnsafeLaws' genUCHR shrinkUCHR $ show
+      , testProperty "CommitteeCertificateMint (safe)" . toDataSafeLaws' genCCM shrinkCCM $ show
+      , testProperty "CommitteeCertificateMint (unsafe)" . toDataUnsafeLaws' genCCM shrinkCCM $ show
+      , testProperty "InitTokenRedeemer (safe)" . toDataSafeLaws' genITR shrinkITR $ show
+      , testProperty "InitTokenRedeemer (unsafe)" . toDataUnsafeLaws' genITR shrinkITR $ show
+      , testProperty "InitTokenAssetClass (safe)" . toDataSafeLaws' genITAC shrinkITAC $ show
+      , testProperty "InitTokenAssetClass (unsafe)" . toDataUnsafeLaws' genITAC shrinkITAC $ show
+      , -- CheckpointDatum needs format clarification
+        testProperty "ATMSPlainMultisignature (safe)" . toDataSafeLaws' genAPM shrinkAPM $ show
+      , testProperty "ATMSPlainMultisignature (unsafe)" . toDataUnsafeLaws' genAPM shrinkAPM $ show
+      , testProperty "CheckpointParameter (safe)" . toDataSafeLaws' genCP shrinkCP $ show
+      , testProperty "CheckpointParameter (unsafe)" . toDataUnsafeLaws' genCP shrinkCP $ show
+      , -- CheckpointMessage needs format clarification
+        testProperty "Ds (safe)" . toDataSafeLaws' genDs shrinkDs $ show
+      , testProperty "Ds (unsafe)" . toDataUnsafeLaws' genDs shrinkDs $ show
+      , testProperty "DsDatum (safe)" . toDataSafeLaws' genDsDatum shrinkDsDatum $ show
+      , testProperty "DsDatum (unsafe)" . toDataUnsafeLaws' genDsDatum shrinkDsDatum $ show
+      , testProperty "Node (safe)" . toDataSafeLaws' genNode shrinkNode $ show
+      , testProperty "Node (unsafe)" . toDataUnsafeLaws' genNode shrinkNode $ show
+      , testProperty "DsConfDatum (safe)" . toDataSafeLaws' genDsConfDatum shrinkDsConfDatum $ show
+      , testProperty "DsConfDatum (unsafe)" . toDataUnsafeLaws' genDsConfDatum shrinkDsConfDatum $ show
+      , testProperty "Ib (safe)" . toDataSafeLaws' genIb shrinkIb $ show
+      , testProperty "Ib (unsafe)" . toDataUnsafeLaws' genIb shrinkIb $ show
+      , testProperty "DsKeyMint (safe)" . toDataSafeLaws' genDsKeyMint shrinkDsKeyMint $ show
+      , testProperty "DsKeyMint (unsafe)" . toDataUnsafeLaws' genDsKeyMint shrinkDsKeyMint $ show
+      , testProperty "ATMSRedeemer (safe)" . toDataSafeLaws' genATMSR shrinkATMSR $ show
+      , testProperty "ATMSRedeemer (unsafe)" . toDataUnsafeLaws' genATMSR shrinkATMSR $ show
+      , testProperty "CheckpointDatum (safe)" . toDataSafeLaws' genCHPD shrinkCHPD $ show
+      , testProperty "CheckpointDatum (unsafe)" . toDataUnsafeLaws' genCHPD shrinkCHPD $ show
+      , testProperty "CheckpointMessage (safe)" . toDataSafeLaws' genCHPM shrinkCHPM $ show
+      , testProperty "CheckpointMessage (unsafe)" . toDataUnsafeLaws' genCHPM shrinkCHPM $ show
+      , testProperty "DParameterValidatorDatum (safe)" . toDataSafeLaws' genDPVD shrinkDPVD $ show
+      , testProperty "DParameterValidatorDatum (unsafe)" . toDataUnsafeLaws' genDPVD shrinkDPVD $ show
+      , testProperty "FUELMintingRedeemer (safe)" . toDataSafeLaws' genFMR shrinkFRM $ show
+      , testProperty "FUELMintingRedeemer (unsafe)" . toDataUnsafeLaws' genFMR shrinkFRM $ show
+      , testProperty "PermissionedCandidateKeys (safe)" . toDataSafeLaws' genPCK shrinkPCK $ show
+      , testProperty "PermissionedCandidateKeys (unsafe)" . toDataUnsafeLaws' genPCK shrinkPCK $ show
+      , testProperty "PermissionedCandidatesPolicyRedeemer (safe)" . toDataSafeLaws' genPCPR shrinkPCPR $ show
+      , testProperty "PermissionedCandidatesPolicyRedeemer (unsafe)" . toDataUnsafeLaws' genPCPR shrinkPCPR $ show
+      , testProperty "PermissionedCandidatesValidatorDatum (safe)" . toDataSafeLaws' genPCVD shrinkPCVD $ show
+      , testProperty "PermissionedCandidatesValidatorDatum (unsafe)" . toDataUnsafeLaws' genPCVD shrinkPCVD $ show
+      , testProperty "PermissionedCandidatesValidatorRedeemer (safe)" . toDataSafeLaws' genPCVR shrinkPCVR $ show
+      , testProperty "PermissionedCandidatesValidatorRedeemer (unsafe)" . toDataUnsafeLaws' genPCVR shrinkPCVR $ show
+      , testProperty "ReserveDatum (safe)" . toDataSafeLaws' genRD shrinkRD $ show
+      , testProperty "ReserveDatum (unsafe)" . toDataUnsafeLaws' genRD shrinkRD $ show
+      , testProperty "ReserveRedeemer (safe)" . toDataSafeLaws' genRR shrinkRR $ show
+      , testProperty "ReserveRedeemer (unsafe)" . toDataUnsafeLaws' genRR shrinkRR $ show
+      , testProperty "ReserveAuthPolicyRedeemer (safe)" . toDataSafeLaws' genRAPR shrinkRAPR $ show
+      , testProperty "ReserveAuthPolicyRedeemer (unsafe)" . toDataUnsafeLaws' genRAPR shrinkRAPR $ show
+      , testProperty "IlliquidCirculationSupplyRedeemer (safe)" . toDataSafeLaws' genICSR shrinkICSR $ show
+      , testProperty "IlliquidCirculationSupplyRedeemer (unsafe)" . toDataUnsafeLaws' genICSR shrinkICSR $ show
+      , testProperty "MultiSigGovParams (safe)" . toDataSafeLaws' genMSGP shrinkMSGP $ show
+      , testProperty "MultiSigGovParams (unsafe)" . toDataUnsafeLaws' genMSGP shrinkMSGP $ show
+      , testProperty "MultiSigGovRedeemer (safe)" . toDataSafeLaws' genMSGR shrinkMSGR $ show
+      , testProperty "MultiSigGovRedeemer (unsafe)" . toDataUnsafeLaws' genMSGR shrinkMSGR $ show
+      ]
   where
     go :: QuickCheckTests -> QuickCheckTests
     go = max (QuickCheckTests 10_000)
@@ -371,8 +373,8 @@ genRD = do
   i <- arbitrary
   c <- arbitrary
 
-  pure $
-    ReserveDatum
+  pure
+    $ ReserveDatum
       (ImmutableReserveSettings (POSIXTime pt) (AssetClass (cs1, "")))
       (MutableReserveSettings cs2 i)
       (ReserveStats c)
@@ -402,8 +404,8 @@ genICSR =
 genMSGP :: Gen MultiSigGovParams
 genMSGP = do
   pkhs <- liftArbitrary $ do
-            ArbitraryPubKeyHash pkh <- arbitrary
-            pure pkh
+    ArbitraryPubKeyHash pkh <- arbitrary
+    pure pkh
   a <- chooseInteger (1, fromIntegral $ length pkhs)
   pure $ MultiSigGovParams pkhs a
 
@@ -547,8 +549,8 @@ genBPR = do
   ArbitrarySignature sideSig <- arbitrary
   ArbitraryTxOutRef iu <- arbitrary
   ArbitraryPubKeyHash pkh <- arbitrary
-  pure $
-    BlockProducerRegistration
+  pure
+    $ BlockProducerRegistration
       so
       sidePk
       sideSig
@@ -699,8 +701,8 @@ shrinkICSR = const []
 shrinkMSGP :: MultiSigGovParams -> [MultiSigGovParams]
 shrinkMSGP (MultiSigGovParams pkhs a) = do
   pkhs' <- flip liftShrink pkhs $ \pkh -> do
-             ArbitraryPubKeyHash pkh' <- shrink (ArbitraryPubKeyHash pkh)
-             pure pkh'
+    ArbitraryPubKeyHash pkh' <- shrink (ArbitraryPubKeyHash pkh)
+    pure pkh'
   a' <- shrink a
   pure $ MultiSigGovParams pkhs' a'
 
@@ -846,8 +848,8 @@ shrinkBPR (BlockProducerRegistration {..}) = do
   ArbitrarySignature sideSig' <- shrink (ArbitrarySignature sidechainSignature)
   ArbitraryTxOutRef tout' <- shrink (ArbitraryTxOutRef inputUtxo)
   ArbitraryPubKeyHash pkh' <- shrink (ArbitraryPubKeyHash ownPkh)
-  pure $
-    BlockProducerRegistration
+  pure
+    $ BlockProducerRegistration
       so'
       sidePk'
       sideSig'

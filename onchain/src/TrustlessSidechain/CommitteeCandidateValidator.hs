@@ -45,8 +45,8 @@ committeeCandidateValidatorUntyped ::
   BuiltinData ->
   ()
 committeeCandidateValidatorUntyped sidechainParams datum red ctx =
-  check $
-    mkCommitteeCandidateValidator
+  check
+    $ mkCommitteeCandidateValidator
       sidechainParams
       (Unsafe.BlockProducerRegistration datum)
       red

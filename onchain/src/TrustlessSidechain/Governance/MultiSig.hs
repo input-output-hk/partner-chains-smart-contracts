@@ -3,14 +3,14 @@
 
 -- | Implement a security mechanism that requires n out of m signatures on the
 -- transaction.
-module TrustlessSidechain.Governance.MultiSig
-  ( MultiSigGovParams(..)
-  , MultiSigGovRedeemer(..)
-  , serialisableGovernanceMultiSigPolicy
-  ) where
+module TrustlessSidechain.Governance.MultiSig (
+  MultiSigGovParams (..),
+  MultiSigGovRedeemer (..),
+  serialisableGovernanceMultiSigPolicy,
+) where
 
 import PlutusLedgerApi.Common (SerialisedScript)
-import PlutusLedgerApi.V2 (PubKeyHash, serialiseCompiledCode )
+import PlutusLedgerApi.V2 (PubKeyHash, serialiseCompiledCode)
 import PlutusTx
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
@@ -28,9 +28,12 @@ import TrustlessSidechain.Utils (currencySymbolValueOf)
 --
 -- @since Unreleased
 data MultiSigGovParams = MultiSigGovParams
-  { governanceMembers :: [PubKeyHash] -- ^ Members of the governance
-  , requiredSignatures :: Integer     -- ^ Minimal required number of signatures
-  } deriving (TSPrelude.Show, TSPrelude.Eq)
+  { governanceMembers :: [PubKeyHash]
+  -- ^ Members of the governance
+  , requiredSignatures :: Integer
+  -- ^ Minimal required number of signatures
+  }
+  deriving (TSPrelude.Show, TSPrelude.Eq)
 
 -- | @since Unreleased
 instance ToData MultiSigGovParams where
@@ -62,8 +65,8 @@ data MultiSigGovRedeemer = MultiSignatureCheck | MultiSigTokenGC
 -- | @since Unreleased
 instance ToData MultiSigGovRedeemer where
   {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData MultiSignatureCheck = toBuiltinData  (0 :: Integer)
-  toBuiltinData MultiSigTokenGC = toBuiltinData  (1 :: Integer)
+  toBuiltinData MultiSignatureCheck = toBuiltinData (0 :: Integer)
+  toBuiltinData MultiSigTokenGC = toBuiltinData (1 :: Integer)
 
 -- | @since Unreleased
 instance FromData MultiSigGovRedeemer where
@@ -94,29 +97,35 @@ instance UnsafeFromData MultiSigGovRedeemer where
 -- When passed the `MultiSigTokenGC` redeemer the policy only checks that the
 -- tokens are burned.  This permits to garbage-collect governance tokens
 -- generated during the checks.
-mkGovernanceMultiSigPolicy
-  :: MultiSigGovParams
-  -> MultiSigGovRedeemer
-  -> Unsafe.ScriptContext
-  -> Bool
-mkGovernanceMultiSigPolicy MultiSigGovParams{..} MultiSignatureCheck ctx =
-    traceIfFalse "ERROR-MULTISIG-GOV-POLICY-01" enoughSignatures
+mkGovernanceMultiSigPolicy ::
+  MultiSigGovParams ->
+  MultiSigGovRedeemer ->
+  Unsafe.ScriptContext ->
+  Bool
+mkGovernanceMultiSigPolicy MultiSigGovParams {..} MultiSignatureCheck ctx =
+  traceIfFalse "ERROR-MULTISIG-GOV-POLICY-01" enoughSignatures
   where
     txInfo :: Unsafe.TxInfo
     txInfo = Unsafe.scriptContextTxInfo ctx
 
     -- count the number of governance member signatures on a transaction
     govSigCount :: Integer
-    govSigCount = sum (map (\pkh -> if Unsafe.txSignedBy txInfo pkh
-                                    then 1
-                                    else 0)
-                           governanceMembers)
+    govSigCount =
+      sum
+        ( map
+            ( \pkh ->
+                if Unsafe.txSignedBy txInfo pkh
+                  then 1
+                  else 0
+            )
+            governanceMembers
+        )
 
     -- Is the number of signatures enough?
     enoughSignatures :: Bool
     enoughSignatures = govSigCount >= requiredSignatures
 mkGovernanceMultiSigPolicy _ MultiSigTokenGC ctx =
-    traceIfFalse "ERROR-MULTISIG-GOV-POLICY-02" tokensBurned
+  traceIfFalse "ERROR-MULTISIG-GOV-POLICY-02" tokensBurned
   where
     txInfo :: Unsafe.TxInfo
     txInfo = Unsafe.scriptContextTxInfo ctx
@@ -127,8 +136,9 @@ mkGovernanceMultiSigPolicy _ MultiSigTokenGC ctx =
     -- Check the amount of minted tokens
     mintedAmount :: Integer
     mintedAmount =
-      currencySymbolValueOf (Unsafe.decode $ Unsafe.txInfoMint txInfo)
-                            currSymbol
+      currencySymbolValueOf
+        (Unsafe.decode $ Unsafe.txInfoMint txInfo)
+        currSymbol
 
     -- Are we burning tokens?
     tokensBurned :: Bool
@@ -144,8 +154,8 @@ mkGovernanceMultiSigPolicyUntyped ::
   BuiltinData ->
   ()
 mkGovernanceMultiSigPolicyUntyped params red ctx =
-  check $
-    mkGovernanceMultiSigPolicy
+  check
+    $ mkGovernanceMultiSigPolicy
       (unsafeFromBuiltinData params)
       (unsafeFromBuiltinData red)
       (Unsafe.ScriptContext ctx)
