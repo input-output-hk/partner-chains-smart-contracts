@@ -75,9 +75,7 @@ import TrustlessSidechain.Versioning.ScriptId
       , IlliquidCirculationSupplyWithdrawalPolicy
       )
   )
-import TrustlessSidechain.Versioning.Types
-  ( VersionOracle(VersionOracle)
-  )
+import TrustlessSidechain.Versioning.Types (VersionOracle(VersionOracle))
 import TrustlessSidechain.Versioning.Utils (insertVersionLookupsAndConstraints)
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
@@ -219,11 +217,14 @@ findIlliquidCirculationSupplyUtxos ∷
     (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
     UtxoMap
 findIlliquidCirculationSupplyUtxos sidechainParams =
-    Versioning.getVersionedValidatorAddress
+  Versioning.getVersionedValidatorAddress
     sidechainParams
-    (VersionOracle { version: BigNum.fromInt 1
-                   , scriptId: IlliquidCirculationSupplyValidator })
-      >>= utxosAt
+    ( VersionOracle
+        { version: BigNum.fromInt 1
+        , scriptId: IlliquidCirculationSupplyValidator
+        }
+    )
+    >>= utxosAt
 
 findICSUtxo ∷
   ∀ r.
