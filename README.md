@@ -2,9 +2,9 @@
 
 ## Introduction
 
-This repository is a Plutus application (off-chain code + on-chain Plutus scripts) that is part of the Sidechain bridge backend. The goal is to support the different interactions with Cardano as a mainchain from a sidechain's perspective.
+This repository is a Plutus application (off-chain code + on-chain Plutus scripts) that is part of the Partner Chain bridge backend. The goal is to support the different interactions with Cardano as a mainchain from a partner chain's perspective.
 
-This alpha release is just the beginning of the journey. It is intended to get early feedback from the community, is provided "as is," and should not be used in live production networks. Use at your own risk. We welcome and appreciate your feedback!
+This alpha release is just the beginning of the journey. It is intended to gather early feedback from the community and is provided "as is." It should not be used in live production networks. Use at your own risk. We welcome and appreciate your feedback!
 
 The repository targets the following users:
 
