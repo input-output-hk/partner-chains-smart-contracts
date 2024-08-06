@@ -49,7 +49,24 @@ import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.UpdateCommitteeHash.Utils
   ( getUpdateCommitteeHashValidator
   )
-import TrustlessSidechain.Versioning.Types (ScriptId(..))
+import TrustlessSidechain.Versioning.Types
+  ( ScriptId
+      ( CheckpointValidator
+      , CommitteeCandidateValidator
+      , CommitteeCertificateVerificationPolicy
+      , CommitteeHashValidator
+      , CommitteeOraclePolicy
+      , DsKeyPolicy
+      , FUELBurningPolicy
+      , FUELMintingPolicy
+      , GovernancePolicy
+      , IlliquidCirculationSupplyValidator
+      , MerkleRootTokenPolicy
+      , MerkleRootTokenValidator
+      , ReserveAuthPolicy
+      , ReserveValidator
+      )
+  )
 import TrustlessSidechain.Versioning.Utils as Versioning
 import TrustlessSidechain.Governance(Governance(MultiSig))
 import Type.Row (type (+))

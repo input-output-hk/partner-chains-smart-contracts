@@ -10,7 +10,7 @@ import Cardano.Types.PlutusData (PlutusData)
 import Cardano.Types.PlutusScript as PlutusScript
 import Contract.PlutusData as PlutusData
 import Contract.Prelude
-  ( Maybe(..)
+  ( Maybe(Nothing)
   , bind
   , discard
   , null

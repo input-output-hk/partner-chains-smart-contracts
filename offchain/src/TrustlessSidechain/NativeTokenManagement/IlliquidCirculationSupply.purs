@@ -1,6 +1,5 @@
 module TrustlessSidechain.NativeTokenManagement.IlliquidCirculationSupply
-  ( findIlliquidCirculationSupplyUtxos
-  , illiquidCirculationSupplyValidator
+  ( illiquidCirculationSupplyValidator
   , depositMoreToSupply
   , withdrawFromSupply
   ) where
@@ -8,14 +7,15 @@ module TrustlessSidechain.NativeTokenManagement.IlliquidCirculationSupply
 import Contract.Prelude
 
 import Cardano.Types.ScriptHash (ScriptHash)
-import Contract.Address (Address)
 import Cardano.Types.AssetName (AssetName)
 import Cardano.Types.PlutusData (unit) as PlutusData
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.PlutusScript as PlutusScript
-import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(..))
+import Cardano.Types.TransactionUnspentOutput
+  ( TransactionUnspentOutput(TransactionUnspentOutput)
+  )
 import Contract.PlutusData
-  ( RedeemerDatum(..)
+  ( RedeemerDatum(RedeemerDatum)
   , toData
   )
 import Contract.ScriptLookups as Lookups
@@ -28,18 +28,17 @@ import Contract.TxConstraints
   , InputWithScriptRef(RefInput)
   )
 import Contract.TxConstraints as TxConstraints
-import Contract.Utxos (UtxoMap)
 import Cardano.Types.Value (Value)
 import Cardano.Types.BigNum as BigNum
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.Effects.Log (LOG)
-import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.NativeTokenManagement.Types
-  ( IlliquidCirculationSupplyRedeemer(..)
+  ( IlliquidCirculationSupplyRedeemer(DepositMoreToSupply, WithdrawFromSupply)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Scripts
@@ -47,10 +46,15 @@ import TrustlessSidechain.Utils.Scripts
   )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Utils.Asset (emptyAssetName)
-import TrustlessSidechain.Versioning.ScriptId (ScriptId(..))
+import TrustlessSidechain.Versioning.ScriptId
+  ( ScriptId
+      ( IlliquidCirculationSupplyValidator
+      , IlliquidCirculationSupplyWithdrawalPolicy
+      )
+  )
 import TrustlessSidechain.Effects.Util (fromMaybeThrow)
 import TrustlessSidechain.Versioning.Types
-  ( VersionOracle(..)
+  ( VersionOracle(VersionOracle)
   , VersionOracleConfig
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
@@ -63,50 +67,8 @@ illiquidCirculationSupplyValidator ∷
 illiquidCirculationSupplyValidator voc =
   mkValidatorWithParams IlliquidCirculationSupplyValidator [ toData voc ]
 
-icsValidatorVersionOracle ∷ VersionOracle
-icsValidatorVersionOracle = VersionOracle
-  { version: BigNum.fromInt 1, scriptId: IlliquidCirculationSupplyValidator }
-
 icsWithdrawalTokenName ∷ AssetName
 icsWithdrawalTokenName = emptyAssetName
-
-icsWithdrawalPolicyVersionOracle ∷ VersionOracle
-icsWithdrawalPolicyVersionOracle =
-  VersionOracle
-    { version: BigNum.fromInt 1
-    , scriptId: IlliquidCirculationSupplyWithdrawalPolicy
-    }
-
-getIlliquidCirculationSupplyAddress ∷
-  ∀ r.
-  SidechainParams →
-  Run
-    (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    Address
-getIlliquidCirculationSupplyAddress sidechainParams =
-  Versioning.getVersionedValidatorAddress
-    sidechainParams
-    icsValidatorVersionOracle
-
-findIlliquidCirculationSupplyUtxos ∷
-  ∀ r.
-  SidechainParams →
-  Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
-    UtxoMap
-findIlliquidCirculationSupplyUtxos sidechainParams =
-  getIlliquidCirculationSupplyAddress sidechainParams >>= utxosAt
-
-getIcsWithdrawalPolicyScriptRefUtxo ∷
-  ∀ r.
-  SidechainParams →
-  Run
-    (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    (TransactionInput /\ TransactionOutput)
-getIcsWithdrawalPolicyScriptRefUtxo sidechainParams =
-  Versioning.getVersionedScriptRefUtxo
-    sidechainParams
-    icsWithdrawalPolicyVersionOracle
 
 illiquidCirculationSupplyLookupsAndConstraints ∷
   ∀ r.
@@ -118,7 +80,11 @@ illiquidCirculationSupplyLookupsAndConstraints ∷
     }
 illiquidCirculationSupplyLookupsAndConstraints sp = do
   (icsRefTxInput /\ icsRefTxOutput) ←
-    getIcsWithdrawalPolicyScriptRefUtxo sp
+    Versioning.getVersionedScriptRefUtxo sp
+      (VersionOracle { version: BigNum.fromInt 1
+                     , scriptId: IlliquidCirculationSupplyWithdrawalPolicy
+                     }
+      )
 
   pure
     { icsLookups: Lookups.unspentOutputs
@@ -191,7 +157,11 @@ withdrawFromSupply sp mintingPolicyHash withdrawnValue utxo = do
   (withdrawalPolicyInput /\ withdrawalPolicyOutput) ←
     Versioning.getVersionedScriptRefUtxo
       sp
-      icsWithdrawalPolicyVersionOracle
+      (VersionOracle { version: BigNum.fromInt 1
+                     , scriptId: IlliquidCirculationSupplyWithdrawalPolicy
+                     }
+      )
+
   let
     icsValidatorHash = PlutusScript.hash illiquidCirculationSupplyValidator'
 

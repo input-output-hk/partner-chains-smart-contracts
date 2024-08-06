@@ -1,7 +1,7 @@
 module TrustlessSidechain.Effects.Errors.Parser where
 
 import Contract.Prelude
-  ( Maybe(..)
+  ( Maybe(Just)
   , bind
   , pure
   , show
@@ -12,7 +12,7 @@ import Contract.Prelude
   , (<>)
   , (>=)
   )
-import Data.Either (Either(..))
+import Data.Either (Either(Left, Right))
 import Data.Int (fromString)
 import Data.List.NonEmpty (toUnfoldable)
 import Data.String.CodeUnits (fromCharArray)

@@ -1,8 +1,8 @@
 module TrustlessSidechain.Effects.Env
-    ( Env(..)
-    , emptyEnv
-    , module X
-    ) where
+  ( Env(..)
+  , emptyEnv
+  , module X
+  ) where
 
 import TrustlessSidechain.Governance (Governance)
 import Run.Reader (READER, ask, runReader) as X

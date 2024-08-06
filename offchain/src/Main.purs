@@ -72,7 +72,7 @@ import TrustlessSidechain.EndpointResp
       )
   , stringifyEndpointResp
   )
-import TrustlessSidechain.Error (OffchainError(..))
+import TrustlessSidechain.Error (OffchainError(NotFoundUtxo))
 import TrustlessSidechain.FUELMintingPolicy.V1 as Mint.V1
 import TrustlessSidechain.FUELMintingPolicy.V2 as Mint.V2
 import TrustlessSidechain.FUELProxyPolicy as FUELProxyPolicy

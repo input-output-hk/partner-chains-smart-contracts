@@ -10,14 +10,14 @@ module TrustlessSidechain.NativeTokenManagement.Types
 
 import Contract.Prelude
 
-import Cardano.Types.Asset (Asset(..))
+import Cardano.Types.Asset (Asset(AdaAsset, Asset))
 import Cardano.Types.BigInt as BigInt
 import Cardano.Types.BigNum as BigNum
 import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.PlutusData
   ( class FromData
   , class ToData
-  , PlutusData(..)
+  , PlutusData(Constr, Integer, List)
   , fromData
   , toData
   )

@@ -21,6 +21,7 @@ import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction (TransactionOutput)
 import Contract.TxConstraints as TxConstraints
+import Contract.Utxos (UtxoMap)
 import Contract.Wallet as Wallet
 import Control.Monad.Error.Class (throwError)
 import Data.Array as Array
@@ -43,12 +44,13 @@ import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
 import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
-import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
+import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.Governance.Admin as Governance
-import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
-import TrustlessSidechain.NativeTokenManagement.IlliquidCirculationSupply
-  ( findIlliquidCirculationSupplyUtxos
+import TrustlessSidechain.InitSidechain
+  ( InitSidechainParams(InitSidechainParams)
+  , initSidechain
   )
 import TrustlessSidechain.NativeTokenManagement.Reserve
   ( depositToReserve
@@ -60,8 +62,8 @@ import TrustlessSidechain.NativeTokenManagement.Reserve
   , updateReserveUtxo
   )
 import TrustlessSidechain.NativeTokenManagement.Types
-  ( ImmutableReserveSettings(..)
-  , MutableReserveSettings(..)
+  ( ImmutableReserveSettings(ImmutableReserveSettings)
+  , MutableReserveSettings(MutableReserveSettings)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
@@ -72,6 +74,13 @@ import TrustlessSidechain.Utils.Crypto
   , toPubKeyUnsafe
   )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
+import TrustlessSidechain.Versioning.ScriptId
+  ( ScriptId(IlliquidCirculationSupplyValidator)
+  )
+import TrustlessSidechain.Versioning.Types
+  ( VersionOracle(VersionOracle)
+  )
+import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
 
 invalidScriptHash ∷ ScriptHash
@@ -142,6 +151,19 @@ dummyInitialiseSidechain pkh = do
   { sidechainParams } ← initSidechain initScParams 1
 
   pure sidechainParams
+
+findIlliquidCirculationSupplyUtxos ∷
+  ∀ r.
+  SidechainParams →
+  Run
+    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+    UtxoMap
+findIlliquidCirculationSupplyUtxos sidechainParams =
+    Versioning.getVersionedValidatorAddress
+    sidechainParams
+    (VersionOracle { version: BigNum.fromInt 1
+                   , scriptId: IlliquidCirculationSupplyValidator })
+      >>= utxosAt
 
 mintNonAdaTokens ∷
   ∀ r.

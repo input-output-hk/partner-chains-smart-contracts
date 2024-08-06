@@ -9,7 +9,7 @@ module TrustlessSidechain.Utils.Asset
 import Contract.Prelude
 
 import Cardano.Types.AssetClass (AssetClass(AssetClass))
-import Cardano.Types.Asset (Asset(..))
+import Cardano.Types.Asset (Asset(AdaAsset, Asset))
 import Cardano.Types.AssetName (AssetName, mkAssetName)
 import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe, byteArrayToHex)

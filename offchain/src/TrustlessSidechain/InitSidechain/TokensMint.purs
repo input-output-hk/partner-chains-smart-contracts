@@ -28,7 +28,7 @@ import TrustlessSidechain.Effects.Transaction (getUtxo) as Effect
 import TrustlessSidechain.Effects.Util (fromMaybeThrow) as Effect
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Effects.Wallet (getWalletUtxos) as Effect
-import TrustlessSidechain.Error (OffchainError(..))
+import TrustlessSidechain.Error (OffchainError(NoGenesisUTxO))
 import TrustlessSidechain.GetSidechainAddresses
   ( SidechainAddresses
   , SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)

@@ -3,7 +3,7 @@ module TrustlessSidechain.Options.Specs (options) where
 import Contract.Prelude
 
 import Cardano.AsCbor (decodeCbor)
-import Cardano.Types.Asset (Asset (..))
+import Cardano.Types.Asset (Asset (AdaAsset, Asset))
 import Cardano.Types.BigNum (BigNum)
 import Cardano.Types.TransactionInput (TransactionInput)
 import Cardano.Types.NetworkId (NetworkId(MainnetId))
@@ -70,8 +70,8 @@ import TrustlessSidechain.MerkleRoot.Types
   )
 import TrustlessSidechain.MerkleTree (MerkleTree, RootHash)
 import TrustlessSidechain.NativeTokenManagement.Types
-  ( ImmutableReserveSettings(..)
-  , MutableReserveSettings(..)
+  ( ImmutableReserveSettings(ImmutableReserveSettings)
+  , MutableReserveSettings(MutableReserveSettings)
   )
 import TrustlessSidechain.Options.Parsers
   ( bech32BytesParser
