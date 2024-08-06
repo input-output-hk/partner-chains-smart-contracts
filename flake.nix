@@ -15,7 +15,8 @@
     };
 
     cardano-transaction-lib = {
-      url = "github:Plutonomicon/cardano-transaction-lib/3279526b028c26a6ccb871b7bba4a0cc4a1f2299";
+      url =
+        "github:Plutonomicon/cardano-transaction-lib/3279526b028c26a6ccb871b7bba4a0cc4a1f2299";
     };
 
     plutip.follows = "cardano-transaction-lib/plutip";
@@ -47,7 +48,7 @@
     inputs.iogx.lib.mkFlake {
       inherit inputs;
       repoRoot = ./.;
-      systems = ["x86_64-linux" "x86_64-darwin" "aarch64-darwin"];
+      systems = [ "x86_64-linux" "x86_64-darwin" "aarch64-darwin" ];
       outputs = import ./nix/outputs.nix;
       nixpkgsArgs = {
         overlays = [

@@ -1,10 +1,5 @@
-{ repoRoot
-, inputs
-, pkgs
-, lib
-, system
-,
-}: cabalProject:
+{ repoRoot, inputs, pkgs, lib, system, }:
+cabalProject:
 let
   cardano-cli = inputs.cardano-node.legacyPackages.cardano-cli;
   cardano-node = inputs.cardano-node.legacyPackages.cardano-node;

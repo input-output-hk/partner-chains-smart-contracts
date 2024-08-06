@@ -1,10 +1,5 @@
-{
-  repoRoot,
-  inputs,
-  pkgs,
-  lib,
-  system,
-}: let
+{ repoRoot, inputs, pkgs, lib, system, }:
+let
   offchain = repoRoot.nix.lib.patchedProject {
     projectName = "sidechain-main-cli";
     src = builtins.path {
@@ -33,4 +28,4 @@
     ];
   };
 in
-  offchain
+offchain
