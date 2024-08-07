@@ -15,12 +15,9 @@
     };
 
     cardano-transaction-lib = {
-      url =
-        "github:Plutonomicon/cardano-transaction-lib/3279526b028c26a6ccb871b7bba4a0cc4a1f2299";
+      url = "github:Plutonomicon/cardano-transaction-lib/bcbfb9b8e81d432a8914f8c25b6bbc995a4f670d";
     };
-
-    plutip.follows = "cardano-transaction-lib/plutip";
-    iohk-nix.follows = "cardano-transaction-lib/plutip/iohk-nix";
+    iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
 
     nixpkgs.follows = "haskell-nix/nixpkgs";
 
@@ -40,7 +37,7 @@
     };
 
     # Used to provide the cardano-node and cardano-cli executables.
-    cardano-node.url = "github:input-output-hk/cardano-node?ref=8.7.2";
+    cardano-node.follows = "cardano-transaction-lib/cardano-node";
 
     mithril.url = "github:input-output-hk/mithril";
   };
@@ -48,7 +45,7 @@
     inputs.iogx.lib.mkFlake {
       inherit inputs;
       repoRoot = ./.;
-      systems = [ "x86_64-linux" "x86_64-darwin" "aarch64-darwin" ];
+      systems = ["x86_64-linux" "x86_64-darwin" "aarch64-darwin"];
       outputs = import ./nix/outputs.nix;
       nixpkgsArgs = {
         overlays = [

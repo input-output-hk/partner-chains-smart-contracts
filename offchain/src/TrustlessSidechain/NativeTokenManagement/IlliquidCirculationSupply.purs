@@ -6,53 +6,46 @@ module TrustlessSidechain.NativeTokenManagement.IlliquidCirculationSupply
 
 import Contract.Prelude
 
-import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Types.AssetName (AssetName)
+import Cardano.Types.BigNum as BigNum
+import Cardano.Types.Int as Int
 import Cardano.Types.PlutusData (unit) as PlutusData
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.PlutusScript as PlutusScript
-import Cardano.Types.TransactionUnspentOutput
-  ( TransactionUnspentOutput(TransactionUnspentOutput)
-  )
+import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.TransactionInput (TransactionInput)
+import Cardano.Types.TransactionOutput (TransactionOutput)
+import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(..))
+import Cardano.Types.Value (Value)
+import Cardano.Types.Value as Value
 import Contract.PlutusData
   ( RedeemerDatum(RedeemerDatum)
   , toData
   )
 import Contract.ScriptLookups as Lookups
-import Cardano.Types.Int as Int
-import Cardano.Types.Value as Value
-import Cardano.Types.TransactionOutput (TransactionOutput)
-import Cardano.Types.TransactionInput (TransactionInput)
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
   , InputWithScriptRef(RefInput)
   )
 import Contract.TxConstraints as TxConstraints
-import Cardano.Types.Value (Value)
-import Cardano.Types.BigNum as BigNum
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
+import TrustlessSidechain.Effects.Util (fromMaybeThrow)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.NativeTokenManagement.Types
   ( IlliquidCirculationSupplyRedeemer(DepositMoreToSupply, WithdrawFromSupply)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Asset (emptyAssetName)
 import TrustlessSidechain.Utils.Scripts
   ( mkValidatorWithParams
   )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
-import TrustlessSidechain.Utils.Asset (emptyAssetName)
-import TrustlessSidechain.Versioning.ScriptId
-  ( ScriptId
-      ( IlliquidCirculationSupplyValidator
-      , IlliquidCirculationSupplyWithdrawalPolicy
-      )
-  )
-import TrustlessSidechain.Effects.Util (fromMaybeThrow)
+import TrustlessSidechain.Versioning.ScriptId (ScriptId(..))
 import TrustlessSidechain.Versioning.Types
   ( VersionOracle(VersionOracle)
   , VersionOracleConfig
@@ -81,9 +74,10 @@ illiquidCirculationSupplyLookupsAndConstraints ∷
 illiquidCirculationSupplyLookupsAndConstraints sp = do
   (icsRefTxInput /\ icsRefTxOutput) ←
     Versioning.getVersionedScriptRefUtxo sp
-      (VersionOracle { version: BigNum.fromInt 1
-                     , scriptId: IlliquidCirculationSupplyWithdrawalPolicy
-                     }
+      ( VersionOracle
+          { version: BigNum.fromInt 1
+          , scriptId: IlliquidCirculationSupplyWithdrawalPolicy
+          }
       )
 
   pure
@@ -112,9 +106,10 @@ depositMoreToSupply sp depositedValue utxo = do
 
     value = unwrap >>> _.amount $ snd utxo
 
-  newValue <- fromMaybeThrow
-    (GenericInternalError "Couldn't add values.")
-    $ pure (value `Value.add` depositedValue)
+  newValue ←
+    fromMaybeThrow
+      (GenericInternalError "Couldn't add values.")
+      $ pure (value `Value.add` depositedValue)
 
   let
     lookups ∷ Lookups.ScriptLookups
@@ -157,9 +152,10 @@ withdrawFromSupply sp mintingPolicyHash withdrawnValue utxo = do
   (withdrawalPolicyInput /\ withdrawalPolicyOutput) ←
     Versioning.getVersionedScriptRefUtxo
       sp
-      (VersionOracle { version: BigNum.fromInt 1
-                     , scriptId: IlliquidCirculationSupplyWithdrawalPolicy
-                     }
+      ( VersionOracle
+          { version: BigNum.fromInt 1
+          , scriptId: IlliquidCirculationSupplyWithdrawalPolicy
+          }
       )
 
   let
@@ -167,9 +163,10 @@ withdrawFromSupply sp mintingPolicyHash withdrawnValue utxo = do
 
     value = unwrap >>> _.amount $ snd utxo
 
-  newValue <- fromMaybeThrow
-    (GenericInternalError "Couldn't subtract values.")
-    $ pure (value `Value.minus` withdrawnValue)
+  newValue ←
+    fromMaybeThrow
+      (GenericInternalError "Couldn't subtract values.")
+      $ pure (value `Value.minus` withdrawnValue)
 
   let
     lookups ∷ Lookups.ScriptLookups
@@ -192,9 +189,9 @@ withdrawFromSupply sp mintingPolicyHash withdrawnValue utxo = do
           icsWithdrawalTokenName
           (Int.fromInt 1)
           ( RefInput $ TransactionUnspentOutput
-             { input: withdrawalPolicyInput
-             , output: withdrawalPolicyOutput
-             }
+              { input: withdrawalPolicyInput
+              , output: withdrawalPolicyOutput
+              }
           )
         <> icsConstraints
 

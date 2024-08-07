@@ -37,8 +37,8 @@ import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePla
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import TrustlessSidechain.DParameter.Utils as DParameter
 import TrustlessSidechain.DistributedSet as DistributedSet
+import TrustlessSidechain.Effects.Env (Env, READER)
 import TrustlessSidechain.Effects.Wallet (WALLET)
-import TrustlessSidechain.Effects.Env (READER, Env)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.FUELProxyPolicy (getFuelProxyMintingPolicy)
 import TrustlessSidechain.InitSidechain.Utils as InitSidechain

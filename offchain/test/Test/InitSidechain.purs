@@ -22,10 +22,10 @@ import Run.Except (note) as Run
 import Run.Except (throw)
 import Test.CandidatePermissionToken as Test.CandidatePermissionToken
 import Test.InitSidechain.Utils (failMsg, unorderedEq)
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
 import Test.Unit.Assert (assert)
-import Test.Utils (WrappedTests, plutipGroup)
+import Test.Utils (WrappedTests, testnetGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint.Utils as Checkpoint
@@ -53,7 +53,7 @@ import Type.Row (type (+))
 
 -- | `tests` aggregates all the tests together in one convenient function
 tests ∷ WrappedTests
-tests = plutipGroup "Initialising the sidechain" $ do
+tests = testnetGroup "Initialising the sidechain" $ do
   -- InitSidechain endpoint
   testScenario1
   testScenario2
@@ -65,9 +65,9 @@ tests = plutipGroup "Initialising the sidechain" $ do
 
 -- | `testScenario1` just calls the init sidechain endpoint (which should
 -- | succeed!)
-testScenario1 ∷ PlutipTest
+testScenario1 ∷ TestnetTest
 testScenario1 = Mote.Monad.test "Calling `initSidechain`"
-  $ Test.PlutipTest.mkPlutipConfigTest
+  $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 50_000_000
       , BigNum.fromInt 50_000_000
       , BigNum.fromInt 50_000_000
@@ -109,9 +109,9 @@ testScenario1 = Mote.Monad.test "Calling `initSidechain`"
 -- | initialize the sidechain with Alice's utxo.
 -- | In short, this verifies that to initialize the sidechain, we need to spend
 -- | the `initUtxo`
-testScenario2 ∷ PlutipTest
+testScenario2 ∷ TestnetTest
 testScenario2 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
-  $ Test.PlutipTest.mkPlutipConfigTest
+  $ Test.TestnetTest.mkTestnetConfigTest
       ( [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -168,10 +168,10 @@ testScenario2 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
 -- | `testScenario3` is identical to `testScenario1` BUT we include the minting
 -- | of candidate permission tokens, and verify that we actually have the
 -- | candidate permission token afterwards
-testScenario3 ∷ PlutipTest
+testScenario3 ∷ TestnetTest
 testScenario3 =
   Mote.Monad.test "Calling `initSidechain` with candidate permission tokens"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -286,10 +286,10 @@ mintSeveralInitTokens sidechainParams = do
 -- | Check that `initTokenStatus` gets no tokens if none are
 -- | there. Alice initializes the sidechain (and should have one CandidatePermission InitToken).
 -- | Then check that Bob has no init tokens.
-testInitTokenStatusEmpty ∷ PlutipTest
+testInitTokenStatusEmpty ∷ TestnetTest
 testInitTokenStatusEmpty =
   Mote.Monad.test "getInitTokenStatus returns empty if no init tokens"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         ( [ BigNum.fromInt 50_000_000
           , BigNum.fromInt 50_000_000
           , BigNum.fromInt 50_000_000
@@ -321,11 +321,11 @@ testInitTokenStatusEmpty =
 
 -- | Run `initSidechain` without creating "CandidatePermission" tokens,
 -- | and therefore leaving one "CandidatePermission InitToken" unspent.
-testInitTokenStatusOneToken ∷ PlutipTest
+testInitTokenStatusOneToken ∷ TestnetTest
 testInitTokenStatusOneToken =
   Mote.Monad.test
     "getInitTokenStatus returns single init token"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -362,11 +362,11 @@ testInitTokenStatusOneToken =
 
 -- | Directly mint several init tokens but do not spend them.
 -- | Check that you get what you expect.
-testInitTokenStatusMultiTokens ∷ PlutipTest
+testInitTokenStatusMultiTokens ∷ TestnetTest
 testInitTokenStatusMultiTokens =
   Mote.Monad.test
     "getInitTokenStatus returns expected tokens"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000

@@ -43,10 +43,10 @@ import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
 import Contract.Value (AssetName)
 import Data.Array as Array
+import Data.EuclideanRing (div)
 import Data.Function (on)
 import Data.Maybe as Maybe
 import Data.Ord as Ord
-import Data.EuclideanRing (div)
 import JS.BigInt (BigInt)
 import JS.BigInt as BigInt
 import Partial.Unsafe as Unsafe
@@ -368,10 +368,10 @@ verifyMultiSignature
     go signed pubs sigs =
       let
         ok = signed >
-             ( div
-                (thresholdNumerator * BigInt.fromInt (Array.length pubKeys))
-                thresholdDenominator
-             )
+          ( div
+              (thresholdNumerator * BigInt.fromInt (Array.length pubKeys))
+              thresholdDenominator
+          )
       in
         case Array.uncons pubs of
           Nothing → ok
@@ -402,7 +402,7 @@ isSorted xss = case Array.tail xss of
 
 foreign import blake2b256 ∷ String → String
 
-foreign import blake2b256Hash :: ByteArray -> ByteArray
+foreign import blake2b256Hash ∷ ByteArray → ByteArray
 
 -- | `aggregateKeys` aggregates a list of keys s.t. the resulting `ByteArray`
 -- | may be stored in the `UpdateCommitteeDatum` in an onchain compatible way.

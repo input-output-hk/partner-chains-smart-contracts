@@ -16,6 +16,12 @@ import Run.Except (EXCEPT, runExcept)
 import TrustlessSidechain.Effects.App (APP, BASE)
 import TrustlessSidechain.Effects.Contract (liftContract, unliftContract)
 import TrustlessSidechain.Effects.Contract as Effect
+import TrustlessSidechain.Effects.Env
+  ( Env
+  , READER
+  , ask
+  , runReader
+  )
 import TrustlessSidechain.Effects.Log (LogF, handleLogLive, handleLogWith)
 import TrustlessSidechain.Effects.Transaction
   ( TRANSACTION
@@ -29,12 +35,6 @@ import TrustlessSidechain.Effects.Wallet
   , handleWalletLive
   , handleWalletWith
   )
-import TrustlessSidechain.Effects.Env
-  ( Env
-  , READER
-  , runReader
-  , ask
-  )
 import TrustlessSidechain.Error (OffchainError)
 import Type.Row (type (+))
 
@@ -42,7 +42,7 @@ import Type.Row (type (+))
 runAppWith ∷
   ∀ r.
   ( TransactionF ~> Run
-      ( READER Env + EXCEPT OffchainError + r)
+      (READER Env + EXCEPT OffchainError + r)
   ) →
   ( WalletF ~> Run
       ( READER Env + EXCEPT OffchainError + TRANSACTION + r
@@ -52,7 +52,7 @@ runAppWith ∷
       ( READER Env + EXCEPT OffchainError + WALLET + TRANSACTION + r
       )
   ) →
-  Env ->
+  Env →
   Run (APP + r) ~>
     Run (EXCEPT OffchainError + r)
 runAppWith handleTransaction handleWallet handleLog env f =
@@ -66,7 +66,7 @@ runAppWith handleTransaction handleWallet handleLog env f =
 runAppLive ∷
   ∀ a.
   ContractParams →
-  Env ->
+  Env →
   Run (APP + BASE + ()) a →
   Aff (Either OffchainError a)
 runAppLive contractParams e = runBaseAff'
@@ -76,7 +76,7 @@ runAppLive contractParams e = runBaseAff'
 
 -- | Strip away the `APP` effect using the live handlers
 runToBase ∷
-  Env ->
+  Env →
   Run (APP + BASE + ()) ~> Run (EXCEPT OffchainError + BASE + ())
 runToBase env f =
   runAppWith handleTransactionLive
@@ -86,7 +86,7 @@ runToBase env f =
     $ f
 
 -- | Unlift an effect stack which contains a `CONTRACT` effect to the `Contract` monad
-unliftApp ∷ Env -> Run (APP + BASE + ()) ~> Contract
+unliftApp ∷ Env → Run (APP + BASE + ()) ~> Contract
 unliftApp env = unliftContract <<< runToBase env
 
 -- | Lift a function which operates on `Contract` to operate our effect stack
@@ -96,5 +96,5 @@ withUnliftApp ∷
   Run (APP + BASE + ()) a →
   Run (APP + BASE + ()) b
 withUnliftApp f action = do
- env <- ask
- liftContract $ f $ unliftApp env action
+  env ← ask
+  liftContract $ f $ unliftApp env action

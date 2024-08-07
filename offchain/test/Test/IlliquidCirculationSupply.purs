@@ -3,50 +3,53 @@ module Test.IlliquidCirculationSupply
   ) where
 
 import Contract.Prelude
+
+import Cardano.Types (UtxoMap)
+import Cardano.Types.Asset (fromAssetClass)
+import Cardano.Types.AssetClass (AssetClass(AssetClass))
+import Cardano.Types.BigNum (BigNum)
+import Cardano.Types.BigNum as BigNum
+import Cardano.Types.Int as Int
+import Cardano.Types.Mint as Mint
+import Cardano.Types.MultiAsset as MultiAsset
+import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash)
+import Cardano.Types.PlutusScript (PlutusScript)
+import Cardano.Types.PlutusScript as PlutusScript
+import Cardano.Types.ScriptHash (ScriptHash)
+import Cardano.Types.Value (valueOf)
 import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.ScriptLookups as Lookups
-import Cardano.Types.ScriptHash (ScriptHash)
-import Cardano.Types.BigNum as BigNum
-import Cardano.Types.BigNum (BigNum)
-import Cardano.Types.Mint as Mint
-import Cardano.Types.Int as Int
-import Cardano.Types.MultiAsset as MultiAsset
-import Cardano.Types.PlutusScript (PlutusScript)
-import Cardano.Types.PlutusScript as PlutusScript
-import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash)
 import Contract.Transaction (TransactionInput, TransactionOutput)
 import Contract.TxConstraints (DatumPresence(DatumInline))
 import Contract.TxConstraints as TxConstraints
-import Cardano.Types.Value (valueOf)
-import Contract.Utxos (UtxoMap)
 import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Control.Monad.Error.Class (throwError)
 import Data.Array as Array
-import JS.BigInt as BigInt
 import Data.Map as Map
 import Effect.Exception (error)
+import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Run (EFFECT, Run)
 import Run.Except (EXCEPT)
 import Test.AlwaysPassingScripts (alwaysPassingPolicy)
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
-import Test.Utils (WrappedTests, plutipGroup)
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
+import Test.Utils (WrappedTests, testnetGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
+import TrustlessSidechain.Effects.Env (Env, READER)
 import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow)
 import TrustlessSidechain.Effects.Wallet (WALLET)
-import TrustlessSidechain.Effects.Env (Env, READER)
-import TrustlessSidechain.Error (OffchainError(NotFoundUtxo))
+import TrustlessSidechain.Error (OffchainError(..))
 import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
@@ -58,15 +61,13 @@ import TrustlessSidechain.NativeTokenManagement.IlliquidCirculationSupply
   , withdrawFromSupply
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import Cardano.Types.AssetClass (AssetClass(AssetClass))
-import Cardano.Types.Asset (fromAssetClass)
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
+import TrustlessSidechain.Utils.Asset (emptyAssetName, singletonFromAsset)
 import TrustlessSidechain.Utils.Crypto
   ( aggregateKeys
   , generatePrivKey
   , toPubKeyUnsafe
   )
-import TrustlessSidechain.Utils.Asset (emptyAssetName, singletonFromAsset)
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId
@@ -74,22 +75,20 @@ import TrustlessSidechain.Versioning.ScriptId
       , IlliquidCirculationSupplyWithdrawalPolicy
       )
   )
-import TrustlessSidechain.Versioning.Types
-  ( VersionOracle(VersionOracle)
-  )
+import TrustlessSidechain.Versioning.Types (VersionOracle(VersionOracle))
 import TrustlessSidechain.Versioning.Utils (insertVersionLookupsAndConstraints)
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
 
 -- | `tests` aggregates all UpdateCommitteeHash the tests.
 tests ∷ WrappedTests
-tests = plutipGroup "IlliquidCirculationSupply" $ do
+tests = testnetGroup "IlliquidCirculationSupply" $ do
   testScenario1
   testScenario2
 
 dummyInitialiseSidechain ∷
   ∀ r.
-  PaymentPubKeyHash ->
+  PaymentPubKeyHash →
   Run
     (APP + EFFECT + CONTRACT + r)
     SidechainParams
@@ -218,11 +217,14 @@ findIlliquidCirculationSupplyUtxos ∷
     (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
     UtxoMap
 findIlliquidCirculationSupplyUtxos sidechainParams =
-    Versioning.getVersionedValidatorAddress
+  Versioning.getVersionedValidatorAddress
     sidechainParams
-    (VersionOracle { version: BigNum.fromInt 1
-                   , scriptId: IlliquidCirculationSupplyValidator })
-      >>= utxosAt
+    ( VersionOracle
+        { version: BigNum.fromInt 1
+        , scriptId: IlliquidCirculationSupplyValidator
+        }
+    )
+    >>= utxosAt
 
 findICSUtxo ∷
   ∀ r.
@@ -238,13 +240,13 @@ findICSUtxo
       ( Map.toUnfoldable <$> findIlliquidCirculationSupplyUtxos sidechainParams
       )
 
-testScenario1 ∷ PlutipTest
+testScenario1 ∷ TestnetTest
 testScenario1 =
   Mote.Monad.test
     "Deposit to ICS"
-    $ Test.PlutipTest.mkPlutipConfigTest initialDistribution
+    $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-        pkh <- getOwnPaymentPubKeyHash
+        pkh ← getOwnPaymentPubKeyHash
         Test.Utils.withSingleMultiSig (unwrap pkh) $ do
 
           sidechainParams ← dummyInitialiseSidechain pkh
@@ -280,13 +282,13 @@ testScenario1 =
             )
             (liftContract $ throwError $ error "Deposit not sucessful")
 
-testScenario2 ∷ PlutipTest
+testScenario2 ∷ TestnetTest
 testScenario2 =
   Mote.Monad.test
     "Withdraw from ICS"
-    $ Test.PlutipTest.mkPlutipConfigTest initialDistribution
+    $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-        pkh <- getOwnPaymentPubKeyHash
+        pkh ← getOwnPaymentPubKeyHash
         Test.Utils.withSingleMultiSig (unwrap pkh) $ do
 
           sidechainParams ← dummyInitialiseSidechain pkh

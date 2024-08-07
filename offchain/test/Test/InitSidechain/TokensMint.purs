@@ -9,10 +9,10 @@ import Contract.Wallet as Wallet
 import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Test.InitSidechain.Utils (expectedInitTokens, failMsg, unorderedEq)
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
 import Test.Unit.Assert (assert)
-import Test.Utils (WrappedTests, plutipGroup)
+import Test.Utils (WrappedTests, testnetGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint.Utils as Checkpoint
@@ -34,7 +34,7 @@ import TrustlessSidechain.Versioning as Versioning
 
 -- | `tests` aggregates all the tests together in one convenient function
 tests ∷ WrappedTests
-tests = plutipGroup "Minting the init tokens" $ do
+tests = testnetGroup "Minting the init tokens" $ do
   -- InitTokensMint endpoint
   initTokensMintScenario1
   initTokensMintIdempotent
@@ -42,10 +42,10 @@ tests = plutipGroup "Minting the init tokens" $ do
 -- | Setup the same as `testScenario1`, but in which `initTokensMint`
 -- | is called rather than `initSidechain`. It should succeed, and
 -- | it checks the tokens are indeed minted by calling `getInitTokenStatus`.
-initTokensMintScenario1 ∷ PlutipTest
+initTokensMintScenario1 ∷ TestnetTest
 initTokensMintScenario1 =
   Mote.Monad.test "`initTokensMint` returns expected token names and quantities"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -105,10 +105,10 @@ initTokensMintScenario1 =
 -- | attempts to mint the tokens twice. The tokens should
 -- | still be as expected and the return transactionId should
 -- | be `Nothing`.
-initTokensMintIdempotent ∷ PlutipTest
+initTokensMintIdempotent ∷ TestnetTest
 initTokensMintIdempotent =
   Mote.Monad.test "`initTokensMint` gives expected results when called twice"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000

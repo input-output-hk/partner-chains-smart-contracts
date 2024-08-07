@@ -71,7 +71,9 @@ import TrustlessSidechain.FUELMintingPolicy.V1
   , FUELMintingRedeemer(FUELMintingRedeemer, FUELBurningRedeemer)
   , MerkleTreeEntry(MerkleTreeEntry)
   )
-import TrustlessSidechain.Governance.Admin (GovernanceAuthority(GovernanceAuthority))
+import TrustlessSidechain.Governance.Admin
+  ( GovernanceAuthority(GovernanceAuthority)
+  )
 import TrustlessSidechain.InitSidechain.Types
   ( InitTokenAssetClass(InitTokenAssetClass)
   )
@@ -418,7 +420,7 @@ genReserveDatum = do
   ArbitraryScriptHash cs ← arbitrary
   c ← arbitrary
   ArbitraryScriptHash sh ← arbitrary
-  ArbitraryAssetName an <- arbitrary
+  ArbitraryAssetName an ← arbitrary
   i ← arbitrary
 
   pure $
@@ -432,7 +434,7 @@ genReserveDatum = do
 
 genReserveRedeemer ∷ Gen ReserveRedeemer
 genReserveRedeemer = do
-  ArbitraryBigInt governanceVersion <- arbitrary
+  ArbitraryBigInt governanceVersion ← arbitrary
   QGen.oneOf $ NE.cons'
     ( pure $ DepositToReserve { governanceVersion }
     )

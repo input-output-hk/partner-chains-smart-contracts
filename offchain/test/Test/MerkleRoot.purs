@@ -28,20 +28,20 @@ import Run (Run)
 import Run (liftEffect) as Run
 import Run.Except (EXCEPT)
 import Run.Except (note, rethrow) as Run
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
-import Test.Utils (WrappedTests, plutipGroup)
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
+import Test.Utils (WrappedTests, testnetGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSAggregateSignatures(PlainEcdsaSecp256k1)
   , ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
 import TrustlessSidechain.Effects.Contract (liftContract)
+import TrustlessSidechain.Effects.Env (Env, READER)
 import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
-import TrustlessSidechain.Effects.Env (READER, Env)
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.FUELMintingPolicy.V1
   ( CombinedMerkleProof(CombinedMerkleProof)
@@ -66,7 +66,7 @@ import Type.Row (type (+))
 
 -- | `tests` aggregates all MerkleRoot tests in a convenient single function
 tests ∷ WrappedTests
-tests = plutipGroup "Merkle root insertion" $ do
+tests = testnetGroup "Merkle root insertion" $ do
   testScenario1
   testScenario2
   testScenario3
@@ -170,9 +170,9 @@ saveRoot
 -- |
 -- |    3. Saves that merkle root with the current committee (everyone but one
 -- |    person) using the `MerkleRoot.saveRoot` endpoint.
-testScenario1 ∷ PlutipTest
+testScenario1 ∷ TestnetTest
 testScenario1 = Mote.Monad.test "Saving a Merkle root"
-  $ Test.PlutipTest.mkPlutipConfigTest
+  $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 50_000_000
       , BigNum.fromInt 50_000_000
       , BigNum.fromInt 50_000_000
@@ -280,9 +280,9 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
 -- |    3. saves another merkle root (this references the last merkle root).
 -- |
 -- | Note: the initialize sidechain part is duplicated code from above.
-testScenario2 ∷ PlutipTest
+testScenario2 ∷ TestnetTest
 testScenario2 = Mote.Monad.test "Saving two merkle roots"
-  $ Test.PlutipTest.mkPlutipConfigTest
+  $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 50_000_000
       , BigNum.fromInt 50_000_000
       , BigNum.fromInt 50_000_000
@@ -372,10 +372,10 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
 -- |    2. saves a merkle root
 -- |
 -- | Note: there is significant duplicated code from `testScenario2`
-testScenario3 ∷ PlutipTest
+testScenario3 ∷ TestnetTest
 testScenario3 =
   Mote.Monad.test "Saving a merkle root with a largely duplicated committee"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000

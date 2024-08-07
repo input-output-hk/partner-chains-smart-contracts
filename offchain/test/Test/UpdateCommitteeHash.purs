@@ -23,17 +23,17 @@ import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe (unsafePartial)
 import Partial.Unsafe as Unsafe
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
-import Test.Utils (WrappedTests, plutipGroup)
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
+import Test.Utils (WrappedTests, testnetGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSAggregateSignatures(PlainEcdsaSecp256k1)
   , ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
 import TrustlessSidechain.Effects.Contract (liftContract)
-import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
 import TrustlessSidechain.Effects.Env (Env, ask)
+import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
 import TrustlessSidechain.GarbageCollector as GarbageCollector
 import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
@@ -75,7 +75,7 @@ generateUchmSignatures ∷
   , -- the sidechain epoch
     sidechainEpoch ∷ BigInt
   , -- the Reader Env
-    env :: Env
+    env ∷ Env
   } →
   Contract (Array (Tuple EcdsaSecp256k1PubKey EcdsaSecp256k1Signature))
 generateUchmSignatures
@@ -139,7 +139,7 @@ updateCommitteeHash ∷
   , -- sidechain epoch of the new committee
     sidechainEpoch ∷ BigInt
   , -- the Reader Env
-    env :: Env
+    env ∷ Env
   } →
   Contract Unit
 updateCommitteeHash params = updateCommitteeHashWith params pure
@@ -161,7 +161,7 @@ updateCommitteeHashWith ∷
     previousMerkleRoot ∷ Maybe RootHash
   , -- sidechain epoch of the new committee
     sidechainEpoch ∷ BigInt
-  , env :: Env
+  , env ∷ Env
   } →
   ( UpdateCommitteeHashParams PlutusData →
     Contract (UpdateCommitteeHashParams PlutusData)
@@ -194,7 +194,7 @@ updateCommitteeHashWith params f = void do
 
 -- | `tests` aggregates all UpdateCommitteeHash the tests.
 tests ∷ WrappedTests
-tests = plutipGroup "Committee handover (committe hash update)" $ do
+tests = testnetGroup "Committee handover (committe hash update)" $ do
   testScenario1
   testScenario2
   testScenario3
@@ -202,9 +202,9 @@ tests = plutipGroup "Committee handover (committe hash update)" $ do
   testScenario5
 
 -- | 'testScenario1' updates the committee hash
-testScenario1 ∷ PlutipTest
+testScenario1 ∷ TestnetTest
 testScenario1 = Mote.Monad.test "Simple update committee hash"
-  $ Test.PlutipTest.mkPlutipConfigTest
+  $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 50_000_000
       , BigNum.fromInt 50_000_000
       , BigNum.fromInt 50_000_000
@@ -241,7 +241,7 @@ testScenario1 = Mote.Monad.test "Simple update committee hash"
       nextCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
         generatePrivKey
 
-      env <- ask
+      env ← ask
       liftContract $ updateCommitteeHash
         { sidechainParams
         , currentCommitteePrvKeys: initCommitteePrvKeys
@@ -258,10 +258,10 @@ testScenario1 = Mote.Monad.test "Simple update committee hash"
 -- | `testScenario2` updates the committee hash with a threshold ratio of 1/1,
 -- | but should fail because there isn't enough committee members signing the update
 -- | off.
-testScenario2 ∷ PlutipTest
+testScenario2 ∷ TestnetTest
 testScenario2 =
   Mote.Monad.test "Update committee hash without honest majority (should fail)"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -301,7 +301,7 @@ testScenario2 =
         nextCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
           generatePrivKey
 
-        env <- ask
+        env ← ask
         liftContract $ Test.Utils.fails
           $ updateCommitteeHashWith
               { sidechainParams: scParams
@@ -316,24 +316,24 @@ testScenario2 =
                 $ UpdateCommitteeHashParams
                 $ params
                     { aggregateSignature =
-                          unsafePartial $
-                            case params.aggregateSignature of
+                        unsafePartial $
+                          case params.aggregateSignature of
+                            PlainEcdsaSecp256k1
+                              [ c1 /\ _s1, c2 /\ s2 ] →
                               PlainEcdsaSecp256k1
-                                [ c1 /\ _s1, c2 /\ s2 ] →
-                                PlainEcdsaSecp256k1
-                                  [ c1 /\ Nothing
-                                  , c2 /\ s2
-                                  ]
+                                [ c1 /\ Nothing
+                                , c2 /\ s2
+                                ]
                     }
 
 -- | `testScenario3` initialises the committee with an out of order committee
 -- | (by moving the smallest committee member to the end), and updates the committee
 -- | hash when the signatures / new committee are given out of order (in
 -- | reverse order actually); and updates it again
-testScenario3 ∷ PlutipTest
+testScenario3 ∷ TestnetTest
 testScenario3 =
   Mote.Monad.test "Update committee hash with out of order committee"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -395,7 +395,7 @@ testScenario3 =
                               Array.reverse sigs
                   }
               )
-        env <- ask
+        env ← ask
         -- the first update
         liftContract $ updateCommitteeHashWith
           { sidechainParams
@@ -422,10 +422,10 @@ testScenario3 =
           >>= balanceSignAndSubmit "Test: burn NFTs"
 
 -- | `testScenario4` is given in #277
-testScenario4 ∷ PlutipTest
+testScenario4 ∷ TestnetTest
 testScenario4 =
   Mote.Monad.test "Unsorted committee members (issue #277)"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -484,7 +484,7 @@ testScenario4 =
 
         { sidechainParams } ← initSidechain initScParams 1
 
-        env <- ask
+        env ← ask
         liftContract $ updateCommitteeHashWith
           { sidechainParams
           , currentCommitteePrvKeys: initCommitteePrvKeys
@@ -516,11 +516,11 @@ testScenario4 =
 
 -- | `testScenario5` is essentially `testScenario2` but updates the committee
 -- | with exactly the required signatures instead.
-testScenario5 ∷ PlutipTest
+testScenario5 ∷ TestnetTest
 testScenario5 =
   Mote.Monad.test
     "Update committee hash with the exact amount of signatures needed"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -560,7 +560,7 @@ testScenario5 =
           $ sequence
           $ Array.replicate keyCount generatePrivKey
 
-        env <- ask
+        env ← ask
         liftContract
           $ updateCommitteeHashWith
               { sidechainParams: scParams

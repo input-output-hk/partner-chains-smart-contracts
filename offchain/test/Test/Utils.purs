@@ -9,7 +9,7 @@ module Test.Utils
   , interpretConstVoidTest
   , interpretWrappedTest
   , pureGroup
-  , plutipGroup
+  , testnetGroup
   , WithTestRunner(..)
   , WrappedTests
   , assertHasOutputWithAsset
@@ -21,12 +21,11 @@ module Test.Utils
 
 import Contract.Prelude
 
-
-import Cardano.Types.Ed25519KeyHash (Ed25519KeyHash)
 import Cardano.AsCbor (encodeCbor)
 import Cardano.Serialization.Lib as CSL
 import Cardano.Types.Asset (Asset(Asset))
 import Cardano.Types.BigNum as BigNum
+import Cardano.Types.Ed25519KeyHash (Ed25519KeyHash)
 import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash)
 import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
 import Contract.Address (Address)
@@ -63,17 +62,19 @@ import Partial.Unsafe (unsafePartial)
 import Partial.Unsafe as Unsafe
 import Run (Run)
 import Run.Except (EXCEPT, throw)
-import Test.PlutipTest (PlutipConfigTest, interpretPlutipTest)
+import Run.Reader (local)
+import Test.TestnetTest (TestnetConfigTest, interpretTestnetTest)
 import Test.Unit (Test, TestSuite)
 import Test.Unit as Test.Unit
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
+import TrustlessSidechain.Effects.Env (Env, READER)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow)
 import TrustlessSidechain.Effects.Util as Effect
-import TrustlessSidechain.Effects.Env (READER, Env)
-import Run.Reader (local)
-import TrustlessSidechain.Governance(Governance(MultiSig))
-import TrustlessSidechain.Governance.MultiSig (MultiSigGovParams(MultiSigGovParams))
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
+import TrustlessSidechain.Governance (Governance(MultiSig))
+import TrustlessSidechain.Governance.MultiSig
+  ( MultiSigGovParams(MultiSigGovParams)
+  )
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import Type.Row (type (+))
 
@@ -199,7 +200,7 @@ interpretConstVoidTest = go <<< Mote.Monad.plan
 
 -- | Test wrapper, to distinguish between different test interpreters
 data WithTestRunner
-  = WithPlutipRunner (Mote (Const Void) PlutipConfigTest Unit)
+  = WithTestnetRunner (Mote (Const Void) TestnetConfigTest Unit)
   | PureRunner (Mote (Const Void) Test Unit)
 
 -- | A type synonym for wrapped tests
@@ -213,7 +214,7 @@ interpretWrappedTest = go <<< Mote.Monad.plan
     Mote.Plan.foldPlan
       ( \{ label, value } → Test.Unit.suite label $
           case value of
-            WithPlutipRunner testCase → interpretPlutipTest testCase
+            WithTestnetRunner testCase → interpretTestnetTest testCase
             PureRunner testCase → interpretConstVoidTest testCase
 
       )
@@ -222,10 +223,10 @@ interpretWrappedTest = go <<< Mote.Monad.plan
       sequence_
 
 -- | A test group function to conveniently wrap multiple Mote tests using `WithTestRunner`
--- | Tests in this group will be executed by Plutip
-plutipGroup ∷ String → Mote (Const Void) PlutipConfigTest Unit → WrappedTests
-plutipGroup label tests =
-  Mote.Monad.test label $ WithPlutipRunner tests
+-- | Tests in this group will be executed in Cardano Testnet
+testnetGroup ∷ String → Mote (Const Void) TestnetConfigTest Unit → WrappedTests
+testnetGroup label tests =
+  Mote.Monad.test label $ WithTestnetRunner tests
 
 -- | A test group function to conveniently wrap multiple Mote tests using `WithTestRunner`
 -- | Tests in this group will be executed purely
@@ -323,15 +324,14 @@ fromMaybeTestError msg = flip bind $ maybe
   )
   pure
 
-
 withSingleMultiSig ∷
   ∀ r a.
   Ed25519KeyHash →
   Run (READER Env + r) a →
   Run (READER Env + r) a
 withSingleMultiSig wallet = local $ const
-    { governance: Just $ MultiSig $ MultiSigGovParams
-      { governanceMembers: [wallet]
+  { governance: Just $ MultiSig $ MultiSigGovParams
+      { governanceMembers: [ wallet ]
       , requiredSignatures: BigInt.fromInt 1
       }
-    }
+  }

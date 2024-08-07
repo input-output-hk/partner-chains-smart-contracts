@@ -12,20 +12,26 @@ import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Run (AFF, EFFECT, Run)
 import Run.Except (EXCEPT)
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
 import Test.Unit.Assert (assert)
-import Test.Utils (WrappedTests, fails, getOwnTransactionInput, plutipGroup, withSingleMultiSig)
+import Test.Utils
+  ( WrappedTests
+  , fails
+  , getOwnTransactionInput
+  , testnetGroup
+  , withSingleMultiSig
+  )
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
 import TrustlessSidechain.CommitteeCandidateValidator
   ( getCommitteeCandidateValidator
   )
+import TrustlessSidechain.Effects.Env (Env, READER)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
-import TrustlessSidechain.Effects.Env (READER, Env)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.FUELMintingPolicy.V2 as FUELMintingPolicy.V2
 import TrustlessSidechain.Governance.Admin as Governance
@@ -56,7 +62,7 @@ import Type.Row (type (+))
 
 -- | `tests` aggregate all the Versioning tests in one convenient function
 tests ∷ WrappedTests
-tests = plutipGroup "Minting and burning versioning tokens" $ do
+tests = testnetGroup "Minting and burning versioning tokens" $ do
   testInsertAndInvalidateSuccessScenario
   testInsertSameScriptTwiceSuccessScenario
   testInsertUnversionedScriptSuccessScenario
@@ -65,10 +71,10 @@ tests = plutipGroup "Minting and burning versioning tokens" $ do
   testInsertScriptsPresentInPreviousVersion
 
 -- | We insert a new version of a script, and invalidate the old one.
-testInsertAndInvalidateSuccessScenario ∷ PlutipTest
+testInsertAndInvalidateSuccessScenario ∷ TestnetTest
 testInsertAndInvalidateSuccessScenario =
   Mote.Monad.test "Inserting new version, then invalidate the old one"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -170,10 +176,10 @@ testInsertAndInvalidateSuccessScenario =
 
 -- | We insert the same script (same ScriptId and same version) twice. That
 -- should work.
-testInsertSameScriptTwiceSuccessScenario ∷ PlutipTest
+testInsertSameScriptTwiceSuccessScenario ∷ TestnetTest
 testInsertSameScriptTwiceSuccessScenario =
   Mote.Monad.test "Insert same script with the same version twice"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -256,10 +262,10 @@ testInsertSameScriptTwiceSuccessScenario =
         assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
 
 -- | We insert an script that is not part of the initial versioned scripts.
-testInsertUnversionedScriptSuccessScenario ∷ PlutipTest
+testInsertUnversionedScriptSuccessScenario ∷ TestnetTest
 testInsertUnversionedScriptSuccessScenario =
   Mote.Monad.test "Insert an unversioned script"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -319,10 +325,10 @@ testInsertUnversionedScriptSuccessScenario =
 
 -- | After inserting a versioned script, invalidating it twice should fail in the second
 -- | invalidation call.
-testRemovingTwiceSameScriptFailScenario ∷ PlutipTest
+testRemovingTwiceSameScriptFailScenario ∷ TestnetTest
 testRemovingTwiceSameScriptFailScenario =
   Mote.Monad.test "Removing the same script twice should fail"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -387,10 +393,10 @@ testRemovingTwiceSameScriptFailScenario =
 
 -- | Executing a single versioned script invalidation transaction should remove a single versioned
 -- | script, even if multiple scripts with the same ID and version were inserted.
-testRemovingScriptInsertedMultipleTimesSuccessScenario ∷ PlutipTest
+testRemovingScriptInsertedMultipleTimesSuccessScenario ∷ TestnetTest
 testRemovingScriptInsertedMultipleTimesSuccessScenario =
   Mote.Monad.test "Removing the same script twice should fail"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -469,10 +475,10 @@ testRemovingScriptInsertedMultipleTimesSuccessScenario =
 
 -- | `insertVersion` only inserts a script with `version` for elements with
 -- | `ScriptId` present among policies / validators of `version - 1`.
-testInsertScriptsPresentInPreviousVersion ∷ PlutipTest
+testInsertScriptsPresentInPreviousVersion ∷ TestnetTest
 testInsertScriptsPresentInPreviousVersion =
   Mote.Monad.test "Insert new version of a script only if present in version - 1"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -546,7 +552,9 @@ assertNumberOfActualVersionedScripts ∷
   Int →
   -- | Number of expected versionned validator scripts
   Int →
-  Run (EXCEPT OffchainError + TRANSACTION + WALLET + READER Env + AFF + EFFECT + r) Unit
+  Run
+    (EXCEPT OffchainError + TRANSACTION + WALLET + READER Env + AFF + EFFECT + r)
+    Unit
 assertNumberOfActualVersionedScripts
   sidechainParamsWithATMSKind
   version

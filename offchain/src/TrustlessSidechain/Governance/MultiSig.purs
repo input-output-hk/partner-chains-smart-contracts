@@ -1,6 +1,6 @@
 module TrustlessSidechain.Governance.MultiSig
-  ( MultiSigGovParams (MultiSigGovParams)
-  , MultiSigGovRedeemer (..)
+  ( MultiSigGovParams(MultiSigGovParams)
+  , MultiSigGovRedeemer(..)
   , multisigGovPolicy
   , multisigGovCurrencyInfo
   , multisigGovTokenName
@@ -9,6 +9,7 @@ module TrustlessSidechain.Governance.MultiSig
 import Contract.Prelude
 
 import Cardano.Types.Ed25519KeyHash (Ed25519KeyHash)
+import Cardano.Types.PlutusScript (PlutusScript)
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -16,7 +17,6 @@ import Contract.PlutusData
   , fromData
   , toData
   )
-import Cardano.Types.PlutusScript (PlutusScript)
 import Contract.Value (TokenName)
 import JS.BigInt as BigInt
 import Run (Run)
@@ -45,9 +45,9 @@ import Type.Row (type (+))
 -- @since Unreleased
 newtype MultiSigGovParams = MultiSigGovParams
   { -- | Members of the governance
-    governanceMembers :: Array Ed25519KeyHash
-    -- | Minimal required number of signatures
-  , requiredSignatures :: BigInt.BigInt
+    governanceMembers ∷ Array Ed25519KeyHash
+  -- | Minimal required number of signatures
+  , requiredSignatures ∷ BigInt.BigInt
   }
 
 derive instance Generic MultiSigGovParams _
@@ -81,7 +81,6 @@ instance FromData MultiSigGovParams where
 
 instance Show MultiSigGovParams where
   show = genericShow
-
 
 -- | Redemeer for the multi-sig governance policy that tells whether we are
 -- checking for approval from the governance or just burning unused tokens

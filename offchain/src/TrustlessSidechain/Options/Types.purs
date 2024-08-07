@@ -285,7 +285,7 @@ data TxEndpoint
 
   -- | update of a reserve
   | UpdateReserveSettings
-      { mutableReserveSettings ∷ MutableReserveSettings}
+      { mutableReserveSettings ∷ MutableReserveSettings }
 
   -- | deposit to a reserve
   | DepositReserve
@@ -295,8 +295,8 @@ data TxEndpoint
 
   -- | transfer from a reserve to illiquid circulation supply
   | ReleaseReserveFunds
-      { totalAccruedTillNow :: Int
-      , transactionInput :: TransactionInput
+      { totalAccruedTillNow ∷ Int
+      , transactionInput ∷ TransactionInput
       }
 
   -- | handover of a reserve

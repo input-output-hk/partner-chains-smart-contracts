@@ -17,14 +17,14 @@ import Partial.Unsafe (unsafePartial)
 import Run (liftEffect) as Run
 import Run.Except (note) as Run
 import Test.MerkleRoot as Test.MerkleRoot
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
 import Test.Utils
   ( WrappedTests
   , dummySidechainParams
   , fails
   , getOwnTransactionInput
-  , plutipGroup
+  , testnetGroup
   )
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
@@ -66,7 +66,7 @@ import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 -- | `tests` aggregate all the FUELMintingPolicy tests in one convenient
 -- | function
 tests ∷ WrappedTests
-tests = plutipGroup "Minting FUEL tokens using MerkleTree-based minting policy"
+tests = testnetGroup "Minting FUEL tokens using MerkleTree-based minting policy"
   $ do
       testScenarioSuccess
       testScenarioSuccess2
@@ -74,9 +74,9 @@ tests = plutipGroup "Minting FUEL tokens using MerkleTree-based minting policy"
       testScenarioFailure2
 
 -- | `testScenarioSuccess` tests minting some tokens
-testScenarioSuccess ∷ PlutipTest
+testScenarioSuccess ∷ TestnetTest
 testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
-  $ Test.PlutipTest.mkPlutipConfigTest
+  $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 100_000_000
       , BigNum.fromInt 100_000_000
       , BigNum.fromInt 100_000_000
@@ -155,10 +155,10 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
 
 -- | `testScenarioSuccess2` tests minting some tokens with the fast distributed
 -- | set lookup. Note: this is mostly duplicated from `testScenarioSuccess`
-testScenarioSuccess2 ∷ PlutipTest
+testScenarioSuccess2 ∷ TestnetTest
 testScenarioSuccess2 =
   Mote.Monad.test "Claiming FUEL tokens with fast distributed set lookup"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -251,10 +251,10 @@ testScenarioSuccess2 =
             >>=
               balanceSignAndSubmit "Test: mint v1 fuel"
 
-testScenarioFailure ∷ PlutipTest
+testScenarioFailure ∷ TestnetTest
 testScenarioFailure =
   Mote.Monad.test "Attempt to claim with invalid merkle proof (should fail)"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -293,9 +293,9 @@ testScenarioFailure =
 
 -- | `testScenarioFailure2` tries to mint something twice (which should
 -- | fail!)
-testScenarioFailure2 ∷ PlutipTest
+testScenarioFailure2 ∷ TestnetTest
 testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
-  $ Test.PlutipTest.mkPlutipConfigTest
+  $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 50_000_000
       , BigNum.fromInt 50_000_000
       , BigNum.fromInt 50_000_000

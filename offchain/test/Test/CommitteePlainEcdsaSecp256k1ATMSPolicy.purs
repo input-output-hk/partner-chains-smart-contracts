@@ -5,8 +5,8 @@ module Test.CommitteePlainEcdsaSecp256k1ATMSPolicy
 
 import Contract.Prelude
 
-import Cardano.Types.AssetName (mkAssetName)
 import Cardano.Types.Asset (Asset(Asset))
+import Cardano.Types.AssetName (mkAssetName)
 import Cardano.Types.BigNum as BigNum
 import Contract.Log (logInfo')
 import Contract.PlutusData (toData)
@@ -18,9 +18,9 @@ import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Partial.Unsafe as Unsafe
 import Run as Run
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
-import Test.Utils (WrappedTests, plutipGroup)
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
+import Test.Utils (WrappedTests, testnetGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CommitteeATMSSchemes.Types
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
@@ -74,16 +74,16 @@ generateSignatures
 -- | `tests` aggregates all the `CommitteePlainEcdsaSecp256k1ATMSPolicy` tests together in
 -- | one convenient function.
 tests ∷ WrappedTests
-tests = plutipGroup "CommitteePlainEcdsaSecp256k1ATMSPolicy minting" $ do
+tests = testnetGroup "CommitteePlainEcdsaSecp256k1ATMSPolicy minting" $ do
   testScenario1
 
 -- | 'testScenario1' includes various tests for `CommitteePlainEcdsaSecp256k1ATMSPolicy` from
 -- | the same sidechain.
-testScenario1 ∷ PlutipTest
+testScenario1 ∷ TestnetTest
 testScenario1 =
   Mote.Monad.test
     "Various tests for the CommitteePlainEcdsaSecp256k1ATMSPolicy token"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -176,8 +176,9 @@ testScenario1 =
                   }
 
           Test.Utils.assertIHaveOutputWithAsset
-            (Asset committeePlainEcdsaSecp256k1ATMSCurrencySymbol
-              sidechainMessageTokenName)
+            ( Asset committeePlainEcdsaSecp256k1ATMSCurrencySymbol
+                sidechainMessageTokenName
+            )
 
         -- the following test cases are mostly duplicated code with slight
         -- variations for the testing
@@ -227,8 +228,9 @@ testScenario1 =
                   }
 
           Test.Utils.assertIHaveOutputWithAsset
-            (Asset committeePlainEcdsaSecp256k1ATMSCurrencySymbol
-              sidechainMessageTokenName)
+            ( Asset committeePlainEcdsaSecp256k1ATMSCurrencySymbol
+                sidechainMessageTokenName
+            )
 
         liftContract $ logInfo'
           "CommitteePlainEcdsaSecp256k1ATMSPolicy a successful mint from the committee where the public keys / signatures are not sorted"
@@ -271,8 +273,9 @@ testScenario1 =
                   }
 
           Test.Utils.assertIHaveOutputWithAsset
-            (Asset committeePlainEcdsaSecp256k1ATMSCurrencySymbol
-              sidechainMessageTokenName)
+            ( Asset committeePlainEcdsaSecp256k1ATMSCurrencySymbol
+                sidechainMessageTokenName
+            )
 
         liftContract $ logInfo'
           "CommitteePlainEcdsaSecp256k1ATMSPolicy an unsuccessful mint where the committee signs all 3s, but we try to mint all 4s"

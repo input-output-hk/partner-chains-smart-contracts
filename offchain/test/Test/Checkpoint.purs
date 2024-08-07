@@ -22,10 +22,10 @@ import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Run (liftEffect) as Run
 import Run.Except (note) as Run
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
 import Test.UpdateCommitteeHash (updateCommitteeHash)
-import Test.Utils (WrappedTests, plutipGroup)
+import Test.Utils (WrappedTests, testnetGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.CommitteeATMSSchemes
@@ -33,8 +33,8 @@ import TrustlessSidechain.CommitteeATMSSchemes
   , ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
 import TrustlessSidechain.Effects.Contract (liftContract)
-import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Env (ask)
+import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain
@@ -92,7 +92,7 @@ generateCheckpointSignatures
   pure committeeSignatures
 
 tests ∷ WrappedTests
-tests = plutipGroup "Checkpointing" $ do
+tests = testnetGroup "Checkpointing" $ do
   signedByUnknownCommitteeTest
   committeeChangeCheckpointTest
   saveCheckpointTest
@@ -100,11 +100,11 @@ tests = plutipGroup "Checkpointing" $ do
   outOfOrderCheckpointTest
   invalidCheckpointBlockHashTest
 
-saveCheckpointTest ∷ PlutipTest
+saveCheckpointTest ∷ TestnetTest
 saveCheckpointTest =
   Mote.Monad.test
     "Save checkpoint should succeed if enough signatures are provided"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -171,11 +171,11 @@ saveCheckpointTest =
 
         void $ Checkpoint.saveCheckpoint saveCheckpointInput
 
-notEnoughSignaturesTest ∷ PlutipTest
+notEnoughSignaturesTest ∷ TestnetTest
 notEnoughSignaturesTest =
   Mote.Monad.test
     "Save checkpoint should fail if there are not enough signatures"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -251,11 +251,11 @@ notEnoughSignaturesTest =
         withUnliftApp Test.Utils.fails $ void $ Checkpoint.saveCheckpoint
           saveCheckpointInput
 
-outOfOrderCheckpointTest ∷ PlutipTest
+outOfOrderCheckpointTest ∷ TestnetTest
 outOfOrderCheckpointTest =
   Mote.Monad.test
     "Save checkpoint should fail if the checkpoint block number is not strictly increasing"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -324,11 +324,11 @@ outOfOrderCheckpointTest =
         withUnliftApp Test.Utils.fails $ void $ Checkpoint.saveCheckpoint
           saveCheckpointInput
 
-invalidCheckpointBlockHashTest ∷ PlutipTest
+invalidCheckpointBlockHashTest ∷ TestnetTest
 invalidCheckpointBlockHashTest =
   Mote.Monad.test
     "Save checkpoint should fail if the checkpoint block hash is invalid"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -399,11 +399,11 @@ invalidCheckpointBlockHashTest =
 
 -- | Typical scenario -- a checkpoint is provided by a committee
 -- | that doesn't have its committee hash stored on chain
-signedByUnknownCommitteeTest ∷ PlutipTest
+signedByUnknownCommitteeTest ∷ TestnetTest
 signedByUnknownCommitteeTest =
   Mote.Monad.test
     "Save checkpoint should fail if the checkpoint is signed by an unknown committee"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -478,11 +478,11 @@ signedByUnknownCommitteeTest =
 -- | 1. Init sidechain checkpoints the genesis
 -- | 2. UpdateCommitee changes the committee
 -- | 3. SaveCheckpoint is called with the new committee (valid checkpoint)
-committeeChangeCheckpointTest ∷ PlutipTest
+committeeChangeCheckpointTest ∷ TestnetTest
 committeeChangeCheckpointTest =
   Mote.Monad.test
     "Save checkpoint should succeed if the checkpoint is signed by the new committee"
-    $ Test.PlutipTest.mkPlutipConfigTest
+    $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -520,7 +520,7 @@ committeeChangeCheckpointTest =
         newCommitteeKeys ← Run.liftEffect $ sequence $ Array.replicate 5
           generatePrivKey
 
-        env <- ask
+        env ← ask
 
         liftContract $ updateCommitteeHash
           { sidechainParams

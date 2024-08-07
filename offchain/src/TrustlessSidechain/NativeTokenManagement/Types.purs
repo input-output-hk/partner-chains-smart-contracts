@@ -67,7 +67,7 @@ instance FromData ImmutableReserveSettings where
 
 newtype MutableReserveSettings = MutableReserveSettings
   { vFunctionTotalAccrued ∷ ScriptHash
-  , incentiveAmount ∷  BigInt.BigInt
+  , incentiveAmount ∷ BigInt.BigInt
   }
 
 derive newtype instance Eq MutableReserveSettings
@@ -134,12 +134,12 @@ instance FromData ReserveDatum where
 
 data ReserveRedeemer
   = DepositToReserve
-    { governanceVersion :: BigInt.BigInt }
+      { governanceVersion ∷ BigInt.BigInt }
   | TransferToIlliquidCirculationSupply
   | UpdateReserve
-    { governanceVersion :: BigInt.BigInt }
+      { governanceVersion ∷ BigInt.BigInt }
   | Handover
-    { governanceVersion :: BigInt.BigInt }
+      { governanceVersion ∷ BigInt.BigInt }
 
 derive instance Eq ReserveRedeemer
 
@@ -160,16 +160,16 @@ instance ToData ReserveRedeemer where
 
 instance FromData ReserveRedeemer where
   fromData = case _ of
-    Constr tag [arg] | tag == BigNum.fromInt 0 → do
-      governanceVersion <- fromData arg
+    Constr tag [ arg ] | tag == BigNum.fromInt 0 → do
+      governanceVersion ← fromData arg
       pure $ DepositToReserve { governanceVersion }
     Constr tag [] | tag == BigNum.fromInt 1 → pure
       TransferToIlliquidCirculationSupply
-    Constr tag [arg] | tag == BigNum.fromInt 2 → do
-      governanceVersion <- fromData arg
+    Constr tag [ arg ] | tag == BigNum.fromInt 2 → do
+      governanceVersion ← fromData arg
       pure $ UpdateReserve { governanceVersion }
-    Constr tag [arg] | tag == BigNum.fromInt 3 → do
-      governanceVersion <- fromData arg
+    Constr tag [ arg ] | tag == BigNum.fromInt 3 → do
+      governanceVersion ← fromData arg
       pure $ Handover { governanceVersion }
     _ → Nothing
 
@@ -194,7 +194,6 @@ instance FromData ReserveAuthPolicyRedeemer where
   fromData dat = do
     governanceVersion ← fromData dat
     pure $ ReserveAuthPolicyRedeemer { governanceVersion }
-
 
 data IlliquidCirculationSupplyRedeemer
   = DepositMoreToSupply

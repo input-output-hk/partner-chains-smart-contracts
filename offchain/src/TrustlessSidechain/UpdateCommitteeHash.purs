@@ -28,8 +28,8 @@ import Contract.Transaction
   )
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
-  , TxConstraints
   , InputWithScriptRef(RefInput)
+  , TxConstraints
   )
 import Contract.TxConstraints as TxConstraints
 import Data.Map as Map
@@ -79,7 +79,11 @@ import TrustlessSidechain.UpdateCommitteeHash.Utils
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.Types
-  ( ScriptId(CommitteeOraclePolicy, MerkleRootTokenPolicy, CommitteeHashValidator)
+  ( ScriptId
+      ( CommitteeOraclePolicy
+      , MerkleRootTokenPolicy
+      , CommitteeHashValidator
+      )
   , VersionOracle(VersionOracle)
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
@@ -253,7 +257,9 @@ updateCommitteeHashLookupsAndConstraints
           { version: BigNum.fromInt 1, scriptId: MerkleRootTokenPolicy }
       )
 
-  (updateCommitteeHashValidatorRefTxInput /\ updateCommitteeHashValidatorRefTxOutput) ←
+  ( updateCommitteeHashValidatorRefTxInput /\
+      updateCommitteeHashValidatorRefTxOutput
+  ) ←
     Versioning.getVersionedScriptRefUtxo
       sidechainParams
       ( VersionOracle
@@ -293,20 +299,22 @@ updateCommitteeHashLookupsAndConstraints
         <> Lookups.unspentOutputs
           (Map.singleton mrtPolicyRefTxInput mrtPolicyRefTxOutput)
     constraints =
-         TxConstraints.mustSpendScriptOutputUsingScriptRef
-           oref
-           redeemer
-           (RefInput $ TransactionUnspentOutput
-              { input: updateCommitteeHashValidatorRefTxInput
-              , output: updateCommitteeHashValidatorRefTxOutput
-              }
-           )
-      <> TxConstraints.mustPayToScript newValidatorHash newDatum DatumInline value
-      <> case maybePreviousMerkleRoot of
-        Nothing → mempty
-        Just { index: previousMerkleRootORef } → TxConstraints.mustReferenceOutput
-          previousMerkleRootORef
-      <> TxConstraints.mustReferenceOutput mrtPolicyRefTxInput
+      TxConstraints.mustSpendScriptOutputUsingScriptRef
+        oref
+        redeemer
+        ( RefInput $ TransactionUnspentOutput
+            { input: updateCommitteeHashValidatorRefTxInput
+            , output: updateCommitteeHashValidatorRefTxOutput
+            }
+        )
+        <> TxConstraints.mustPayToScript newValidatorHash newDatum DatumInline
+          value
+        <> case maybePreviousMerkleRoot of
+          Nothing → mempty
+          Just { index: previousMerkleRootORef } →
+            TxConstraints.mustReferenceOutput
+              previousMerkleRootORef
+        <> TxConstraints.mustReferenceOutput mrtPolicyRefTxInput
 
   pure
     { lookupsAndConstraints: { lookups, constraints }

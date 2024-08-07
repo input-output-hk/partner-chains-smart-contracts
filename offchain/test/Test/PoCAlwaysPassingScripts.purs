@@ -3,8 +3,8 @@ module Test.AlwaysPassingScripts
   , alwaysPassingPolicy
   ) where
 
-import Contract.PlutusData (toData)
 import Cardano.Types.PlutusScript (PlutusScript)
+import Contract.PlutusData (toData)
 import JS.BigInt (BigInt)
 import Run (Run)
 import Run.Except (EXCEPT)

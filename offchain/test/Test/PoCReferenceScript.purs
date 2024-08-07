@@ -26,9 +26,9 @@ import Contract.Wallet as Wallet
 import Data.Map as Map
 import Mote.Monad as Mote.Monad
 import Run.Except (note) as Run
-import Test.PlutipTest (PlutipTest)
-import Test.PlutipTest as Test.PlutipTest
 import Test.PoCRawScripts as RawScripts
+import Test.TestnetTest (TestnetTest)
+import Test.TestnetTest as Test.TestnetTest
 import Test.Utils as Test.Utils
 import TrustlessSidechain.Effects.Contract (liftContract)
 import TrustlessSidechain.Effects.Log (logInfo') as Effect
@@ -46,7 +46,7 @@ import TrustlessSidechain.Error
   )
 import TrustlessSidechain.Utils.Address (toAddress)
 
-tests ∷ PlutipTest
+tests ∷ TestnetTest
 tests = Mote.Monad.group "PoCReferenceScript tests" do
   testScenario1
   testScenario2
@@ -85,9 +85,9 @@ tests = Mote.Monad.group "PoCReferenceScript tests" do
 -- |       set
 -- |     - Do NOT Include the validator `RawScripts.rawPoCReferenceScript` as this
 -- |       is given from the reference script in Output 1.
-testScenario1 ∷ PlutipTest
+testScenario1 ∷ TestnetTest
 testScenario1 = Mote.Monad.test "PoCReferenceScript: testScenario1"
-  $ Test.PlutipTest.mkPlutipConfigTest
+  $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 10_000_000, BigNum.fromInt 10_000_000 ]
   $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       -- 1.
@@ -185,6 +185,7 @@ testScenario1 = Mote.Monad.test "PoCReferenceScript: testScenario1"
               <> ScriptLookups.unspentOutputs
                 (Map.singleton toReferenceIn toReferenceOut)
               <> ScriptLookups.validator toReferenceValidator
+              <> ScriptLookups.datum referenceValidatorDat
 
         unbalancedTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups
           constraints
@@ -199,9 +200,9 @@ testScenario1 = Mote.Monad.test "PoCReferenceScript: testScenario1"
 
 -- | `testScenario2` is the same as `testScenario1`, but changes 2. to not
 -- | include the script on chain, and hence 3. should fail.
-testScenario2 ∷ PlutipTest
+testScenario2 ∷ TestnetTest
 testScenario2 = Mote.Monad.test "PoCReferenceScript: testScenario2"
-  $ Test.PlutipTest.mkPlutipConfigTest
+  $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 10_000_000, BigNum.fromInt 10_000_000 ]
   $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
       -- START of duplicated code from `testScenario1`
