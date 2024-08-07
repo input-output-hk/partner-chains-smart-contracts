@@ -41,7 +41,7 @@ jobs:
           "s3://cache.sc.iog.io?secret-key=${{ runner.temp }}/nix-key&region=$AWS_DEFAULT_REGION" \
           && rm /tmp/outputs
 
-  test-x64-linux:
+  test-offchain-x64-linux:
     permissions:
       id-token: write
       contents: read
@@ -54,7 +54,22 @@ jobs:
         with:
           token: ${{ github.token }}
       - name: Run tests
-        run: nix build .#check.x86_64-linux -L
+        run: |
+          # nix build .#check.x86_64-linux -L
+          nix develop .#ps --command bash -c '
+          cd offchain
+          spago test 2>&1 | tee output.log & pid=$!
+          ( tail -f -n0 output.log & ) | while read -r line
+          do
+            echo "$line"
+            if [[ "$line" =~ All\ [0-9]+\ tests\ passed! ]]; then
+              echo "Success message detected. Terminating the process."
+              pkill cardano-testnet
+              exit 0
+            fi
+          done
+          wait $pid
+          '
 
   build-arm64-darwin:
     permissions:

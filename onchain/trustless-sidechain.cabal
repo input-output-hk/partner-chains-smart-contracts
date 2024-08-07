@@ -29,7 +29,6 @@ common common-lang
 
   build-depends:      base
   default-extensions:
-    NoStarIsType
     BangPatterns
     BinaryLiterals
     BlockArguments
@@ -48,6 +47,7 @@ common common-lang
     LambdaCase
     MultiParamTypeClasses
     NamedFieldPuns
+    NoStarIsType
     NumericUnderscores
     OverloadedLabels
     OverloadedStrings
