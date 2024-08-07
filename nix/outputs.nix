@@ -1,5 +1,12 @@
-{ repoRoot, inputs, pkgs, lib, system, ... }:
-let onchain = repoRoot.nix.onchain;
+{
+  repoRoot,
+  inputs,
+  pkgs,
+  lib,
+  system,
+  ...
+}: let
+  onchain = repoRoot.nix.onchain;
 in [
   (onchain.flake)
   {
@@ -7,13 +14,12 @@ in [
       default = sidechain-main-cli;
       sidechain-main-cli = {
         type = "app";
-        program =
-          "${inputs.self.packages.sidechain-main-cli}/bin/sidechain-main-cli";
+        program = "${inputs.self.packages.sidechain-main-cli}/bin/sidechain-main-cli";
       };
     };
     devShells = rec {
       default = pkgs.mkShell {
-        inputsFrom = [ ps hs ];
+        inputsFrom = [ps hs];
         nativeBuildInputs = [
           # Shell utils
           pkgs.bashInteractive
@@ -36,11 +42,12 @@ in [
       };
       profiled = onchain.variants.profiled.devShell;
       hs = inputs.self.devShell;
-      ps =
-        let shell = repoRoot.nix.offchain.devShell;
-        in pkgs.mkShell {
-          inputsFrom = [ shell ];
-          packages = [ pkgs.nodejs pkgs.git ];
+      ps = let
+        shell = repoRoot.nix.offchain.devShell;
+      in
+        pkgs.mkShell {
+          inputsFrom = [shell];
+          packages = [pkgs.nodejs pkgs.git];
           shellHook = ''
             PROJ_ROOT=$(git rev-parse --show-toplevel)
             if [ ! -e "$PROJ_ROOT/offchain/src/TrustlessSidechain/CLIVersion.purs" ]; then
@@ -56,9 +63,11 @@ in [
 
     # This is used for nix build .#check.<system> because nix flake check
     # does not work with haskell.nix import-from-derivtion.
-    check = pkgs.runCommand "combined-check"
+    check =
+      pkgs.runCommand "combined-check"
       {
-        nativeBuildInputs = builtins.attrValues inputs.self._checks.${system}
+        nativeBuildInputs =
+          builtins.attrValues inputs.self._checks.${system}
           ++ builtins.attrValues inputs.self.packages.${system}
           ++ inputs.self.devShells.${system}.hs.nativeBuildInputs
           ++ inputs.self.devShells.${system}.ps.nativeBuildInputs
