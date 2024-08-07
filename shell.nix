@@ -1,4 +1,5 @@
-(import
+(
+  import
   (
     let
       lock = builtins.fromJSON (builtins.readFile ./flake.lock);
@@ -8,6 +9,9 @@
         sha256 = lock.nodes.flake-compat.locked.narHash;
       }
   )
-  {src = ./.;})
+  {
+    src = ./.;
+  }
+)
 .shellNix
 .default
