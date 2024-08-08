@@ -22,19 +22,10 @@ in
       default = pkgs.mkShell {
         inputsFrom = [ ps hs ];
         nativeBuildInputs = [
-          # Shell utils
-          pkgs.bashInteractive
-          pkgs.git
-          pkgs.cabal-install
-
-          # Lint / Format
-          pkgs.fd
           pkgs.hlint
-          pkgs.haskellPackages.apply-refact
+          pkgs.nixpkgs-fmt
           pkgs.haskellPackages.cabal-fmt
           pkgs.haskellPackages.fourmolu
-          pkgs.nixpkgs-fmt
-          pkgs.graphviz
         ];
         shellHook = ''
           ${ps.shellHook}
