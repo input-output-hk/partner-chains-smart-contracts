@@ -5,15 +5,15 @@ import Contract.Prelude
 import Cardano.AsCbor (decodeCbor)
 import Cardano.Types.Asset (Asset(..))
 import Cardano.Types.BigNum (BigNum)
-import Cardano.Types.TransactionInput (TransactionInput)
 import Cardano.Types.NetworkId (NetworkId(MainnetId))
+import Cardano.Types.TransactionInput (TransactionInput)
 import Contract.Config
   ( PrivateStakeKeySource(PrivateStakeKeyFile)
   , ServerConfig
   , defaultOgmiosWsConfig
+  , mainnetConfig
   , mkCtlBackendParams
   , testnetConfig
-  , mainnetConfig
   )
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Scripts (ValidatorHash)
@@ -83,6 +83,7 @@ import TrustlessSidechain.Options.Parsers
   , denominator
   , ecdsaSecp256k1PrivateKey
   , governanceAuthority
+  , networkId
   , numerator
   , permissionedCandidateKeys
   , plutusDataParser
@@ -93,7 +94,6 @@ import TrustlessSidechain.Options.Parsers
   , sidechainAddress
   , uint
   , validatorHashParser
-  , networkId
   )
 import TrustlessSidechain.Options.Parsers as Parsers
 import TrustlessSidechain.Options.Types
@@ -422,19 +422,18 @@ withCommonOpts maybeConfig endpointParser = ado
     fromMaybe defaultKupoServerConfig
       (maybeConfig >>= _.runtimeConfig >>= _.kupo)
 
-
-  network <- option networkId $ fold
+  network ← option networkId $ fold
     [ long "network"
     , metavar "NETWORK"
     , help "Network ID of the sidechain"
     , maybe mempty value
-        ( maybeConfig >>= _.runtimeConfig >>= _.network )
+        (maybeConfig >>= _.runtimeConfig >>= _.network)
     ]
 
-
-  let config = case network of
-        MainnetId -> mainnetConfig
-        _         -> testnetConfig
+  let
+    config = case network of
+      MainnetId → mainnetConfig
+      _ → testnetConfig
 
   in
     TxOptions

@@ -159,11 +159,14 @@ findIlliquidCirculationSupplyUtxos ∷
     (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
     UtxoMap
 findIlliquidCirculationSupplyUtxos sidechainParams =
-    Versioning.getVersionedValidatorAddress
+  Versioning.getVersionedValidatorAddress
     sidechainParams
-    (VersionOracle { version: BigNum.fromInt 1
-                   , scriptId: IlliquidCirculationSupplyValidator })
-      >>= utxosAt
+    ( VersionOracle
+        { version: BigNum.fromInt 1
+        , scriptId: IlliquidCirculationSupplyValidator
+        }
+    )
+    >>= utxosAt
 
 mintNonAdaTokens ∷
   ∀ r.

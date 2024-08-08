@@ -20,9 +20,9 @@ import Data.Map as Map
 import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Run.Except (note) as Run
+import Test.PoCRawScripts as RawScripts
 import Test.TestnetTest (TestnetTest)
 import Test.TestnetTest as Test.TestnetTest
-import Test.PoCRawScripts as RawScripts
 import Test.Utils as Test.Utils
 import TrustlessSidechain.Effects.Contract (liftContract)
 import TrustlessSidechain.Effects.Log (logInfo') as Effect

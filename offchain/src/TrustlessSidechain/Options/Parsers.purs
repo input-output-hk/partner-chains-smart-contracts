@@ -49,13 +49,13 @@ import Contract.Prelude
 
 import Cardano.AsCbor (decodeCbor)
 import Cardano.FromData (fromData)
-import Cardano.Types.NetworkId (NetworkId(MainnetId, TestnetId))
 import Cardano.Plutus.Types.Address (fromCardano)
 import Cardano.Plutus.Types.Credential (Credential(ScriptCredential))
 import Cardano.Serialization.Lib (fromBytes, toBytes)
 import Cardano.Types.Address (Address, fromBech32, fromCsl, toCsl)
 import Cardano.Types.AssetName as AssetName
 import Cardano.Types.BigNum (BigNum, fromBigInt)
+import Cardano.Types.NetworkId (NetworkId(MainnetId, TestnetId))
 import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash(PaymentPubKeyHash))
 import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Types.TransactionInput (TransactionInput(TransactionInput))
@@ -267,12 +267,12 @@ governanceAuthority ∷ ReadM Governance.GovernanceAuthority
 governanceAuthority =
   Governance.mkGovernanceAuthority <$> pubKeyHash
 
-networkId :: ReadM NetworkId
+networkId ∷ ReadM NetworkId
 networkId = eitherReader
   ( \str → case str of
-      "mainnet"  → pure MainnetId
-      "testnet" -> pure TestnetId
-      _         -> Left "network-id must be either 'mainnet' or 'testnet'"
+      "mainnet" → pure MainnetId
+      "testnet" → pure TestnetId
+      _ → Left "network-id must be either 'mainnet' or 'testnet'"
   )
 
 -- | Parse only CBOR encoded hexadecimal
