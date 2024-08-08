@@ -1,26 +1,26 @@
-{
-  repoRoot,
-  inputs,
-  pkgs,
-  lib,
-  system,
-  ...
+{ repoRoot
+, inputs
+, pkgs
+, lib
+, system
+, ...
 }: {
   formatCheck =
     pkgs.runCommand "format-check"
-    {
-      nativeBuildInputs =
-        inputs.self.devShells.hs.nativeBuildInputs
-        ++ inputs.self.devShells.ps.nativeBuildInputs
-        ++ inputs.self.devShells.ps.buildInputs
-        ++ inputs.self.devShells.default.nativeBuildInputs;
-    } ''
+      {
+        nativeBuildInputs =
+          inputs.self.devShells.hs.nativeBuildInputs
+          ++ inputs.self.devShells.ps.nativeBuildInputs
+          ++ inputs.self.devShells.ps.buildInputs
+          ++ inputs.self.devShells.default.nativeBuildInputs;
+      } ''
 
       pushd ${inputs.self}
       export LC_CTYPE=C.UTF-8
       export LC_ALL=C.UTF-8
       export LANG=C.UTF-8
       export IN_NIX_SHELL='pure'
+
 
       make nixpkgsfmt_check
       popd
@@ -35,16 +35,17 @@
 
       mkdir $out
     '';
-  upToDatePlutusScriptCheck = let
-    hsProject = repoRoot.nix.onchain.flake;
-  in
+  upToDatePlutusScriptCheck =
+    let
+      hsProject = repoRoot.nix.onchain.flake;
+    in
     pkgs.runCommand "up-to-date-plutus-scripts-check"
-    {
-      nativeBuildInputs =
-        inputs.self.devShells.hs.nativeBuildInputs
-        ++ inputs.self.devShells.ps.nativeBuildInputs
-        ++ inputs.self.devShells.ps.buildInputs;
-    } ''
+      {
+        nativeBuildInputs =
+          inputs.self.devShells.hs.nativeBuildInputs
+          ++ inputs.self.devShells.ps.nativeBuildInputs
+          ++ inputs.self.devShells.ps.buildInputs;
+      } ''
       export LC_CTYPE=C.UTF-8
       export LC_ALL=C.UTF-8
       export LANG=C.UTF-8
@@ -80,9 +81,10 @@
 
       touch $out
     '';
-  trustless-sidechain-ctl = let
-    project = repoRoot.nix.offchain;
-  in
+  trustless-sidechain-ctl =
+    let
+      project = repoRoot.nix.offchain;
+    in
     project.runLocalTestnetTest {
       testMain = "Test.Main";
       builtProject = project.compiled;

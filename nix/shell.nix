@@ -1,14 +1,16 @@
-{
-  repoRoot,
-  inputs,
-  pkgs,
-  lib,
-  system,
-}: cabalProject: let
+{ repoRoot
+, inputs
+, pkgs
+, lib
+, system
+,
+}: cabalProject:
+let
   cardano-cli = inputs.cardano-node.packages.${system}.cardano-cli;
   cardano-node = inputs.cardano-node.packages.${system}.cardano-node;
   cardano-testnet = inputs.cardano-node.packages.${system}.cardano-testnet;
-in {
+in
+{
   name = "trustless-sidechain";
   welcomeMessage = "Welcome to the Trustless Sidechain shell";
   packages = [
@@ -25,6 +27,7 @@ in {
     CARDANO_CLI = "${cardano-cli}/bin/cardano-cli";
     CARDANO_NODE = "${cardano-node}/bin/cardano-node";
   };
+
 
   preCommit = {
     fourmolu.enable = false;

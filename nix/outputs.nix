@@ -1,13 +1,14 @@
-{
-  repoRoot,
-  inputs,
-  pkgs,
-  lib,
-  system,
-  ...
-}: let
+{ repoRoot
+, inputs
+, pkgs
+, lib
+, system
+, ...
+}:
+let
   onchain = repoRoot.nix.onchain;
-in [
+in
+[
   (onchain.flake)
   {
     apps = rec {
@@ -19,7 +20,7 @@ in [
     };
     devShells = rec {
       default = pkgs.mkShell {
-        inputsFrom = [ps hs];
+        inputsFrom = [ ps hs ];
         nativeBuildInputs = [
           # Shell utils
           pkgs.bashInteractive
@@ -41,12 +42,14 @@ in [
       };
       profiled = onchain.variants.profiled.devShell;
       hs = inputs.self.devShell;
-      ps = let
-        shell = repoRoot.nix.offchain.devShell;
-      in
+      ps =
+        let
+          shell = repoRoot.nix.offchain.devShell;
+        in
+
         pkgs.mkShell {
-          inputsFrom = [shell];
-          packages = [pkgs.nodejs pkgs.git];
+          inputsFrom = [ shell ];
+          packages = [ pkgs.nodejs pkgs.git ];
           shellHook = ''
             PROJ_ROOT=$(git rev-parse --show-toplevel)
             if [ ! -e "$PROJ_ROOT/offchain/src/TrustlessSidechain/CLIVersion.purs" ]; then
@@ -64,13 +67,13 @@ in [
     # does not work with haskell.nix import-from-derivtion.
     check =
       pkgs.runCommand "combined-check"
-      {
-        nativeBuildInputs =
-          builtins.attrValues inputs.self._checks.${system}
-          ++ builtins.attrValues inputs.self.packages.${system}
-          ++ inputs.self.devShells.${system}.hs.nativeBuildInputs
-          ++ inputs.self.devShells.${system}.ps.nativeBuildInputs
-          ++ inputs.self.devShells.${system}.ps.buildInputs;
-      } "touch $out";
+        {
+          nativeBuildInputs =
+            builtins.attrValues inputs.self._checks.${system}
+            ++ builtins.attrValues inputs.self.packages.${system}
+            ++ inputs.self.devShells.${system}.hs.nativeBuildInputs
+            ++ inputs.self.devShells.${system}.ps.nativeBuildInputs
+            ++ inputs.self.devShells.${system}.ps.buildInputs;
+        } "touch $out";
   }
 ]
