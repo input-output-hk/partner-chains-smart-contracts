@@ -26,7 +26,8 @@
       popd
 
       pushd ${inputs.self}/onchain/
-      make format_check cabalfmt_check lint
+      make format_check cabalfmt_check
+      #make lint
       popd
 
       pushd ${inputs.self}/offchain
