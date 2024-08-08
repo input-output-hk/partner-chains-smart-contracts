@@ -22,10 +22,14 @@ in
       default = pkgs.mkShell {
         inputsFrom = [ ps hs ];
         nativeBuildInputs = [
+          # These packages are all required for running checks present
+          # in the makefiles
           pkgs.hlint
           pkgs.nixpkgs-fmt
           pkgs.haskellPackages.cabal-fmt
           pkgs.haskellPackages.fourmolu
+          pkgs.nodePackages.purs-tidy
+          pkgs.nodePackages.eslint
         ];
         shellHook = ''
           ${ps.shellHook}
