@@ -32,5 +32,7 @@ in {
     cabal-fmt.enable = false;
     optipng.enable = false;
     nixpkgs-fmt.enable = false;
+    purs-tidy.enable = true;
+
   };
 }
