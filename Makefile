@@ -97,12 +97,12 @@ format-nix-staged: requires_nix_shell
 	@git diff -z --name-only --diff-filter=d --cached HEAD\
 		| grep -Ez '^.*\.nix$$'\
 		| while IFS= read -r -d '' FILE; do test -f $$FILE && printf "$$FILE\0"; done\
-		| xargs -0 -r alejandra
+		| xargs -0 -r nixpkgs-fmt
 
 check-format-nix-staged: requires_nix_shell
 	@git diff -z --name-only --diff-filter=d --cached HEAD\
 		| grep -Ez '^.*\.nix$$'\
-		| xargs -0 -r alejandra --check
+		| xargs -0 -r nixpkgs-fmt --check
 
 FOURMOLU_EXTENSIONS := \
 	-o -XBangPatterns \
@@ -174,10 +174,10 @@ check-format-dhall-staged: requires_nix_shell
 		| xargs -0 -r dhall lint --check
 
 nixpkgsfmt: requires_nix_shell
-	alejandra $(NIX_SOURCES)
+	nixpkgs-fmt $(NIX_SOURCES)
 
 nixpkgsfmt_check: requires_nix_shell
-	alejandra --check $(NIX_SOURCES)
+	nixpkgs-fmt --check $(NIX_SOURCES)
 
 lock: requires_nix_shell
 	nix flake lock

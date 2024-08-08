@@ -29,11 +29,10 @@ in [
           # Lint / Format
           pkgs.fd
           pkgs.hlint
-          #pkgs.haskellPackages.apply-refact
-          #pkgs.haskellPackages.cabal-fmt
-          #pkgs.haskellPackages.fourmolu
-          #nixpkgs-fmt
-          pkgs.alejandra
+          pkgs.haskellPackages.apply-refact
+          pkgs.haskellPackages.cabal-fmt
+          pkgs.haskellPackages.fourmolu
+          pkgs.nixpkgs-fmt
           pkgs.graphviz
         ];
         shellHook = ''

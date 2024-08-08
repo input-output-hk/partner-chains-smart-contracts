@@ -89,7 +89,7 @@ esbuild-bundle: build create-bundle-entrypoint
 
 spago2nix:
 	@spago2nix generate
-	@alejandra spago-packages.nix
+	@nixpkgs-fmt spago-packages.nix
 
 check-format:
 	@purs-tidy check ${ps-sources}
