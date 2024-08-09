@@ -50,15 +50,4 @@ rec {
       mkdir -p $out
       zip -r $out/release.zip  ./node_modules ./sidechain-cli
     '';
-
-  sidechain-main-cli-image = inputs.n2c.packages.nix2container.buildImage {
-    name = "sidechain-main-cli-docker";
-    tag = "${inputs.self.shortRev or inputs.self.dirtyShortRev}";
-    config = { Cmd = [ "sidechain-main-cli" ]; };
-    copyToRoot = pkgs.buildEnv {
-      name = "root";
-      paths = [ pkgs.bashInteractive pkgs.coreutils sidechain-main-cli ];
-      pathsToLink = [ "/bin" ];
-    };
-  };
 }
