@@ -71,7 +71,13 @@ jobs:
         run: echo "${{ secrets.NIX_SIGNING_KEY }}" > "${{ runner.temp }}/nix-key"
 
       - name: Run nixci to build all outputs
-        run: nix run github:srid/nixci -- -v build > /tmp/outputs
+        run: |
+          nix develop .#ps --command bash -c '
+          pushd offchain
+          npm install @esbuild/darwin-arm64
+          popd
+          nix run github:srid/nixci -- -v build > /tmp/outputs
+          '
 
       - name: Acquire AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -99,4 +105,10 @@ jobs:
         with:
           token: ${{ github.token }}
       - name: Run tests
-        run: nix build .#check.aarch64-darwin -L
+        run: |
+          nix develop .#ps --command bash -c '
+          pushd offchain
+          npm install @esbuild/darwin-arm64
+          popd
+          nix build .#check.aarch64-darwin -L
+          '
