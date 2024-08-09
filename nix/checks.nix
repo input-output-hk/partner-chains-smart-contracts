@@ -5,37 +5,6 @@
 , system
 , ...
 }: {
-  formatCheck =
-    pkgs.runCommand "format-check"
-      {
-        nativeBuildInputs =
-          inputs.self.devShells.hs.nativeBuildInputs
-          ++ inputs.self.devShells.ps.nativeBuildInputs
-          ++ inputs.self.devShells.ps.buildInputs
-          ++ inputs.self.devShells.default.nativeBuildInputs;
-      } ''
-
-      pushd ${inputs.self}
-      export LC_CTYPE=C.UTF-8
-      export LC_ALL=C.UTF-8
-      export LANG=C.UTF-8
-      export IN_NIX_SHELL='pure'
-
-
-      make nixpkgsfmt_check
-      popd
-
-      pushd ${inputs.self}/onchain/
-      make format_check cabalfmt_check
-      #make lint
-      popd
-
-      pushd ${inputs.self}/offchain
-      make check-format
-      popd
-
-      mkdir $out
-    '';
   upToDatePlutusScriptCheck =
     let
       hsProject = repoRoot.nix.onchain.flake;
