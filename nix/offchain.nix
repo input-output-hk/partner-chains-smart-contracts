@@ -18,7 +18,7 @@ let
     packageJson = ../offchain/package.json;
     packageLock = ../offchain/package-lock.json;
     spagoPackages = ../offchain/spago-packages.nix;
-    withRuntime = true;
+    withRuntime = false;
     shell.packages = with pkgs; [
       # Shell Utils
       bashInteractive

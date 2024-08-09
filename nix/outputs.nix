@@ -38,12 +38,12 @@ in
       profiled = onchain.variants.profiled.devShell;
       hs = inputs.self.devShell;
       ps =
-        let
-          shell = repoRoot.nix.offchain.devShell;
-        in
+        # let
+        #   shell = repoRoot.nix.offchain.devShell;
+        # in
 
         pkgs.mkShell {
-          inputsFrom = [ shell ];
+          #inputsFrom = [ shell ];
           packages = [ pkgs.nodejs pkgs.git ];
           shellHook = ''
             PROJ_ROOT=$(git rev-parse --show-toplevel)
@@ -56,6 +56,16 @@ in
         };
     };
     packages = repoRoot.nix.packages;
+    _packages =
+      let
+        flake-compat = import inputs.flake-compat;
+        cardanoPackages = (flake-compat { src = inputs.cardano-node; }).defaultNix.packages.${system};
+      in
+      {
+        cardano-node = cardanoPackages.cardano-node;
+        cardano-cli = cardanoPackages.cardano-cli;
+        cardano-testnet = cardanoPackages.cardano-testnet;
+      };
     _checks = repoRoot.nix.checks;
 
     # This is used for nix build .#check.<system> because nix flake check
