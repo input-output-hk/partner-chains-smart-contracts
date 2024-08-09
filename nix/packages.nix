@@ -21,6 +21,7 @@ rec {
     main = "Main";
     builtProject = project.compiled;
     browserRuntime = false;
+    nodeModules = project.mkNodeModules { withDevDeps = false; };
   };
 
   sidechain-release-bundle =
