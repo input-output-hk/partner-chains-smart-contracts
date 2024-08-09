@@ -2,7 +2,7 @@ module Test.Config (config) where
 
 import Contract.Prelude
 
-import Ctl.Internal.Testnet.Types (Era(Babbage), TestnetConfig)
+import Contract.Test.Testnet (Era(Babbage), TestnetConfig)
 import Data.Time.Duration (Seconds(Seconds))
 import Data.UInt as UInt
 
