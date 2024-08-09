@@ -66,9 +66,6 @@ import Type.Row (type (+))
 newtype UnbalancedTx = UnbalancedTx
   { transaction ∷ Transaction -- the unbalanced tx created
   , usedUtxos ∷ Map TransactionInput TransactionOutput
-  , datums ∷
-      Array PlutusData -- the array of ordered datums that require attaching
-  , redeemers ∷ Array UnindexedRedeemer
   }
 
 derive instance Generic UnbalancedTx _
@@ -242,6 +239,4 @@ handleTransactionLive =
   toUnbalancedTx (tx /\ utxoMap) = UnbalancedTx
     { transaction: tx
     , usedUtxos: utxoMap
-    , datums: []
-    , redeemers: []
     }
