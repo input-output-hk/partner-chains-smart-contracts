@@ -2,6 +2,11 @@
   description = "trustless-sidechain";
 
   inputs = {
+
+    iohk-nix = {
+      url = "github:input-output-hk/iohk-nix";
+    };
+
     iogx = {
       url = "github:input-output-hk/iogx";
       inputs.haskell-nix.follows = "haskell-nix";
@@ -9,10 +14,12 @@
       inputs.CHaP.follows = "CHaP";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
     n2c = {
       url = "github:nlewo/nix2container";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
     blank.url = "github:input-output-hk/empty-flake";
     cardano-nix = {
       url = "github:tgunnoe/cardano.nix/add-darwin";
@@ -22,11 +29,6 @@
       inputs.blockfrost.follows = "blank";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    cardano-transaction-lib = {
-      url = "github:Plutonomicon/cardano-transaction-lib/bcbfb9b8e81d432a8914f8c25b6bbc995a4f670d";
-      inputs.cardano-nix.follows = "cardano-nix";
-    };
-    iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
 
     nixpkgs.follows = "haskell-nix/nixpkgs";
 
@@ -45,10 +47,8 @@
       inputs.hackage.follows = "hackage";
     };
 
-    # Used to provide the cardano-node and cardano-cli executables.
-    cardano-node.follows = "cardano-transaction-lib/cardano-node";
+    cardano-node.url = "github:input-output-hk/cardano-node/9.1.0";
 
-    mithril.url = "github:input-output-hk/mithril";
   };
   outputs = inputs:
     inputs.iogx.lib.mkFlake {
@@ -60,9 +60,6 @@
         overlays = [
           inputs.iohk-nix.overlays.crypto
           inputs.haskell-nix.overlay
-          inputs.cardano-transaction-lib.overlays.runtime
-          inputs.cardano-transaction-lib.overlays.purescript
-          inputs.cardano-transaction-lib.overlays.spago
         ];
       };
     };

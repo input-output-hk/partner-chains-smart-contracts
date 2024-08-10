@@ -20,7 +20,7 @@ in
     };
     devShells = rec {
       default = pkgs.mkShell {
-        inputsFrom = [ ps hs ];
+        inputsFrom = [ hs ];
         nativeBuildInputs = [
           # These packages are all required for running checks present
           # in the makefiles
@@ -39,11 +39,11 @@ in
       hs = inputs.self.devShell;
       ps =
         let
-          shell = repoRoot.nix.offchain.devShell;
+          #          shell = repoRoot.nix.offchain.devShell;
         in
 
         pkgs.mkShell {
-          inputsFrom = [ shell ];
+          inputsFrom = [ ];
           packages = [ pkgs.nodejs pkgs.git ];
           shellHook = ''
             PROJ_ROOT=$(git rev-parse --show-toplevel)
