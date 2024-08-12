@@ -13,9 +13,18 @@
       url = "github:nlewo/nix2container";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
+    blank.url = "github:input-output-hk/empty-flake";
+    cardano-nix = {
+      url = "github:tgunnoe/cardano.nix/add-darwin";
+      inputs."cardano-node-8.7.3".follows = "blank";
+      inputs."cardano-node-8.1.1".follows = "blank";
+      inputs.cardano-db-sync.follows = "blank";
+      inputs.blockfrost.follows = "blank";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     cardano-transaction-lib = {
       url = "github:Plutonomicon/cardano-transaction-lib/bcbfb9b8e81d432a8914f8c25b6bbc995a4f670d";
+      inputs.cardano-nix.follows = "cardano-nix";
     };
     iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
 
@@ -62,11 +71,13 @@
       "https://cache.iog.io"
       "https://public-plutonomicon.cachix.org"
       "https://cache.sc.iog.io"
+      "https://cache.zw3rk.com"
     ];
     extra-trusted-public-keys = [
       "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
       "public-plutonomicon.cachix.org-1:3AKJMhCLn32gri1drGuaZmFrmnue+KkKrhhubQk/CWc="
       "cache.sc.iog.io:b4YIcBabCEVKrLQgGW8Fylz4W8IvvfzRc+hy0idqrWU="
+      "loony-tools:pr9m4BkM/5/eSTZlkQyRt57Jz7OMBxNSUiMC4FkcNfk="
     ];
     allow-import-from-derivation = true;
     accept-flake-config = true;

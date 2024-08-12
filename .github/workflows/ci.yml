@@ -26,7 +26,7 @@ jobs:
         run: echo "${{ secrets.NIX_SIGNING_KEY }}" > "${{ runner.temp }}/nix-key"
 
       - name: Run nixci to build all outputs
-        run: nix run github:srid/nixci -- -v build > /tmp/outputs
+        run: nix run github:srid/nixci -- -v build > ${{ runner.temp }}/outputs
 
       - name: Acquire AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -36,10 +36,10 @@ jobs:
 
       - name: Copy nix scopes to nix cache
         run: |
-          nix-store --stdin -q --deriver < /tmp/outputs | nix-store --stdin -qR --include-outputs \
+          nix-store --stdin -q --deriver < ${{ runner.temp }}/outputs | nix-store --stdin -qR --include-outputs \
           | nix copy --stdin --to \
           "s3://cache.sc.iog.io?secret-key=${{ runner.temp }}/nix-key&region=$AWS_DEFAULT_REGION" \
-          && rm /tmp/outputs
+          && rm ${{ runner.temp }}/outputs
 
   test-x64-linux:
     permissions:
@@ -70,8 +70,13 @@ jobs:
       - name: Add signing key for nix
         run: echo "${{ secrets.NIX_SIGNING_KEY }}" > "${{ runner.temp }}/nix-key"
 
+      - name: Patch manifest for arm64-macos
+        run: |
+          git apply .github/workflows/esbuild-arm64.patch
+
       - name: Run nixci to build all outputs
-        run: nix run github:srid/nixci -- -v build > /tmp/outputs
+        run: |
+          nix run github:srid/nixci -- -v build > ${{ runner.temp }}/outputs
 
       - name: Acquire AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -81,10 +86,10 @@ jobs:
 
       - name: Copy nix scopes to nix cache
         run: |
-          nix-store --stdin -q --deriver < /tmp/outputs | nix-store --stdin -qR --include-outputs \
+          nix-store --stdin -q --deriver < ${{ runner.temp }}/outputs | nix-store --stdin -qR --include-outputs \
           | nix copy --stdin --to \
           "s3://cache.sc.iog.io?secret-key=${{ runner.temp }}/nix-key&region=$AWS_DEFAULT_REGION" \
-          && rm /tmp/outputs
+          && rm ${{ runner.temp }}/outputs
 
   test-arm64-darwin:
     permissions:
@@ -98,5 +103,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ github.token }}
+      - name: Patch manifest for arm64-macos
+        run: |
+          git apply .github/workflows/esbuild-arm64.patch
       - name: Run tests
-        run: nix build .#check.aarch64-darwin -L
+        run: |
+          nix build .#check.aarch64-darwin -L
