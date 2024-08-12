@@ -63,9 +63,9 @@
       buildInputs = [
         ogmios
         kupo
-        inputs.cardano-node.packages.cardano-testnet
-        inputs.cardano-node.packages.cardano-node
-        inputs.cardano-node.packages.cardano-cli
+        inputs.self._packages.cardano-testnet
+        inputs.self._packages.cardano-node
+        inputs.self._packages.cardano-cli
         #pkgs.psmisc # breaks tests on macos
       ];
     };

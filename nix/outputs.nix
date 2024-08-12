@@ -38,12 +38,7 @@ in
       profiled = onchain.variants.profiled.devShell;
       hs = inputs.self.devShell;
       ps =
-        let
-          shell = repoRoot.nix.offchain.devShell;
-        in
-
         pkgs.mkShell {
-          inputsFrom = [ shell ];
           packages = [ pkgs.nodejs pkgs.git ];
           shellHook = ''
             PROJ_ROOT=$(git rev-parse --show-toplevel)
@@ -56,19 +51,25 @@ in
         };
     };
     packages = repoRoot.nix.packages;
-    _packages = {
-      # This package doesn't work in the check output for some esoteric reason
-      sidechain-main-cli-image = inputs.n2c.packages.nix2container.buildImage {
-        name = "sidechain-main-cli-docker";
-        tag = "${inputs.self.shortRev or inputs.self.dirtyShortRev}";
-        config = { Cmd = [ "sidechain-main-cli" ]; };
-        copyToRoot = pkgs.buildEnv {
-          name = "root";
-          paths = [ pkgs.bashInteractive pkgs.coreutils inputs.self.packages.sidechain-main-cli ];
-          pathsToLink = [ "/bin" ];
+    _packages =
+      let
+        flake-compat = import inputs.flake-compat;
+        cardanoPackages = (flake-compat { src = inputs.cardano-node; }).defaultNix.packages.${system};
+      in
+      {
+        inherit (cardanoPackages) cardano-node cardano-cli cardano-testnet;
+        # This package doesn't work in the check output for some esoteric reason
+        sidechain-main-cli-image = inputs.n2c.packages.nix2container.buildImage {
+          name = "sidechain-main-cli-docker";
+          tag = "${inputs.self.shortRev or inputs.self.dirtyShortRev}";
+          config = { Cmd = [ "sidechain-main-cli" ]; };
+          copyToRoot = pkgs.buildEnv {
+            name = "root";
+            paths = [ pkgs.bashInteractive pkgs.coreutils inputs.self.packages.sidechain-main-cli ];
+            pathsToLink = [ "/bin" ];
+          };
         };
       };
-    };
     _checks = repoRoot.nix.checks;
 
     # This is used for nix build .#check.<system> because nix flake check

@@ -8,12 +8,22 @@
       inputs.hackage.follows = "hackage";
       inputs.CHaP.follows = "CHaP";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.iohk-nix.follows = "iohk-nix";
+      inputs.nix2container.follows = "n2c";
+      inputs.easy-purescript-nix.follows = "cardano-transaction-lib/easy-purescript-nix";
+      inputs.nixpkgs-stable.follows = "nixpkgs";
+      inputs.pre-commit-hooks-nix.follows = "cardano-nix/pre-commit-hooks-nix";
     };
     n2c = {
       url = "github:nlewo/nix2container";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     blank.url = "github:input-output-hk/empty-flake";
+
+    flake-compat = {
+      url = "github:input-output-hk/flake-compat/fixes";
+      flake = false;
+    };
     cardano-nix = {
       url = "github:tgunnoe/cardano.nix/add-darwin";
       inputs."cardano-node-8.7.3".follows = "blank";
@@ -24,7 +34,16 @@
     };
     cardano-transaction-lib = {
       url = "github:Plutonomicon/cardano-transaction-lib/3c134eabb573c5b7b9eed3a064be194c8273d1c3";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixpkgs-arion.follows = "blank";
+      inputs.cardano-node.follows = "blank";
+      inputs.db-sync.follows = "blank";
       inputs.cardano-nix.follows = "cardano-nix";
+      inputs.haskell-nix.follows = "haskell-nix";
+      inputs.hackage-nix.follows = "hackage";
+      inputs.hercules-ci-effects.follows = "blank";
+      inputs.blockfrost.follows = "blank";
+      inputs.CHaP.follows = "CHaP";
     };
     iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
 
@@ -43,12 +62,19 @@
     haskell-nix = {
       url = "github:input-output-hk/haskell.nix";
       inputs.hackage.follows = "hackage";
+      inputs.hydra.follows = "blank";
     };
 
     # Used to provide the cardano-node and cardano-cli executables.
-    cardano-node.follows = "cardano-transaction-lib/cardano-node";
+    cardano-node = {
+      url = "github:input-output-hk/cardano-node/9.1.0";
+      flake = false;
+    };
 
-    mithril.url = "github:input-output-hk/mithril";
+    mithril = {
+      url = "github:input-output-hk/mithril";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
   outputs = inputs:
     inputs.iogx.lib.mkFlake {
@@ -60,7 +86,6 @@
         overlays = [
           inputs.iohk-nix.overlays.crypto
           inputs.haskell-nix.overlay
-          inputs.cardano-transaction-lib.overlays.runtime
           inputs.cardano-transaction-lib.overlays.purescript
           inputs.cardano-transaction-lib.overlays.spago
         ];

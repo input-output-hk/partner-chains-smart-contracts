@@ -6,9 +6,9 @@
 ,
 }: cabalProject:
 let
-  cardano-cli = inputs.cardano-node.packages.${system}.cardano-cli;
-  cardano-node = inputs.cardano-node.packages.${system}.cardano-node;
-  cardano-testnet = inputs.cardano-node.packages.${system}.cardano-testnet;
+  cardano-cli = inputs.self._packages.cardano-cli;
+  cardano-node = inputs.self._packages.cardano-node;
+  cardano-testnet = inputs.self._packages.cardano-testnet;
 in
 {
   name = "trustless-sidechain";
