@@ -9,6 +9,7 @@ let
   cardano-cli = inputs.cardano-node.packages.${system}.cardano-cli;
   cardano-node = inputs.cardano-node.packages.${system}.cardano-node;
   cardano-testnet = inputs.cardano-node.packages.${system}.cardano-testnet;
+  kupo = inputs.cardano-nix.packages.${system}."kupo-2.9.0";
 in
 {
   name = "trustless-sidechain";
@@ -17,6 +18,7 @@ in
     cardano-cli
     cardano-node
     cardano-testnet
+    kupo
     pkgs.ghcid
     pkgs.curl
     pkgs.nixci

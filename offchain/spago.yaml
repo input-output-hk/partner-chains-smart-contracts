@@ -571,3 +571,4 @@ workspace:
       ref: v1.0.0
   package_set:
     url: https://raw.githubusercontent.com/purescript/package-sets/psc-0.15.4-20230105/packages.json
+    hash: sha256:1j6wibc2sixxbsxfzh51v733slddx9hh4m7f4r51mfr8rb5hlp7r

@@ -39,11 +39,13 @@ in
       hs = inputs.self.devShell;
       ps =
         let
-          #          shell = repoRoot.nix.offchain.devShell;
+          shell = (pkgs.purifix {
+            src = ../offchain;
+          }).develop;
         in
 
         pkgs.mkShell {
-          inputsFrom = [ ];
+          inputsFrom = [ shell ];
           packages = [ pkgs.nodejs pkgs.git ];
           shellHook = ''
             PROJ_ROOT=$(git rev-parse --show-toplevel)
