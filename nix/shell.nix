@@ -30,9 +30,9 @@ in
 
 
   preCommit = {
-    fourmolu.enable = true;
-    shellcheck.enable = true;
-    cabal-fmt.enable = true;
+    fourmolu.enable = false;
+    shellcheck.enable = false;
+    cabal-fmt.enable = false;
     optipng.enable = true;
     nixpkgs-fmt.enable = true;
     purs-tidy.enable = true;

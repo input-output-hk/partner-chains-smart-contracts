@@ -27,7 +27,7 @@ import PlutusLedgerApi.V2 (
   ScriptHash,
   TxInInfo (txInInfoResolved),
   TxInfo (txInfoInputs),
-  TxOut (txOutReferenceScript),
+  TxOut (txOutReferenceScript)
  )
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
@@ -58,9 +58,9 @@ serialisablePoCToReferenceScriptValidator = serialiseCompiledCode $$(PlutusTx.co
 -- given 'Address''s witness datum is the redeemer.
 mkPoCReferenceScriptValidator :: () -> ScriptHash -> ScriptContext -> Bool
 mkPoCReferenceScriptValidator _dat red ctx =
-  traceIfFalse "error 'mkPoCReferenceScriptValidator': no tx with given reference script's script hash"
-    $ any (\txin -> txOutReferenceScript (txInInfoResolved txin) == Just red)
-    $ txInfoInputs info
+  traceIfFalse "error 'mkPoCReferenceScriptValidator': no tx with given reference script's script hash" $
+    any (\txin -> txOutReferenceScript (txInInfoResolved txin) == Just red) $
+      txInfoInputs info
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx

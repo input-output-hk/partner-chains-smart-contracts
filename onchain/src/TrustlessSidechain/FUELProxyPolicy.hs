@@ -42,8 +42,8 @@ data FuelProxyRedeemer
   = FuelProxyMint {version :: Integer}
   | FuelProxyBurn
       { version :: Integer
+      -- | Recipient's sidechain address
       , recipient :: BuiltinByteString
-      -- ^ Recipient's sidechain address
       }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
@@ -129,8 +129,8 @@ mkFuelProxyPolicyUntyped ::
   BuiltinData ->
   ()
 mkFuelProxyPolicyUntyped params versioningConfig =
-  mkUntypedMintingPolicy
-    $ mkFuelProxyPolicy
+  mkUntypedMintingPolicy $
+    mkFuelProxyPolicy
       (unsafeFromBuiltinData params)
       (unsafeFromBuiltinData versioningConfig)
 

@@ -62,8 +62,8 @@ toDataSafeLaws' gen shr pprint = forAllShrinkShow gen shr pprint $ \x ->
   go (PTPrelude.fromBuiltinData . PTPrelude.toBuiltinData $ x) x
   where
     go :: Maybe a -> a -> Property
-    go xs y = counterexample ("Original data: " <> pprint y)
-      $ case xs of
+    go xs y = counterexample ("Original data: " <> pprint y) $
+      case xs of
         Nothing -> counterexample "Could not decode." . property $ False
         Just x1 ->
           if x1 == y
@@ -89,8 +89,8 @@ toDataUnsafeLaws' gen shr pprint = forAllShrinkShow gen shr pprint $ \x ->
   where
     go :: a -> a -> Property
     go x1 x2 =
-      counterexample ("Original data: " <> pprint x2)
-        $ if x1 == x2
+      counterexample ("Original data: " <> pprint x2) $
+        if x1 == x2
           then property True
           else
             counterexample ("Decoded data did not match: " <> pprint x1)

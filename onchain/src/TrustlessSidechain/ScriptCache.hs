@@ -37,8 +37,8 @@ mkScriptCacheUntyped ::
   BuiltinData ->
   ()
 mkScriptCacheUntyped pkh =
-  mkUntypedValidator
-    $ mkScriptCache
+  mkUntypedValidator $
+    mkScriptCache
       (PlutusTx.unsafeFromBuiltinData pkh)
 
 serialisableScriptCache :: SerialisedScript

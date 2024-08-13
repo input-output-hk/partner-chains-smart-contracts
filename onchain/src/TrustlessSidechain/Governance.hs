@@ -14,12 +14,11 @@ import TrustlessSidechain.Versioning
 -- transaction must mint at least one token of the governance minting policy to
 -- signify transaction approval.
 {-# INLINEABLE approvedByGovernance #-}
-approvedByGovernance ::
-  VersionOracleConfig ->
-  -- | Governance version
-  Integer ->
-  Unsafe.ScriptContext ->
-  Bool
+approvedByGovernance
+  :: VersionOracleConfig
+  -> Integer -- ^ Governance version
+  -> Unsafe.ScriptContext
+  -> Bool
 approvedByGovernance voc version ctx =
   case ofGovernanceCs of
     Just [(_, amount)] | amount > 0 -> True -- must mint at least one token, any name

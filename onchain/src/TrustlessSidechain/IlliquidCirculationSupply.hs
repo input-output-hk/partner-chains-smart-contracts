@@ -15,8 +15,8 @@ import PlutusLedgerApi.V1.Value (
 import PlutusLedgerApi.V2 (
   Address,
   SerialisedScript,
-  getDatum,
   serialiseCompiledCode,
+  getDatum,
  )
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
@@ -83,18 +83,19 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
 
     supplyInputUtxo :: Unsafe.TxOut
     supplyInputUtxo =
-      Utils.fromSingleton "ERROR-ILLIQUID-CIRCULATION-SUPPLY-05"
-        $ getInputsAt info supplyAddress
+      Utils.fromSingleton "ERROR-ILLIQUID-CIRCULATION-SUPPLY-05" $
+        getInputsAt info supplyAddress
 
     supplyOutputUtxo :: Unsafe.TxOut
     supplyOutputUtxo =
-      Utils.fromSingleton "ERROR-ILLIQUID-CIRCULATION-SUPPLY-06"
-        $ Unsafe.getContinuingOutputs ctx
+      Utils.fromSingleton "ERROR-ILLIQUID-CIRCULATION-SUPPLY-06" $
+        Unsafe.getContinuingOutputs ctx
 
     assetsIncrease :: Bool
     assetsIncrease =
       (Unsafe.decode . Unsafe.txOutValue $ supplyInputUtxo)
-        `lt` (Unsafe.decode . Unsafe.txOutValue $ supplyOutputUtxo)
+      `lt`
+      (Unsafe.decode . Unsafe.txOutValue $ supplyOutputUtxo)
 
     oneIcsWithdrawalMintingPolicyTokenIsMinted :: Bool
     oneIcsWithdrawalMintingPolicyTokenIsMinted =
@@ -106,16 +107,14 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
     isDatumUnit :: Unsafe.TxOut -> Bool
     isDatumUnit txOut =
       isJust
-        ( getDatum
-            . Unsafe.decode
-            <$> (Unsafe.getOutputDatum . Unsafe.txOutDatum) txOut
-            >>= PlutusTx.fromBuiltinData @()
-        )
+        (getDatum . Unsafe.decode
+          <$> (Unsafe.getOutputDatum . Unsafe.txOutDatum) txOut
+          >>= PlutusTx.fromBuiltinData @())
 
 mkIlliquidCirculationSupplyValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkIlliquidCirculationSupplyValidatorUntyped voc rd rr ctx =
-  check
-    $ mkIlliquidCirculationSupplyValidator
+  check $
+    mkIlliquidCirculationSupplyValidator
       (PlutusTx.unsafeFromBuiltinData voc)
       (PlutusTx.unsafeFromBuiltinData rd)
       (PlutusTx.unsafeFromBuiltinData rr)

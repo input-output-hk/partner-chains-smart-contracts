@@ -16,11 +16,11 @@ import Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest)
 import TrustlessSidechain.CommitteePlainATMSPolicy qualified as CommitteePlainATMSPolicy
 import TrustlessSidechain.Governance.Admin (mkGovernanceAuthority)
 import TrustlessSidechain.Governance.MultiSig (
-  MultiSigGovParams (..),
+  MultiSigGovParams(..),
   MultiSigGovRedeemer (
-    MultiSigTokenGC,
-    MultiSignatureCheck
-  ),
+    MultiSignatureCheck,
+    MultiSigTokenGC
+  )
  )
 import TrustlessSidechain.MerkleTree (MerkleProof (MerkleProof), MerkleTree (Bin, Tip), RootHash (RootHash), Side (L, R), Up (Up), sibling, siblingSide)
 import TrustlessSidechain.Types (
@@ -132,7 +132,6 @@ import TrustlessSidechain.Types (
     RemovePermissionedCandidates,
     UpdatePermissionedCandidates
   ),
-  ReserveAuthPolicyRedeemer (ReserveAuthPolicyRedeemer),
   ReserveDatum (ReserveDatum, immutableSettings, mutableSettings, stats),
   ReserveRedeemer (
     DepositToReserve,
@@ -140,6 +139,7 @@ import TrustlessSidechain.Types (
     TransferToIlliquidCirculationSupply,
     UpdateReserve
   ),
+  ReserveAuthPolicyRedeemer (ReserveAuthPolicyRedeemer),
   ReserveStats (ReserveStats),
   SidechainParams (
     SidechainParams,
@@ -574,15 +574,14 @@ sampleIlliquidCirculationSupplyRedeemer2 :: IlliquidCirculationSupplyRedeemer
 sampleIlliquidCirculationSupplyRedeemer2 = WithdrawFromSupply
 
 sampleMultiSigGovParams :: MultiSigGovParams
-sampleMultiSigGovParams =
-  MultiSigGovParams
-    { governanceMembers =
-        [ "0f45aaf1b2959db6e5ff94dbb1f823bf257680c3c723ac2d49f97546"
-        , "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
-        , "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
-        ]
-    , requiredSignatures = 2
-    }
+sampleMultiSigGovParams = MultiSigGovParams
+  { governanceMembers =
+    [ "0f45aaf1b2959db6e5ff94dbb1f823bf257680c3c723ac2d49f97546"
+    , "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
+    , "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
+    ]
+  , requiredSignatures = 2
+  }
 
 sampleMultiSigGovRedeemer1 :: MultiSigGovRedeemer
 sampleMultiSigGovRedeemer1 = MultiSignatureCheck

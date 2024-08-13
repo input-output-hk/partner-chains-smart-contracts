@@ -8,8 +8,8 @@ module TrustlessSidechain.CandidatePermissionMintingPolicy (
 
 import PlutusLedgerApi.Common (
   SerialisedScript,
-  serialiseCompiledCode,
- )
+  serialiseCompiledCode
+  )
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (InitTokenAssetClass)
@@ -53,8 +53,8 @@ mkCandidatePermissionMintingPolicyUntyped ::
   BuiltinData ->
   ()
 mkCandidatePermissionMintingPolicyUntyped initTokenAssetClass a scriptContext =
-  check
-    $ mkCandidatePermissionMintingPolicy
+  check $
+    mkCandidatePermissionMintingPolicy
       (PlutusTx.unsafeFromBuiltinData initTokenAssetClass)
       a
       (Unsafe.wrap scriptContext)

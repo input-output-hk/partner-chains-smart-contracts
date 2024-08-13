@@ -77,8 +77,8 @@ mkMintingPolicy verifySig ccm versioningConfig redeemer ctx =
       where
         noTokensMinted :: Bool
         noTokensMinted =
-          case AssocMap.lookup (Unsafe.decode currSymbol)
-            $ Value.getValue (Unsafe.decode . Unsafe.txInfoMint . Unsafe.scriptContextTxInfo $ ctx) of
+          case AssocMap.lookup (Unsafe.decode currSymbol) $
+            Value.getValue (Unsafe.decode . Unsafe.txInfoMint . Unsafe.scriptContextTxInfo $ ctx) of
             Just tns -> AssocMap.all (< 0) tns
             _ -> Trace.traceError "ERROR-ATMS-POLICY-02"
     (ATMSMint atmspms, _) -> do
@@ -90,8 +90,8 @@ mkMintingPolicy verifySig ccm versioningConfig redeemer ctx =
         -- 1.
         isCurrentCommittee :: Bool
         isCurrentCommittee =
-          aggregateCheck (get @"plainPublicKeys" atmspms)
-            $ get @"aggregateCommitteePubKeys" committeeDatum
+          aggregateCheck (get @"plainPublicKeys" atmspms) $
+            get @"aggregateCommitteePubKeys" committeeDatum
 
         -- 2.
         signedByCurrentCommittee :: Bool
@@ -150,15 +150,15 @@ mkMintingPolicy verifySig ccm versioningConfig redeemer ctx =
           let go :: [Unsafe.TxInInfo] -> UpdateCommitteeDatum ATMSPlainAggregatePubKey
               go (t : ts)
                 | o <- Unsafe.txInInfoResolved t
-                , amt <-
-                    Value.valueOf
-                      (Unsafe.decode $ Unsafe.txOutValue o)
-                      committeeOracleCurrencySymbol
-                      UpdateCommitteeHash.initCommitteeOracleTn
-                , UpdateCommitteeHash.initCommitteeOracleMintAmount == amt
-                , -- We always expect this to be given as inline datum
-                  OutputDatum d <- Unsafe.decode $ Unsafe.txOutDatum o =
-                    IsData.unsafeFromBuiltinData $ getDatum d
+                  , amt <-
+                      Value.valueOf
+                        (Unsafe.decode $ Unsafe.txOutValue o)
+                        committeeOracleCurrencySymbol
+                        UpdateCommitteeHash.initCommitteeOracleTn
+                  , UpdateCommitteeHash.initCommitteeOracleMintAmount == amt
+                  , -- We always expect this to be given as inline datum
+                    OutputDatum d <- Unsafe.decode $ Unsafe.txOutDatum o =
+                  IsData.unsafeFromBuiltinData $ getDatum d
                 | otherwise = go ts
               go [] = traceError "ERROR-ATMS-POLICY-05"
            in go $ Unsafe.txInfoReferenceInputs info ++ Unsafe.txInfoInputs info
@@ -173,8 +173,8 @@ mkMintingPolicy verifySig ccm versioningConfig redeemer ctx =
         uniqueMintedTokenName :: TokenName
         uniqueMintedTokenName
           | Just tns <- AssocMap.lookup ownCurSymb $ Value.getValue (Unsafe.decode $ Unsafe.txInfoMint info)
-          , [(tn, _)] <- filter ((> 0) . snd) $ AssocMap.toList tns =
-              tn
+            , [(tn, _)] <- filter ((> 0) . snd) $ AssocMap.toList tns =
+            tn
           | otherwise = Trace.traceError "ERROR-ATMS-POLICY-06"
     _ -> False
 

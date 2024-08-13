@@ -102,9 +102,9 @@ getOpts = Control.Monad.join $ execParser opts
 
 -- | Parsed arguments of the CLI.
 newtype Args = Args
-  { aCommand :: Command
-  -- ^ The 'Command' to take for the given arguments (i.e., the result of
-  -- the subparser.
+  { -- | The 'Command' to take for the given arguments (i.e., the result of
+    -- the subparser.
+    aCommand :: Command
   }
 
 -- | 'Command' represents the commands that we may execute from the frontend
@@ -112,9 +112,9 @@ data Command
   = GenCliCommand
       { gccSigningKeyFile :: FilePath
       , gccSidechainParams :: SidechainParams
-      , gccATMSKind :: ATMSKind
-      -- ^ The 'String' which identifies the ATMS kind used by the sidechain.
-      -- Note that this 'String' is simply forwarded to Purescript CLI.
+      , -- | The 'String' which identifies the ATMS kind used by the sidechain.
+        -- Note that this 'String' is simply forwarded to Purescript CLI.
+        gccATMSKind :: ATMSKind
       , gccCliCommand :: GenCliCommand
       }
   | MerkleTreeCommand {mtcCommand :: MerkleTreeCommand}
@@ -128,10 +128,10 @@ data SidechainKeyCommand
   | -- | For generating a file of a fresh (with high probability) sidechain
     -- committee with both their private and public keys.
     FreshSidechainCommittee
-      { fscCommitteeSize :: Int
-      -- ^ the committee size i.e., how many private / public key pairs
-      -- to generate.
-      -- Invariant: must be non-negative
+      { -- | the committee size i.e., how many private / public key pairs
+        -- to generate.
+        -- Invariant: must be non-negative
+        fscCommitteeSize :: Int
       }
   | -- | Converts a sidechain private key to a public key
     SidechainPrivateKeyToPublicKey
@@ -162,49 +162,49 @@ data MerkleTreeCommand
 data GenCliCommand
   = -- | CLI arguments for registering an SPO
     RegistrationCommand
-      { rcSpoPrivKey :: SignKeyDSIGN Ed25519DSIGN
-      -- ^ SPO private key
-      , rcSidechainPrivKey :: SECP.SecKey
-      -- ^ Private key in the sidechain's desired format
-      , rcRegistrationUtxo :: TxOutRef
-      -- ^ Utxo of admit candidate registration
+      { -- | SPO private key
+        rcSpoPrivKey :: SignKeyDSIGN Ed25519DSIGN
+      , -- | Private key in the sidechain's desired format
+        rcSidechainPrivKey :: SECP.SecKey
+      , -- | Utxo of admit candidate registration
+        rcRegistrationUtxo :: TxOutRef
       }
   | -- | CLI arguments for deregistering an SPO
     DeregistrationCommand
-      { drSpoPubKey :: VerKeyDSIGN Ed25519DSIGN
-      -- ^ SPO public key
+      { -- | SPO public key
+        drSpoPubKey :: VerKeyDSIGN Ed25519DSIGN
       }
   | -- | CLI arguments for updating the committee
     UpdateCommitteeHashCommand
-      { uchcCurrentCommitteePrivKeys :: [SECP.SecKey]
-      -- ^ the current committee's (as stored on chain) private keys
-      , uchcNewCommitteePubKeys :: [EcdsaSecp256k1PubKey]
-      -- ^ new committee public keys
-      -- | @since v4.0.0
-      , uchcSidechainEpoch :: Integer
-      -- ^ Sidechain epoch of the committee handover (needed to
-      -- create the message we wish to sign
-      , uchcPreviousMerkleRoot :: Maybe LedgerBytes
-      -- ^ previous merkle root that was just stored on chain.
-      -- This is needed to create the message we wish to sign
+      { -- | the current committee's (as stored on chain) private keys
+        uchcCurrentCommitteePrivKeys :: [SECP.SecKey]
+      , -- | new committee public keys
+        -- | @since v4.0.0
+        uchcNewCommitteePubKeys :: [EcdsaSecp256k1PubKey]
+      , -- | Sidechain epoch of the committee handover (needed to
+        -- create the message we wish to sign
+        uchcSidechainEpoch :: Integer
+      , -- | previous merkle root that was just stored on chain.
+        -- This is needed to create the message we wish to sign
+        uchcPreviousMerkleRoot :: Maybe LedgerBytes
       , uchcScriptHash :: ScriptHash
       }
   | -- | CLI arguments for saving a new merkle root
     SaveRootCommand
-      { srcMerkleRoot :: LedgerBytes
-      -- ^ 32 byte merkle root hash
-      , srcCurrentCommitteePrivKeys :: [SECP.SecKey]
-      -- ^ current committee's (as stored on chain) private keys
-      , srcPreviousMerkleRoot :: Maybe LedgerBytes
-      -- ^ the previous merkle root (as needed to create the CLI command)
+      { -- | 32 byte merkle root hash
+        srcMerkleRoot :: LedgerBytes
+      , -- | current committee's (as stored on chain) private keys
+        srcCurrentCommitteePrivKeys :: [SECP.SecKey]
+      , -- | the previous merkle root (as needed to create the CLI command)
+        srcPreviousMerkleRoot :: Maybe LedgerBytes
       }
   | -- | CLI arguments for saving a new merkle root
     InitSidechainCommand
-      { iscInitCommitteePubKeys :: [EcdsaSecp256k1PubKey]
-      -- ^ initial committee public keys
-      -- | @since v4.0.0
-      , iscSidechainEpoch :: Integer
-      -- ^ inital sidechain epoch
+      { -- | initial committee public keys
+        -- | @since v4.0.0
+        iscInitCommitteePubKeys :: [EcdsaSecp256k1PubKey]
+      , -- | inital sidechain epoch
+        iscSidechainEpoch :: Integer
       }
 
 -- | A newtype wrapper around 'MerkleTreeEntry'  to admit json parsing parsing
@@ -217,19 +217,17 @@ newtype MerkleTreeEntryJson = MerkleTreeEntryJson MerkleTreeEntry
 
 instance FromJSON MerkleTreeEntryJson where
   parseJSON = Aeson.withObject "MerkleTreeEntry" $ \v ->
-    fmap MerkleTreeEntryJson
-      $ MerkleTreeEntry
-      <$> v
-      Aeson..: "index"
-      <*> v
-      Aeson..: "amount"
-      <*> fmap
-        (LedgerBytes . bech32RecipientBytes)
-        (v Aeson..: "recipient" :: Aeson.Types.Parser Bech32Recipient)
-      -- parse the bech32 type, then grab the byte output
-      <*> fmap
-        (fmap (LedgerBytes . BuiltinByteString . encodeUtf8))
-        (v Aeson..:? "previousMerkleRoot")
+    fmap MerkleTreeEntryJson $
+      MerkleTreeEntry
+        <$> v Aeson..: "index"
+        <*> v Aeson..: "amount"
+        <*> fmap
+          (LedgerBytes . bech32RecipientBytes)
+          (v Aeson..: "recipient" :: Aeson.Types.Parser Bech32Recipient)
+        -- parse the bech32 type, then grab the byte output
+        <*> fmap
+          (fmap (LedgerBytes . BuiltinByteString . encodeUtf8))
+          (v Aeson..:? "previousMerkleRoot")
 
 -- * CLI parser
 
@@ -256,8 +254,8 @@ argParser :: OptParse.Parser (IO Args)
 argParser =
   do
     ioCmd <-
-      subparser
-        $ mconcat
+      subparser $
+        mconcat
           [ initSidechainCommand
           , registerCommand
           , deregisterCommand
@@ -348,27 +346,25 @@ parseSpoPrivKeyCbor = eitherReader toSpoPrivKeyCbor
       HString.String -> Either HString.String (SignKeyDSIGN Ed25519DSIGN)
     toSpoPrivKeyCbor str = do
       bin <-
-        mapLeft ("Invalid spo key hex: " <>)
-          $ Base16.decode
-          . Char8.pack
-          $ str
+        mapLeft ("Invalid spo key hex: " <>) $
+          Base16.decode . Char8.pack $
+            str
       mapLeft ((<>) "Invalid cbor spo key: " . show) $ Binary.decodeFull' bin
 
 -- | Parse SECP256K1 private key
 parseSidechainPrivKey :: OptParse.ReadM SECP.SecKey
 parseSidechainPrivKey =
-  eitherReader
-    $ OffChain.strToSecpPrivKey
-    . ByteString.Char8.pack
+  eitherReader $
+    OffChain.strToSecpPrivKey . ByteString.Char8.pack
 
 -- | Parse SECP256K1 public key -- see 'OffChain.strToSecpPubKey' for details
 -- on the format
 parseSidechainPubKey :: OptParse.ReadM EcdsaSecp256k1PubKey
 parseSidechainPubKey =
-  eitherReader
-    $ fmap OffChain.secpPubKeyToSidechainPubKey
-    . OffChain.strToSecpPubKey
-    . ByteString.Char8.pack
+  eitherReader $
+    fmap OffChain.secpPubKeyToSidechainPubKey
+      . OffChain.strToSecpPubKey
+      . ByteString.Char8.pack
 
 -- | Parse pub key hash.
 parseGovernanceAuthority :: OptParse.ReadM GovernanceAuthority
@@ -395,17 +391,15 @@ parsePreviousMerkleRoot =
 parseMerkleTree :: OptParse.ReadM MerkleTree
 parseMerkleTree = eitherReader $ \str -> do
   binary <-
-    mapLeft ("Invalid merkle tree hex: " <>)
-      . Base16.decode
-      . Char8.pack
-      $ str
+    mapLeft ("Invalid merkle tree hex: " <>) . Base16.decode . Char8.pack $
+      str
   builtindata :: Builtins.BuiltinData <-
-    mapLeft show
-      $ fmap BuiltinData
-      $ Serialise.deserialiseOrFail
-      $ ByteString.Lazy.fromStrict binary
-  maybe (Left "'fromBuiltinData' for merkle tree failed") Right
-    $ fromBuiltinData builtindata
+    mapLeft show $
+      fmap BuiltinData $
+        Serialise.deserialiseOrFail $
+          ByteString.Lazy.fromStrict binary
+  maybe (Left "'fromBuiltinData' for merkle tree failed") Right $
+    fromBuiltinData builtindata
 
 -- | 'parseRootHash' parses a hex encoded, cbored, builtindata representation
 -- of a root hash of a merkle tree given as a CLI argument.
@@ -435,12 +429,11 @@ parseSpoPubKeyCbor = eitherReader toSpoPubKeyCbor
       HString.String -> Either HString.String (VerKeyDSIGN Ed25519DSIGN)
     toSpoPubKeyCbor str = do
       bin <-
-        mapLeft ("Invalid spo key hex: " <>)
-          $ Base16.decode
-          . Char8.pack
-          $ str
-      mapLeft ((<>) "Invalid cbor spo key: " . show)
-        $ Binary.decodeFull' bin
+        mapLeft ("Invalid spo key hex: " <>) $
+          Base16.decode . Char8.pack $
+            str
+      mapLeft ((<>) "Invalid cbor spo key: " . show) $
+        Binary.decodeFull' bin
 
 -- Commented out this code for legacy reasons. Originally, we parsed the
 -- roothash in its cbor representation, but really we want to actually just
@@ -470,34 +463,31 @@ currentCommitteePrivateKeysParser =
     OptParse.<|> currentCommitteeFile
   where
     manyCurrentCommittePrivateKeys =
-      many
-        $ option parseSidechainPrivKey
-        $ mconcat
-          [ long "current-committee-private-key"
-          , metavar "PRIVATE_KEY"
-          , help
-              "Secp256k1 private key of a current committee member (hex encoded)"
-          ]
+      many $
+        option parseSidechainPrivKey $
+          mconcat
+            [ long "current-committee-private-key"
+            , metavar "PRIVATE_KEY"
+            , help
+                "Secp256k1 private key of a current committee member (hex encoded)"
+            ]
 
     currentCommitteeFile = do
       let helptxt =
             "Filepath of JSON generated committee from `fresh-sidechain-committee`"
       committeeFilepath <-
-        option OptParse.str
-          $ mconcat
+        option OptParse.str $
+          mconcat
             [ long "current-committee"
             , metavar "FILEPATH"
             , help helptxt
             ]
-      pure
-        $ Aeson.decodeFileStrict' committeeFilepath
-        >>= \case
+      pure $
+        Aeson.decodeFileStrict' committeeFilepath >>= \case
           Just (SidechainCommittee members) -> pure $ fmap scmPrivateKey members
           Nothing ->
-            ioError
-              $ userError
-              $ "Invalid JSON committee file at: "
-              <> committeeFilepath
+            ioError $
+              userError $ "Invalid JSON committee file at: " <> committeeFilepath
 
 -- | CLI parser for parsing the new committee's public keys
 newCommitteePublicKeysParser :: OptParse.Parser (IO [EcdsaSecp256k1PubKey])
@@ -506,35 +496,32 @@ newCommitteePublicKeysParser =
     OptParse.<|> newCommitteeFile
   where
     manyCommitteePublicKeys =
-      many
-        $ option parseSidechainPubKey
-        $ mconcat
-          [ long "new-committee-pub-key"
-          , metavar "PUBLIC_KEY"
-          , help
-              "Secp256k1 public key of a current committee member (hex DER encoded [33 bytes])"
-          ]
+      many $
+        option parseSidechainPubKey $
+          mconcat
+            [ long "new-committee-pub-key"
+            , metavar "PUBLIC_KEY"
+            , help
+                "Secp256k1 public key of a current committee member (hex DER encoded [33 bytes])"
+            ]
 
     newCommitteeFile = do
       let helptxt =
             "Filepath of JSON generated committee from `fresh-sidechain-committee`"
       committeeFilepath <-
-        option OptParse.str
-          $ mconcat
+        option OptParse.str $
+          mconcat
             [ long "new-committee"
             , metavar "FILEPATH"
             , help helptxt
             ]
 
-      pure
-        $ Aeson.decodeFileStrict' committeeFilepath
-        >>= \case
+      pure $
+        Aeson.decodeFileStrict' committeeFilepath >>= \case
           Just (SidechainCommittee members) -> pure $ fmap scmPublicKey members
           Nothing ->
-            ioError
-              $ userError
-              $ "Invalid JSON committee file at: "
-              <> committeeFilepath
+            ioError $
+              userError $ "Invalid JSON committee file at: " <> committeeFilepath
 
 -- | Parser for parsing a hex encoded CBOR encoded
 -- 'Plutus.V2.Ledger.Api.Address'
@@ -556,40 +543,37 @@ initCommitteePublicKeysParser =
     OptParse.<|> newCommitteeFile
   where
     manyCommitteePublicKeys =
-      many
-        $ option parseSidechainPubKey
-        $ mconcat
-          [ long "committee-pub-key"
-          , metavar "PUBLIC_KEY"
-          , help
-              "Secp256k1 public key of an initial committee member (hex DER encoded [33 bytes])"
-          ]
+      many $
+        option parseSidechainPubKey $
+          mconcat
+            [ long "committee-pub-key"
+            , metavar "PUBLIC_KEY"
+            , help
+                "Secp256k1 public key of an initial committee member (hex DER encoded [33 bytes])"
+            ]
 
     newCommitteeFile = do
       committeeFilepath <-
-        option OptParse.str
-          $ mconcat
+        option OptParse.str $
+          mconcat
             [ long "committee"
             , metavar "FILEPATH"
             , help "Filepath of JSON generated committee from `fresh-sidechain-committee`"
             ]
 
-      pure
-        $ Aeson.decodeFileStrict' committeeFilepath
-        >>= \case
+      pure $
+        Aeson.decodeFileStrict' committeeFilepath >>= \case
           Just (SidechainCommittee members) -> pure $ fmap scmPublicKey members
           Nothing ->
-            ioError
-              $ userError
-              $ "Invalid JSON committee file at: "
-              <> committeeFilepath
+            ioError $
+              userError $ "Invalid JSON committee file at: " <> committeeFilepath
 
 -- | CLI parser for gathering the 'SidechainParams'
 sidechainParamsParser :: OptParse.Parser SidechainParams
 sidechainParamsParser = do
   chainId <-
-    option auto
-      $ mconcat
+    option auto $
+      mconcat
         [ short 'i'
         , long "sidechain-id"
         , metavar "1"
@@ -597,8 +581,8 @@ sidechainParamsParser = do
         ]
 
   genesisUtxo <-
-    option parseTxOutRef
-      $ mconcat
+    option parseTxOutRef $
+      mconcat
         [ short 'c'
         , long "genesis-committee-hash-utxo"
         , metavar "TX_ID#TX_IDX"
@@ -606,8 +590,8 @@ sidechainParamsParser = do
         ]
 
   governanceAuthority <-
-    option parseGovernanceAuthority
-      $ mconcat
+    option parseGovernanceAuthority $
+      mconcat
         [ short 'g'
         , long "governance-authority"
         , metavar "PUB_KEY_HASH"
@@ -615,8 +599,8 @@ sidechainParamsParser = do
         ]
 
   (thresholdNumerator, thresholdDenominator) <-
-    option parseThreshold
-      $ mconcat
+    option parseThreshold $
+      mconcat
         [ long "threshold"
         , metavar "UINT/UINT"
         , help "Threshold ratio for the required number of signatures"
@@ -626,8 +610,8 @@ sidechainParamsParser = do
 
 signingKeyFileParser :: OptParse.Parser FilePath
 signingKeyFileParser =
-  option OptParse.str
-    $ mconcat
+  option OptParse.str $
+    mconcat
       [ long "payment-signing-key-file"
       , metavar "FILEPATH"
       , help "Path to the signing key file"
@@ -640,8 +624,8 @@ genCliCommandHelperParser :: OptParse.Parser (GenCliCommand -> Command)
 genCliCommandHelperParser = do
   scParams <- sidechainParamsParser
   atmsKind <-
-    option (maybeReader (OffChain.parseATMSKind . ByteString.Char8.pack))
-      $ mconcat
+    option (maybeReader (OffChain.parseATMSKind . ByteString.Char8.pack)) $
+      mconcat
         [ long "atms-kind"
         , metavar "ATMS_KIND"
         , help "ATMS kind of the sidechain"
@@ -661,293 +645,293 @@ genCliCommandHelperParser = do
 -- 'RegistrationCommand'.
 registerCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
 registerCommand =
-  command "register"
-    $ flip info (progDesc "Generates signatures for registering an spo")
-    $ do
-      scParamsAndSigningKeyFunction <- genCliCommandHelperParser
-      rcSpoPrivKey <-
-        do
-          option parseSpoPrivKey
-            $ mconcat
-              [ long "spo-signing-key"
-              , metavar "SIGNING_KEY"
-              , help "SPO Cold signing key of the block producer candidate"
-              ]
-          OptParse.<|> do
-            option parseSpoPrivKeyCbor
-              $ mconcat
-                [ long "spo-signing-key-cbor"
-                , metavar "SIGNING_KEY_CBOR"
-                , help "hex encoded cbor SPO signing key"
+  command "register" $
+    flip info (progDesc "Generates signatures for registering an spo") $
+      do
+        scParamsAndSigningKeyFunction <- genCliCommandHelperParser
+        rcSpoPrivKey <-
+          do
+            option parseSpoPrivKey $
+              mconcat
+                [ long "spo-signing-key"
+                , metavar "SIGNING_KEY"
+                , help "SPO Cold signing key of the block producer candidate"
                 ]
+            OptParse.<|> do
+              option parseSpoPrivKeyCbor $
+                mconcat
+                  [ long "spo-signing-key-cbor"
+                  , metavar "SIGNING_KEY_CBOR"
+                  , help "hex encoded cbor SPO signing key"
+                  ]
 
-      rcSidechainPrivKey <-
-        option parseSidechainPrivKey
-          $ mconcat
-            [ long "sidechain-signing-key"
-            , metavar "SIGNING_KEY"
-            , help "Signing key of the sidechain block producer candidate"
-            ]
+        rcSidechainPrivKey <-
+          option parseSidechainPrivKey $
+            mconcat
+              [ long "sidechain-signing-key"
+              , metavar "SIGNING_KEY"
+              , help "Signing key of the sidechain block producer candidate"
+              ]
 
-      rcRegistrationUtxo <-
-        option parseTxOutRef
-          $ mconcat
-            [ long "registration-utxo"
-            , metavar "TX_ID#TX_IDX"
-            , help
-                "Input UTxO to be spend with the commitee candidate registration"
-            ]
+        rcRegistrationUtxo <-
+          option parseTxOutRef $
+            mconcat
+              [ long "registration-utxo"
+              , metavar "TX_ID#TX_IDX"
+              , help
+                  "Input UTxO to be spend with the commitee candidate registration"
+              ]
 
-      pure $ pure (scParamsAndSigningKeyFunction $ RegistrationCommand {..})
-    <**> helper
+        pure $ pure (scParamsAndSigningKeyFunction $ RegistrationCommand {..})
+        <**> helper
 
 deregisterCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
 deregisterCommand =
-  command "deregister"
-    $ flip info (progDesc "Thin wrapper around `deregister` for deregistering an spo")
-    $ do
-      scParamsAndSigningKeyFunction <- genCliCommandHelperParser
-      drSpoPubKey <-
-        option parseSpoPubKeyCbor
-          $ mconcat
-            [ long "spo-pub-key-cbor"
-            , metavar "PUB_KEY_CBOR"
-            , help "Hex encoded cbor SPO public key"
-            ]
+  command "deregister" $
+    flip info (progDesc "Thin wrapper around `deregister` for deregistering an spo") $
+      do
+        scParamsAndSigningKeyFunction <- genCliCommandHelperParser
+        drSpoPubKey <-
+          option parseSpoPubKeyCbor $
+            mconcat
+              [ long "spo-pub-key-cbor"
+              , metavar "PUB_KEY_CBOR"
+              , help "Hex encoded cbor SPO public key"
+              ]
 
-      pure $ pure (scParamsAndSigningKeyFunction $ DeregistrationCommand {..})
-    <**> helper
+        pure $ pure (scParamsAndSigningKeyFunction $ DeregistrationCommand {..})
+        <**> helper
 
 -- | 'initSidechainCommand' parses the cli arguments for gathering the
 -- parameters for initalizing the sidechain
 initSidechainCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
 initSidechainCommand =
-  command "init"
-    $ flip
+  command "init" $
+    flip
       info
       (progDesc "Generates the CLI command to initialize the sidechain")
-    $ do
-      scParamsAndSigningKeyFunction <- genCliCommandHelperParser
+      $ do
+        scParamsAndSigningKeyFunction <- genCliCommandHelperParser
 
-      ioIscInitCommitteePubKeys <- initCommitteePublicKeysParser
+        ioIscInitCommitteePubKeys <- initCommitteePublicKeysParser
 
-      -- mostly duplicated from 'updateCommitteeHashCommand'
-      iscSidechainEpoch <-
-        option auto
-          $ mconcat
-            [ long "sidechain-epoch"
-            , metavar "INTEGER"
-            , help "Sidechain epoch of the initial committee"
-            ]
-      pure $ do
-        iscInitCommitteePubKeys <- ioIscInitCommitteePubKeys
-        pure $ scParamsAndSigningKeyFunction $ InitSidechainCommand {..}
-    <**> helper
+        -- mostly duplicated from 'updateCommitteeHashCommand'
+        iscSidechainEpoch <-
+          option auto $
+            mconcat
+              [ long "sidechain-epoch"
+              , metavar "INTEGER"
+              , help "Sidechain epoch of the initial committee"
+              ]
+        pure $ do
+          iscInitCommitteePubKeys <- ioIscInitCommitteePubKeys
+          pure $ scParamsAndSigningKeyFunction $ InitSidechainCommand {..}
+        <**> helper
 
 -- | 'committeeHashCommand' parses the cli arguments for gathering the
 -- parameters for 'UpdateCommitteeHashCommand'
 updateCommitteeHashCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
 updateCommitteeHashCommand =
-  command "committee-hash"
-    $ flip
+  command "committee-hash" $
+    flip
       info
       (progDesc "Generates signatures the committee hash endpoint")
-    $ do
-      scParamsAndSigningKeyFunction <- genCliCommandHelperParser
+      $ do
+        scParamsAndSigningKeyFunction <- genCliCommandHelperParser
 
-      ioUchcCurrentCommitteePrivKeys <- currentCommitteePrivateKeysParser
+        ioUchcCurrentCommitteePrivKeys <- currentCommitteePrivateKeysParser
 
-      ioUchcNewCommitteePubKeys <- newCommitteePublicKeysParser
+        ioUchcNewCommitteePubKeys <- newCommitteePublicKeysParser
 
-      uchcSidechainEpoch <-
-        option auto
-          $ mconcat
-            [ long "sidechain-epoch"
-            , metavar "INTEGER"
-            , help "Sidechain epoch of the committee update"
-            ]
-      uchcPreviousMerkleRoot <-
-        optional
-          $ option parsePreviousMerkleRoot
-          $ mconcat
-            [ long "previous-merkle-root"
-            , metavar "PREVIOUS_MERKLE_ROOT"
-            , help "Hex encoded previous merkle root (if it exists)"
-            ]
-      uchcScriptHash <-
-        option parseScriptHash
-          $ mconcat
-            [ long "--new-committee-validator-script-hash"
-            , metavar "VALIDATOR_HASH"
-            , help "Hex encoded validator hash"
-            ]
-      pure $ do
-        uchcCurrentCommitteePrivKeys <- ioUchcCurrentCommitteePrivKeys
-        uchcNewCommitteePubKeys <- ioUchcNewCommitteePubKeys
-        pure $ scParamsAndSigningKeyFunction $ UpdateCommitteeHashCommand {..}
-    <**> helper
+        uchcSidechainEpoch <-
+          option auto $
+            mconcat
+              [ long "sidechain-epoch"
+              , metavar "INTEGER"
+              , help "Sidechain epoch of the committee update"
+              ]
+        uchcPreviousMerkleRoot <-
+          optional $
+            option parsePreviousMerkleRoot $
+              mconcat
+                [ long "previous-merkle-root"
+                , metavar "PREVIOUS_MERKLE_ROOT"
+                , help "Hex encoded previous merkle root (if it exists)"
+                ]
+        uchcScriptHash <-
+          option parseScriptHash $
+            mconcat
+              [ long "--new-committee-validator-script-hash"
+              , metavar "VALIDATOR_HASH"
+              , help "Hex encoded validator hash"
+              ]
+        pure $ do
+          uchcCurrentCommitteePrivKeys <- ioUchcCurrentCommitteePrivKeys
+          uchcNewCommitteePubKeys <- ioUchcNewCommitteePubKeys
+          pure $ scParamsAndSigningKeyFunction $ UpdateCommitteeHashCommand {..}
+        <**> helper
 
 -- | 'saveRootCommand' parses the cli arguments to grab the required parameters
 -- for generating a CLI command for saving a merkle root.
 saveRootCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
 saveRootCommand =
-  command "save-root"
-    $ flip
+  command "save-root" $
+    flip
       info
       (progDesc "Create the CLI command for saving a merkle root")
-    $ do
-      scParamsAndSigningKeyFunction <- genCliCommandHelperParser
+      $ do
+        scParamsAndSigningKeyFunction <- genCliCommandHelperParser
 
-      -- duplicated code from 'rootHashCommand'
-      srcMerkleRoot <-
-        option parseRootHash
-          $ mconcat
-            [ long "merkle-root"
-            , metavar "MERKLE_ROOT"
-            , help "Expects the root hash (32 bytes) as an argument"
-            ]
-      -- duplicated code from updateCommitteeHashCommand
-      ioSrcCurrentCommitteePrivKeys <- currentCommitteePrivateKeysParser
+        -- duplicated code from 'rootHashCommand'
+        srcMerkleRoot <-
+          option parseRootHash $
+            mconcat
+              [ long "merkle-root"
+              , metavar "MERKLE_ROOT"
+              , help "Expects the root hash (32 bytes) as an argument"
+              ]
+        -- duplicated code from updateCommitteeHashCommand
+        ioSrcCurrentCommitteePrivKeys <- currentCommitteePrivateKeysParser
 
-      -- duplicated code rootHashCommand
-      srcPreviousMerkleRoot <-
-        optional
-          $ option parsePreviousMerkleRoot
-          $ mconcat
-            [ long "previous-merkle-root"
-            , metavar "PREVIOUS_MERKLE_ROOT"
-            , help "Hex encoded previous merkle root (if it exists)"
-            ]
+        -- duplicated code rootHashCommand
+        srcPreviousMerkleRoot <-
+          optional $
+            option parsePreviousMerkleRoot $
+              mconcat
+                [ long "previous-merkle-root"
+                , metavar "PREVIOUS_MERKLE_ROOT"
+                , help "Hex encoded previous merkle root (if it exists)"
+                ]
 
-      pure $ do
-        srcCurrentCommitteePrivKeys <- ioSrcCurrentCommitteePrivKeys
-        pure $ scParamsAndSigningKeyFunction $ SaveRootCommand {..}
-    <**> helper
+        pure $ do
+          srcCurrentCommitteePrivKeys <- ioSrcCurrentCommitteePrivKeys
+          pure $ scParamsAndSigningKeyFunction $ SaveRootCommand {..}
+        <**> helper
 
 -- | 'committeeHashCommand' parses the cli arguments for creating merkle trees.
 merkleTreeCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
 merkleTreeCommand =
-  command "merkle-tree"
-    $ flip
+  command "merkle-tree" $
+    flip
       info
       (progDesc "Creates a hex encoded BuiltinData representation of a merkle tree")
-    $ do
-      mtecEntries <-
-        some
-          $ option parseMerkleTreeEntry
-          $ mconcat
-            [ long "merkle-tree-entry"
-            , metavar "JSON_MERKLE_TREE_ENTRY"
-            , help "Merkle tree entry in json form with schema {index :: Integer, amount :: Integer, recipient :: BuiltinByteString, previousMerkleRoot :: Maybe BuiltinByteString}"
-            ]
-      pure $ pure $ MerkleTreeCommand $ MerkleTreeEntriesCommand {..}
-    <**> helper
+      $ do
+        mtecEntries <-
+          some $
+            option parseMerkleTreeEntry $
+              mconcat
+                [ long "merkle-tree-entry"
+                , metavar "JSON_MERKLE_TREE_ENTRY"
+                , help "Merkle tree entry in json form with schema {index :: Integer, amount :: Integer, recipient :: BuiltinByteString, previousMerkleRoot :: Maybe BuiltinByteString}"
+                ]
+        pure $ pure $ MerkleTreeCommand $ MerkleTreeEntriesCommand {..}
+        <**> helper
 
 -- | 'rootHashCommand' parses the cli arguments to grab the root hash from a
 -- merkle tree
 rootHashCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
 rootHashCommand =
-  command "root-hash"
-    $ flip
+  command "root-hash" $
+    flip
       info
       (progDesc "Gets the hex encoded merkle root hash of a given merkle tree")
-    $ do
-      rhcMerkleTree <-
-        option parseMerkleTree
-          $ mconcat
-            [ long "merkle-tree"
-            , metavar "MERKLE_TREE"
-            , help "Expects hex(cbor(toBuiltinData(MerkleTree))) as an argument"
-            ]
-      pure $ pure $ MerkleTreeCommand $ RootHashCommand {..}
-    <**> helper
+      $ do
+        rhcMerkleTree <-
+          option parseMerkleTree $
+            mconcat
+              [ long "merkle-tree"
+              , metavar "MERKLE_TREE"
+              , help "Expects hex(cbor(toBuiltinData(MerkleTree))) as an argument"
+              ]
+        pure $ pure $ MerkleTreeCommand $ RootHashCommand {..}
+        <**> helper
 
 -- | 'combinedMerkleProofCommand' parses the cli arguments to grab the 'CombinedMerkleProof' from a merkle
 -- tree entry, and a merkle tree
 combinedMerkleProofCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
 combinedMerkleProofCommand =
-  command "combined-merkle-proof"
-    $ flip
+  command "combined-merkle-proof" $
+    flip
       info
       (progDesc "Creates a hex encoded BuiltinData representation of a combined merkle proof")
-    $ do
-      -- duplicated code from 'rootHashCommand'
-      cmpMerkleTree <-
-        option parseMerkleTree
-          $ mconcat
-            [ long "merkle-tree"
-            , metavar "MERKLE_TREE"
-            , help "Expects hex(cbor(toBuiltinData(MerkleTree))) as an argument"
-            ]
-      -- duplicated code from 'merkleTreeCommand'
-      cmpMerkleTreeEntry <-
-        option parseMerkleTreeEntry
-          $ mconcat
-            [ long "merkle-tree-entry"
-            , metavar "JSON_MERKLE_TREE_ENTRY"
-            , help "Merkle tree entry in json form with schema {index :: Integer, amount :: Integer, recipient :: BuiltinByteString, previousMerkleRoot :: Maybe BuiltinByteString}"
-            ]
-      pure $ pure $ MerkleTreeCommand $ CombinedMerkleProofCommand {..}
-    <**> helper
+      $ do
+        -- duplicated code from 'rootHashCommand'
+        cmpMerkleTree <-
+          option parseMerkleTree $
+            mconcat
+              [ long "merkle-tree"
+              , metavar "MERKLE_TREE"
+              , help "Expects hex(cbor(toBuiltinData(MerkleTree))) as an argument"
+              ]
+        -- duplicated code from 'merkleTreeCommand'
+        cmpMerkleTreeEntry <-
+          option parseMerkleTreeEntry $
+            mconcat
+              [ long "merkle-tree-entry"
+              , metavar "JSON_MERKLE_TREE_ENTRY"
+              , help "Merkle tree entry in json form with schema {index :: Integer, amount :: Integer, recipient :: BuiltinByteString, previousMerkleRoot :: Maybe BuiltinByteString}"
+              ]
+        pure $ pure $ MerkleTreeCommand $ CombinedMerkleProofCommand {..}
+        <**> helper
 
 -- | 'merkleProofCommand' parses the cli arguments to grab the merkle proof
 -- from a merkle tree and merkle tree entry
 merkleProofCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
 merkleProofCommand =
-  command "merkle-proof"
-    $ flip
+  command "merkle-proof" $
+    flip
       info
       (progDesc "Creates a hex encoded BuiltinData representation of a merkle proof")
-    $ do
-      -- duplicated code from 'rootHashCommand'
-      mpcMerkleTree <-
-        option parseMerkleTree
-          $ mconcat
-            [ long "merkle-tree"
-            , metavar "MERKLE_TREE"
-            , help "Expects hex(cbor(toBuiltinData(MerkleTree))) as an argument"
-            ]
-      -- duplicated code from 'merkleTreeCommand'
-      mpcMerkleTreeEntry <-
-        option parseMerkleTreeEntry
-          $ mconcat
-            [ long "merkle-tree-entry"
-            , metavar "JSON_MERKLE_TREE_ENTRY"
-            , help "Merkle tree entry in json form with schema {index :: Integer, amount :: Integer, recipient :: BuiltinByteString, previousMerkleRoot :: Maybe BuiltinByteString}"
-            ]
-      pure $ pure $ MerkleTreeCommand $ MerkleProofCommand {..}
-    <**> helper
+      $ do
+        -- duplicated code from 'rootHashCommand'
+        mpcMerkleTree <-
+          option parseMerkleTree $
+            mconcat
+              [ long "merkle-tree"
+              , metavar "MERKLE_TREE"
+              , help "Expects hex(cbor(toBuiltinData(MerkleTree))) as an argument"
+              ]
+        -- duplicated code from 'merkleTreeCommand'
+        mpcMerkleTreeEntry <-
+          option parseMerkleTreeEntry $
+            mconcat
+              [ long "merkle-tree-entry"
+              , metavar "JSON_MERKLE_TREE_ENTRY"
+              , help "Merkle tree entry in json form with schema {index :: Integer, amount :: Integer, recipient :: BuiltinByteString, previousMerkleRoot :: Maybe BuiltinByteString}"
+              ]
+        pure $ pure $ MerkleTreeCommand $ MerkleProofCommand {..}
+        <**> helper
 
 -- | 'freshSidechainPrivateKeyCommand' parses the cli arguments to generate a
 -- fresh sidechain private key
 freshSidechainPrivateKeyCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
 freshSidechainPrivateKeyCommand =
-  command "fresh-sidechain-private-key"
-    $ flip
+  command "fresh-sidechain-private-key" $
+    flip
       info
       (progDesc "Generates a fresh hex encoded sidechain private key")
-    $ do
-      pure $ pure $ SidechainKeyCommand FreshSidechainPrivateKey
-    <**> helper
+      $ do
+        pure $ pure $ SidechainKeyCommand FreshSidechainPrivateKey
+        <**> helper
 
 -- | 'freshSidechainCommittee' parses the cli arguments for generating a Json file
 -- output of a sidechain committee
 freshSidechainCommittee :: OptParse.Mod OptParse.CommandFields (IO Command)
 freshSidechainCommittee = do
-  command "fresh-sidechain-committee"
-    $ flip
+  command "fresh-sidechain-committee" $
+    flip
       info
       (progDesc "Generates a fresh sidechain committee in JSON format to stdout of a determined size")
-    $ do
-      fscCommitteeSize <-
-        option (eitherReader nonNegativeIntParser)
-          $ mconcat
-            [ long "size"
-            , metavar "INT"
-            , help "Non-negative int to determine the size of the sidechain committee"
-            ]
-      pure $ pure $ SidechainKeyCommand FreshSidechainCommittee {..}
-    <**> helper
+      $ do
+        fscCommitteeSize <-
+          option (eitherReader nonNegativeIntParser) $
+            mconcat
+              [ long "size"
+              , metavar "INT"
+              , help "Non-negative int to determine the size of the sidechain committee"
+              ]
+        pure $ pure $ SidechainKeyCommand FreshSidechainCommittee {..}
+        <**> helper
   where
     nonNegativeIntParser :: HString.String -> Either HString.String Int
     nonNegativeIntParser =
@@ -970,20 +954,20 @@ freshSidechainCommittee = do
 sidechainPrivateKeyToPublicKeyCommand ::
   OptParse.Mod OptParse.CommandFields (IO Command)
 sidechainPrivateKeyToPublicKeyCommand =
-  command "sidechain-private-key-to-public-key"
-    $ flip
+  command "sidechain-private-key-to-public-key" $
+    flip
       info
       (progDesc "Computes the corresponding public key to a given private key")
-    $ do
-      spktpkPrivateKey <-
-        option parseSidechainPrivKey
-          $ mconcat
-            [ long "sidechain-signing-key"
-            , metavar "SIGNING_KEY"
-            , help "Signing key of the sidechain block producer candidate"
-            ]
-      pure $ pure $ SidechainKeyCommand $ SidechainPrivateKeyToPublicKey {..}
-    <**> helper
+      $ do
+        spktpkPrivateKey <-
+          option parseSidechainPrivKey $
+            mconcat
+              [ long "sidechain-signing-key"
+              , metavar "SIGNING_KEY"
+              , help "Signing key of the sidechain block producer candidate"
+              ]
+        pure $ pure $ SidechainKeyCommand $ SidechainPrivateKeyToPublicKey {..}
+        <**> helper
 
 tryDecode :: Text -> Either HString.String ByteString
 tryDecode = Base16.decode . encodeUtf8

@@ -132,8 +132,8 @@ mkCheckpointValidator checkpointParam versioningConfig datum _red ctx =
     extractCommitteeDatum [] = traceError "ERROR-CHECKPOINT-VALIDATOR-05"
     extractCommitteeDatum (txIn : txIns)
       | containsCommitteeNft txIn = case Unsafe.decode . Unsafe.txOutDatum . Unsafe.txInInfoResolved $ txIn of
-          OutputDatum d -> IsData.unsafeFromBuiltinData $ getDatum d
-          _ -> extractCommitteeDatum txIns
+        OutputDatum d -> IsData.unsafeFromBuiltinData $ getDatum d
+        _ -> extractCommitteeDatum txIns
       | otherwise = extractCommitteeDatum txIns
 
     committeeDatum :: UpdateCommitteeDatum ATMSPlainAggregatePubKey
@@ -206,17 +206,17 @@ mkCheckpointPolicy itac _red scriptContext =
     -- Assert that we have minted exactly one of this currency symbol
     checkMintedAmount :: Bool
     checkMintedAmount =
-      case fmap AssocMap.toList
-        $ AssocMap.lookup
+      case fmap AssocMap.toList $
+        AssocMap.lookup
           (Unsafe.ownCurrencySymbol scriptContext)
-        $ getValue mint of
+          $ getValue mint of
         Just [(tn', amt)] -> tn' == initCheckpointMintTn && amt == initCheckpointMintAmount
         _ -> False
 
 mkCheckpointPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkCheckpointPolicyUntyped itac red ctx =
-  check
-    $ mkCheckpointPolicy
+  check $
+    mkCheckpointPolicy
       (PlutusTx.unsafeFromBuiltinData itac)
       (PlutusTx.unsafeFromBuiltinData red)
       (Unsafe.ScriptContext ctx)
@@ -233,8 +233,8 @@ mkCheckpointValidatorUntyped ::
   BuiltinData ->
   ()
 mkCheckpointValidatorUntyped checkpointParam versioningConfig datum red ctx =
-  check
-    $ mkCheckpointValidator
+  check $
+    mkCheckpointValidator
       (PlutusTx.unsafeFromBuiltinData checkpointParam)
       (PlutusTx.unsafeFromBuiltinData versioningConfig)
       (PlutusTx.unsafeFromBuiltinData datum)

@@ -18,7 +18,7 @@ import TrustlessSidechain.OffChain (encodeHexBuiltinBS)
 --
 -- Results of the tests are compared to the files under ./test/golden/*.golden
 -- If no file exists for the given data type, a new one will be created automatically
-dataEncoderGoldenTest :: (ToData a) => HString.String -> a -> TestTree
+dataEncoderGoldenTest :: ToData a => HString.String -> a -> TestTree
 dataEncoderGoldenTest name sampleData =
   let builtinData = toBuiltinData sampleData
       plutusDataBS = fromStrict $ encodeUtf8 $ Text.pack $ show builtinData

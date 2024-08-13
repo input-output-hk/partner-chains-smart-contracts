@@ -85,7 +85,7 @@ class HasField (l :: Symbol) (r :: Type) (a :: Type) | l r -> a where
 -- @since v4.0.0
 put ::
   forall (l :: Symbol) (r :: Type) (a :: Type).
-  (HasField l r a) =>
+  HasField l r a =>
   a ->
   r ->
   r
