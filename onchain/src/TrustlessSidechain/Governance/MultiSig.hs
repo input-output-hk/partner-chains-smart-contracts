@@ -9,9 +9,8 @@ module TrustlessSidechain.Governance.MultiSig
   , serialisableGovernanceMultiSigPolicy
   ) where
 
-import PlutusLedgerApi.Common (SerialisedScript)
-import PlutusLedgerApi.V2 (PubKeyHash, serialiseCompiledCode )
 import PlutusTx
+import Plutus.V2.Ledger.Api
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
@@ -62,8 +61,8 @@ data MultiSigGovRedeemer = MultiSignatureCheck | MultiSigTokenGC
 -- | @since Unreleased
 instance ToData MultiSigGovRedeemer where
   {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData MultiSignatureCheck = toBuiltinData  (0 :: Integer)
-  toBuiltinData MultiSigTokenGC = toBuiltinData  (1 :: Integer)
+  toBuiltinData MultiSignatureCheck = BuiltinData $ PlutusTx.I 0
+  toBuiltinData MultiSigTokenGC = BuiltinData $ PlutusTx.I 1
 
 -- | @since Unreleased
 instance FromData MultiSigGovRedeemer where
@@ -150,6 +149,6 @@ mkGovernanceMultiSigPolicyUntyped params red ctx =
       (unsafeFromBuiltinData red)
       (Unsafe.ScriptContext ctx)
 
-serialisableGovernanceMultiSigPolicy :: SerialisedScript
+serialisableGovernanceMultiSigPolicy :: Script
 serialisableGovernanceMultiSigPolicy =
-  serialiseCompiledCode $$(PlutusTx.compile [||mkGovernanceMultiSigPolicyUntyped||])
+  fromCompiledCode $$(PlutusTx.compile [||mkGovernanceMultiSigPolicyUntyped||])

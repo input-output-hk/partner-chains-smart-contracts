@@ -6,16 +6,16 @@ module TrustlessSidechain.IlliquidCirculationSupply (
   serialisableIlliquidCirculationSupplyValidator,
 ) where
 
-import PlutusLedgerApi.V1.Value (
+import Plutus.V1.Ledger.Value (
   CurrencySymbol,
   TokenName (..),
   Value,
   lt,
  )
-import PlutusLedgerApi.V2 (
+import Plutus.V2.Ledger.Api (
   Address,
-  SerialisedScript,
-  serialiseCompiledCode,
+  Script,
+  fromCompiledCode,
   getDatum,
  )
 import PlutusTx qualified
@@ -120,6 +120,6 @@ mkIlliquidCirculationSupplyValidatorUntyped voc rd rr ctx =
       (PlutusTx.unsafeFromBuiltinData rr)
       (Unsafe.wrap ctx)
 
-serialisableIlliquidCirculationSupplyValidator :: SerialisedScript
+serialisableIlliquidCirculationSupplyValidator :: Script
 serialisableIlliquidCirculationSupplyValidator =
-  serialiseCompiledCode $$(PlutusTx.compile [||mkIlliquidCirculationSupplyValidatorUntyped||])
+  fromCompiledCode $$(PlutusTx.compile [||mkIlliquidCirculationSupplyValidatorUntyped||])

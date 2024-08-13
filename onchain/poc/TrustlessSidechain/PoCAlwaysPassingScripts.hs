@@ -9,9 +9,9 @@ module TrustlessSidechain.PoCAlwaysPassingScripts (
   serialisableAlwaysPassingPolicy,
 ) where
 
-import PlutusLedgerApi.V2 (
-  SerialisedScript,
-  serialiseCompiledCode,
+import Plutus.V2.Ledger.Api (
+  Script,
+  fromCompiledCode,
  )
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude (
@@ -46,9 +46,9 @@ mkAlwaysPassingValidatorUntyped seed datum redeemer ctx =
       (PlutusTx.unsafeFromBuiltinData redeemer)
       (Unsafe.wrap ctx)
 
-serialisableAlwaysPassingValidator :: SerialisedScript
+serialisableAlwaysPassingValidator :: Script
 serialisableAlwaysPassingValidator =
-  serialiseCompiledCode $$(PlutusTx.compile [||mkAlwaysPassingValidatorUntyped||])
+  fromCompiledCode $$(PlutusTx.compile [||mkAlwaysPassingValidatorUntyped||])
 
 {-# INLINEABLE mkAlwaysPassingPolicy #-}
 mkAlwaysPassingPolicy :: Integer -> BuiltinData -> Unsafe.ScriptContext -> Bool
@@ -63,6 +63,6 @@ mkAlwaysPassingPolicyUntyped seed redeemer ctx =
       (PlutusTx.unsafeFromBuiltinData redeemer)
       (Unsafe.wrap ctx)
 
-serialisableAlwaysPassingPolicy :: SerialisedScript
+serialisableAlwaysPassingPolicy :: Script
 serialisableAlwaysPassingPolicy =
-  serialiseCompiledCode $$(PlutusTx.compile [||mkAlwaysPassingPolicyUntyped||])
+  fromCompiledCode $$(PlutusTx.compile [||mkAlwaysPassingPolicyUntyped||])

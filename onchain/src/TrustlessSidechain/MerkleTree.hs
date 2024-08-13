@@ -57,7 +57,7 @@ module TrustlessSidechain.MerkleTree (
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as ByteString.Char8
 import GHC.Generics (Generic)
-import PlutusLedgerApi.V2 (LedgerBytes (LedgerBytes, getLedgerBytes))
+import Plutus.V2.Ledger.Api (LedgerBytes (LedgerBytes, getLedgerBytes))
 import PlutusPrelude (NonEmpty, on)
 import PlutusPrelude qualified
 import PlutusTx (makeIsDataIndexed)

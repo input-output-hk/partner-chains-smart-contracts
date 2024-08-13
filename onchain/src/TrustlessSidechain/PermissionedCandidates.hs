@@ -10,11 +10,11 @@ module TrustlessSidechain.PermissionedCandidates (
   mkMintingPolicy,
 ) where
 
-import PlutusLedgerApi.Common (SerialisedScript)
-import PlutusLedgerApi.V2 (
+import Plutus.V2.Ledger.Api (
   Address,
+  Script,
   TxOut (TxOut),
-  serialiseCompiledCode,
+  fromCompiledCode,
  )
 import PlutusTx qualified
 import TrustlessSidechain.Governance.Admin qualified as Governance
@@ -180,9 +180,9 @@ mkMintingPolicyUntyped sp validatorAddress redeemer ctx =
       (unsafeFromBuiltinData redeemer)
       (Unsafe.wrap ctx)
 
-serialisableMintingPolicy :: SerialisedScript
+serialisableMintingPolicy :: Script
 serialisableMintingPolicy =
-  serialiseCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
+  fromCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
 
 mkValidatorUntyped ::
   BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
@@ -194,6 +194,6 @@ mkValidatorUntyped sp address redeemer ctx =
       (unsafeFromBuiltinData redeemer)
       (Unsafe.wrap ctx)
 
-serialisableValidator :: SerialisedScript
+serialisableValidator :: Script
 serialisableValidator =
-  serialiseCompiledCode $$(PlutusTx.compile [||mkValidatorUntyped||])
+  fromCompiledCode $$(PlutusTx.compile [||mkValidatorUntyped||])

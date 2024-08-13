@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Data.Handwritten (
@@ -19,7 +18,7 @@ import Data.Wrappers (
   directProductToData3,
   directProductUnsafeFromData3,
  )
-import PlutusLedgerApi.V1.Value (CurrencySymbol)
+import Plutus.V1.Ledger.Value (CurrencySymbol)
 import PlutusTx.Builtins (matchList)
 import PlutusTx.Builtins.Internal (
   BuiltinList,
@@ -143,7 +142,7 @@ listToData ::
   (ToData a) =>
   [a] ->
   BuiltinData
-listToData !ell = Unsafe.mkList (go ell)
+listToData ell = Unsafe.mkList (go ell)
   where
     go :: [a] -> BuiltinList BuiltinData
     go = \case

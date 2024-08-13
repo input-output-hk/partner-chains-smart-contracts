@@ -8,9 +8,9 @@ module TrustlessSidechain.CommitteePlainATMSPolicy (
   aggregateKeys,
 ) where
 
-import PlutusLedgerApi.V1.Value (CurrencySymbol)
-import PlutusLedgerApi.V1.Value qualified as Value
-import PlutusLedgerApi.V2 (
+import Plutus.V1.Ledger.Value (CurrencySymbol)
+import Plutus.V1.Ledger.Value qualified as Value
+import Plutus.V2.Ledger.Api (
   Datum (getDatum),
   LedgerBytes (LedgerBytes, getLedgerBytes),
   OutputDatum (OutputDatum),

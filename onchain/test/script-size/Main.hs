@@ -1,7 +1,7 @@
 module Main (main) where
 
 import Compiled qualified
-import PlutusLedgerApi.V1 (serialiseCompiledCode)
+import Plutus.V1.Ledger.Api (fromCompiledCode)
 import Sizer (scriptFitsInto, scriptFitsUnder)
 import Test.Tasty (defaultMain, testGroup)
 import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as CPMP
@@ -57,181 +57,168 @@ main =
         [ scriptFitsInto
             "mkMintingPolicy (FUEL) serialized"
             FUEL.serialisableMintingPolicy
-            3_259
+            3_234
         , scriptFitsInto
             "mkBurningPolicy (FUEL) serialized"
             FUEL.serialisableBurningPolicy
-            9
+            8
         , scriptFitsInto
             "mkMintingPolicy (MerkleRoot) serialized"
             MerkleRoot.serialisableMintingPolicy
-            2_934
+            2_607
         , scriptFitsInto
             "mkCommitteeCandidateValidator (serialized)"
             CCV.serialisableValidator
-            315
+            369
         , scriptFitsInto
             "mkCandidatePermissionMintingPolicy (serialized)"
             CPMP.serialisableCandidatePermissionMintingPolicy
-            396
+            402
         , scriptFitsInto
             "mkCommitteeOraclePolicy (serialized)"
             UCH.serialisableCommitteeOraclePolicy
-            1_988
+            1_818
         , scriptFitsInto
             "mkUpdateCommitteeHashValidator (serialized)"
             UCH.serialisableCommitteeHashValidator
-            2_763
+            2_641
         , scriptFitsInto
             "mkCheckpointValidator (serialized)"
             CV.serialisableCheckpointValidator
-            2_536
+            2_409
         , scriptFitsInto
             "mkCheckpointPolicy (serialized)"
             CV.serialisableCheckpointPolicy
-            604
+            605
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy) serialized"
             CPEATMSP.serialisableMintingPolicy
-            2_390
+            2_254
         , scriptFitsInto
             "mkMintingPolicy (CommitteePlainSchnorrSecp256k1ATMSPolicy) serialized"
             CPSATMSP.serialisableMintingPolicy
-            2_390
+            2_254
         , scriptFitsInto
             "mkDParameterValidatorCode (DParameter) serialized"
             DParameter.serialisableValidator
-            498
+            512
         , scriptFitsInto
             "mkDParameterPolicyCode (DParameter) serialized"
             DParameter.serialisableMintingPolicy
-            984
+            964
         , scriptFitsInto
             "mkFuelProxyPolicyCode (FUELProxyPolicy) serialized"
             FUELProxyPolicy.serialisableFuelProxyPolicy
-            2_765
+            2_461
         , scriptFitsInto
             "mkPermissionedCandidatePolicyCode (PermissionedCandidates) serialized"
             PermissionedCandidates.serialisableCandidatePermissionMintingPolicy
-            396
+            402
         , scriptFitsInto
             "mkPermissionedCandidatesValidatorCode (PermissionedCandidates) serialized"
             PermissionedCandidates.serialisableValidator
-            565
+            638
         , scriptFitsInto
             "mkVersionOraclePolicyCode (Versioning) serialized"
             Versioning.serialisableVersionOraclePolicy
-            3_715
+            2_662
         , scriptFitsInto
             "mkVersionOracleValidatorCode (Versioning) serialized"
             Versioning.serialisableVersionOracleValidator
-            929
+            1_035
         , scriptFitsInto
             "mkInitTokenPolicy (InitToken) serialized"
             InitToken.serialisableInitTokenPolicy
-            803
+            735
         , scriptFitsInto
             "mkReserveValidator (Reserve) serialized"
             Reserve.serialisableReserveValidator
-            6_013
+            5_154
         , scriptFitsInto
             "mkReserveAuthPolicy (Reserve) serialized"
             Reserve.serialisableReserveAuthPolicy
-            2_693
+            2_530
         , scriptFitsInto
             "mkIlliquidCirculationSupplyValidator (IlliquidCirculationSupply) serialized"
             IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyValidator
-            3_268
+            2_611
         ]
     , testGroup
         "Distributed set"
         [ scriptFitsInto
             "mkInsertValidator (serialized)"
             DS.serialisableInsertValidator
-            2_704
+            2_863
         , scriptFitsInto
             "mkDsConfPolicy (serialized)"
             DS.serialisableDsConfPolicy
-            645
+            597
         , scriptFitsInto
             "mkDsKeyPolicy (serialized)"
             DS.serialisableDsKeyPolicy
-            1_374
+            1_447
         ]
     , testGroup
         "Data rep"
         [ scriptFitsUnder
             "toBuiltinData"
-            ("handwritten", serialiseCompiledCode Compiled.toDataHandwritten)
-            ("generated", serialiseCompiledCode Compiled.toDataGenerated)
+            ("handwritten", fromCompiledCode Compiled.toDataHandwritten)
+            ("generated", fromCompiledCode Compiled.toDataGenerated)
         , scriptFitsUnder
             "fromBuiltinData"
-            ("handwritten", serialiseCompiledCode Compiled.fromDataHandwritten)
-            ("generated", serialiseCompiledCode Compiled.fromDataGenerated)
+            ("handwritten", fromCompiledCode Compiled.fromDataHandwritten)
+            ("generated", fromCompiledCode Compiled.fromDataGenerated)
         , scriptFitsUnder
             "unsafeFromBuiltinData"
-            ("handwritten", serialiseCompiledCode Compiled.unsafeFromDataHandwritten)
-            ("generated", serialiseCompiledCode Compiled.unsafeFromDataGenerated)
+            ("handwritten", fromCompiledCode Compiled.unsafeFromDataHandwritten)
+            ("generated", fromCompiledCode Compiled.unsafeFromDataGenerated)
         , scriptFitsUnder
             "toBuiltinData (pair)"
-            ("handwritten", serialiseCompiledCode Compiled.pairToDataHandwritten)
-            ("generated", serialiseCompiledCode Compiled.pairToDataGenerated)
+            ("handwritten", fromCompiledCode Compiled.pairToDataHandwritten)
+            ("generated", fromCompiledCode Compiled.pairToDataGenerated)
         , scriptFitsUnder
             "fromBuiltinData (pair)"
-            ("handwritten", serialiseCompiledCode Compiled.pairFromDataHandwritten)
-            ("generated", serialiseCompiledCode Compiled.pairFromDataGenerated)
+            ("handwritten", fromCompiledCode Compiled.pairFromDataHandwritten)
+            ("generated", fromCompiledCode Compiled.pairFromDataGenerated)
         , scriptFitsUnder
             "unsafeFromBuiltinData (pair)"
-            ("handwritten", serialiseCompiledCode Compiled.pairUnsafeFromDataHandwritten)
-            ("generated", serialiseCompiledCode Compiled.pairUnsafeFromDataGenerated)
+            ("handwritten", fromCompiledCode Compiled.pairUnsafeFromDataHandwritten)
+            ("generated", fromCompiledCode Compiled.pairUnsafeFromDataGenerated)
         , scriptFitsUnder
             "toBuiltinData (list)"
-            ("handwritten", serialiseCompiledCode Compiled.listToDataHandwritten)
-            ("generated", serialiseCompiledCode Compiled.listToDataGenerated)
+            ("handwritten", fromCompiledCode Compiled.listToDataHandwritten)
+            ("generated", fromCompiledCode Compiled.listToDataGenerated)
         , scriptFitsUnder
             "fromBuiltinData (list)"
-            ("handwritten", serialiseCompiledCode Compiled.listFromDataHandwritten)
-            ("generated", serialiseCompiledCode Compiled.listFromDataGenerated)
-
-        {- TODO
--------------------------------------------------------
-We have a size discrepancy of 3 bytes.
-This test is commented out for now, as we attempt to reason the size difference
---
-Additional note:
-This test seem to be a test of Plutus temaplate haskell code generation and implementation.
-We seem to be testing the implementation of Plutus to UPLC based on our expectaions.
-I argue that such tests are not in scope here and belong to plutus project.
-From our prespective, Plutus -> UPLC code gereration is Black Box Api call.
--------------------------------------------------------
+            ("handwritten", fromCompiledCode Compiled.listFromDataHandwritten)
+            ("generated", fromCompiledCode Compiled.listFromDataGenerated)
         , scriptFitsUnder
             "unsafeFromBuiltinData (list)"
-            ("handwritten", serialiseCompiledCode Compiled.listUnsafeFromDataHandwritten)
-            ("generated", serialiseCompiledCode Compiled.listUnsafeFromDataGenerated)
--}
+            ("handwritten", fromCompiledCode Compiled.listUnsafeFromDataHandwritten)
+            ("generated", fromCompiledCode Compiled.listUnsafeFromDataGenerated)
         , scriptFitsUnder
             "toBuiltinData (solution 3)"
-            ("using wrappers", serialiseCompiledCode Compiled.toDataWrapper)
-            ("direct", serialiseCompiledCode Compiled.toDataDirect)
+            ("using wrappers", fromCompiledCode Compiled.toDataWrapper)
+            ("direct", fromCompiledCode Compiled.toDataDirect)
         , scriptFitsUnder
             "fromBuiltinData (solution 3)"
-            ("using wrappers", serialiseCompiledCode Compiled.fromDataWrapper)
-            ("direct", serialiseCompiledCode Compiled.fromDataDirect)
+            ("using wrappers", fromCompiledCode Compiled.fromDataWrapper)
+            ("direct", fromCompiledCode Compiled.fromDataDirect)
         , scriptFitsUnder
             "unsafeFromBuiltinData (solution 3)"
-            ("using wrappers", serialiseCompiledCode Compiled.unsafeFromDataWrapper)
-            ("direct", serialiseCompiledCode Compiled.unsafeFromDataDirect)
+            ("using wrappers", fromCompiledCode Compiled.unsafeFromDataWrapper)
+            ("direct", fromCompiledCode Compiled.unsafeFromDataDirect)
         , scriptFitsUnder
             "toBuiltinData (CPS versus direct)"
-            ("cps", serialiseCompiledCode Compiled.toData3CPS)
-            ("direct", serialiseCompiledCode Compiled.toData3Direct)
+            ("cps", fromCompiledCode Compiled.toData3CPS)
+            ("direct", fromCompiledCode Compiled.toData3Direct)
         , scriptFitsUnder
             "fromBuiltinData (CPS versus direct)"
-            ("cps", serialiseCompiledCode Compiled.fromData3CPS)
-            ("direct", serialiseCompiledCode Compiled.fromData3Direct)
+            ("cps", fromCompiledCode Compiled.fromData3CPS)
+            ("direct", fromCompiledCode Compiled.fromData3Direct)
         , scriptFitsUnder
             "unsafeFromBuiltinData (CPS versus direct)"
-            ("cps", serialiseCompiledCode Compiled.unsafeFromData3CPS)
-            ("direct", serialiseCompiledCode Compiled.unsafeFromData3Direct)
+            ("cps", fromCompiledCode Compiled.unsafeFromData3CPS)
+            ("direct", fromCompiledCode Compiled.unsafeFromData3Direct)
         ]
     ]

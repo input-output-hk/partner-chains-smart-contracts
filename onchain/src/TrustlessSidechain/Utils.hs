@@ -18,10 +18,14 @@ import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 
 import Cardano.Api (PlutusScriptV2)
 import Cardano.Api.Shelley (PlutusScript (PlutusScriptSerialised))
+import Codec.Serialise (serialise)
+import Data.ByteString.Lazy (toStrict)
+import Data.ByteString.Short (toShort)
 import Data.Kind (Type)
-import PlutusLedgerApi.Common (SerialisedScript)
-import PlutusLedgerApi.V1.Value (valueOf)
-import PlutusLedgerApi.V2 (
+import Plutonomy.UPLC qualified
+import Plutus.V1.Ledger.Scripts (Script)
+import Plutus.V1.Ledger.Value (valueOf)
+import Plutus.V2.Ledger.Api (
   CurrencySymbol,
   ScriptContext,
   TokenName,
@@ -103,6 +107,10 @@ mkUntypedMintingPolicy ::
 mkUntypedMintingPolicy f r p =
   check $ f (unsafeFromBuiltinData r) (unsafeFromBuiltinData p)
 
-scriptToPlutusScript :: SerialisedScript -> PlutusScript PlutusScriptV2
+scriptToPlutusScript :: Script -> PlutusScript PlutusScriptV2
 scriptToPlutusScript =
   PlutusScriptSerialised @PlutusScriptV2
+    . toShort
+    . toStrict
+    . serialise
+    . Plutonomy.UPLC.optimizeUPLC

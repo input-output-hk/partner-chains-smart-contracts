@@ -8,8 +8,7 @@ import Data.String qualified as HString
 import Data.Word (Word8)
 import GHC.Exts (fromListN)
 import GHC.Real (fromRational)
-import PlutusLedgerApi.V2 (LedgerBytes (LedgerBytes))
-import System.IO.Unsafe (unsafePerformIO)
+import Plutus.V2.Ledger.Api (LedgerBytes (LedgerBytes))
 import Test.QuickCheck (
   Arbitrary (arbitrary, shrink),
   Property,
@@ -56,30 +55,23 @@ unitTests =
       sig2 = "bea04eef29ee7e6a020b18180de2715c387473132167e9646d0a6594cd7a27074ddadae2cdd13899395fa12e08393176d3640359fedc66501fd82589c9f953b8"
    in testGroup
         "Unit tests"
-        [ testCase "0 threshold"
-            $ verifyMultisig [] 0 msg []
-            @?= True
-        , testCase "not eq"
-            $ verifyMultisig [key1] 1 msg [sig2]
-            @?= False
-        , testCase "1-1"
-            $ verifyMultisig [key1] 1 msg [sig1]
-            @?= True
-        , testCase "2-1"
-            $ verifyMultisig [key1, key2] 1 msg [sig2]
-            @?= True
-        , testCase "1-2"
-            $ verifyMultisig [key2] 1 msg [sig1, sig2]
-            @?= False
+        [ testCase "0 threshold" $
+            verifyMultisig [] 0 msg [] @?= True
+        , testCase "not eq" $
+            verifyMultisig [key1] 1 msg [sig2] @?= False
+        , testCase "1-1" $
+            verifyMultisig [key1] 1 msg [sig1] @?= True
+        , testCase "2-1" $
+            verifyMultisig [key1, key2] 1 msg [sig2] @?= True
+        , testCase "1-2" $
+            verifyMultisig [key2] 1 msg [sig1, sig2] @?= False
         , -- this test is malformed, and hence should be 'False'.. while
           -- it is a valid signature, it doesn't satisfy the
           -- preconditions of the function
-          testCase "attemptDuplicatePubkey"
-            $ verifyMultisig [key1, key1] 2 msg [sig1]
-            @?= False
-        , testCase "attemptDuplicateSigs"
-            $ verifyMultisig [key1] 2 msg [sig1, sig1]
-            @?= False
+          testCase "attemptDuplicatePubkey" $
+            verifyMultisig [key1, key1] 2 msg [sig1] @?= False
+        , testCase "attemptDuplicateSigs" $
+            verifyMultisig [key1] 2 msg [sig1, sig1] @?= False
         ]
 
 propertyTests :: TestTree
@@ -126,24 +118,19 @@ data SufficientVerification
 instance Arbitrary SufficientVerification where
   arbitrary = do
     privKeys <- Gen.listOf1 $ QCExtra.suchThatMap (Gen.vectorOf 32 arbitrary) mkPrivKey
-    -- need a function that lifts IO Ctx to
-    let
-      {-# NOINLINE ctx #-}
-      ctx = unsafePerformIO SECP.createContext
-    let pubKeys = TSPrelude.fmap (SECP.derivePubKey ctx) privKeys
+    let pubKeys = TSPrelude.fmap SECP.derivePubKey privKeys
     (message, messageBS) <- QCExtra.suchThatMap (Gen.vectorOf 32 arbitrary) $ \bytes -> do
       let bs = fromListN 32 bytes
       msg <- SECP.msg bs
       TSPrelude.pure (msg, bs)
-    let f = signWithKey ctx
     signatures <-
-      TSPrelude.fmap (TSPrelude.fmap (`f` message))
+      TSPrelude.fmap (TSPrelude.fmap (`signWithKey` message))
         . QCExtra.suchThatMap (QCExtra.sublistOf privKeys)
         $ \pkSubs -> do
           guard (TSPrelude.not . List.null $ pkSubs)
           TSPrelude.pure pkSubs
     enough <- TSPrelude.fmap TSPrelude.fromIntegral . Gen.chooseInt $ (1, TSPrelude.length signatures)
-    let pubKeyBytes = TSPrelude.fmap (LedgerBytes . toBuiltin . SECP.exportPubKey ctx True) pubKeys
+    let pubKeyBytes = TSPrelude.fmap (LedgerBytes . toBuiltin . SECP.exportPubKey True) pubKeys
     let messageBBS = LedgerBytes $ toBuiltin messageBS
     TSPrelude.pure . SufficientVerification pubKeyBytes enough messageBBS $ signatures
   shrink (SufficientVerification pks enough msg sigs) = do
@@ -231,10 +218,10 @@ showInsufficientVerification (InsufficientVerification pks enough msg sigs) =
 mkPrivKey :: [Word8] -> Maybe SECP.SecKey
 mkPrivKey = SECP.secKey . fromListN 32
 
-signWithKey :: SECP.Ctx -> SECP.SecKey -> SECP.Msg -> LedgerBytes
-signWithKey ctx sk =
+signWithKey :: SECP.SecKey -> SECP.Msg -> LedgerBytes
+signWithKey sk =
   LedgerBytes
     . toBuiltin
-    . (\(SECP.CompactSig sig) -> sig)
-    . SECP.exportCompactSig ctx
-    . SECP.signMsg ctx sk
+    . SECP.getCompactSig
+    . SECP.exportCompactSig
+    . SECP.signMsg sk

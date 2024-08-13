@@ -13,25 +13,24 @@ module TrustlessSidechain.UpdateCommitteeHash (
   serialisableCommitteeHashValidator,
 ) where
 
-import PlutusLedgerApi.V1.Value qualified as Value
-import PlutusLedgerApi.V2 (
+import Plutus.V1.Ledger.Value qualified as Value
+import Plutus.V2.Ledger.Api (
   Credential (ScriptCredential),
   CurrencySymbol,
   Datum (getDatum),
   LedgerBytes (LedgerBytes),
   OutputDatum (OutputDatum),
+  Script,
   ScriptContext (scriptContextTxInfo),
-  SerialisedScript,
   TokenName (TokenName),
   TxInInfo (txInInfoResolved),
   TxInfo (txInfoMint, txInfoOutputs, txInfoReferenceInputs),
   TxOut (txOutAddress, txOutDatum, txOutValue),
   Value (getValue),
   addressCredential,
-  serialiseCompiledCode,
-  SerialisedScript,
+  fromCompiledCode,
  )
-import PlutusLedgerApi.V2.Contexts qualified as Contexts
+import Plutus.V2.Ledger.Contexts qualified as Contexts
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
@@ -246,9 +245,9 @@ mkCommitteeOraclePolicyUntyped =
     . mkCommitteeOraclePolicy
     . PlutusTx.unsafeFromBuiltinData
 
-serialisableCommitteeOraclePolicy :: SerialisedScript
+serialisableCommitteeOraclePolicy :: Script
 serialisableCommitteeOraclePolicy =
-  serialiseCompiledCode $$(PlutusTx.compile [||mkCommitteeOraclePolicyUntyped||])
+  fromCompiledCode $$(PlutusTx.compile [||mkCommitteeOraclePolicyUntyped||])
 
 mkCommitteeHashValidatorUntyped ::
   BuiltinData ->
@@ -263,6 +262,6 @@ mkCommitteeHashValidatorUntyped uch versioningConfig =
       (PlutusTx.unsafeFromBuiltinData uch)
       (PlutusTx.unsafeFromBuiltinData versioningConfig)
 
-serialisableCommitteeHashValidator :: SerialisedScript
+serialisableCommitteeHashValidator :: Script
 serialisableCommitteeHashValidator =
-  serialiseCompiledCode $$(PlutusTx.compile [||mkCommitteeHashValidatorUntyped||])
+  fromCompiledCode $$(PlutusTx.compile [||mkCommitteeHashValidatorUntyped||])

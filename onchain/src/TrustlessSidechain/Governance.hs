@@ -2,7 +2,7 @@ module TrustlessSidechain.Governance (
   approvedByGovernance,
 ) where
 
-import PlutusLedgerApi.V1.Value
+import Plutus.V1.Ledger.Value
 import PlutusTx.AssocMap (lookup, toList)
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe

@@ -20,7 +20,7 @@ module Test.QuickCheck.Extra (
   ArbitraryBytes (..),
   ArbitraryTxOutRef (..),
   ArbitraryCurrencySymbol (..),
-  ArbitraryScriptHash (..),
+  ArbitraryValidatorHash (..),
   ArbitraryPubKeyHash (..),
   ArbitraryAddress (..),
   ArbitraryCredential (..),
@@ -38,20 +38,20 @@ import Data.Bits (
 import Data.List (drop)
 import GHC.Err (undefined)
 import GHC.Exts (fromList, toList)
-import PlutusLedgerApi.V1.Value (
+import Plutus.V1.Ledger.Value (
   AssetClass (AssetClass),
  )
-import PlutusLedgerApi.V2 (
+import Plutus.V2.Ledger.Api (
   Address (Address),
   Credential (PubKeyCredential, ScriptCredential),
   CurrencySymbol (CurrencySymbol),
   LedgerBytes (LedgerBytes),
   PubKeyHash (PubKeyHash),
-  ScriptHash (..),
   StakingCredential (StakingHash, StakingPtr),
   TokenName (TokenName),
   TxId (TxId),
   TxOutRef (TxOutRef),
+  ValidatorHash (ValidatorHash),
  )
 import Test.QuickCheck (
   ASCIIString (ASCIIString),
@@ -317,7 +317,7 @@ instance Arbitrary ArbitraryCredential where
       sc :: Gen Credential
       sc =
         ScriptCredential <$> do
-          ArbitraryScriptHash vh <- arbitrary
+          ArbitraryValidatorHash vh <- arbitrary
           pure vh
   shrink (ArbitraryCredential cred) =
     ArbitraryCredential <$> case cred of
@@ -327,28 +327,28 @@ instance Arbitrary ArbitraryCredential where
           pure pkh'
       ScriptCredential vh ->
         ScriptCredential <$> do
-          ArbitraryScriptHash vh' <- shrink (ArbitraryScriptHash vh)
+          ArbitraryValidatorHash vh' <- shrink (ArbitraryValidatorHash vh)
           pure vh'
 
 -- | @since v4.0.0
 instance CoArbitrary ArbitraryCredential where
   coarbitrary (ArbitraryCredential cred) = case cred of
     PubKeyCredential pkh -> variant (0 :: Int) . coarbitrary (ArbitraryPubKeyHash pkh)
-    ScriptCredential vh -> variant (1 :: Int) . coarbitrary (ArbitraryScriptHash vh)
+    ScriptCredential vh -> variant (1 :: Int) . coarbitrary (ArbitraryValidatorHash vh)
 
 -- | @since v4.0.0
 instance Function ArbitraryCredential where
   function = functionMap into outOf
     where
-      into :: ArbitraryCredential -> Either ArbitraryPubKeyHash ArbitraryScriptHash
+      into :: ArbitraryCredential -> Either ArbitraryPubKeyHash ArbitraryValidatorHash
       into (ArbitraryCredential cred) = case cred of
         PubKeyCredential pkh -> Left (ArbitraryPubKeyHash pkh)
-        ScriptCredential vh -> Right (ArbitraryScriptHash vh)
-      outOf :: Either ArbitraryPubKeyHash ArbitraryScriptHash -> ArbitraryCredential
+        ScriptCredential vh -> Right (ArbitraryValidatorHash vh)
+      outOf :: Either ArbitraryPubKeyHash ArbitraryValidatorHash -> ArbitraryCredential
       outOf =
         ArbitraryCredential . \case
           Left (ArbitraryPubKeyHash pkh) -> PubKeyCredential pkh
-          Right (ArbitraryScriptHash vh) -> ScriptCredential vh
+          Right (ArbitraryValidatorHash vh) -> ScriptCredential vh
 
 -- | Wrapper for 'Address' to provide QuickCheck instances.
 --
@@ -504,10 +504,10 @@ instance Function ArbitraryCurrencySymbol where
           . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
           . fromList @ByteString
 
--- | Wrapper for 'ScriptHash' to provide QuickCheck instances.
+-- | Wrapper for 'ValidatorHash' to provide QuickCheck instances.
 --
 -- @since v4.0.0
-newtype ArbitraryScriptHash = ArbitraryScriptHash ScriptHash
+newtype ArbitraryValidatorHash = ArbitraryValidatorHash ValidatorHash
   deriving
     ( -- | @since v4.0.0
       Eq
@@ -518,7 +518,7 @@ newtype ArbitraryScriptHash = ArbitraryScriptHash ScriptHash
     , -- | @since v4.0.0
       PTPrelude.Ord
     )
-    via ScriptHash
+    via ValidatorHash
   deriving stock
     ( -- | @since v4.0.0
       Show
@@ -528,30 +528,30 @@ newtype ArbitraryScriptHash = ArbitraryScriptHash ScriptHash
 -- much sense to).
 --
 -- @since v4.0.0
-instance Arbitrary ArbitraryScriptHash where
+instance Arbitrary ArbitraryValidatorHash where
   arbitrary =
-    ArbitraryScriptHash
-      . ScriptHash
+    ArbitraryValidatorHash
+      . ValidatorHash
       . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
       . fromList @ByteString
       <$> vectorOf 28 arbitrary
 
 -- | @since v4.0.0
-instance CoArbitrary ArbitraryScriptHash where
-  coarbitrary (ArbitraryScriptHash (ScriptHash bbs)) =
+instance CoArbitrary ArbitraryValidatorHash where
+  coarbitrary (ArbitraryValidatorHash (ValidatorHash bbs)) =
     coarbitrary . toList . PTPrelude.fromBuiltin $ bbs
 
 -- | @since v4.0.0
-instance Function ArbitraryScriptHash where
+instance Function ArbitraryValidatorHash where
   function = functionMap into outOf
     where
-      into :: ArbitraryScriptHash -> [Word8]
-      into (ArbitraryScriptHash (ScriptHash bbs)) =
+      into :: ArbitraryValidatorHash -> [Word8]
+      into (ArbitraryValidatorHash (ValidatorHash bbs)) =
         toList . PTPrelude.fromBuiltin $ bbs
-      outOf :: [Word8] -> ArbitraryScriptHash
+      outOf :: [Word8] -> ArbitraryValidatorHash
       outOf =
-        ArbitraryScriptHash
-          . ScriptHash
+        ArbitraryValidatorHash
+          . ValidatorHash
           . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
           . fromList @ByteString
 

@@ -5,9 +5,10 @@ module TrustlessSidechain.InitToken (
   serialisableInitTokenPolicy,
 ) where
 
-import PlutusLedgerApi.Common (SerialisedScript, serialiseCompiledCode)
-import PlutusLedgerApi.V2 (
-  getValue,
+import Plutus.V2.Ledger.Api (
+  Script,
+  Value (getValue),
+  fromCompiledCode,
  )
 import PlutusTx qualified
 import PlutusTx.AssocMap qualified as AssocMap
@@ -79,6 +80,6 @@ mkInitTokenPolicyUntyped sp red ctx =
       (PlutusTx.unsafeFromBuiltinData red)
       (Unsafe.wrap ctx)
 
-serialisableInitTokenPolicy :: SerialisedScript
+serialisableInitTokenPolicy :: Script
 serialisableInitTokenPolicy =
-  serialiseCompiledCode $$(PlutusTx.compile [||mkInitTokenPolicyUntyped||])
+  fromCompiledCode $$(PlutusTx.compile [||mkInitTokenPolicyUntyped||])
