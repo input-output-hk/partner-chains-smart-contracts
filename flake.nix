@@ -3,6 +3,13 @@
 
   inputs = {
 
+    purifix.url = "github:purifix/purifix";
+
+    purescript-overlay = {
+      url = "github:thomashoneyman/purescript-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     iohk-nix = {
       url = "github:input-output-hk/iohk-nix";
     };
@@ -60,6 +67,8 @@
         overlays = [
           inputs.iohk-nix.overlays.crypto
           inputs.haskell-nix.overlay
+          inputs.purescript-overlay.overlays.default
+          inputs.purifix.overlay
         ];
       };
     };
