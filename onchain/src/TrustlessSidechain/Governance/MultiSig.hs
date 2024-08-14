@@ -26,7 +26,7 @@ import TrustlessSidechain.Utils (currencySymbolValueOf)
 -- minting policy, changing the order of elements will change the hash of the
 -- policy.
 --
--- @since Unreleased
+-- @since v6.1.0
 data MultiSigGovParams = MultiSigGovParams
   { governanceMembers :: [PubKeyHash]
   -- ^ Members of the governance
@@ -35,40 +35,40 @@ data MultiSigGovParams = MultiSigGovParams
   }
   deriving (TSPrelude.Show, TSPrelude.Eq)
 
--- | @since Unreleased
+-- | @since v6.1.0
 instance ToData MultiSigGovParams where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (MultiSigGovParams {..}) =
     productToData2 governanceMembers requiredSignatures
 
--- | @since Unreleased
+-- | @since v6.1.0
 instance FromData MultiSigGovParams where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData = productFromData2 MultiSigGovParams
 
--- | @since Unreleased
+-- | @since v6.1.0
 instance UnsafeFromData MultiSigGovParams where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 MultiSigGovParams
 
--- | @since Unreleased
+-- | @since v6.1.0
 makeHasField ''MultiSigGovParams
 
 -- | Redemeer for the multi-sig governance policy that tells whether we are
 -- checking for approval from the governance or just burning unused tokens
 -- generated during signature checks.
 --
--- @since Unreleased
+-- @since v6.1.0
 data MultiSigGovRedeemer = MultiSignatureCheck | MultiSigTokenGC
   deriving (TSPrelude.Show, TSPrelude.Eq)
 
--- | @since Unreleased
+-- | @since v6.1.0
 instance ToData MultiSigGovRedeemer where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData MultiSignatureCheck = toBuiltinData (0 :: Integer)
   toBuiltinData MultiSigTokenGC = toBuiltinData (1 :: Integer)
 
--- | @since Unreleased
+-- | @since v6.1.0
 instance FromData MultiSigGovRedeemer where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData x = do
@@ -78,7 +78,7 @@ instance FromData MultiSigGovRedeemer where
       1 -> Just MultiSigTokenGC
       _ -> Nothing
 
--- | @since Unreleased
+-- | @since v6.1.0
 instance UnsafeFromData MultiSigGovRedeemer where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData x =

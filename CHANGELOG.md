@@ -5,9 +5,18 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 # Unreleased
 
+# v6.1.0
+
 ## Added
 
   * Added `--network` paremeter which takes either `testnet` or `mainnet`
+  * Add CLI for reserve and illiquid circulation supply endpoints
+  * Obtain cardano-address via CHaP
+
+## Changed
+  * Update ghc from 8.7 to 9.66
+  * Update plutus-tx from 1.0 to 1.27, and remove plutonic dependency
+  * Update ctl to version 8.6
 
 # v6.0.0
 
