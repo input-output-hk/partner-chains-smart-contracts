@@ -42,7 +42,7 @@ import Type.Row (type (+))
 -- minting policy, changing the order of elements will change the hash of the
 -- policy.
 --
--- @since Unreleased
+-- @since v6.1.0
 newtype MultiSigGovParams = MultiSigGovParams
   { -- | Members of the governance
     governanceMembers ∷ Array Ed25519KeyHash
@@ -86,7 +86,7 @@ instance Show MultiSigGovParams where
 -- checking for approval from the governance or just burning unused tokens
 -- generated during signature checks.
 --
--- @since Unreleased
+-- @since v6.1.0
 data MultiSigGovRedeemer = MultiSignatureCheck | MultiSigTokenGC
 
 derive instance Generic MultiSigGovRedeemer _
