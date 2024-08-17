@@ -6,16 +6,17 @@
 pkgs.mkShell {
   inputsFrom = [ hsShell ];
   buildInputs = with pkgs; [
-    cardano-node
     cardano-cli
+    cardano-node
     cardano-testnet
     fd
+    nodejs-18_x
     ogmios
-    purs
-    purs-tidy
     purescript-language-server
     purescript-psa
+    purs
+    purs-tidy
     spago
-    nodejs-18_x
+    spago2nix
   ];
 }

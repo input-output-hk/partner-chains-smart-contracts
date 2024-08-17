@@ -102,6 +102,18 @@
       "url": "https://github.com/nixos/nixpkgs/archive/4284c2b73c8bce4b46a6adf23e16d9e2ec8da4bb.tar.gz",
       "hash": "1pz8nmcqy68dhk6i1nkldfqask8yfp3k1qpb8apdq0dzblpwk2wb"
     },
+    "npmlock2nix": {
+      "type": "Git",
+      "repository": {
+        "type": "GitHub",
+        "owner": "nix-community",
+        "repo": "npmlock2nix"
+      },
+      "branch": "master",
+      "revision": "9197bbf397d76059a76310523d45df10d2e4ca81",
+      "url": "https://github.com/nix-community/npmlock2nix/archive/9197bbf397d76059a76310523d45df10d2e4ca81.tar.gz",
+      "hash": "1ddfby72fsnpn4yw43g4zxvg6jzlk5hi5cfnnccg9jgw53ckr4xh"
+    },
     "purescript-overlay": {
       "type": "Git",
       "repository": {
@@ -125,6 +137,18 @@
       "revision": "v0.3.2",
       "url": "https://github.com/bitcoin-core/secp256k1/archive/v0.3.2.tar.gz",
       "hash": "12wksk7bi3yfzmk1zwh5b6846zcaycqz1w4w4p23apjc8da4jwpn"
+    },
+    "spago2nix": {
+      "type": "Git",
+      "repository": {
+        "type": "GitHub",
+        "owner": "justinwoo",
+        "repo": "spago2nix"
+      },
+      "branch": "master",
+      "revision": "86f2cef73eb5b90d04d0897aa8c0384593adf9c4",
+      "url": "https://github.com/justinwoo/spago2nix/archive/86f2cef73eb5b90d04d0897aa8c0384593adf9c4.tar.gz",
+      "hash": "1xybdzllavqwbyj266zddjc36jpg6aygk505n8fj5w0cfjny5f8q"
     }
   },
   "version": 3

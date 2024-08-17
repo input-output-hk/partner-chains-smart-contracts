@@ -5,6 +5,8 @@ let
   iohkNix = import pins."iohk-nix" { };
   purescript = import pins."purescript-overlay";
   cardanoNode = import pins."cardano-node" { };
+  npmLockToNix = import pins."npmlock2nix" { };
+  spagoToNix = import pins."spago2nix" { };
 
   overlays =
     let
@@ -64,6 +66,12 @@ let
       # ogmios: Needed for integration testing
       ogmiosOverlay = [ (self: super: { ogmios = super.callPackage ./packages/ogmios.nix { }; }) ];
 
+      # npmlock2nix: used to manage the npm dependencies in the offchain code
+      npmlockOverlay = [ (self: super: { inherit npmLockToNix; }) ];
+
+      # spago2nix: required for purescript/spago package integration
+      spagoToNixOverlay = [ (self: super: { spago2nix = super.callPackage ./packages/spago2nix.nix { }; }) ];
+
     in
     chapOverlay
     ++ haskellNixOverlays
@@ -73,7 +81,9 @@ let
     ++ purescriptOverlay
     ++ cardanoNodeOverlay
     ++ kupoOverlay
-    ++ ogmiosOverlay;
+    ++ ogmiosOverlay
+    ++ npmlockOverlay
+    ++ spagoToNixOverlay;
 
   config = { allowUnfree = true; };
 in
