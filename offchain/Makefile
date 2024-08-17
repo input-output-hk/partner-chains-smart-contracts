@@ -2,12 +2,10 @@ SHELL := bash
 .ONESHELL:
 .PHONY: build test update-scripts version clean \
         check-format format \
-        spago2nix \
         esbuild-bundle create-bundle-entrypoint delete-bundle-entrypoint
 .SHELLFLAGS := -eu -o pipefail -c
 
 ps-sources := $(shell fd --no-ignore-parent -epurs)
-nix-sources := $(shell fd --no-ignore-parent -enix --exclude='spago*')
 js-sources := $(shell fd --no-ignore-parent -ejs -ecjs)
 purs-args := "--censor-lib --stash --strict --censor-codes=UserDefinedWarning"
 
@@ -87,9 +85,6 @@ esbuild-bundle: build create-bundle-entrypoint
 	BROWSER_RUNTIME=${browser-runtime} node esbuild/bundle.js ./dist/entrypoint.js dist/index.js
 	@make delete-bundle-entrypoint
 
-spago2nix:
-	@spago2nix generate
-	@nixpkgs-fmt spago-packages.nix
 
 check-format:
 	@purs-tidy check ${ps-sources}
@@ -107,7 +102,6 @@ clean:
 	@ rm -rf .psci_modules || true
 	@ rm -rf .spago || true
 	@ rm -rf generated-docs || true
-	@ rm -rf .spago2nix || true
 	@ rm -rf node_modules || true
 	@ rm -rf output || true
 	@ rm -rf dist || true
