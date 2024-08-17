@@ -24,6 +24,36 @@
       "url": "https://github.com/input-output-hk/cardano-haskell-packages/archive/e3afe42f8c3a0be8e8fb53602afd57f7839e040a.tar.gz",
       "hash": "03md160d64k9c95nc0hhwdqkwvn0j6w68gzjzfg8c7rq246y3j0w"
     },
+    "cardano-node": {
+      "type": "GitRelease",
+      "repository": {
+        "type": "GitHub",
+        "owner": "intersectmbo",
+        "repo": "cardano-node"
+      },
+      "pre_releases": false,
+      "version_upper_bound": null,
+      "release_prefix": null,
+      "version": "9.1.0",
+      "revision": "176f99e51155cb3eaa0711db1c3c969d67438958",
+      "url": "https://api.github.com/repos/intersectmbo/cardano-node/tarball/9.1.0",
+      "hash": "0ssiz42ngx55qgb5a0s8qanb848h8jwzq77ggxx1vlrn1x22170p"
+    },
+    "flake-compat": {
+      "type": "GitRelease",
+      "repository": {
+        "type": "GitHub",
+        "owner": "edolstra",
+        "repo": "flake-compat"
+      },
+      "pre_releases": false,
+      "version_upper_bound": null,
+      "release_prefix": null,
+      "version": "v1.0.1",
+      "revision": "0f9255e01c2351cc7d116c072cb317785dd33b33",
+      "url": "https://api.github.com/repos/edolstra/flake-compat/tarball/v1.0.1",
+      "hash": "0m9grvfsbwmvgwaxvdzv6cmyvjnlww004gfxjvcl806ndqaxzy4j"
+    },
     "haskell.nix": {
       "type": "Git",
       "repository": {
@@ -71,6 +101,18 @@
       "revision": "4284c2b73c8bce4b46a6adf23e16d9e2ec8da4bb",
       "url": "https://github.com/nixos/nixpkgs/archive/4284c2b73c8bce4b46a6adf23e16d9e2ec8da4bb.tar.gz",
       "hash": "1pz8nmcqy68dhk6i1nkldfqask8yfp3k1qpb8apdq0dzblpwk2wb"
+    },
+    "purescript-overlay": {
+      "type": "Git",
+      "repository": {
+        "type": "GitHub",
+        "owner": "thomashoneyman",
+        "repo": "purescript-overlay"
+      },
+      "branch": "main",
+      "revision": "8b1ea117f0cfe5d81dc005c6168f17c1fd7e75ec",
+      "url": "https://github.com/thomashoneyman/purescript-overlay/archive/8b1ea117f0cfe5d81dc005c6168f17c1fd7e75ec.tar.gz",
+      "hash": "1ki0j6h2hlrdxx2r6h14cb68gz2grw38cn5lqjjpqv7nrhj18mrm"
     },
     "secp256k1": {
       "type": "Git",

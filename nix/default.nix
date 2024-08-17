@@ -3,6 +3,8 @@ let
   pins = import ../npins;
   haskellNix = import pins."haskell.nix" { };
   iohkNix = import pins."iohk-nix" { };
+  purescript = import pins."purescript-overlay";
+  cardanoNode = import pins."cardano-node" { };
 
   overlays =
     let
@@ -47,8 +49,31 @@ let
           };
         })
       ];
+
+      # purescript-overlay: provides purescript related packages for the
+      # offchain code including purs and spago
+      purescriptOverlay = [ purescript.overlays.default ];
+
+      # cardano-node: We need cardano-node for running the integration tests
+      # in offchain
+      cardanoNodeOverlay = [ (self: super: { inherit (cardanoNode) cardano-node cardano-cli cardano-testnet; }) ];
+
+      # kupo: We also need kupo for running integration tests
+      kupoOverlay = [ (self: super: { kupo = super.callPackage ./packages/kupo.nix { }; }) ];
+
+      # ogmios: Needed for integration testing
+      ogmiosOverlay = [ (self: super: { ogmios = super.callPackage ./packages/ogmios.nix { }; }) ];
+
     in
-    chapOverlay ++ haskellNixOverlays ++ iohkNixCryptoOverlay ++ iohkNixOverlays ++ haskellNixMapping;
+    chapOverlay
+    ++ haskellNixOverlays
+    ++ iohkNixCryptoOverlay
+    ++ iohkNixOverlays
+    ++ haskellNixMapping
+    ++ purescriptOverlay
+    ++ cardanoNodeOverlay
+    ++ kupoOverlay
+    ++ ogmiosOverlay;
 
   config = { allowUnfree = true; };
 in

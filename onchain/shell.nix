@@ -6,6 +6,7 @@
 onchainProject.shellFor {
   withHoogle = false;
   buildInputs = with pkgs; [
+    cardano-node
     gnumake
     haskellPackages.cabal-install
     haskellPackages.cabal-fmt
@@ -14,5 +15,6 @@ onchainProject.shellFor {
     haskellPackages.haskell-language-server
     haskellPackages.hlint
     haskellPackages.hoogle
+    kupo
   ];
 }
