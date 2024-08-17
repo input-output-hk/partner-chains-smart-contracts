@@ -1,25 +1,26 @@
 { system ? builtins.currentSystem }:
 let
   pins = import ../npins;
-  haskellNix = import pins."haskell.nix" {};
-  iohkNix = import pins."iohk-nix" {};
+  haskellNix = import pins."haskell.nix" { };
+  iohkNix = import pins."iohk-nix" { };
 
   overlays =
-    let 
+    let
       # iohk-nix: provides overrides on crypto packages that
       # we depend on for the onchain haskell build. The flake
       # is unfortunately not maintained in a way that it can
       # easily be consumed without flakes so we have to do
       # some bootstrapping here providing the inputs ourselves
       # as additional pins.
-      iohkNixCryptoOverlay = let
-       f = builtins.head iohkNix.overlays.crypto;
-        iohkNixCryptoInputs = {
-          sodium = pins.libsodium // { shortRev = "dbb48cce"; };
-          blst = pins.blst // { shortRev = "1l1c905"; };
-          secp256k1 = pins.secp256k1 // { shortRev = "acf5c55"; };
-        };
-      in
+      iohkNixCryptoOverlay =
+        let
+          f = builtins.head iohkNix.overlays.crypto;
+          iohkNixCryptoInputs = {
+            sodium = pins.libsodium // { shortRev = "dbb48cce"; };
+            blst = pins.blst // { shortRev = "1l1c905"; };
+            secp256k1 = pins.secp256k1 // { shortRev = "acf5c55"; };
+          };
+        in
         [ (f iohkNixCryptoInputs) ];
 
       # haskell.nix: provides haskell/nix integration that
@@ -47,8 +48,8 @@ let
         })
       ];
     in
-      chapOverlay ++ haskellNixOverlays ++ iohkNixCryptoOverlay ++ iohkNixOverlays ++ haskellNixMapping;
+    chapOverlay ++ haskellNixOverlays ++ iohkNixCryptoOverlay ++ iohkNixOverlays ++ haskellNixMapping;
 
   config = { allowUnfree = true; };
 in
-  import pins.nixpkgs { inherit system overlays config; }
+import pins.nixpkgs { inherit system overlays config; }
