@@ -21,4 +21,4 @@ let
   };
 
 in
-  if stdenv.isDarwin then kupoLinux else kupoDarwin
+if stdenv.isDarwin then kupoLinux else kupoDarwin

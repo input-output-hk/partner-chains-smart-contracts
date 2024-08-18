@@ -19,4 +19,4 @@ let
   };
 
 in
-  if stdenv.isLinux then ogmiosLinux else ogmiosDarwin
+if stdenv.isLinux then ogmiosLinux else ogmiosDarwin

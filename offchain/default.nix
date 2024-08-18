@@ -32,7 +32,7 @@ let
       buildRequirePatchShebangs = true;
       node-pre-gyp = npmLockToNix.v2.packageRequirePatchShebangs;
     };
-    ESBUILD_BINARY_PATH="${pkgs.esbuild}/bin/esbuild";
+    ESBUILD_BINARY_PATH = "${pkgs.esbuild}/bin/esbuild";
   };
 
   cli = stdenv.mkDerivation {
