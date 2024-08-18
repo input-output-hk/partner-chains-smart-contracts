@@ -6,6 +6,7 @@
 let
 
   inherit (pkgs) npmLockToNix lib nodejs-18_x stdenv;
+  inherit (lib) fileset;
 
   cliScript = pkgs.writeScript "sidechain-mai-cli" ''
     #!/usr/bin/env bash
@@ -22,7 +23,10 @@ let
   '';
 
   nodeModules = npmLockToNix.v2.node_modules {
-    src = lib.cleanSource ./.;
+    src = fileset.toSource {
+      root = ./.;
+      fileset = fileset.union ./package.json ./package-lock.json;
+    };
     nodejs = nodejs-18_x;
     sourceOverrides = {
       buildRequirePatchShebangs = true;
@@ -32,7 +36,19 @@ let
 
   cli = stdenv.mkDerivation {
     name = "cli";
-    src = lib.cleanSource ./.;
+
+    src = fileset.toSource {
+      root = ./.;
+      fileset = (fileset.unions [
+        ./package.json
+        ./package-lock.json
+        ./entry.js
+        ./esbuild.js
+        ./src
+        ./test
+      ]);
+    };
+
     dontPatchShebangs = true;
 
     buildInputs = with spagoPkgs; [
