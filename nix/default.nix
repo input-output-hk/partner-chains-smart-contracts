@@ -53,7 +53,9 @@ let
       ];
 
       # purescript-overlay: provides purescript related packages for the
-      # offchain code including purs and spago
+      # offchain code including purs and spago.
+      # NOTE: The overlay does not provide `spago` for `darwin-aarch64` so
+      # we are instead using the one provided in nixpkgs via `haskellPackages`
       purescriptOverlay = [ purescript.overlays.default ];
 
       # cardano-node: We need cardano-node for running the integration tests
@@ -79,6 +81,7 @@ let
     ++ iohkNixOverlays
     ++ haskellNixMapping
     ++ purescriptOverlay
+    ++ [ (self: super: { spago = super.haskellPackages.spago; }) ]
     ++ cardanoNodeOverlay
     ++ kupoOverlay
     ++ ogmiosOverlay

@@ -1,10 +1,11 @@
 { pkgs
-, nodejs ? pkgs."nodejs-18_x"
+, fetchFromGitHub
+, nodejs
 }:
 
 import
   (
-    pkgs.fetchFromGitHub {
+    fetchFromGitHub {
       owner = "justinwoo";
       repo = "spago2nix";
       rev = "1b8ec352bc7eac077b934d6b9f6efa0129926e59";
