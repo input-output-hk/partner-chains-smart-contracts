@@ -35,58 +35,43 @@ let
       # packaging
       iohkNixOverlays = iohkNix.overlays."haskell-nix-extra";
 
-      # cardano-haskell-packages: provides cardano related haskell pacakges
-      chapOverlay = [ (self: super: { CHaP = pins."cardano-haskell-packages"; }) ];
-
-      # In order to actually apply the changes provided by iohk-nix
-      # we need to modify haskell.nix overwriting the attribute set
-      # with the altered crypto libraries
-      haskellNixMapping = [
-        (self: super: {
-          haskell-nix = super.haskell-nix // {
-            extraPkgconfigMappings = super.haskell-nix.extraPkgconfigMappings or { } // {
-              "libblst" = [ "libblst" ];
-              "libsodium" = [ "libsodium-vrf" ];
-            };
-          };
-        })
-      ];
-
       # purescript-overlay: provides purescript related packages for the
       # offchain code including purs and spago.
       # NOTE: The overlay does not provide `spago` for `darwin-aarch64` so
       # we are instead using the one provided in nixpkgs via `haskellPackages`
       purescriptOverlay = [ purescript.overlays.default ];
 
-      # cardano-node: We need cardano-node for running the integration tests
-      # in offchain
-      cardanoNodeOverlay = [ (self: super: { inherit (cardanoNode) cardano-node cardano-cli cardano-testnet; }) ];
-
-      # kupo: We also need kupo for running integration tests
-      kupoOverlay = [ (self: super: { kupo = super.callPackage ./packages/kupo.nix { }; }) ];
-
-      # ogmios: Needed for integration testing
-      ogmiosOverlay = [ (self: super: { ogmios = super.callPackage ./packages/ogmios.nix { }; }) ];
-
-      # npmlock2nix: used to manage the npm dependencies in the offchain code
-      npmlockOverlay = [ (self: super: { inherit npmLockToNix; }) ];
-
-      # spago2nix: required for purescript/spago package integration
-      spagoToNixOverlay = [ (self: super: { spago2nix = super.callPackage ./packages/spago2nix.nix { }; }) ];
-
     in
-    chapOverlay
-    ++ haskellNixOverlays
+    haskellNixOverlays
     ++ iohkNixCryptoOverlay
     ++ iohkNixOverlays
-    ++ haskellNixMapping
     ++ purescriptOverlay
-    ++ [ (self: super: { spago = super.haskellPackages.spago; }) ]
-    ++ cardanoNodeOverlay
-    ++ kupoOverlay
-    ++ ogmiosOverlay
-    ++ npmlockOverlay
-    ++ spagoToNixOverlay;
+    ++ [
+      (self: super: {
+
+        # In order to actually apply the changes provided by iohk-nix
+        # we need to modify haskell.nix overwriting the attribute set
+        # with the altered crypto libraries
+        haskell-nix = super.haskell-nix // {
+          extraPkgconfigMappings = super.haskell-nix.extraPkgconfigMappings or { } // {
+            "libblst" = [ "libblst" ];
+            "libsodium" = [ "libsodium-vrf" ];
+          };
+        };
+
+        CHaP = pins."cardano-haskell-packages";
+
+        cardano-node = cardanoNode.cardano-node;
+        cardano-cli = cardanoNode.cardano-cli;
+        cardano-testnet = cardanoNode.cardano-testnet;
+
+        kupo = super.callPackage ./packages/kupo.nix { };
+        ogmios = super.callPackage ./packages/ogmios.nix { };
+        npmlockToNix = npmLockToNix;
+        spago = super.haskellPackages.spago;
+        spago2nix = super.callPackage ./packages/spago2nix.nix { };
+      })
+    ];
 
   config = { allowUnfree = true; };
 in

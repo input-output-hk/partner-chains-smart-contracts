@@ -5,7 +5,7 @@
 
 let
 
-  inherit (pkgs) npmLockToNix lib nodejs-18_x stdenv;
+  inherit (pkgs) npmlockToNix lib nodejs-18_x stdenv;
   inherit (lib) fileset;
 
   cliScript = pkgs.writeScript "sidechain-mai-cli" ''
@@ -22,7 +22,7 @@ let
     node "$SCRIPT_DIR/.index.mjs" "$@"
   '';
 
-  nodeModules = npmLockToNix.v2.node_modules {
+  nodeModules = npmlockToNix.v2.node_modules {
     src = fileset.toSource {
       root = ./.;
       fileset = fileset.union ./package.json ./package-lock.json;
@@ -30,7 +30,7 @@ let
     nodejs = nodejs-18_x;
     sourceOverrides = {
       buildRequirePatchShebangs = true;
-      node-pre-gyp = npmLockToNix.v2.packageRequirePatchShebangs;
+      node-pre-gyp = npmlockToNix.v2.packageRequirePatchShebangs;
     };
     ESBUILD_BINARY_PATH = "${pkgs.esbuild}/bin/esbuild";
   };
