@@ -19,7 +19,7 @@ let
     fi
 
     command -v node &>/dev/null || echo "Error: node binary not found in path!"
-    node "$SCRIPT_DIR/.index.mjs"
+    node "$SCRIPT_DIR/.index.mjs" "$@"
   '';
 
   nodeModules = npmLockToNix.v2.node_modules {
