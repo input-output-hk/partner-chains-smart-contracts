@@ -7,6 +7,19 @@ let
 
   inherit (pkgs) npmLockToNix lib nodejs-18_x stdenv;
 
+  cliScript = pkgs.writeScript "sidechain-mai-cli" ''
+    #!/usr/bin/env bash
+    SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+    export NODE_PATH="$SCRIPT_DIR/node_modules"
+
+    if ! command -v node &>/dev/null; then
+      echo "Error: nodejs binary not found in path! Exiting."
+      exit 1
+    fi
+
+    command -v node &>/dev/null || echo "Error: node binary not found in path!"
+    node "$SCRIPT_DIR/.index.mjs"
+  '';
 
   nodeModules = npmLockToNix.v2.node_modules {
     src = lib.cleanSource ./.;
@@ -20,6 +33,7 @@ let
   cli = stdenv.mkDerivation {
     name = "cli";
     src = lib.cleanSource ./.;
+    dontPatchShebangs = true;
 
     buildInputs = with spagoPkgs; [
       installSpagoStyle
@@ -34,19 +48,27 @@ let
     ];
 
     unpackPhase = ''
+      cp $src/entry.js .
+      cp $src/package.json .
+      cp $src/package-lock.json .
       cp -r $src/src .
       cp -r $src/test .
+      cp $src/esbuild.js .
       ln -sfn ${nodeModules}/node_modules node_modules
       install-spago-style
     '';
 
     buildPhase = ''
       build-spago-style "./src/**/*.purs" "./test/**/*.purs"
+      node ./esbuild.js
     '';
 
     installPhase = ''
       mkdir -p $out
-      mv output $out
+      cp dist/index.js $out/.index.mjs
+      cp -R node_modules $out
+      cp ${cliScript} $out/sidechain-main-cli
+      chmod +x $out/sidechain-main-cli
     '';
 
   };
