@@ -68,10 +68,12 @@ let
       cp $src/entry.js .
       cp $src/package.json .
       cp $src/package-lock.json .
+      chmod u+rw ./package.json package-lock.json
       cp -r $src/src .
       cp -r $src/test .
       cp $src/esbuild.js .
-      ln -sfn ${nodeModules}/node_modules node_modules
+      cp -R ${nodeModules}/node_modules node_modules
+      chmod -R u+rw ./node_modules
       install-spago-style
     '';
 
@@ -86,9 +88,13 @@ let
     '';
 
     installPhase = ''
+      ls
       mkdir -p $out
       cp dist/index.js $out/.index.mjs
+
+      npm prune --omit=dev
       cp -R node_modules $out
+
       cp ${cliScript} $out/sidechain-main-cli
       chmod +x $out/sidechain-main-cli
     '';
