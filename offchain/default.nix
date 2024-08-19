@@ -76,7 +76,12 @@ let
     '';
 
     buildPhase = ''
-      build-spago-style "./src/**/*.purs" "./test/**/*.purs"
+      psa --censor-lib \
+          --stash \
+          --strict \
+          --is-lib=.spago ".spago/*/*/src/**/*.purs" \
+          --censor-codes=UserDefinedWarning "./src/**/*.purs" "./test/**/*.purs"
+
       node ./esbuild.js
     '';
 
