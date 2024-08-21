@@ -26,7 +26,7 @@ jobs:
         run: echo "${{ secrets.NIX_SIGNING_KEY }}" > "${{ runner.temp }}/nix-key"
 
       - name: Run nixci to build all outputs
-        run: nix run github:srid/nixci -- -v build > ${{ runner.temp }}/outputs
+        run: nix run github:srid/nixci -- -v build -- --fallback > ${{ runner.temp }}/outputs
 
       - name: Acquire AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -54,7 +54,7 @@ jobs:
         with:
           token: ${{ github.token }}
       - name: Run tests
-        run: nix build .#check.x86_64-linux -L
+        run: nix build .#check.x86_64-linux -L --fallback
 
   build-arm64-darwin:
     permissions:
@@ -72,7 +72,7 @@ jobs:
 
       - name: Run nixci to build all outputs
         run: |
-          nix run github:srid/nixci -- -v build > ${{ runner.temp }}/outputs
+          nix run github:srid/nixci -- -v build -- --fallback > ${{ runner.temp }}/outputs
 
       - name: Acquire AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -101,4 +101,4 @@ jobs:
           token: ${{ github.token }}
       - name: Run tests
         run: |
-          nix build .#check.aarch64-darwin -L
+          nix build .#check.aarch64-darwin -L --fallback
