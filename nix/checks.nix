@@ -54,18 +54,16 @@
   trustless-sidechain-ctl =
     let
       project = repoRoot.nix.offchain;
-      ogmios = inputs.cardano-nix.packages.${system}."ogmios-6.5.0";
-      kupo = inputs.cardano-nix.packages.${system}."kupo-2.9.0";
     in
     project.runPursTest {
       testMain = "Test.Main";
       builtProject = project.compiled;
-      buildInputs = [
+      buildInputs = with inputs.self._packages; [
         ogmios
         kupo
-        inputs.self._packages.cardano-testnet
-        inputs.self._packages.cardano-node
-        inputs.self._packages.cardano-cli
+        cardano-testnet
+        cardano-node
+        cardano-cli
         #pkgs.psmisc # breaks tests on macos
       ];
     };

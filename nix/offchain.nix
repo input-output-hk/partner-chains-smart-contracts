@@ -28,20 +28,7 @@ let
         then ../offchain/package-lock-macos-aarch64.json
         else ../offchain/package-lock.json;
       spagoPackages = ../offchain/spago-packages.nix;
-      withRuntime = true;
-      shell.packages = with pkgs; [
-        # Shell Utils
-        bashInteractive
-        git
-        jq
-
-        # Lint / Format
-        fd
-        dhall
-
-        # CTL Runtime
-        docker
-      ];
+      withRuntime = false;
     };
 in
 offchain
