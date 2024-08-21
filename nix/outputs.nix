@@ -39,7 +39,34 @@ in
       hs = inputs.self.devShell;
       ps =
         pkgs.mkShell {
-          packages = [ pkgs.nodejs pkgs.git ];
+          packages = with pkgs; [
+            # Shell Utils
+            bashInteractive
+            git
+            jq
+
+            # Lint / Format
+            fd
+            dhall
+
+            # CTL Runtime
+            docker
+
+            nodejs-18_x
+            nodePackages.node2nix
+
+            # Purescript
+            easy-ps.spago
+            easy-ps.psa
+            easy-ps.spago2nix
+            easy-ps.pscid
+            easy-ps.purs
+            easy-ps.purs-tidy
+
+            inputs.self._packages.ogmios
+            inputs.self._packages.kupo
+
+          ];
           shellHook = ''
             PROJ_ROOT=$(git rev-parse --show-toplevel)
             if [ ! -e "$PROJ_ROOT/offchain/src/TrustlessSidechain/CLIVersion.purs" ]; then
@@ -58,6 +85,8 @@ in
       in
       {
         inherit (cardanoPackages) cardano-node cardano-cli cardano-testnet;
+        ogmios = inputs.cardano-nix.packages.${system}."ogmios-6.5.0";
+        kupo = inputs.cardano-nix.packages.${system}."kupo-2.9.0";
         # This package doesn't work in the check output for some esoteric reason
         sidechain-main-cli-image = inputs.n2c.packages.nix2container.buildImage {
           name = "sidechain-main-cli-docker";
