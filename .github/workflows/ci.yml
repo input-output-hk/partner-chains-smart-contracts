@@ -1,66 +1,25 @@
-name: 'Trustless Sidechain CI'
+name: 'Partner Chains Smart Contracts CI'
 on:
   pull_request:
   push:
     branches:
       - master
-      - develop
   workflow_dispatch:
 
 env:
   AWS_DEFAULT_REGION: eu-central-1
 
 jobs:
-  build-x64-linux:
+  build:
     permissions:
       id-token: write
       contents: read
-    runs-on: [ self-hosted, Linux ]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          token: ${{ github.token }}
-
-      - name: Add signing key for nix
-        run: echo "${{ secrets.NIX_SIGNING_KEY }}" > "${{ runner.temp }}/nix-key"
-
-      - name: Run nixci to build all outputs
-        run: nix run github:srid/nixci -- -v build -- --fallback > ${{ runner.temp }}/outputs
-
-      - name: Acquire AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_DEFAULT_REGION }}
-
-      - name: Copy nix scopes to nix cache
-        run: |
-          nix-store --stdin -q --deriver < ${{ runner.temp }}/outputs | nix-store --stdin -qR --include-outputs \
-          | nix copy --stdin --to \
-          "s3://cache.sc.iog.io?secret-key=${{ runner.temp }}/nix-key&region=$AWS_DEFAULT_REGION" \
-          && rm ${{ runner.temp }}/outputs
-
-  test-x64-linux:
-    permissions:
-      id-token: write
-      contents: read
-    runs-on: [ self-hosted, Linux ]
-    needs:
-      - build-x64-linux
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          token: ${{ github.token }}
-      - name: Run tests
-        run: nix build .#check.x86_64-linux -L --fallback
-
-  build-arm64-darwin:
-    permissions:
-      id-token: write
-      contents: read
-    runs-on: [ self-hosted, macOS ]
+    strategy:
+      matrix:
+        os: [nixos, macos]
+    runs-on:
+      - self-hosted
+      - ${{ matrix.os }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -80,25 +39,58 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_DEFAULT_REGION }}
 
-      - name: Copy nix scopes to nix cache
+      - name: Copy nix scopes to cache
         run: |
           nix-store --stdin -q --deriver < ${{ runner.temp }}/outputs | nix-store --stdin -qR --include-outputs \
           | nix copy --stdin --to \
-          "s3://cache.sc.iog.io?secret-key=${{ runner.temp }}/nix-key&region=$AWS_DEFAULT_REGION" \
-          && rm ${{ runner.temp }}/outputs
+          "s3://cache.sc.iog.io?secret-key=${{ runner.temp }}/nix-key&region=$AWS_DEFAULT_REGION"
 
-  test-arm64-darwin:
+  test-pc-devshells:
+    strategy:
+      matrix:
+        os: [nixos, macos]
+    runs-on:
+      - self-hosted
+      - ${{ matrix.os }}
+    needs:
+      - build
+    steps:
+      - name: Checkout partner-chains
+        uses: actions/checkout@v4
+        with:
+          repository: input-output-hk/partner-chains
+
+          ref: master
+      - name: Override flake.lock input
+        run: |
+          nix flake lock --update-input trustless-sidechain \
+          --override-input trustless-sidechain \
+          github:input-output-hk/partner-chains-smart-contracts/${{ github.sha }}
+      - name: Test build nix outputs
+        run: |
+          nix run github:srid/nixci -- -v build -- --fallback
+
+  tests:
     permissions:
       id-token: write
       contents: read
-    runs-on: [ self-hosted, macOS ]
+    strategy:
+      matrix:
+        os: [nixos, macos]
+    runs-on:
+      - self-hosted
+      - ${{ matrix.os }}
     needs:
-      - build-arm64-darwin
+      - build
+      - test-pc-devshells
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           token: ${{ github.token }}
-      - name: Run tests
-        run: |
-          nix build .#check.aarch64-darwin -L --fallback
+      - name: Run Unit/integration tests for linux
+        if: matrix.os == 'nixos'
+        run: nix build .#check.x86_64-linux -L --fallback
+      - name: Run Unit/integration tests for macos
+        if: matrix.os == 'macos'
+        run: nix build .#check.aarch64-darwin -L --fallback
