@@ -65,6 +65,9 @@ data ScriptId
   | IlliquidCirculationSupplyWithdrawalPolicy
   | GovernancePolicy
   | MultiSigPolicy
+  | AlwaysPassingValidator
+  | AlwaysPassingPolicy
+  | OnlyMintMintingPolicy
 
 derive instance Eq ScriptId
 derive instance Ord ScriptId
@@ -137,6 +140,12 @@ instance FromData ScriptId where
     Just GovernancePolicy
   fromData (Integer i) | i == BigInt.fromInt 33 =
     Just MultiSigPolicy
+  fromData (Integer i) | i == BigInt.fromInt 34 =
+    Just AlwaysPassingValidator
+  fromData (Integer i) | i == BigInt.fromInt 35 =
+    Just AlwaysPassingPolicy
+  fromData (Integer i) | i == BigInt.fromInt 36 =
+    Just OnlyMintMintingPolicy
   fromData _ = Nothing
 
 instance ToData ScriptId where
@@ -172,3 +181,6 @@ instance ToData ScriptId where
   toData IlliquidCirculationSupplyWithdrawalPolicy = Integer (BigInt.fromInt 31)
   toData GovernancePolicy = Integer (BigInt.fromInt 32)
   toData MultiSigPolicy = Integer (BigInt.fromInt 33)
+  toData AlwaysPassingValidator = Integer (BigInt.fromInt 34)
+  toData AlwaysPassingPolicy = Integer (BigInt.fromInt 35)
+  toData OnlyMintMintingPolicy = Integer (BigInt.fromInt 36)

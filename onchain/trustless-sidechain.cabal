@@ -83,6 +83,7 @@ common common-optimized-parallel
 library
   import:          common-lang, common-script-lang
   exposed-modules:
+    TrustlessSidechain.AlwaysPassingScripts
     TrustlessSidechain.CandidatePermissionMintingPolicy
     TrustlessSidechain.CheckpointValidator
     TrustlessSidechain.CommitteeCandidateValidator
@@ -102,6 +103,7 @@ library
     TrustlessSidechain.MerkleRootTokenValidator
     TrustlessSidechain.MerkleTree
     TrustlessSidechain.OffChain
+    TrustlessSidechain.OnlyMintMintingPolicy
     TrustlessSidechain.PermissionedCandidates
     TrustlessSidechain.Reserve
     TrustlessSidechain.ScriptCache
@@ -138,47 +140,6 @@ library
     , trustless-sidechain-prelude
 
   hs-source-dirs:  src
-
-library onchain-poc
-  import:          common-lang, common-script-lang
-  exposed-modules:
-    TrustlessSidechain.PoCAlwaysPassingScripts
-    TrustlessSidechain.PoCECDSA
-    TrustlessSidechain.PoCInlineDatum
-    TrustlessSidechain.PoCMintingPolicy
-    TrustlessSidechain.PoCReferenceInput
-    TrustlessSidechain.PoCReferenceScript
-    TrustlessSidechain.PoCSchnorr
-    TrustlessSidechain.PoCSerialiseData
-
-  build-depends:
-    , aeson                        >=1.5.0.0
-    , attoparsec
-    , base16-bytestring
-    , bech32
-    , bytestring                   >=0.10.12.0
-    , cardano-addresses
-    , cardano-api
-    , cardano-binary
-    , cardano-crypto
-    , cardano-crypto-class
-    , cardano-ledger-alonzo
-    , cryptonite
-    , deepseq
-    , either
-    , lens
-    , plutus-core
-    , plutus-ledger-api
-    , plutus-shim-prelude
-    , plutus-tx-plugin
-    , QuickCheck
-    , secp256k1-haskell
-    , serialise
-    , text
-    , trustless-sidechain
-    , trustless-sidechain-prelude
-
-  hs-source-dirs:  poc
 
 library trustless-sidechain-prelude
   import:          common-lang
@@ -257,7 +218,6 @@ executable trustless-sidechain-serialise
     , bytestring
     , cardano-api
     , filepath
-    , onchain-poc
     , plutus-ledger-api
     , text
     , trustless-sidechain

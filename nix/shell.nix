@@ -22,6 +22,8 @@ in
     pkgs.nixci
     pkgs.haskellPackages.hoogle
     pkgs.watchexec
+    pkgs.spago
+    pkgs.purescript
   ];
   env = {
     CARDANO_CLI = "${cardano-cli}/bin/cardano-cli";

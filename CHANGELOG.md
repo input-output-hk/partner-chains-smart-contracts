@@ -7,6 +7,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 ## Removed
   * Removed `init` command
+  * the PoC test modules were removed
 
 # v6.1.0
 

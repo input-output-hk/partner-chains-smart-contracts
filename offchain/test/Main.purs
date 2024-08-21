@@ -25,16 +25,10 @@ import Test.MerkleRootChaining as MerkleRootChaining
 import Test.MerkleTree as MerkleTree
 import Test.Options.Parsers as Options.Parsers
 import Test.PermissionedCandidates as PermissionedCandidates
-import Test.PoCECDSA as PoCECDSA
-import Test.PoCInlineDatum as PoCInlineDatum
-import Test.PoCReferenceInput as PoCReferenceInput
-import Test.PoCReferenceScript as PoCReferenceScript
-import Test.PoCSchnorrSecp256k1 as PoCSchnorrSecp256k1
-import Test.PoCSerialiseData as PoCSerialiseData
 import Test.Reserve as Reserve
 import Test.Unit.Main as Test.Unit.Main
 import Test.UpdateCommitteeHash as UpdateCommitteeHash
-import Test.Utils (interpretWrappedTest, testnetGroup)
+import Test.Utils (interpretWrappedTest)
 import Test.Utils.Address as AddressUtils
 import Test.Versioning as Versioning
 
@@ -79,14 +73,6 @@ main = do
           DParameter.tests
           PermissionedCandidates.tests
           GarbageCollector.tests
-
-        testnetGroup "POC Testnet tests" do
-          PoCInlineDatum.tests
-          PoCReferenceInput.tests
-          PoCReferenceScript.tests
-          PoCSerialiseData.tests
-          PoCECDSA.testScenario
-          PoCSchnorrSecp256k1.tests
 
         group "Roundtrips" $ do
           Data.tests
