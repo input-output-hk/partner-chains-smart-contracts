@@ -9,14 +9,10 @@
       inputs.CHaP.follows = "CHaP";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.iohk-nix.follows = "iohk-nix";
-      inputs.nix2container.follows = "n2c";
+      inputs.nix2container.follows = "blank";
       inputs.easy-purescript-nix.follows = "cardano-transaction-lib/easy-purescript-nix";
       inputs.nixpkgs-stable.follows = "nixpkgs";
       inputs.pre-commit-hooks-nix.follows = "cardano-nix/pre-commit-hooks-nix";
-    };
-    n2c = {
-      url = "github:nlewo/nix2container";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
     blank.url = "github:input-output-hk/empty-flake";
 

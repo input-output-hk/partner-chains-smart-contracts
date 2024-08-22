@@ -87,17 +87,6 @@ in
         inherit (cardanoPackages) cardano-node cardano-cli cardano-testnet;
         ogmios = inputs.cardano-nix.packages.${system}."ogmios-6.5.0";
         kupo = inputs.cardano-nix.packages.${system}."kupo-2.9.0";
-        # This package doesn't work in the check output for some esoteric reason
-        sidechain-main-cli-image = inputs.n2c.packages.nix2container.buildImage {
-          name = "sidechain-main-cli-docker";
-          tag = "${inputs.self.shortRev or inputs.self.dirtyShortRev}";
-          config = { Cmd = [ "sidechain-main-cli" ]; };
-          copyToRoot = pkgs.buildEnv {
-            name = "root";
-            paths = [ pkgs.bashInteractive pkgs.coreutils inputs.self.packages.sidechain-main-cli ];
-            pathsToLink = [ "/bin" ];
-          };
-        };
       };
     _checks = repoRoot.nix.checks;
 
