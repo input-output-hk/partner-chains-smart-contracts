@@ -36,9 +36,10 @@ import TrustlessSidechain.Effects.Env (Env, ask)
 import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
 import TrustlessSidechain.GarbageCollector as GarbageCollector
 import TrustlessSidechain.Governance.Admin as Governance
-import TrustlessSidechain.InitSidechain (InitSidechainParams(..), initSidechain)
+import TrustlessSidechain.InitSidechain.FUEL (initFuel)
+import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
 import TrustlessSidechain.MerkleTree (RootHash)
-import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   , UpdateCommitteeHashParams(..)
@@ -222,22 +223,25 @@ testScenario1 = Mote.Monad.test "Simple update committee hash"
         generatePrivKey
       let
         initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-        initScParams = InitSidechainParams
-          { initChainId: BigInt.fromInt 1
-          , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-          , initUtxo: genesisUtxo
-          , initAggregatedCommittee: toData $ aggregateKeys $ map
-              unwrap
-              initCommitteePubKeys
-          , initSidechainEpoch: zero
-          , initThresholdNumerator: BigInt.fromInt 2
-          , initThresholdDenominator: BigInt.fromInt 3
-          , initCandidatePermissionTokenMintInfo: Nothing
-          , initATMSKind: ATMSPlainEcdsaSecp256k1
-          , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
-          }
+        aggregatedCommittee = toData $ aggregateKeys $ map
+          unwrap
+          initCommitteePubKeys
+        sidechainParams =
+          SidechainParams
+            { chainId: BigInt.fromInt 1
+            , genesisUtxo
+            , thresholdNumerator: BigInt.fromInt 2
+            , thresholdDenominator: BigInt.fromInt 3
+            , governanceAuthority: Governance.mkGovernanceAuthority pkh
+            }
 
-      { sidechainParams } ← initSidechain initScParams 1
+      _ ← initTokensMint sidechainParams ATMSPlainEcdsaSecp256k1 1
+      _ ←
+        initFuel sidechainParams
+          zero
+          aggregatedCommittee
+          ATMSPlainEcdsaSecp256k1
+          1
       nextCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
         generatePrivKey
 
@@ -280,24 +284,27 @@ testScenario2 =
           generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-          initScParams = InitSidechainParams
-            { initChainId: BigInt.fromInt 1
-            , initGenesisHash: hexToByteArrayUnsafe
-                "aabbccddeeffgghhiijjkkllmmnnoo"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys $
-                map unwrap
-                  initCommitteePubKeys
-            , initThresholdNumerator: BigInt.fromInt 1
-            , initThresholdDenominator: BigInt.fromInt 1
-            , initSidechainEpoch: BigInt.fromInt 0
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority
-                pkh
-            }
+          aggregatedCommittee = toData $ aggregateKeys $ map
+            unwrap
+            initCommitteePubKeys
+          sidechainParams =
+            SidechainParams
+              { chainId: BigInt.fromInt 1
+              , genesisUtxo
+              , thresholdNumerator: BigInt.fromInt 2
+              , thresholdDenominator: BigInt.fromInt 3
+              , governanceAuthority: Governance.mkGovernanceAuthority pkh
+              }
 
-        { sidechainParams: scParams } ← initSidechain initScParams 1
+        { sidechainParams: scParams } ← initTokensMint sidechainParams
+          ATMSPlainEcdsaSecp256k1
+          1
+        _ ←
+          initFuel sidechainParams
+            zero
+            aggregatedCommittee
+            ATMSPlainEcdsaSecp256k1
+            1
         nextCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
           generatePrivKey
 
@@ -351,29 +358,27 @@ testScenario3 =
         let
           initCommitteePubKeys = Array.sort
             (map toPubKeyUnsafe initCommitteePrvKeys)
-          initScParams = InitSidechainParams
-            { initChainId: BigInt.fromInt 6
-            , initGenesisHash: hexToByteArrayUnsafe "aabbccdd"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys
-                $ map unwrap
-                $
-                  case Array.uncons initCommitteePubKeys of
-                    Nothing → mempty
-                    Just { head, tail } → tail <> Array.singleton head
-            -- note how we mess up the order of the initial public keys
-            -- assuming that all entries are distinct (which should be the case
-            -- with high probability)
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority
-                pkh
-            }
+          aggregatedCommittee = toData $ aggregateKeys
+            $ map unwrap
+            $ case Array.uncons initCommitteePubKeys of
+                Nothing → mempty
+                Just { head, tail } → tail <> Array.singleton head
+          sidechainParams =
+            SidechainParams
+              { chainId: BigInt.fromInt 6
+              , genesisUtxo
+              , thresholdNumerator: BigInt.fromInt 2
+              , thresholdDenominator: BigInt.fromInt 3
+              , governanceAuthority: Governance.mkGovernanceAuthority pkh
+              }
 
-        { sidechainParams } ← initSidechain initScParams 1
+        _ ← initTokensMint sidechainParams ATMSPlainEcdsaSecp256k1 1
+        _ ←
+          initFuel sidechainParams
+            zero
+            aggregatedCommittee
+            ATMSPlainEcdsaSecp256k1
+            1
         nextCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
           generatePrivKey
         nextNextCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate
@@ -458,32 +463,32 @@ testScenario4 =
             ]
 
           -- initialising the committee (translated from the CLI command
-          initScParams = InitSidechainParams
-            { initChainId: BigInt.fromInt 78
-            , initGenesisHash: hexToByteArrayUnsafe
-                "d8063cc6e907f497360ca50238af5c2e2a95a8869a2ce74ab3e75fe6c9dcabd0"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys
-                $ map unwrap
-                $
-                  [ byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
-                      "03d9e83bde65acf38fc97497210d7e6f6a1aebf5d4cd9b193c90b81a81c55bc678"
-                  , byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
-                      "03885cccf474b81faba56097f58fcca98a3c8986bc09cdbd163e54add33561f34c"
-                  , byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
-                      "032aa087b8e4a983a7220e1d2eb2db6a6bf8fbed9fad7f5af6824e05f0017c69e0"
-                  ]
-            , initSidechainEpoch: one
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority
-                pkh
-            }
+          aggregatedCommittee = toData $ aggregateKeys
+            $ map unwrap
+            $
+              [ byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
+                  "03d9e83bde65acf38fc97497210d7e6f6a1aebf5d4cd9b193c90b81a81c55bc678"
+              , byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
+                  "03885cccf474b81faba56097f58fcca98a3c8986bc09cdbd163e54add33561f34c"
+              , byteArrayToEcdsaSecp256k1PubKeyUnsafe $ hexToByteArrayUnsafe
+                  "032aa087b8e4a983a7220e1d2eb2db6a6bf8fbed9fad7f5af6824e05f0017c69e0"
+              ]
+          sidechainParams =
+            SidechainParams
+              { chainId: BigInt.fromInt 78
+              , genesisUtxo
+              , thresholdNumerator: BigInt.fromInt 2
+              , thresholdDenominator: BigInt.fromInt 3
+              , governanceAuthority: Governance.mkGovernanceAuthority pkh
+              }
 
-        { sidechainParams } ← initSidechain initScParams 1
-
+        _ ← initTokensMint sidechainParams ATMSPlainEcdsaSecp256k1 1
+        _ ←
+          initFuel sidechainParams
+            zero
+            aggregatedCommittee
+            ATMSPlainEcdsaSecp256k1
+            1
         env ← ask
         liftContract $ updateCommitteeHashWith
           { sidechainParams
@@ -538,24 +543,27 @@ testScenario5 =
           $ Array.replicate keyCount generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-          initScParams = InitSidechainParams
-            { initChainId: BigInt.fromInt 1
-            , initGenesisHash: hexToByteArrayUnsafe
-                "aabbccddeeffgghhiijjkkllmmnnoo"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys $ map
-                unwrap
-                initCommitteePubKeys
-            , initThresholdNumerator: BigInt.fromInt 1
-            , initThresholdDenominator: BigInt.fromInt 2
-            , initSidechainEpoch: BigInt.fromInt 0
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority
-                ownPkh
-            }
+          aggregatedCommittee = toData $ aggregateKeys $ map
+            unwrap
+            initCommitteePubKeys
+          sidechainParams =
+            SidechainParams
+              { chainId: BigInt.fromInt 1
+              , genesisUtxo
+              , thresholdNumerator: BigInt.fromInt 2
+              , thresholdDenominator: BigInt.fromInt 3
+              , governanceAuthority: Governance.mkGovernanceAuthority ownPkh
+              }
 
-        { sidechainParams: scParams } ← initSidechain initScParams 1
+        { sidechainParams: scParams } ← initTokensMint sidechainParams
+          ATMSPlainEcdsaSecp256k1
+          1
+        _ ←
+          initFuel sidechainParams
+            zero
+            aggregatedCommittee
+            ATMSPlainEcdsaSecp256k1
+            1
         nextCommitteePrvKeys ← liftEffect
           $ sequence
           $ Array.replicate keyCount generatePrivKey

@@ -8,7 +8,6 @@ import Cardano.Types.AssetName as AssetName
 import Cardano.Types.BigNum as BigNum
 import Cardano.Types.NetworkId (NetworkId(TestnetId))
 import Contract.PlutusData as PlutusData
-import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import JS.BigInt as BigInt
@@ -41,16 +40,15 @@ import TrustlessSidechain.FUELMintingPolicy.V1
   , mkMintFuelLookupAndConstraints
   )
 import TrustlessSidechain.Governance.Admin as Governance
-import TrustlessSidechain.InitSidechain
-  ( InitSidechainParams(InitSidechainParams)
-  , initSidechain
-  )
+import TrustlessSidechain.InitSidechain.FUEL (initFuel)
+import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
 import TrustlessSidechain.MerkleTree
   ( MerkleProof(MerkleProof)
   , fromList
   , lookupMp
   )
 import TrustlessSidechain.MerkleTree as MerkleTree
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address
   ( fromPaymentPubKeyHash
   , getOwnPaymentPubKeyHash
@@ -94,23 +92,27 @@ testScenarioSuccess = Mote.Monad.test "Claiming FUEL tokens"
         generatePrivKey
       let
         initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-        initScParams = InitSidechainParams
-          { initChainId: BigInt.fromInt 1
-          , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-          , initUtxo: genesisUtxo
-          , initAggregatedCommittee: PlutusData.toData
-              $ aggregateKeys
-              $ map unwrap
-                  initCommitteePubKeys
-          , initSidechainEpoch: zero
-          , initThresholdNumerator: BigInt.fromInt 2
-          , initThresholdDenominator: BigInt.fromInt 3
-          , initCandidatePermissionTokenMintInfo: Nothing
-          , initATMSKind: ATMSPlainEcdsaSecp256k1
-          , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
-          }
+        aggregatedCommittee = PlutusData.toData
+          $ aggregateKeys
+          $ map unwrap
+              initCommitteePubKeys
+        sidechainParams =
+          SidechainParams
+            { chainId: BigInt.fromInt 69_420
+            , genesisUtxo
+            , thresholdNumerator: BigInt.fromInt 2
+            , thresholdDenominator: BigInt.fromInt 3
+            , governanceAuthority: Governance.mkGovernanceAuthority pkh
+            }
 
-      { sidechainParams } ← initSidechain initScParams 1
+      _ ← initTokensMint sidechainParams ATMSPlainEcdsaSecp256k1 1
+      _ ←
+        initFuel sidechainParams
+          zero
+          aggregatedCommittee
+          ATMSPlainEcdsaSecp256k1
+          1
+
       let
         amount = BigInt.fromInt 5
         recipient = fromPaymentPubKeyHash TestnetId pkh
@@ -176,22 +178,26 @@ testScenarioSuccess2 =
           generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-          initScParams = InitSidechainParams
-            { initChainId: BigInt.fromInt 1
-            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: PlutusData.toData
-                $ aggregateKeys
-                $ map unwrap initCommitteePubKeys
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
-            }
+          aggregatedCommittee = PlutusData.toData
+            $ aggregateKeys
+            $ map unwrap initCommitteePubKeys
+          sidechainParams =
+            SidechainParams
+              { chainId: BigInt.fromInt 1
+              , genesisUtxo
+              , thresholdNumerator: BigInt.fromInt 2
+              , thresholdDenominator: BigInt.fromInt 3
+              , governanceAuthority: Governance.mkGovernanceAuthority pkh
+              }
 
-        { sidechainParams } ← initSidechain initScParams 1
+        _ ← initTokensMint sidechainParams ATMSPlainEcdsaSecp256k1 1
+        _ ←
+          initFuel sidechainParams
+            zero
+            aggregatedCommittee
+            ATMSPlainEcdsaSecp256k1
+            1
+
         let
           amount = BigInt.fromInt 5
           recipient = fromPaymentPubKeyHash TestnetId pkh
@@ -314,22 +320,25 @@ testScenarioFailure2 = Mote.Monad.test "Attempt to double claim (should fail)"
           generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-          initScParams = InitSidechainParams
-            { initChainId: BigInt.fromInt 1
-            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: PlutusData.toData
-                $ aggregateKeys
-                $ map unwrap initCommitteePubKeys
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
-            }
+          aggregatedCommittee = PlutusData.toData
+            $ aggregateKeys
+            $ map unwrap initCommitteePubKeys
+          sidechainParams =
+            SidechainParams
+              { chainId: BigInt.fromInt 1
+              , genesisUtxo
+              , thresholdNumerator: BigInt.fromInt 2
+              , thresholdDenominator: BigInt.fromInt 3
+              , governanceAuthority: Governance.mkGovernanceAuthority pkh
+              }
 
-        { sidechainParams } ← initSidechain initScParams 1
+        _ ← initTokensMint sidechainParams ATMSPlainEcdsaSecp256k1 1
+        _ ←
+          initFuel sidechainParams
+            zero
+            aggregatedCommittee
+            ATMSPlainEcdsaSecp256k1
+            1
 
         { combinedMerkleProofs } ← Test.MerkleRoot.saveRoot
           { sidechainParams

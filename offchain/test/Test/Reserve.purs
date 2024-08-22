@@ -16,7 +16,6 @@ import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Types.Value (getCoin, valueOf)
 import Cardano.Types.Value as Value
-import Contract.PlutusData (toData)
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction (TransactionOutput)
@@ -48,10 +47,10 @@ import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.Governance.Admin as Governance
-import TrustlessSidechain.InitSidechain
-  ( InitSidechainParams(InitSidechainParams)
-  , initSidechain
+import TrustlessSidechain.InitSidechain.NativeTokenManagement
+  ( initNativeTokenMgmt
   )
+import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
 import TrustlessSidechain.NativeTokenManagement.Reserve
   ( depositToReserve
   , extractReserveDatum
@@ -65,14 +64,9 @@ import TrustlessSidechain.NativeTokenManagement.Types
   ( ImmutableReserveSettings(ImmutableReserveSettings)
   , MutableReserveSettings(MutableReserveSettings)
   )
-import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Asset (emptyAssetName)
-import TrustlessSidechain.Utils.Crypto
-  ( aggregateKeys
-  , generatePrivKey
-  , toPubKeyUnsafe
-  )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(IlliquidCirculationSupplyValidator)
@@ -127,28 +121,18 @@ dummyInitialiseSidechain ∷
 dummyInitialiseSidechain pkh = do
   genesisUtxo ← Test.Utils.getOwnTransactionInput
 
-  initCommitteePrvKeys ←
-    liftEffect
-      $ sequence
-      $ Array.replicate 1 generatePrivKey
-
   let
-    initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-    initScParams = InitSidechainParams
-      { initChainId: BigInt.fromInt 1
-      , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-      , initUtxo: genesisUtxo
-      , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
-          initCommitteePubKeys
-      , initSidechainEpoch: zero
-      , initThresholdNumerator: BigInt.fromInt 2
-      , initThresholdDenominator: BigInt.fromInt 3
-      , initCandidatePermissionTokenMintInfo: Nothing
-      , initATMSKind: ATMSPlainEcdsaSecp256k1
-      , initGovernanceAuthority: Governance.mkGovernanceAuthority $ pkh
-      }
+    sidechainParams =
+      SidechainParams
+        { chainId: BigInt.fromInt 1
+        , genesisUtxo
+        , thresholdNumerator: BigInt.fromInt 2
+        , thresholdDenominator: BigInt.fromInt 3
+        , governanceAuthority: Governance.mkGovernanceAuthority pkh
+        }
 
-  { sidechainParams } ← initSidechain initScParams 1
+  _ ← initTokensMint sidechainParams ATMSPlainEcdsaSecp256k1 1
+  _ ← initNativeTokenMgmt sidechainParams ATMSPlainEcdsaSecp256k1 1
 
   pure sidechainParams
 

@@ -7,7 +7,6 @@ import Contract.Prelude
 import Cardano.Types.BigNum as BigNum
 import Contract.Log as Log
 import Contract.PlutusData (toData)
-import Contract.Prim.ByteArray as ByteArray
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import JS.BigInt as BigInt
@@ -32,7 +31,9 @@ import TrustlessSidechain.FUELMintingPolicy.V1
   ( MerkleTreeEntry(MerkleTreeEntry)
   )
 import TrustlessSidechain.Governance.Admin as Governance
-import TrustlessSidechain.InitSidechain as InitSidechain
+import TrustlessSidechain.InitSidechain.FUEL (initFuel)
+import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
   , UpdateCommitteeHashParams(UpdateCommitteeHashParams)
@@ -82,26 +83,29 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
       committee1PrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
         Utils.Crypto.generatePrivKey
       let
-        isp =
-          InitSidechain.InitSidechainParams
-            { initChainId: BigInt.fromInt 69_420
-            , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData
-                $ Utils.Crypto.aggregateKeys
-                $ map unwrap
-                $ map
-                    Utils.Crypto.toPubKeyUnsafe
-                    committee1PrvKeys
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority
+        aggregatedCommittee = toData
+          $ Utils.Crypto.aggregateKeys
+          $ map unwrap
+          $ map
+              Utils.Crypto.toPubKeyUnsafe
+              committee1PrvKeys
+        sidechainParams =
+          SidechainParams
+            { chainId: BigInt.fromInt 69_420
+            , genesisUtxo
+            , thresholdNumerator: BigInt.fromInt 2
+            , thresholdDenominator: BigInt.fromInt 3
+            , governanceAuthority: Governance.mkGovernanceAuthority
                 ownPaymentPubKeyHash
             }
-      { sidechainParams } ← InitSidechain.initSidechain isp 1
+
+      _ ← initTokensMint sidechainParams ATMSPlainEcdsaSecp256k1 1
+      _ ←
+        initFuel sidechainParams
+          zero
+          aggregatedCommittee
+          ATMSPlainEcdsaSecp256k1
+          1
 
       -- 2. Saving a merkle root.
       -------------------------------
@@ -240,27 +244,29 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
       committee1PrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
         Utils.Crypto.generatePrivKey
       let
-        isp =
-          InitSidechain.InitSidechainParams
-            { initChainId: BigInt.fromInt 69_420
-            , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData
-                $ Utils.Crypto.aggregateKeys
-                $ map unwrap
-                $ map
-                    Utils.Crypto.toPubKeyUnsafe
-                    committee1PrvKeys
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority
+        aggregatedCommittee = toData
+          $ Utils.Crypto.aggregateKeys
+          $ map unwrap
+          $ map
+              Utils.Crypto.toPubKeyUnsafe
+              committee1PrvKeys
+        sidechainParams =
+          SidechainParams
+            { chainId: BigInt.fromInt 69_420
+            , genesisUtxo
+            , thresholdNumerator: BigInt.fromInt 2
+            , thresholdDenominator: BigInt.fromInt 3
+            , governanceAuthority: Governance.mkGovernanceAuthority
                 ownPaymentPubKeyHash
             }
-      { sidechainParams } ← InitSidechain.initSidechain isp 1
 
+      _ ← initTokensMint sidechainParams ATMSPlainEcdsaSecp256k1 1
+      _ ←
+        initFuel sidechainParams
+          zero
+          aggregatedCommittee
+          ATMSPlainEcdsaSecp256k1
+          1
       -- 2. Saving a merkle root
       -------------------------------
       liftContract $ Log.logInfo'

@@ -30,10 +30,9 @@ import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePla
 import TrustlessSidechain.Effects.Contract (liftContract)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Governance.Admin as Governance
-import TrustlessSidechain.InitSidechain
-  ( InitSidechainParams(InitSidechainParams)
-  , initSidechain
-  )
+import TrustlessSidechain.InitSidechain.FUEL (initFuel)
+import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1Message
@@ -102,22 +101,25 @@ testScenario1 =
         let
           initCommitteePubKeys = map Utils.Crypto.toPubKeyUnsafe
             initCommitteePrvKeys
-          initScParams = InitSidechainParams
-            { initChainId: BigInt.fromInt 1
-            , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData
-                $ Utils.Crypto.aggregateKeys
-                $ map unwrap initCommitteePubKeys
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
-            }
+          aggregatedCommittee = toData
+            $ Utils.Crypto.aggregateKeys
+            $ map unwrap initCommitteePubKeys
+          sidechainParams =
+            SidechainParams
+              { chainId: BigInt.fromInt 69_420
+              , genesisUtxo
+              , thresholdNumerator: BigInt.fromInt 2
+              , thresholdDenominator: BigInt.fromInt 3
+              , governanceAuthority: Governance.mkGovernanceAuthority pkh
+              }
 
-        { sidechainParams } ← initSidechain initScParams 1
+        _ ← initTokensMint sidechainParams ATMSPlainEcdsaSecp256k1 1
+        _ ←
+          initFuel sidechainParams
+            zero
+            aggregatedCommittee
+            ATMSPlainEcdsaSecp256k1
+            1
 
         -- Grabbing the CommitteePlainEcdsaSecp256k1ATMSPolicy on chain parameters / minting policy
         -------------------------

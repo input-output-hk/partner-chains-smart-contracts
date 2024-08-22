@@ -41,7 +41,6 @@ import TrustlessSidechain.EndpointResp
       , CommitteeHashResp
       , SaveRootResp
       , InitCheckpointResp
-      , InitResp
       , InitCandidatePermissionTokenResp
       , InitTokensMintResp
       , InitFuelResp
@@ -85,7 +84,6 @@ import TrustlessSidechain.Governance (Governance(MultiSig))
 import TrustlessSidechain.Governance.MultiSig
   ( MultiSigGovParams(MultiSigGovParams)
   )
-import TrustlessSidechain.InitSidechain (initSidechain, toSidechainParams)
 import TrustlessSidechain.InitSidechain.CandidatePermissionToken
   ( initCandidatePermissionToken
   )
@@ -123,7 +121,6 @@ import TrustlessSidechain.Options.Types
       , CommitteeHash
       , SaveRoot
       , InitCheckpoint
-      , Init
       , InitCandidatePermissionToken
       , InitTokensMint
       , InitFuel
@@ -160,6 +157,7 @@ import TrustlessSidechain.Options.Types
       )
   )
 import TrustlessSidechain.PermissionedCandidates as PermissionedCandidates
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.UpdateCommitteeHash
   ( UpdateCommitteeHashParams(UpdateCommitteeHashParams)
   )
@@ -411,84 +409,28 @@ runTxEndpoint sidechainEndpointParams endpoint =
           >>> { transactionId: _ }
           >>> SaveRootResp
       InitCheckpoint
-        { committeePubKeysInput
-        , initSidechainEpoch
-        , initCandidatePermissionTokenMintInfo
-        , genesisHash
+        { genesisHash
         , version
         } → do
-        rawCommitteePubKeys ← ConfigFile.getCommittee
-          committeePubKeysInput
-
-        committeePubKeys ← CommitteeATMSSchemes.aggregateATMSPublicKeys
-          { atmsKind
-          , committeePubKeys: NonEmpty.toUnfoldable rawCommitteePubKeys
-          }
         let
           sc = unwrap scParams
-          isc =
-            { initChainId: sc.chainId
-            , initGenesisHash: genesisHash
-            , initUtxo: sc.genesisUtxo
-            , initATMSKind: atmsKind
-            , initAggregatedCommittee: committeePubKeys
-            , initCandidatePermissionTokenMintInfo
-            , initSidechainEpoch
-            , initThresholdNumerator: sc.thresholdNumerator
-            , initThresholdDenominator: sc.thresholdDenominator
-            , initGovernanceAuthority: sc.governanceAuthority
-            }
+          sidechainParams =
+            SidechainParams
+              { chainId: sc.chainId
+              , genesisUtxo: sc.genesisUtxo
+              , thresholdNumerator: sc.thresholdNumerator
+              , thresholdDenominator: sc.thresholdDenominator
+              , governanceAuthority: sc.governanceAuthority
+              }
 
         resp ← initCheckpoint
-          (toSidechainParams isc)
-          isc.initGenesisHash
-          isc.initATMSKind
+          sidechainParams
+          genesisHash
+          atmsKind
           version
         pure $ InitCheckpointResp
           { scriptsInitTxIds: map txHashToByteArray resp.scriptsInitTxIds
           , tokensInitTxId: map txHashToByteArray resp.tokensInitTxId
-          }
-      Init
-        { committeePubKeysInput
-        , initSidechainEpoch
-        , initCandidatePermissionTokenMintInfo
-        , genesisHash
-        , version
-        } → do
-        rawCommitteePubKeys ← ConfigFile.getCommittee committeePubKeysInput
-
-        committeePubKeys ←
-          CommitteeATMSSchemes.aggregateATMSPublicKeys
-            { atmsKind
-            , committeePubKeys: NonEmpty.toUnfoldable rawCommitteePubKeys
-            }
-        let
-          sc = unwrap scParams
-          isc =
-            { initChainId: sc.chainId
-            , initGenesisHash: genesisHash
-            , initUtxo: sc.genesisUtxo
-            , initATMSKind: atmsKind
-            , initAggregatedCommittee: committeePubKeys
-            , initCandidatePermissionTokenMintInfo
-            , initSidechainEpoch
-            , initThresholdNumerator: sc.thresholdNumerator
-            , initThresholdDenominator: sc.thresholdDenominator
-            , initGovernanceAuthority: sc.governanceAuthority
-            }
-
-        { transactionId
-        , sidechainParams
-        , sidechainAddresses
-        , initTransactionIds
-        } ←
-          initSidechain (wrap isc) version
-
-        pure $ InitResp
-          { transactionId: txHashToByteArray transactionId
-          , sidechainParams
-          , sidechainAddresses
-          , initTransactionIds: map txHashToByteArray initTransactionIds
           }
 
       InitTokensMint

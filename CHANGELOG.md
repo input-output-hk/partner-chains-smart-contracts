@@ -5,6 +5,9 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 # Unreleased
 
+## Removed
+  * Removed `init` command
+
 # v6.1.0
 
 ## Added
