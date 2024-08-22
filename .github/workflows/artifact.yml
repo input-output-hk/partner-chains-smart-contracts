@@ -82,7 +82,7 @@ jobs:
       - name: Zip the artifact directory
         run: |
           cd artifact
-          chmod +x "${{ env.SIDECHAIN_MAIN_CLI }}"/sidechain-main-cli
+          chmod -R +x "${{ env.SIDECHAIN_MAIN_CLI }}"/
           zip -r "${{ env.SIDECHAIN_MAIN_CLI }}.zip" "${{ env.SIDECHAIN_MAIN_CLI }}"
           cd ..
   
