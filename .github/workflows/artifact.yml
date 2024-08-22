@@ -16,7 +16,6 @@ on:
 jobs:
   partner-chains-smart-contracts-build:
     runs-on: [self-hosted, nixos]
-    needs: create-release
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
