@@ -16,13 +16,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          repository: input-output-hk/partner-chains-smart-contracts
-          token: ${{ secrets.ACTIONS_PAT }}
           ref: ${{ github.event.inputs.partner_chains_smart_contracts_sha }}
-          path: partner-chains-smart-contracts
 
       - name: Build
-        run: nix build ./partner-chains-smart-contracts#sidechain-release-bundle
+        run: nix build ./#sidechain-release-bundle
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
