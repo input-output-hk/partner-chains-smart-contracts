@@ -111,7 +111,7 @@ jobs:
           path: artifact/unzipped/
           
       - name: Upload artifact to release
-        if: ${{ github.event.inputs.create_draft_release_page == 'true' && needs.create-release.outputs.release_id != 'null' && needs.create-release.outputs.release_id != '' }}
+        if: ${{ github.event.inputs.create_draft_release_page == 'true' }}
         run: |
           curl -s -X POST \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
