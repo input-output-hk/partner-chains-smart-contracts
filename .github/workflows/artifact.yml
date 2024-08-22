@@ -77,12 +77,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.SIDECHAIN_MAIN_CLI }}
-          path: ./artifact
+          path: ${{ env.SIDECHAIN_MAIN_CLI }}
   
       - name: Zip the artifact directory
         run: |
-          cd artifact
-          chmod -R +x "${{ env.SIDECHAIN_MAIN_CLI }}"/
+          chmod -R +x "${{ env.SIDECHAIN_MAIN_CLI }}"
           zip -r "${{ env.SIDECHAIN_MAIN_CLI }}.zip" "${{ env.SIDECHAIN_MAIN_CLI }}"
           cd ..
   
