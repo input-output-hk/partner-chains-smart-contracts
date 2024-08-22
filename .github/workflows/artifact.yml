@@ -111,10 +111,11 @@ jobs:
           path: artifact/unzipped/
           
       - name: Upload artifact to release
-        if: ${{ github.event.inputs.create_draft_release_page == 'true' && needs.create-release.outputs.release_id != '' }}
+        if: ${{ github.event.inputs.create_draft_release_page == 'true' && needs.create-release.outputs.release_id != 'null' && needs.create-release.outputs.release_id != '' }}
         run: |
           curl -s -X POST \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/octet-stream" \
             --data-binary @"artifact/unzipped/sidechain-main-cli" \
             "https://uploads.github.com/repos/${{ github.repository }}/releases/${{ needs.create-release.outputs.release_id }}/assets?name=sidechain-main-cli"
+
