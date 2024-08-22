@@ -88,7 +88,6 @@ initTokensMint sidechainParams initATMSKind version = do
     }
 
 -- | Internal function for minting all init tokens in `initTokensMint`
--- | and `initSidechain`.
 mintAllTokens ∷
   ∀ r.
   SidechainParams →

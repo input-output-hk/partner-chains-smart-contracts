@@ -18,7 +18,6 @@ import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Types.Value (valueOf)
 import Contract.PlutusData (toData)
-import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction (TransactionInput, TransactionOutput)
 import Contract.TxConstraints (DatumPresence(DatumInline))
@@ -26,7 +25,6 @@ import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
 import Contract.Wallet as Wallet
 import Control.Monad.Error.Class (throwError)
-import Data.Array as Array
 import Data.Map as Map
 import Effect.Exception (error)
 import JS.BigInt as BigInt
@@ -51,23 +49,18 @@ import TrustlessSidechain.Effects.Util (fromMaybeThrow)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError(..))
 import TrustlessSidechain.Governance.Admin as Governance
-import TrustlessSidechain.InitSidechain
-  ( InitSidechainParams(InitSidechainParams)
-  , initSidechain
+import TrustlessSidechain.InitSidechain.NativeTokenManagement
+  ( initNativeTokenMgmt
   )
+import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
 import TrustlessSidechain.NativeTokenManagement.IlliquidCirculationSupply
   ( depositMoreToSupply
   , illiquidCirculationSupplyValidator
   , withdrawFromSupply
   )
-import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Asset (emptyAssetName, singletonFromAsset)
-import TrustlessSidechain.Utils.Crypto
-  ( aggregateKeys
-  , generatePrivKey
-  , toPubKeyUnsafe
-  )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId
@@ -95,28 +88,18 @@ dummyInitialiseSidechain ∷
 dummyInitialiseSidechain pkh = do
   genesisUtxo ← Test.Utils.getOwnTransactionInput
 
-  initCommitteePrvKeys ←
-    liftEffect
-      $ sequence
-      $ Array.replicate 1 generatePrivKey
-
   let
-    initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-    initScParams = InitSidechainParams
-      { initChainId: BigInt.fromInt 1
-      , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-      , initUtxo: genesisUtxo
-      , initAggregatedCommittee: toData $ aggregateKeys $ map unwrap
-          initCommitteePubKeys
-      , initSidechainEpoch: zero
-      , initThresholdNumerator: BigInt.fromInt 2
-      , initThresholdDenominator: BigInt.fromInt 3
-      , initCandidatePermissionTokenMintInfo: Nothing
-      , initATMSKind: ATMSPlainEcdsaSecp256k1
-      , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
-      }
+    sidechainParams =
+      SidechainParams
+        { chainId: BigInt.fromInt 69_420
+        , genesisUtxo
+        , thresholdNumerator: BigInt.fromInt 2
+        , thresholdDenominator: BigInt.fromInt 3
+        , governanceAuthority: Governance.mkGovernanceAuthority pkh
+        }
 
-  { sidechainParams } ← initSidechain initScParams 1
+  _ ← initTokensMint sidechainParams ATMSPlainEcdsaSecp256k1 1
+  _ ← initNativeTokenMgmt sidechainParams ATMSPlainEcdsaSecp256k1 1
 
   pure sidechainParams
 

@@ -30,11 +30,10 @@ import TrustlessSidechain.FUELProxyPolicy
   , mkFuelProxyMintLookupsAndConstraints
   )
 import TrustlessSidechain.Governance.Admin as Governance
-import TrustlessSidechain.InitSidechain
-  ( InitSidechainParams(InitSidechainParams)
-  , initSidechain
-  )
+import TrustlessSidechain.InitSidechain.FUEL (initFuel)
+import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
 import TrustlessSidechain.MerkleTree as MerkleTree
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address
   ( fromPaymentPubKeyHash
   , getOwnPaymentPubKeyHash
@@ -81,21 +80,25 @@ testScenarioSuccess =
           generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-          initScParams = InitSidechainParams
-            { initChainId: BigInt.fromInt 1
-            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys
-                $ map unwrap initCommitteePubKeys
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            }
+          aggregatedCommittee = toData $ aggregateKeys
+            $ map unwrap initCommitteePubKeys
+          atmsKind = ATMSPlainEcdsaSecp256k1
+          sidechainParams =
+            SidechainParams
+              { chainId: BigInt.fromInt 1
+              , genesisUtxo
+              , thresholdNumerator: BigInt.fromInt 2
+              , thresholdDenominator: BigInt.fromInt 3
+              , governanceAuthority: Governance.mkGovernanceAuthority pkh
+              }
 
-        { sidechainParams } ← initSidechain initScParams 1
+        _ ← initTokensMint sidechainParams atmsKind 1
+        _ ←
+          initFuel sidechainParams
+            zero
+            aggregatedCommittee
+            atmsKind
+            1
         let
           amount = BigInt.fromInt 5
           recipient = fromPaymentPubKeyHash TestnetId pkh
@@ -146,7 +149,7 @@ testScenarioSuccess =
         -- Insert new version of scripts.  Both version 1 and 2 are active and
         -- available at this point.
         void $ Versioning.insertVersion
-          { sidechainParams, atmsKind: (unwrap initScParams).initATMSKind }
+          { sidechainParams, atmsKind }
           2
 
         -- Mint 7 fuel tokens using FUEL policy v2
@@ -198,21 +201,25 @@ testScenarioSuccess2 =
           generatePrivKey
         let
           initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-          initScParams = InitSidechainParams
-            { initChainId: BigInt.fromInt 1
-            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys
-                $ map unwrap initCommitteePubKeys
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            }
+          aggregatedCommittee = toData $ aggregateKeys
+            $ map unwrap initCommitteePubKeys
+          sidechainParams =
+            SidechainParams
+              { chainId: BigInt.fromInt 1
+              , genesisUtxo
+              , thresholdNumerator: BigInt.fromInt 2
+              , thresholdDenominator: BigInt.fromInt 3
+              , governanceAuthority: Governance.mkGovernanceAuthority pkh
+              }
 
-        { sidechainParams } ← initSidechain initScParams 1
+        _ ← initTokensMint sidechainParams ATMSPlainEcdsaSecp256k1 1
+        _ ←
+          initFuel sidechainParams
+            zero
+            aggregatedCommittee
+            ATMSPlainEcdsaSecp256k1
+            1
+
         let
           amount = BigInt.fromInt 5
           amount2 = BigInt.fromInt 10
@@ -311,21 +318,24 @@ testScenarioFailure =
             generatePrivKey
           let
             initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-            initScParams = InitSidechainParams
-              { initChainId: BigInt.fromInt 1
-              , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-              , initUtxo: genesisUtxo
-              , initAggregatedCommittee: toData $ aggregateKeys
-                  $ map unwrap initCommitteePubKeys
-              , initSidechainEpoch: zero
-              , initThresholdNumerator: BigInt.fromInt 2
-              , initThresholdDenominator: BigInt.fromInt 3
-              , initCandidatePermissionTokenMintInfo: Nothing
-              , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
-              , initATMSKind: ATMSPlainEcdsaSecp256k1
-              }
+            aggregatedCommittee = toData $ aggregateKeys
+              $ map unwrap initCommitteePubKeys
+            atmsKind = ATMSPlainEcdsaSecp256k1
+            sidechainParams =
+              SidechainParams
+                { chainId: BigInt.fromInt 1
+                , genesisUtxo
+                , thresholdNumerator: BigInt.fromInt 2
+                , thresholdDenominator: BigInt.fromInt 3
+                , governanceAuthority: Governance.mkGovernanceAuthority pkh
+                }
 
-          { sidechainParams } ← initSidechain initScParams 1
+          _ ← initTokensMint sidechainParams atmsKind 1
+          _ ← initFuel sidechainParams
+            zero
+            aggregatedCommittee
+            atmsKind
+            1
           let
             amount = BigInt.fromInt 5
             recipient = fromPaymentPubKeyHash TestnetId pkh
@@ -375,11 +385,11 @@ testScenarioFailure =
 
           -- Update scripts, invalidating version 1 policies
           void $ Versioning.insertVersion
-            { sidechainParams, atmsKind: (unwrap initScParams).initATMSKind }
+            { sidechainParams, atmsKind }
             2
 
           void $ Versioning.invalidateVersion
-            { sidechainParams, atmsKind: (unwrap initScParams).initATMSKind }
+            { sidechainParams, atmsKind }
             1
 
           -- Attempt to burn fuel using invalidated version 1 policy.  Should

@@ -34,10 +34,9 @@ import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteeP
 import TrustlessSidechain.Effects.Contract (liftContract)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Governance.Admin as Governance
-import TrustlessSidechain.InitSidechain
-  ( InitSidechainParams(InitSidechainParams)
-  , initSidechain
-  )
+import TrustlessSidechain.InitSidechain.FUEL (initFuel)
+import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.SchnorrSecp256k1
@@ -107,23 +106,26 @@ testScenario1 =
         let
           initCommitteePubKeys = map Utils.SchnorrSecp256k1.toPubKey
             initCommitteePrvKeys
-          initScParams = InitSidechainParams
-            { initChainId: BigInt.fromInt 1
-            , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData
-                $ unsafePartial Utils.Crypto.aggregateKeys
-                $ map unwrap initCommitteePubKeys
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlainSchnorrSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority
-                ownPaymentPubKeyHash
-            }
+          aggregatedCommittee = toData
+            $ unsafePartial Utils.Crypto.aggregateKeys
+            $ map unwrap initCommitteePubKeys
+          sidechainParams =
+            SidechainParams
+              { chainId: BigInt.fromInt 1
+              , genesisUtxo
+              , thresholdNumerator: BigInt.fromInt 2
+              , thresholdDenominator: BigInt.fromInt 3
+              , governanceAuthority: Governance.mkGovernanceAuthority
+                  ownPaymentPubKeyHash
+              }
 
-        { sidechainParams } ← initSidechain initScParams 1
+        _ ← initTokensMint sidechainParams ATMSPlainSchnorrSecp256k1 1
+        _ ←
+          initFuel sidechainParams
+            zero
+            aggregatedCommittee
+            ATMSPlainSchnorrSecp256k1
+            1
 
         -- Grabbing the CommitteePlainSchnorrSecp256k1ATMSPolicy on chain parameters / minting policy
         -------------------------

@@ -4,35 +4,19 @@ import Contract.Prelude
 
 import Cardano.Types.BigNum as BigNum
 import Contract.Log (logInfo')
-import Contract.PlutusData (toData)
-import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Utxos (getUtxo)
 import Contract.Wallet as Wallet
-import Data.Array as Array
 import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
-import Run as Run
 import Test.TestnetTest (TestnetTest)
 import Test.TestnetTest as Test.TestnetTest
 import Test.Utils (WrappedTests, fails, getOwnTransactionInput, testnetGroup)
-import TrustlessSidechain.CommitteeATMSSchemes
-  ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
-  )
 import TrustlessSidechain.DParameter as DParameter
 import TrustlessSidechain.Effects.Contract (liftContract)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Governance.Admin as Governance
-import TrustlessSidechain.InitSidechain
-  ( InitSidechainParams(InitSidechainParams)
-  , initSidechain
-  , toSidechainParams
-  )
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
-import TrustlessSidechain.Utils.Crypto
-  ( aggregateKeys
-  , generatePrivKey
-  , toPubKeyUnsafe
-  )
 import TrustlessSidechain.Utils.Transaction
   ( balanceSignAndSubmitWithoutSpendingUtxo
   )
@@ -59,27 +43,14 @@ testScenarioSuccess =
         pkh ← getOwnPaymentPubKeyHash
         genesisUtxo ← getOwnTransactionInput
         let
-          keyCount = 25
-        initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
-          keyCount
-          generatePrivKey
-        let
-          initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-          initScParams = InitSidechainParams
-            { initChainId: BigInt.fromInt 1
-            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys
-                $ map unwrap initCommitteePubKeys
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            }
-
-          sidechainParams = toSidechainParams (unwrap initScParams)
+          sidechainParams =
+            SidechainParams
+              { chainId: BigInt.fromInt 1
+              , genesisUtxo
+              , thresholdNumerator: BigInt.fromInt 2
+              , thresholdDenominator: BigInt.fromInt 3
+              , governanceAuthority: Governance.mkGovernanceAuthority pkh
+              }
 
         void
           $
@@ -107,7 +78,6 @@ testScenarioSuccess =
                     "Test: update D param"
             )
 
-        _ ← initSidechain initScParams 1
         pure unit
 
 testScenarioFailure ∷ TestnetTest
@@ -127,27 +97,14 @@ testScenarioFailure =
         genesisOutput ← liftContract $ getUtxo genesisUtxo
         liftContract $ logInfo' (show genesisOutput)
         let
-          keyCount = 25
-        initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
-          keyCount
-          generatePrivKey
-        let
-          initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-          initScParams = InitSidechainParams
-            { initChainId: BigInt.fromInt 1
-            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys
-                $ map unwrap initCommitteePubKeys
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            }
-
-          sidechainParams = toSidechainParams (unwrap initScParams)
+          sidechainParams =
+            SidechainParams
+              { chainId: BigInt.fromInt 1
+              , genesisUtxo
+              , thresholdNumerator: BigInt.fromInt 2
+              , thresholdDenominator: BigInt.fromInt 3
+              , governanceAuthority: Governance.mkGovernanceAuthority pkh
+              }
 
         void
           $

@@ -17,7 +17,6 @@ import Cardano.Types.NetworkId (NetworkId(TestnetId))
 import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash(PaymentPubKeyHash))
 import Contract.Log as Log
 import Contract.PlutusData as PlutusData
-import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.Bifunctor (lmap)
@@ -48,7 +47,8 @@ import TrustlessSidechain.FUELMintingPolicy.V1
   , MerkleTreeEntry(MerkleTreeEntry)
   )
 import TrustlessSidechain.Governance.Admin as Governance
-import TrustlessSidechain.InitSidechain as InitSidechain
+import TrustlessSidechain.InitSidechain.FUEL (initFuel)
+import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
 import TrustlessSidechain.MerkleRoot
   ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
   , SaveRootParams(SaveRootParams)
@@ -56,7 +56,7 @@ import TrustlessSidechain.MerkleRoot
 import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.MerkleTree (MerkleTree, RootHash)
 import TrustlessSidechain.MerkleTree as MerkleTree
-import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address
   ( getOwnPaymentPubKeyHash
   )
@@ -164,7 +164,7 @@ saveRoot
     }
 
 -- | `testScenario1` does
--- |    1. Sets up the sidechain using the `InitSidechain.initSidechain` endpoint
+-- |    1. Sets up the sidechain using the `initTokenMint` and `initFuel` endpoints
 -- |
 -- |    2. Creates a merkle root to sign
 -- |
@@ -193,24 +193,27 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
         Crypto.generatePrivKey
       let
         initCommitteePubKeys = map Crypto.toPubKeyUnsafe initCommitteePrvKeys
-        initSidechainParams = InitSidechain.InitSidechainParams
-          { initChainId: BigInt.fromInt 69
-          , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-          , initUtxo: genesisUtxo
-          , initAggregatedCommittee: PlutusData.toData
-              $ Crypto.aggregateKeys
-              $ map unwrap
-                  initCommitteePubKeys
-          , initSidechainEpoch: zero
-          , initThresholdNumerator: BigInt.fromInt 2
-          , initThresholdDenominator: BigInt.fromInt 3
-          , initCandidatePermissionTokenMintInfo: Nothing
-          , initATMSKind: ATMSPlainEcdsaSecp256k1
-          , initGovernanceAuthority: Governance.mkGovernanceAuthority
-              ownPaymentPubKeyHash
-          }
+        aggregatedCommittee = PlutusData.toData
+          $ Crypto.aggregateKeys
+          $ map unwrap
+              initCommitteePubKeys
+        sidechainParams =
+          SidechainParams
+            { chainId: BigInt.fromInt 69
+            , genesisUtxo
+            , thresholdNumerator: BigInt.fromInt 2
+            , thresholdDenominator: BigInt.fromInt 3
+            , governanceAuthority: Governance.mkGovernanceAuthority
+                ownPaymentPubKeyHash
+            }
 
-      { sidechainParams } ← InitSidechain.initSidechain initSidechainParams 1
+      _ ← initTokensMint sidechainParams ATMSPlainEcdsaSecp256k1 1
+      _ ←
+        initFuel sidechainParams
+          zero
+          aggregatedCommittee
+          ATMSPlainEcdsaSecp256k1
+          1
 
       -- Building / saving the root that pays lots of FUEL to this wallet :)
       ----------------------------------------------------------------------
@@ -307,24 +310,27 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
         Crypto.generatePrivKey
       let
         initCommitteePubKeys = map Crypto.toPubKeyUnsafe initCommitteePrvKeys
-        initSidechainParams = InitSidechain.InitSidechainParams
-          { initChainId: BigInt.fromInt 69
-          , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-          , initUtxo: genesisUtxo
-          , initAggregatedCommittee: PlutusData.toData
-              $ Crypto.aggregateKeys
-              $ map unwrap
-                  initCommitteePubKeys
-          , initSidechainEpoch: zero
-          , initThresholdNumerator: BigInt.fromInt 2
-          , initThresholdDenominator: BigInt.fromInt 3
-          , initCandidatePermissionTokenMintInfo: Nothing
-          , initATMSKind: ATMSPlainEcdsaSecp256k1
-          , initGovernanceAuthority: Governance.mkGovernanceAuthority
-              ownPaymentPubKeyHash
-          }
+        aggregatedCommittee = PlutusData.toData
+          $ Crypto.aggregateKeys
+          $ map unwrap
+              initCommitteePubKeys
+        sidechainParams =
+          SidechainParams
+            { chainId: BigInt.fromInt 69_420
+            , genesisUtxo
+            , thresholdNumerator: BigInt.fromInt 2
+            , thresholdDenominator: BigInt.fromInt 3
+            , governanceAuthority: Governance.mkGovernanceAuthority
+                ownPaymentPubKeyHash
+            }
 
-      { sidechainParams } ← InitSidechain.initSidechain initSidechainParams 1
+      _ ← initTokensMint sidechainParams ATMSPlainEcdsaSecp256k1 1
+      _ ←
+        initFuel sidechainParams
+          zero
+          aggregatedCommittee
+          ATMSPlainEcdsaSecp256k1
+          1
 
       -- Building / saving the root that pays lots of FUEL to this wallet :)
       ----------------------------------------------------------------------
@@ -403,23 +409,26 @@ testScenario3 =
             <> everyoneElsePrvKeys
             <> Array.replicate 15 duplicated2PrvKey
           initCommitteePubKeys = map Crypto.toPubKeyUnsafe initCommitteePrvKeys
-          initSidechainParams = InitSidechain.InitSidechainParams
-            { initChainId: BigInt.fromInt 69
-            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: PlutusData.toData
-                $ Crypto.aggregateKeys
-                $ map unwrap
-                    initCommitteePubKeys
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 99999
-            , initThresholdDenominator: BigInt.fromInt 100000
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
-            }
+          aggregatedCommittee = PlutusData.toData
+            $ Crypto.aggregateKeys
+            $ map unwrap
+                initCommitteePubKeys
+          sidechainParams =
+            SidechainParams
+              { chainId: BigInt.fromInt 69
+              , genesisUtxo
+              , thresholdNumerator: BigInt.fromInt 2
+              , thresholdDenominator: BigInt.fromInt 3
+              , governanceAuthority: Governance.mkGovernanceAuthority pkh
+              }
 
-        { sidechainParams } ← InitSidechain.initSidechain initSidechainParams 1
+        _ ← initTokensMint sidechainParams ATMSPlainEcdsaSecp256k1 1
+        _ ←
+          initFuel sidechainParams
+            zero
+            aggregatedCommittee
+            ATMSPlainEcdsaSecp256k1
+            1
 
         -- Building / saving the root that pays lots of FUEL to this wallet :)
         ----------------------------------------------------------------------

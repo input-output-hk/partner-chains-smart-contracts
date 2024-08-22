@@ -203,22 +203,12 @@ data TxEndpoint
   | InitTokensMint
       { version ∷ Int }
   | InitCheckpoint
-      { committeePubKeysInput ∷ InputArgOrFile (NonEmptyList ByteArray)
-      , initSidechainEpoch ∷ BigInt
-      , initCandidatePermissionTokenMintInfo ∷ Maybe BigInt
-      , genesisHash ∷ ByteArray
+      { genesisHash ∷ ByteArray
       , version ∷ Int
       }
   | InitFuel
       { committeePubKeysInput ∷ InputArgOrFile (NonEmptyList ByteArray)
       , initSidechainEpoch ∷ BigInt
-      , version ∷ Int
-      }
-  | Init
-      { committeePubKeysInput ∷ InputArgOrFile (NonEmptyList ByteArray)
-      , initSidechainEpoch ∷ BigInt
-      , initCandidatePermissionTokenMintInfo ∷ Maybe BigInt
-      , genesisHash ∷ ByteArray
       , version ∷ Int
       }
   | InitReserveManagement
