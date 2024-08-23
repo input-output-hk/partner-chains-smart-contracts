@@ -32,10 +32,10 @@ import JS.BigInt (BigInt)
 import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT)
-import Test.PoCRawScripts (rawPoCMintingPolicy)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
+import TrustlessSidechain.RawScripts (rawOnlyMintMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
 import TrustlessSidechain.Utils.Scripts
@@ -64,7 +64,11 @@ decodeDummyBurningPolicy ∷
   SidechainParams →
   Run (EXCEPT OffchainError + r) PlutusScript
 decodeDummyBurningPolicy sidechainParams =
-  mkMintingPolicyWithParams' rawPoCMintingPolicy [ toData sidechainParams ]
+  case rawOnlyMintMintingPolicy of
+    (_ /\ onlyMintMintingPolicy) →
+      mkMintingPolicyWithParams'
+        onlyMintMintingPolicy
+        [ toData sidechainParams ]
 
 getFuelBurningPolicy ∷
   ∀ r.

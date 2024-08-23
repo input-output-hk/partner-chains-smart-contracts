@@ -32,10 +32,10 @@ import JS.BigInt (BigInt)
 import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT)
-import Test.PoCRawScripts (rawPoCMintingPolicy)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
+import TrustlessSidechain.RawScripts (rawOnlyMintMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
 import TrustlessSidechain.Utils.Scripts
@@ -56,13 +56,16 @@ data FuelMintParams = FuelMintParams
 dummyTokenName ∷ AssetName
 dummyTokenName = unsafeMkAssetName "Dummy tokens"
 
--- | Get the PoCMintingPolicy by applying `SidechainParams` to the dummy
+-- | Get the OnlyMintMintingPolicy by applying `SidechainParams` to the dummy
 -- | minting policy.
-decodePoCMintingPolicy ∷
+decodeOnlyMintMintingPolicy ∷
   ∀ r. SidechainParams → Run (EXCEPT OffchainError + r) PlutusScript
-decodePoCMintingPolicy sidechainParams = do
-  mkMintingPolicyWithParams' rawPoCMintingPolicy
-    [ toData sidechainParams ]
+decodeOnlyMintMintingPolicy sidechainParams = do
+  case rawOnlyMintMintingPolicy of
+    (_ /\ onlyMintMintingPolicy) →
+      mkMintingPolicyWithParams'
+        onlyMintMintingPolicy
+        [ toData sidechainParams ]
 
 getFuelMintingPolicy ∷
   ∀ r.
@@ -72,7 +75,7 @@ getFuelMintingPolicy ∷
     , fuelMintingCurrencySymbol ∷ ScriptHash
     }
 getFuelMintingPolicy sidechainParams = do
-  fuelMintingPolicy ← decodePoCMintingPolicy sidechainParams
+  fuelMintingPolicy ← decodeOnlyMintMintingPolicy sidechainParams
   let fuelMintingCurrencySymbol = PlutusScript.hash fuelMintingPolicy
   pure { fuelMintingPolicy, fuelMintingCurrencySymbol }
 

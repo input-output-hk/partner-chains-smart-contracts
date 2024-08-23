@@ -31,7 +31,7 @@ import TrustlessSidechain.Versioning.ScriptId
   )
 import Type.Row (type (+))
 
--- | Get the PoCMintingPolicy by applying `SidechainParams` to the dummy
+-- | Get the OnlyMintMintingPolicy by applying `SidechainParams` to the dummy
 -- | minting policy.
 decodeDParameterMintingPolicy ∷
   ∀ r.

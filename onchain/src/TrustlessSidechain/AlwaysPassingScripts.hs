@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module TrustlessSidechain.PoCAlwaysPassingScripts (
+module TrustlessSidechain.AlwaysPassingScripts (
   mkAlwaysPassingValidator,
   mkAlwaysPassingValidatorUntyped,
   serialisableAlwaysPassingValidator,

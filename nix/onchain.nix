@@ -41,14 +41,7 @@ let
           packages = {
             trustless-sidechain.doHaddock = false;
             trustless-sidechain-prelude.doHaddock = false;
-            onchain-poc.doHaddock = false;
-            onchain-poc.flags.defer-plugin-errors = false;
-            onchain-poc.preCheck = ''
-              export CARDANO_CLI=${inputs.cardano-node.legacyPackages.cardano-cli}/bin/cardano-cli${pkgs.stdenv.hostPlatform.extensions.executable}
-              export CARDANO_NODE=${inputs.cardano-node.legacyPackages.cardano-node}/bin/cardano-node${pkgs.stdenv.hostPlatform.extensions.executable}
-            '';
             trustless-sidechain.ghcOptions = [ "-Werror" ];
-            onchain-poc.ghcOptions = [ "-Werror" ];
             trustless-sidechain-prelude.ghcOptions = [ "-Werror" ];
           };
         }
