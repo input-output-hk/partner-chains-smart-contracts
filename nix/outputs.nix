@@ -56,7 +56,7 @@ in
             nodePackages.node2nix
 
             # Purescript
-            easy-ps.spago
+            spago
             easy-ps.psa
             easy-ps.spago2nix
             easy-ps.pscid
