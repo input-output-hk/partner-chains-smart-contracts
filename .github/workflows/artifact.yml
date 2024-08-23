@@ -123,5 +123,5 @@ jobs:
           curl -s -X POST \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/octet-stream" \
-            --data-binary @"artifact/${{ env.SIDECHAIN_MAIN_CLI }}.zip" \
+            --data-binary @"${{ env.SIDECHAIN_MAIN_CLI }}.zip" \
             "https://uploads.github.com/repos/${{ github.repository }}/releases/$release_id/assets?name=${{ env.SIDECHAIN_MAIN_CLI }}.zip"
