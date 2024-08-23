@@ -1,4 +1,8 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -20,8 +24,11 @@ module TrustlessSidechain.FUELProxyPolicy (
   ),
 ) where
 
-import PlutusLedgerApi.V2
+import Data.Eq qualified as Haskell
+import PlutusLedgerApi.V2 hiding (TxInfo, txInfoMint, txInfoReferenceInputs)
+import PlutusPrelude (Generic)
 import PlutusTx
+import TrustlessSidechain.CustomScriptContext
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types
@@ -33,6 +40,25 @@ import TrustlessSidechain.Versioning (
   fuelMintingPolicyId,
   getVersionedCurrencySymbol,
  )
+
+data TxInfo = TxInfo
+  { txInfoInputs :: BuiltinData
+  , txInfoReferenceInputs :: [TxInInfo]
+  , txInfoOutputs :: BuiltinData
+  , txInfoFee :: BuiltinData
+  , txInfoMint :: Value
+  , txInfoDCert :: BuiltinData
+  , txInfoWdrl :: BuiltinData
+  , txInfoValidRange :: BuiltinData
+  , txInfoSignatories :: BuiltinData
+  , txInfoRedeemers :: BuiltinData
+  , txInfoData :: BuiltinData
+  , txInfoId :: BuiltinData
+  }
+  deriving stock (Generic, Haskell.Eq)
+
+makeLift ''TxInfo
+makeIsDataIndexed ''TxInfo [('TxInfo, 0)]
 
 -- | Redeemer for the proxy FUEL that tells whether fuel should be minted or
 -- burned, and which version of the fuel script to use.  Burn case also contains
@@ -61,13 +87,13 @@ mkFuelProxyPolicy ::
   SidechainParams ->
   VersionOracleConfig ->
   FuelProxyRedeemer ->
-  ScriptContext ->
+  CustomScriptContext TxInfo ->
   Bool
 mkFuelProxyPolicy
   _
   versioningConfig
   FuelProxyMint {..}
-  sc@(ScriptContext txInfo (Minting currSymbol)) =
+  (CustomScriptContext txInfo (Minting currSymbol)) =
     traceIfFalse "ERROR-FUEL-POLICY-01" sameAmountsMinted
       && traceIfFalse "ERROR-FUEL-POLICY-02" tokensMinted
     where
@@ -76,7 +102,7 @@ mkFuelProxyPolicy
         getVersionedCurrencySymbol
           versioningConfig
           (VersionOracle {version, scriptId = fuelMintingPolicyId})
-          sc
+          (txInfoReferenceInputs txInfo)
 
       -- Amount of minted tokens.
       mintedAmount = currencySymbolValueOf (txInfoMint txInfo) currSymbol
@@ -92,7 +118,7 @@ mkFuelProxyPolicy
   _
   versioningConfig
   FuelProxyBurn {..}
-  sc@(ScriptContext txInfo (Minting currSymbol)) =
+  (CustomScriptContext txInfo (Minting currSymbol)) =
     traceIfFalse "ERROR-FUEL-POLICY-03" sameAmountsMinted
       && traceIfFalse "ERROR-FUEL-POLICY-04" tokensBurned
     where
@@ -101,7 +127,7 @@ mkFuelProxyPolicy
         getVersionedCurrencySymbol
           versioningConfig
           (VersionOracle {version, scriptId = fuelBurningPolicyId})
-          sc
+          (txInfoReferenceInputs txInfo)
 
       -- Amount of burned tokens.
       mintedAmount = currencySymbolValueOf (txInfoMint txInfo) currSymbol

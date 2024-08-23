@@ -4,6 +4,7 @@ module TrustlessSidechain.PlutusPrelude.TH (
   makeHasField,
   makeUnsafeNewtypes,
   makeUnsafeGetters,
+  makeUnsafeNewtypes',
 ) where
 
 import Control.Monad
@@ -34,6 +35,64 @@ import Prelude
 makeUnsafeNewtypes :: Name -> Q [Dec]
 makeUnsafeNewtypes name = do
   let rawTypeName = getNameUnqualified name
+
+  let builtinDataName = mkName "BuiltinData"
+  let newtypeName = mkName rawTypeName
+  let unNewtypeName = mkName $ "un" <> rawTypeName
+
+  let decNewtype =
+        NewtypeD
+          []
+          newtypeName
+          []
+          Nothing
+          ( RecC
+              newtypeName
+              [
+                ( unNewtypeName
+                , Bang NoSourceUnpackedness NoSourceStrictness
+                , ConT builtinDataName
+                )
+              ]
+          )
+          [DerivClause Nothing [ConT $ mkName "Eq"]]
+  let packableInstanceT =
+        foldl1
+          AppT
+          [ ConT $ mkName "Packable"
+          , ConT newtypeName
+          ]
+  let packableInstance =
+        InstanceD
+          Nothing
+          []
+          packableInstanceT
+          [ PragmaD (InlineP (mkName "wrap") Inline FunLike AllPhases)
+          , FunD
+              (mkName "wrap")
+              [Clause [] (NormalB (ConE newtypeName)) []]
+          , PragmaD (InlineP (mkName "unwrap") Inline FunLike AllPhases)
+          , FunD
+              (mkName "unwrap")
+              [Clause [] (NormalB (VarE unNewtypeName)) []]
+          ]
+  let codableInstance =
+        InstanceD
+          Nothing
+          []
+          ( foldl1
+              AppT
+              [ ConT $ mkName "Codable"
+              , ConT name
+              , ConT newtypeName
+              ]
+          )
+          []
+  return [decNewtype, packableInstance, codableInstance]
+
+makeUnsafeNewtypes' :: Name -> Q [Dec]
+makeUnsafeNewtypes' name = do
+  let rawTypeName = getNameUnqualified name ++ "'"
 
   let builtinDataName = mkName "BuiltinData"
   let newtypeName = mkName rawTypeName

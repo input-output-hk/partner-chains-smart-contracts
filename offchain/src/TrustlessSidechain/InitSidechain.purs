@@ -17,6 +17,7 @@ import JS.BigInt (BigInt)
 import Run (Run)
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
 import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Log (logTimer)
 import TrustlessSidechain.GetSidechainAddresses
   ( SidechainAddresses
   , SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
@@ -113,10 +114,13 @@ initSidechain ∷
     }
 initSidechain (InitSidechainParams isp) version = do
   let sidechainParams = toSidechainParams isp
+  let logger = logTimer "init sidechain function"
 
+  logger "before mint"
   -- Burn genesis UTxO and mint initialization tokens
   { transactionId: txId } ← mintAllTokens sidechainParams isp.initATMSKind
     version
+  logger "mintAllTokens"
 
   -- Initialize FUEL, including distributed set, merkle root, and committee
   -- selection.
@@ -127,6 +131,8 @@ initSidechain (InitSidechainParams isp) version = do
       isp.initATMSKind
       version
 
+  logger "initFuel"
+
   -- Initialize checkpointing.
   checkpointInitTx ←
     initCheckpoint sidechainParams
@@ -134,14 +140,20 @@ initSidechain (InitSidechainParams isp) version = do
       isp.initATMSKind
       version
 
+  logger "initCheckpoint"
+
   -- Initialize candidate permission tokens.
   permissionTokensInitTx ←
     initCandidatePermissionToken sidechainParams
       isp.initCandidatePermissionTokenMintInfo
 
+  logger "initCandidatePermissionToken"
+
   -- Initialize Native Token Management.
   nativeTokenMgmtInitTxs ←
     initNativeTokenMgmt sidechainParams isp.initATMSKind version
+
+  logger "initNativeTokenMgmt"
 
   -- Grabbing the required sidechain addresses of particular validators /
   -- minting policies
@@ -153,6 +165,9 @@ initSidechain (InitSidechainParams isp) version = do
         , usePermissionToken: isJust isp.initCandidatePermissionTokenMintInfo
         , version
         }
+
+  logger "getSidechainAddresses"
+
   pure
     { transactionId: txId
     , initTransactionIds:

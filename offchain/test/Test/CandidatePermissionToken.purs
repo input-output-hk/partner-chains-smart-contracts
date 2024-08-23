@@ -23,7 +23,7 @@ import Test.Utils as Test.Utils
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.Effects.Contract (CONTRACT)
-import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Run (withUnliftApp, withUnliftAppPlain)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.InitSidechain.TokensMint (initSpendGenesisUtxo)
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -52,68 +52,70 @@ testScenarioSuccess1 =
         , BigNum.fromInt 5_000_000
         , BigNum.fromInt 5_000_000
         ]
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+    $ \alice → withUnliftApp "Test.CandidatePermissionToken.testScenarioSuccess1"
+        (Wallet.withKeyWallet alice)
+        do
 
-        -- Generate genesis UTxO
-        genesisUtxo ← Test.Utils.getOwnTransactionInput
+          -- Generate genesis UTxO
+          genesisUtxo ← Test.Utils.getOwnTransactionInput
 
-        let
-          -- Put genesis UTxO into sidechain params
-          sidechainParams = wrap
-            ( (unwrap Test.Utils.dummySidechainParams)
-                { genesisUtxo = genesisUtxo }
-            )
+          let
+            -- Put genesis UTxO into sidechain params
+            sidechainParams = wrap
+              ( (unwrap Test.Utils.dummySidechainParams)
+                  { genesisUtxo = genesisUtxo }
+              )
 
-        -----------------------------
-        -- Mint candidate permission init token and use it to mint a single
-        -- candidate permission token
-        -----------------------------
-        _ ←
-          ( (<>) <$> initSpendGenesisUtxo sidechainParams <*>
-              CandidatePermissionToken.mintOneCandidatePermissionInitToken
-                sidechainParams
-          ) >>=
-            balanceSignAndSubmit "Mint candidate permission init token"
+          -----------------------------
+          -- Mint candidate permission init token and use it to mint a single
+          -- candidate permission token
+          -----------------------------
+          _ ←
+            ( (<>) <$> initSpendGenesisUtxo sidechainParams <*>
+                CandidatePermissionToken.mintOneCandidatePermissionInitToken
+                  sidechainParams
+            ) >>=
+              balanceSignAndSubmit "Mint candidate permission init token"
 
-        _ ← CandidatePermissionToken.runCandidatePermissionToken
-          sidechainParams
-          (BigInt.fromInt 1)
-        -----------------------------
-        -- Register candidate using a permission token
-        -----------------------------
-        registerTxId ←
-          Test.CommitteeCandidateValidator.runRegisterWithCandidatePermissionInfo
-            true
+          _ ← CandidatePermissionToken.runCandidatePermissionToken
             sidechainParams
-
-        -----------------------------
-        -- Asserting that the committee validator actually has the token
-        -----------------------------
-        candidatePermissionInfo ←
-          CandidatePermissionToken.candidatePermissionCurrencyInfo
-            sidechainParams
-
-        committeeCandidiateValidatorAddr ← do
-          committeeCandidateValidator ←
-            CommitteeCandidateValidator.getCommitteeCandidateValidator
+            (BigInt.fromInt 1)
+          -----------------------------
+          -- Register candidate using a permission token
+          -----------------------------
+          registerTxId ←
+            Test.CommitteeCandidateValidator.runRegisterWithCandidatePermissionInfo
+              true
               sidechainParams
-          Utils.toAddress (PlutusScript.hash committeeCandidateValidator)
 
-        Test.Utils.assertHasOutputWithAsset registerTxId
-          committeeCandidiateValidatorAddr
-          candidatePermissionInfo.currencySymbol
-          CandidatePermissionToken.candidatePermissionTokenName
+          -----------------------------
+          -- Asserting that the committee validator actually has the token
+          -----------------------------
+          candidatePermissionInfo ←
+            CandidatePermissionToken.candidatePermissionCurrencyInfo
+              sidechainParams
 
-        -----------------------------
-        -- Running the deregister endpoint
-        -----------------------------
-        _ ← Test.CommitteeCandidateValidator.runDeregister sidechainParams
+          committeeCandidiateValidatorAddr ← do
+            committeeCandidateValidator ←
+              CommitteeCandidateValidator.getCommitteeCandidateValidator
+                sidechainParams
+            Utils.toAddress (PlutusScript.hash committeeCandidateValidator)
 
-        Test.Utils.assertIHaveOutputWithAsset $ Asset
-          candidatePermissionInfo.currencySymbol
-          CandidatePermissionToken.candidatePermissionTokenName
+          Test.Utils.assertHasOutputWithAsset registerTxId
+            committeeCandidiateValidatorAddr
+            candidatePermissionInfo.currencySymbol
+            CandidatePermissionToken.candidatePermissionTokenName
 
-        pure unit
+          -----------------------------
+          -- Running the deregister endpoint
+          -----------------------------
+          _ ← Test.CommitteeCandidateValidator.runDeregister sidechainParams
+
+          Test.Utils.assertIHaveOutputWithAsset $ Asset
+            candidatePermissionInfo.currencySymbol
+            CandidatePermissionToken.candidatePermissionTokenName
+
+          pure unit
 
 -- | `assertIHaveCandidatePermissionToken` asserts that we have a UTxO with at
 -- | least one of the candidate candidate permission token
@@ -144,35 +146,38 @@ testScenarioFailure1 =
         , BigNum.fromInt 5_000_000
         , BigNum.fromInt 5_000_000
         ]
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+    $ \alice → withUnliftApp "Test.CandidatePermissionToken.testScenarioFailure1"
+        (Wallet.withKeyWallet alice)
+        do
 
-        let
-          sidechainParams = Test.Utils.dummySidechainParams
+          let
+            sidechainParams = Test.Utils.dummySidechainParams
 
-        -----------------------------
-        -- Running the endpoints..
-        -----------------------------
-        txId ←
-          Test.CommitteeCandidateValidator.runRegisterWithCandidatePermissionInfo
-            false
-            sidechainParams
-
-        -----------------------------
-        -- Asserting that the committee validator actually has the token
-        -----------------------------
-        candidatePermissionInfo ←
-          CandidatePermissionToken.candidatePermissionCurrencyInfo
-            sidechainParams
-
-        committeeCandidiateValidatorAddr ← do
-          committeeCandidateValidator ←
-            CommitteeCandidateValidator.getCommitteeCandidateValidator
+          -----------------------------
+          -- Running the endpoints..
+          -----------------------------
+          txId ←
+            Test.CommitteeCandidateValidator.runRegisterWithCandidatePermissionInfo
+              false
               sidechainParams
-          Utils.toAddress (PlutusScript.hash committeeCandidateValidator)
 
-        Test.Utils.assertHasOutputWithAsset txId committeeCandidiateValidatorAddr
-          candidatePermissionInfo.currencySymbol
-          CandidatePermissionToken.candidatePermissionTokenName
-          # withUnliftApp Test.Utils.fails
+          -----------------------------
+          -- Asserting that the committee validator actually has the token
+          -----------------------------
+          candidatePermissionInfo ←
+            CandidatePermissionToken.candidatePermissionCurrencyInfo
+              sidechainParams
 
-        pure unit
+          committeeCandidiateValidatorAddr ← do
+            committeeCandidateValidator ←
+              CommitteeCandidateValidator.getCommitteeCandidateValidator
+                sidechainParams
+            Utils.toAddress (PlutusScript.hash committeeCandidateValidator)
+
+          Test.Utils.assertHasOutputWithAsset txId
+            committeeCandidiateValidatorAddr
+            candidatePermissionInfo.currencySymbol
+            CandidatePermissionToken.candidatePermissionTokenName
+            # withUnliftAppPlain Test.Utils.fails
+
+          pure unit

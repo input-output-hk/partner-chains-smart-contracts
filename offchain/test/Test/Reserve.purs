@@ -205,395 +205,411 @@ testScenario1 ∷ TestnetTest
 testScenario1 =
   Mote.Monad.test "Successful reserve initialization with ADA as reserve token"
     $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-        pkh ← getOwnPaymentPubKeyHash
-        Test.Utils.withSingleMultiSig (unwrap pkh) $ do
+    $ \alice → withUnliftApp "Test.Reserve.testScenario1"
+        (Wallet.withKeyWallet alice)
+        do
+          pkh ← getOwnPaymentPubKeyHash
+          Test.Utils.withSingleMultiSig (unwrap pkh) $ do
 
-          sidechainParams ← dummyInitialiseSidechain pkh
+            sidechainParams ← dummyInitialiseSidechain pkh
 
-          void $ initialiseReserveUtxo
-            sidechainParams
-            immutableAdaSettings
-            invalidMutableSettings
-            (BigNum.fromInt 100)
+            void $ initialiseReserveUtxo
+              sidechainParams
+              immutableAdaSettings
+              invalidMutableSettings
+              (BigNum.fromInt 100)
 
-          utxoMap ← findReserveUtxos sidechainParams
+            utxoMap ← findReserveUtxos sidechainParams
 
-          when (Map.isEmpty utxoMap)
-            $ liftContract
-            $ throwError
-            $ error "Reserve utxo not found"
+            when (Map.isEmpty utxoMap)
+              $ liftContract
+              $ throwError
+              $ error "Reserve utxo not found"
 
 testScenario2 ∷ TestnetTest
 testScenario2 =
   Mote.Monad.test
     "Successful reserve initialization with non-ADA as reserve token"
     $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-        pkh ← getOwnPaymentPubKeyHash
-        Test.Utils.withSingleMultiSig (unwrap pkh) $ do
+    $ \alice → withUnliftApp "Test.Reserve.testScenario2"
+        (Wallet.withKeyWallet alice)
+        do
+          pkh ← getOwnPaymentPubKeyHash
+          Test.Utils.withSingleMultiSig (unwrap pkh) $ do
 
-          sidechainParams ← dummyInitialiseSidechain pkh
+            sidechainParams ← dummyInitialiseSidechain pkh
 
-          let numOfNonAdaTokens = 101
+            let numOfNonAdaTokens = 101
 
-          tokenKind ← mintNonAdaTokens $ Int.fromInt numOfNonAdaTokens
+            tokenKind ← mintNonAdaTokens $ Int.fromInt numOfNonAdaTokens
 
-          let
-            immutableSettings = ImmutableReserveSettings
-              { t0: zero
-              , tokenKind: fromAssetClass tokenKind
-              }
+            let
+              immutableSettings = ImmutableReserveSettings
+                { t0: zero
+                , tokenKind: fromAssetClass tokenKind
+                }
 
-          void $ initialiseReserveUtxo
-            sidechainParams
-            immutableSettings
-            invalidMutableSettings
-            (BigNum.fromInt numOfNonAdaTokens)
+            void $ initialiseReserveUtxo
+              sidechainParams
+              immutableSettings
+              invalidMutableSettings
+              (BigNum.fromInt numOfNonAdaTokens)
 
-          utxoMap ← findReserveUtxos sidechainParams
+            utxoMap ← findReserveUtxos sidechainParams
 
-          when (Map.isEmpty utxoMap)
-            $ liftContract
-            $ throwError
-            $ error "Reserve utxo not found"
+            when (Map.isEmpty utxoMap)
+              $ liftContract
+              $ throwError
+              $ error "Reserve utxo not found"
 
 testScenario3 ∷ TestnetTest
 testScenario3 =
   Mote.Monad.test
     "Deposit more non-ADA to a reserve"
     $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-        pkh ← getOwnPaymentPubKeyHash
-        Test.Utils.withSingleMultiSig (unwrap pkh) $ do
+    $ \alice → withUnliftApp "Test.Reserve.testScenario3"
+        (Wallet.withKeyWallet alice)
+        do
+          pkh ← getOwnPaymentPubKeyHash
+          Test.Utils.withSingleMultiSig (unwrap pkh) $ do
 
-          sidechainParams ← dummyInitialiseSidechain pkh
+            sidechainParams ← dummyInitialiseSidechain pkh
 
-          let
-            initialAmountOfNonAdaTokens = 50
-            depositAmountOfNonAdaTokens = 51
+            let
+              initialAmountOfNonAdaTokens = 50
+              depositAmountOfNonAdaTokens = 51
 
-            numOfNonAdaTokens =
-              (initialAmountOfNonAdaTokens + depositAmountOfNonAdaTokens)
+              numOfNonAdaTokens =
+                (initialAmountOfNonAdaTokens + depositAmountOfNonAdaTokens)
 
-          tokenKind ← mintNonAdaTokens $ Int.fromInt numOfNonAdaTokens
+            tokenKind ← mintNonAdaTokens $ Int.fromInt numOfNonAdaTokens
 
-          let
-            immutableSettings = ImmutableReserveSettings
-              { t0: zero
-              , tokenKind: fromAssetClass tokenKind
-              }
+            let
+              immutableSettings = ImmutableReserveSettings
+                { t0: zero
+                , tokenKind: fromAssetClass tokenKind
+                }
 
-          void $ initialiseReserveUtxo
-            sidechainParams
-            immutableSettings
-            invalidMutableSettings
-            (BigNum.fromInt initialAmountOfNonAdaTokens)
+            void $ initialiseReserveUtxo
+              sidechainParams
+              immutableSettings
+              invalidMutableSettings
+              (BigNum.fromInt initialAmountOfNonAdaTokens)
 
-          void $ depositToReserve
-            sidechainParams
-            (fromAssetClass tokenKind)
-            (BigNum.fromInt depositAmountOfNonAdaTokens)
+            void $ depositToReserve
+              sidechainParams
+              (fromAssetClass tokenKind)
+              (BigNum.fromInt depositAmountOfNonAdaTokens)
 
-          maybeUtxo ← Map.toUnfoldable
-            <$> findReserveUtxos sidechainParams
+            maybeUtxo ← Map.toUnfoldable
+              <$> findReserveUtxos sidechainParams
 
-          let
-            extractValue = snd >>> unwrap >>> _.amount
-            isExpectedAmount = valueOf (fromAssetClass tokenKind)
+            let
+              extractValue = snd >>> unwrap >>> _.amount
+              isExpectedAmount = valueOf (fromAssetClass tokenKind)
 
-          unless
-            ( Just (BigNum.fromInt numOfNonAdaTokens) ==
-                (extractValue >>> isExpectedAmount <$> maybeUtxo)
-            )
-            (liftContract $ throwError $ error "Deposit not sucessful")
+            unless
+              ( Just (BigNum.fromInt numOfNonAdaTokens) ==
+                  (extractValue >>> isExpectedAmount <$> maybeUtxo)
+              )
+              (liftContract $ throwError $ error "Deposit not sucessful")
 
 testScenario4 ∷ TestnetTest
 testScenario4 =
   Mote.Monad.test
     "Update reserve utxo mutable settings"
     $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-        pkh ← getOwnPaymentPubKeyHash
-        Test.Utils.withSingleMultiSig (unwrap pkh) $ do
+    $ \alice → withUnliftApp "Test.Reserve.testScenario4"
+        (Wallet.withKeyWallet alice)
+        do
+          pkh ← getOwnPaymentPubKeyHash
+          Test.Utils.withSingleMultiSig (unwrap pkh) $ do
 
-          sidechainParams ← dummyInitialiseSidechain pkh
+            sidechainParams ← dummyInitialiseSidechain pkh
 
-          void $ initialiseReserveUtxo
-            sidechainParams
-            immutableAdaSettings
-            invalidMutableSettings
-            (BigNum.fromInt 2_000_000)
+            void $ initialiseReserveUtxo
+              sidechainParams
+              immutableAdaSettings
+              invalidMutableSettings
+              (BigNum.fromInt 2_000_000)
 
-          utxoBefore ←
-            Test.Utils.fromMaybeTestError "Utxo after initialization not found" $
-              (Map.toUnfoldable <$> findReserveUtxos sidechainParams)
+            utxoBefore ←
+              Test.Utils.fromMaybeTestError "Utxo after initialization not found" $
+                (Map.toUnfoldable <$> findReserveUtxos sidechainParams)
 
-          let
-            updatedMutableSettings = MutableReserveSettings
-              { vFunctionTotalAccrued:
-                  wrap $ unsafePartial $ fromJust $ fromBytes
-                    $ hexToByteArrayUnsafe
-                    $
-                      "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
-              , incentiveAmount: BigInt.fromInt 20
-              }
+            let
+              updatedMutableSettings = MutableReserveSettings
+                { vFunctionTotalAccrued:
+                    wrap $ unsafePartial $ fromJust $ fromBytes
+                      $ hexToByteArrayUnsafe
+                      $
+                        "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
+                , incentiveAmount: BigInt.fromInt 20
+                }
 
-          void $ updateReserveUtxo
-            sidechainParams
-            updatedMutableSettings
-            utxoBefore
+            void $ updateReserveUtxo
+              sidechainParams
+              updatedMutableSettings
+              utxoBefore
 
-          utxoAfter ←
-            Test.Utils.fromMaybeTestError "Utxo after update not found"
-              $ Map.toUnfoldable
-              <$> findReserveUtxos sidechainParams
+            utxoAfter ←
+              Test.Utils.fromMaybeTestError "Utxo after update not found"
+                $ Map.toUnfoldable
+                <$> findReserveUtxos sidechainParams
 
-          let
-            unwrappedDatum =
-              snd
-                >>> extractReserveDatum
-                >>> map unwrap
+            let
+              unwrappedDatum =
+                snd
+                  >>> extractReserveDatum
+                  >>> map unwrap
 
-            withUpdatedMutableSettings = _
-              { mutableSettings = updatedMutableSettings }
+              withUpdatedMutableSettings = _
+                { mutableSettings = updatedMutableSettings }
 
-          unless
-            ( (withUpdatedMutableSettings <$> unwrappedDatum utxoBefore)
-                == unwrappedDatum utxoAfter
-            )
-            (liftContract $ throwError $ error "Update not sucessful")
+            unless
+              ( (withUpdatedMutableSettings <$> unwrappedDatum utxoBefore)
+                  == unwrappedDatum utxoAfter
+              )
+              (liftContract $ throwError $ error "Update not sucessful")
 
 testScenario5 ∷ TestnetTest
 testScenario5 =
   Mote.Monad.test
     "Transfer to illiquid circulation supply with non-ADA as reserve token"
     $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-        pkh ← getOwnPaymentPubKeyHash
-        Test.Utils.withSingleMultiSig (unwrap pkh) $ do
-          sidechainParams ← dummyInitialiseSidechain pkh
+    $ \alice → withUnliftApp "Test.Reserve.testScenario5"
+        (Wallet.withKeyWallet alice)
+        do
+          pkh ← getOwnPaymentPubKeyHash
+          Test.Utils.withSingleMultiSig (unwrap pkh) $ do
+            sidechainParams ← dummyInitialiseSidechain pkh
 
-          let
-            numOfNonAdaTokens = 101
-            numOfTransferTokens = 15
-          tokenKind ← mintNonAdaTokens $ Int.fromInt numOfNonAdaTokens
+            let
+              numOfNonAdaTokens = 101
+              numOfTransferTokens = 15
+            tokenKind ← mintNonAdaTokens $ Int.fromInt numOfNonAdaTokens
 
-          fakeVt ← alwaysPassingPolicy $ BigInt.fromInt 11
+            fakeVt ← alwaysPassingPolicy $ BigInt.fromInt 11
 
-          let
-            incentiveAmount = 1
+            let
+              incentiveAmount = 1
 
-            mutableSettings = MutableReserveSettings
-              { vFunctionTotalAccrued: PlutusScript.hash fakeVt
-              , incentiveAmount: BigInt.fromInt incentiveAmount
-              }
+              mutableSettings = MutableReserveSettings
+                { vFunctionTotalAccrued: PlutusScript.hash fakeVt
+                , incentiveAmount: BigInt.fromInt incentiveAmount
+                }
 
-            immutableSettings = ImmutableReserveSettings
-              { t0: zero
-              , tokenKind: fromAssetClass tokenKind
-              }
+              immutableSettings = ImmutableReserveSettings
+                { t0: zero
+                , tokenKind: fromAssetClass tokenKind
+                }
 
-          void $ initialiseReserveUtxo
-            sidechainParams
-            immutableSettings
-            mutableSettings
-            (BigNum.fromInt numOfNonAdaTokens)
+            void $ initialiseReserveUtxo
+              sidechainParams
+              immutableSettings
+              mutableSettings
+              (BigNum.fromInt numOfNonAdaTokens)
 
-          utxo ←
-            Test.Utils.fromMaybeTestError "Utxo after initialization not found"
-              $ Map.toUnfoldable
-              <$> findReserveUtxos sidechainParams
+            utxo ←
+              Test.Utils.fromMaybeTestError "Utxo after initialization not found"
+                $ Map.toUnfoldable
+                <$> findReserveUtxos sidechainParams
 
-          void $ transferToIlliquidCirculationSupply
-            sidechainParams
-            numOfTransferTokens
-            fakeVt
-            utxo
+            void $ transferToIlliquidCirculationSupply
+              sidechainParams
+              numOfTransferTokens
+              fakeVt
+              utxo
 
-          reserveAfterTransfer ← totalAssets <$> findReserveUtxos sidechainParams
-          icsAfterTransfer ← map totalAssets $ findIlliquidCirculationSupplyUtxos
-            sidechainParams
+            reserveAfterTransfer ← totalAssets <$> findReserveUtxos sidechainParams
+            icsAfterTransfer ← map totalAssets $ findIlliquidCirculationSupplyUtxos
+              sidechainParams
 
-          let amountOfReserveTokens t = valueOf (fromAssetClass tokenKind) t
-          unless
-            ( amountOfReserveTokens reserveAfterTransfer ==
-                BigNum.fromInt (numOfNonAdaTokens - numOfTransferTokens)
-            )
-            ( liftContract $ throwError $ error
-                "Incorrect number of reserve tokens in reserve after transfer"
-            )
+            let amountOfReserveTokens t = valueOf (fromAssetClass tokenKind) t
+            unless
+              ( amountOfReserveTokens reserveAfterTransfer ==
+                  BigNum.fromInt (numOfNonAdaTokens - numOfTransferTokens)
+              )
+              ( liftContract $ throwError $ error
+                  "Incorrect number of reserve tokens in reserve after transfer"
+              )
 
-          unless
-            ( amountOfReserveTokens icsAfterTransfer ==
-                BigNum.fromInt (numOfTransferTokens - incentiveAmount)
-            )
-            ( liftContract $ throwError $ error
-                "Incorrect number of reserve tokens in ICS after transfer"
-            )
+            unless
+              ( amountOfReserveTokens icsAfterTransfer ==
+                  BigNum.fromInt (numOfTransferTokens - incentiveAmount)
+              )
+              ( liftContract $ throwError $ error
+                  "Incorrect number of reserve tokens in ICS after transfer"
+              )
 
-          Test.Utils.assertIHaveOutputWithAsset $ fromAssetClass tokenKind
+            Test.Utils.assertIHaveOutputWithAsset $ fromAssetClass tokenKind
 
-          pure unit
+            pure unit
 
 testScenario8 ∷ TestnetTest
 testScenario8 =
   Mote.Monad.test
     "Transfer to illiquid circulation supply with ADA as reserve token"
     $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-        pkh ← getOwnPaymentPubKeyHash
-        Test.Utils.withSingleMultiSig (unwrap pkh) $ do
+    $ \alice → withUnliftApp "Test.Reserve.testScenario8"
+        (Wallet.withKeyWallet alice)
+        do
+          pkh ← getOwnPaymentPubKeyHash
+          Test.Utils.withSingleMultiSig (unwrap pkh) $ do
 
-          sidechainParams ← dummyInitialiseSidechain pkh
+            sidechainParams ← dummyInitialiseSidechain pkh
 
-          fakeVt ← alwaysPassingPolicy $ BigInt.fromInt 11
+            fakeVt ← alwaysPassingPolicy $ BigInt.fromInt 11
 
-          let
-            numOfAda = 5_000_000
-            numOfTransferred = 3_000_000
-            incentiveAmount = BigInt.fromInt 0
-            mutableSettings = MutableReserveSettings
-              { vFunctionTotalAccrued:
-                  PlutusScript.hash
-                    $ fakeVt
-              , incentiveAmount
-              }
+            let
+              numOfAda = 5_000_000
+              numOfTransferred = 3_000_000
+              incentiveAmount = BigInt.fromInt 0
+              mutableSettings = MutableReserveSettings
+                { vFunctionTotalAccrued:
+                    PlutusScript.hash
+                      $ fakeVt
+                , incentiveAmount
+                }
 
-          void $ initialiseReserveUtxo
-            sidechainParams
-            immutableAdaSettings
-            mutableSettings
-            (BigNum.fromInt numOfAda)
+            void $ initialiseReserveUtxo
+              sidechainParams
+              immutableAdaSettings
+              mutableSettings
+              (BigNum.fromInt numOfAda)
 
-          utxo ←
-            Test.Utils.fromMaybeTestError "Utxo after initialization not found"
-              $ Map.toUnfoldable
-              <$> findReserveUtxos sidechainParams
+            utxo ←
+              Test.Utils.fromMaybeTestError "Utxo after initialization not found"
+                $ Map.toUnfoldable
+                <$> findReserveUtxos sidechainParams
 
-          void $ transferToIlliquidCirculationSupply
-            sidechainParams
-            numOfTransferred
-            fakeVt
-            utxo
+            void $ transferToIlliquidCirculationSupply
+              sidechainParams
+              numOfTransferred
+              fakeVt
+              utxo
 
-          let amountOfReserveTokens t = unwrap $ getCoin t
+            let amountOfReserveTokens t = unwrap $ getCoin t
 
-          reserveAfterTransfer ← totalAssets <$> findReserveUtxos sidechainParams
-          icsAfterTransfer ← map totalAssets $ findIlliquidCirculationSupplyUtxos
-            sidechainParams
+            reserveAfterTransfer ← totalAssets <$> findReserveUtxos sidechainParams
+            icsAfterTransfer ← map totalAssets $ findIlliquidCirculationSupplyUtxos
+              sidechainParams
 
-          unless
-            ( amountOfReserveTokens reserveAfterTransfer ==
-                BigNum.fromInt (numOfAda - numOfTransferred)
-            )
-            ( liftContract $ throwError $ error
-                "Incorrect number of reserve tokens in reserve after transfer"
-            )
+            unless
+              ( amountOfReserveTokens reserveAfterTransfer ==
+                  BigNum.fromInt (numOfAda - numOfTransferred)
+              )
+              ( liftContract $ throwError $ error
+                  "Incorrect number of reserve tokens in reserve after transfer"
+              )
 
-          unless
-            ( amountOfReserveTokens icsAfterTransfer == BigNum.fromInt
-                numOfTransferred
-            )
-            ( liftContract $ throwError $ error
-                "Incorrect number of reserve tokens in ICS after transfer"
-            )
+            unless
+              ( amountOfReserveTokens icsAfterTransfer == BigNum.fromInt
+                  numOfTransferred
+              )
+              ( liftContract $ throwError $ error
+                  "Incorrect number of reserve tokens in ICS after transfer"
+              )
 
-          pure unit
+            pure unit
 
 testScenario6 ∷ TestnetTest
 testScenario6 =
   Mote.Monad.test
     "Handover with non-ADA as reserve token"
     $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+    $ \alice → withUnliftApp "Test.Reserve.testScenario6"
+        (Wallet.withKeyWallet alice)
+        do
 
-        pkh ← getOwnPaymentPubKeyHash
-        Test.Utils.withSingleMultiSig (unwrap pkh) $ do
-          sidechainParams ← dummyInitialiseSidechain pkh
+          pkh ← getOwnPaymentPubKeyHash
+          Test.Utils.withSingleMultiSig (unwrap pkh) $ do
+            sidechainParams ← dummyInitialiseSidechain pkh
 
-          let numOfNonAdaTokens = 101
+            let numOfNonAdaTokens = 101
 
-          tokenKind ← mintNonAdaTokens $ Int.fromInt numOfNonAdaTokens
+            tokenKind ← mintNonAdaTokens $ Int.fromInt numOfNonAdaTokens
 
-          let
-            immutableSettings = ImmutableReserveSettings
-              { t0: zero
-              , tokenKind: fromAssetClass tokenKind
-              }
+            let
+              immutableSettings = ImmutableReserveSettings
+                { t0: zero
+                , tokenKind: fromAssetClass tokenKind
+                }
 
-          void $ initialiseReserveUtxo
-            sidechainParams
-            immutableSettings
-            invalidMutableSettings
-            (BigNum.fromInt numOfNonAdaTokens)
+            void $ initialiseReserveUtxo
+              sidechainParams
+              immutableSettings
+              invalidMutableSettings
+              (BigNum.fromInt numOfNonAdaTokens)
 
-          utxo ←
-            Test.Utils.fromMaybeTestError "Utxo after initialization not found"
-              $ Map.toUnfoldable
-              <$> findReserveUtxos sidechainParams
+            utxo ←
+              Test.Utils.fromMaybeTestError "Utxo after initialization not found"
+                $ Map.toUnfoldable
+                <$> findReserveUtxos sidechainParams
 
-          void $ handover
-            sidechainParams
-            utxo
+            void $ handover
+              sidechainParams
+              utxo
 
-          reserveUtxosAfterHandover ← findReserveUtxos sidechainParams
-          icsAfterTransfer ← map totalAssets $ findIlliquidCirculationSupplyUtxos
-            sidechainParams
+            reserveUtxosAfterHandover ← findReserveUtxos sidechainParams
+            icsAfterTransfer ← map totalAssets $ findIlliquidCirculationSupplyUtxos
+              sidechainParams
 
-          unless (Map.isEmpty reserveUtxosAfterHandover)
-            ( liftContract $ throwError $ error
-                "Reserve utxo still present after handover"
-            )
+            unless (Map.isEmpty reserveUtxosAfterHandover)
+              ( liftContract $ throwError $ error
+                  "Reserve utxo still present after handover"
+              )
 
-          unless
-            ( valueOf (fromAssetClass tokenKind) icsAfterTransfer ==
-                BigNum.fromInt numOfNonAdaTokens
-            )
-            ( liftContract $ throwError $ error
-                "Reserve tokens not transferred to illiquid circulation supply"
-            )
+            unless
+              ( valueOf (fromAssetClass tokenKind) icsAfterTransfer ==
+                  BigNum.fromInt numOfNonAdaTokens
+              )
+              ( liftContract $ throwError $ error
+                  "Reserve tokens not transferred to illiquid circulation supply"
+              )
 
 testScenario7 ∷ TestnetTest
 testScenario7 =
   Mote.Monad.test
     "Handover with ADA as reserve token"
     $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-        pkh ← getOwnPaymentPubKeyHash
-        Test.Utils.withSingleMultiSig (unwrap pkh) $ do
-          sidechainParams ← dummyInitialiseSidechain pkh
+    $ \alice → withUnliftApp "Test.Reserve.testScenario7"
+        (Wallet.withKeyWallet alice)
+        do
+          pkh ← getOwnPaymentPubKeyHash
+          Test.Utils.withSingleMultiSig (unwrap pkh) $ do
+            sidechainParams ← dummyInitialiseSidechain pkh
 
-          let numOfAda = 3_000_000
+            let numOfAda = 3_000_000
 
-          void $ initialiseReserveUtxo
-            sidechainParams
-            immutableAdaSettings
-            invalidMutableSettings
-            (BigNum.fromInt numOfAda)
+            void $ initialiseReserveUtxo
+              sidechainParams
+              immutableAdaSettings
+              invalidMutableSettings
+              (BigNum.fromInt numOfAda)
 
-          utxo ←
-            Test.Utils.fromMaybeTestError "Utxo after initialization not found"
-              $ Map.toUnfoldable
-              <$> findReserveUtxos sidechainParams
+            utxo ←
+              Test.Utils.fromMaybeTestError "Utxo after initialization not found"
+                $ Map.toUnfoldable
+                <$> findReserveUtxos sidechainParams
 
-          void $ handover
-            sidechainParams
-            utxo
+            void $ handover
+              sidechainParams
+              utxo
 
-          reserveUtxosAfterHandover ← findReserveUtxos sidechainParams
-          icsAfterTransfer ← map totalAssets $ findIlliquidCirculationSupplyUtxos
-            sidechainParams
+            reserveUtxosAfterHandover ← findReserveUtxos sidechainParams
+            icsAfterTransfer ← map totalAssets $ findIlliquidCirculationSupplyUtxos
+              sidechainParams
 
-          unless (Map.isEmpty reserveUtxosAfterHandover)
-            ( liftContract $ throwError $ error
-                "Reserve utxo still present after handover"
-            )
+            unless (Map.isEmpty reserveUtxosAfterHandover)
+              ( liftContract $ throwError $ error
+                  "Reserve utxo still present after handover"
+              )
 
-          unless
-            ( unwrap (getCoin icsAfterTransfer) ==
-                BigNum.fromInt numOfAda
-            )
-            ( liftContract $ throwError $ error
-                "Reserve tokens not transferred to illiquid circulation supply"
-            )
+            unless
+              ( unwrap (getCoin icsAfterTransfer) ==
+                  BigNum.fromInt numOfAda
+              )
+              ( liftContract $ throwError $ error
+                  "Reserve tokens not transferred to illiquid circulation supply"
+              )

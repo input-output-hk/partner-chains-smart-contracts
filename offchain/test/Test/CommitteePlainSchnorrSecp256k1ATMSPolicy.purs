@@ -32,7 +32,7 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   )
 import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import TrustlessSidechain.Effects.Contract (liftContract)
-import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Run (withUnliftApp, withUnliftAppPlain)
 import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
@@ -96,232 +96,140 @@ testScenario1 =
         , BigNum.fromInt 100_000_000
         , BigNum.fromInt 100_000_000
         ]
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-        ownPaymentPubKeyHash ← getOwnPaymentPubKeyHash
-        genesisUtxo ← Test.Utils.getOwnTransactionInput
-        let
-          keyCount = 80
-        initCommitteePrvKeys ← sequence $ Array.replicate keyCount
-          $ Effect.Class.liftEffect
-              Utils.SchnorrSecp256k1.generateRandomPrivateKey
-        let
-          initCommitteePubKeys = map Utils.SchnorrSecp256k1.toPubKey
-            initCommitteePrvKeys
-          initScParams = InitSidechainParams
-            { initChainId: BigInt.fromInt 1
-            , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData
-                $ unsafePartial Utils.Crypto.aggregateKeys
-                $ map unwrap initCommitteePubKeys
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlainSchnorrSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority
-                ownPaymentPubKeyHash
-            }
-
-        { sidechainParams } ← initSidechain initScParams 1
-
-        -- Grabbing the CommitteePlainSchnorrSecp256k1ATMSPolicy on chain parameters / minting policy
-        -------------------------
-        let
-          committeePlainSchnorrSecp256k1ATMSMint =
-            CommitteePlainSchnorrSecp256k1ATMSPolicy.committeePlainSchnorrSecp256k1ATMSMintFromSidechainParams
-              sidechainParams
-
-        { currencySymbol: committeePlainSchnorrSecp256k1ATMSCurrencySymbol } ←
-          CommitteePlainSchnorrSecp256k1ATMSPolicy.committeePlainSchnorrSecp256k1ATMSCurrencyInfo
-            { committeeCertificateMint: committeePlainSchnorrSecp256k1ATMSMint
-            , sidechainParams
-            }
-
-        -- Running the tests
-        -------------------------
-        liftContract $ logInfo'
-          "CommitteePlainSchnorrSecp256k1ATMSPolicy a successful mint from the committee"
-        void do
+    $ \alice → withUnliftApp
+        "Test.CommitteePlainSchnorrSecp256k1ATMSPolicy.testScenario1"
+        (Wallet.withKeyWallet alice)
+        do
+          ownPaymentPubKeyHash ← getOwnPaymentPubKeyHash
+          genesisUtxo ← Test.Utils.getOwnTransactionInput
           let
-            sidechainMessageByteArray =
-              -- byte array of 32 bytes which are all 0s.
-              ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 0
-
-            sidechainMessage = sidechainMessageByteArray
-            sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
-              mkAssetName sidechainMessageByteArray
-
-            allPubKeysAndSignatures = generateSignatures
-              { -- the current committee stored on chain
-                currentCommitteePrvKeys: initCommitteePrvKeys
-              , sidechainMessage: sidechainMessage
+            keyCount = 80
+          initCommitteePrvKeys ← sequence $ Array.replicate keyCount
+            $ Effect.Class.liftEffect
+                Utils.SchnorrSecp256k1.generateRandomPrivateKey
+          let
+            initCommitteePubKeys = map Utils.SchnorrSecp256k1.toPubKey
+              initCommitteePrvKeys
+            initScParams = InitSidechainParams
+              { initChainId: BigInt.fromInt 1
+              , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
+              , initUtxo: genesisUtxo
+              , initAggregatedCommittee: toData
+                  $ unsafePartial Utils.Crypto.aggregateKeys
+                  $ map unwrap initCommitteePubKeys
+              , initSidechainEpoch: zero
+              , initThresholdNumerator: BigInt.fromInt 2
+              , initThresholdDenominator: BigInt.fromInt 3
+              , initCandidatePermissionTokenMintInfo: Nothing
+              , initATMSKind: ATMSPlainSchnorrSecp256k1
+              , initGovernanceAuthority: Governance.mkGovernanceAuthority
+                  ownPaymentPubKeyHash
               }
-            committeeSignatures = map (\(pubKey /\ sig) → pubKey /\ Just sig)
-              allPubKeysAndSignatures
 
-          -- TODO: CTL updates removed the required functions for `assertMaxFee`,
-          -- so this function no longer exists... but perhaps one day we should
-          -- get this back. Boo hoo!
-          -- ```
-          -- Test.Utils.assertMaxFee (BigInt.fromInt 1_000_000)
-          -- ```
+          { sidechainParams } ← initSidechain initScParams 1
 
-          utxo ←
-            CommitteePlainSchnorrSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
-              sidechainParams
-          _ ←
-            CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
-              $
-                { committeeATMSParams: CommitteeATMSParams
-                    { currentCommitteeUtxo: utxo
-                    , committeeCertificateMint:
-                        committeePlainSchnorrSecp256k1ATMSMint
-                    , aggregateSignature: committeeSignatures
-                    , message: sidechainMessageTokenName
-                    }
-                , sidechainParams
+          -- Grabbing the CommitteePlainSchnorrSecp256k1ATMSPolicy on chain parameters / minting policy
+          -------------------------
+          let
+            committeePlainSchnorrSecp256k1ATMSMint =
+              CommitteePlainSchnorrSecp256k1ATMSPolicy.committeePlainSchnorrSecp256k1ATMSMintFromSidechainParams
+                sidechainParams
+
+          { currencySymbol: committeePlainSchnorrSecp256k1ATMSCurrencySymbol } ←
+            CommitteePlainSchnorrSecp256k1ATMSPolicy.committeePlainSchnorrSecp256k1ATMSCurrencyInfo
+              { committeeCertificateMint: committeePlainSchnorrSecp256k1ATMSMint
+              , sidechainParams
+              }
+
+          -- Running the tests
+          -------------------------
+          liftContract $ logInfo'
+            "CommitteePlainSchnorrSecp256k1ATMSPolicy a successful mint from the committee"
+          void do
+            let
+              sidechainMessageByteArray =
+                -- byte array of 32 bytes which are all 0s.
+                ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 0
+
+              sidechainMessage = sidechainMessageByteArray
+              sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
+                mkAssetName sidechainMessageByteArray
+
+              allPubKeysAndSignatures = generateSignatures
+                { -- the current committee stored on chain
+                  currentCommitteePrvKeys: initCommitteePrvKeys
+                , sidechainMessage: sidechainMessage
+                }
+              committeeSignatures = map (\(pubKey /\ sig) → pubKey /\ Just sig)
+                allPubKeysAndSignatures
+
+            -- TODO: CTL updates removed the required functions for `assertMaxFee`,
+            -- so this function no longer exists... but perhaps one day we should
+            -- get this back. Boo hoo!
+            -- ```
+            -- Test.Utils.assertMaxFee (BigInt.fromInt 1_000_000)
+            -- ```
+
+            utxo ←
+              CommitteePlainSchnorrSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
+                sidechainParams
+            _ ←
+              CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
+                $
+                  { committeeATMSParams: CommitteeATMSParams
+                      { currentCommitteeUtxo: utxo
+                      , committeeCertificateMint:
+                          committeePlainSchnorrSecp256k1ATMSMint
+                      , aggregateSignature: committeeSignatures
+                      , message: sidechainMessageTokenName
+                      }
+                  , sidechainParams
+                  }
+
+            Test.Utils.assertIHaveOutputWithAsset
+              ( Asset committeePlainSchnorrSecp256k1ATMSCurrencySymbol
+                  sidechainMessageTokenName
+              )
+
+          -- the following test cases are mostly duplicated code with slight
+          -- variations for the testing
+          liftContract $ logInfo'
+            "CommitteePlainSchnorrSecp256k1ATMSPolicy a successful mint from the committee with only 54/80 of the committee members"
+          void do
+            let
+              sidechainMessageByteArray =
+                -- byte array of 32 bytes which are all 1s.
+                ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 1
+
+              sidechainMessage =
+                sidechainMessageByteArray
+              sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
+                mkAssetName sidechainMessageByteArray
+
+              allPubKeysAndSignatures = generateSignatures
+                { currentCommitteePrvKeys: initCommitteePrvKeys
+                , sidechainMessage: sidechainMessage
                 }
 
-          Test.Utils.assertIHaveOutputWithAsset
-            ( Asset committeePlainSchnorrSecp256k1ATMSCurrencySymbol
-                sidechainMessageTokenName
-            )
-
-        -- the following test cases are mostly duplicated code with slight
-        -- variations for the testing
-        liftContract $ logInfo'
-          "CommitteePlainSchnorrSecp256k1ATMSPolicy a successful mint from the committee with only 54/80 of the committee members"
-        void do
-          let
-            sidechainMessageByteArray =
-              -- byte array of 32 bytes which are all 1s.
-              ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 1
-
-            sidechainMessage =
-              sidechainMessageByteArray
-            sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
-              mkAssetName sidechainMessageByteArray
-
-            allPubKeysAndSignatures = generateSignatures
-              { currentCommitteePrvKeys: initCommitteePrvKeys
-              , sidechainMessage: sidechainMessage
-              }
-
-            committeeSignatures =
-              ( Array.take 26
-                  ( map (\(pubKey /\ _sig) → pubKey /\ Nothing)
-                      allPubKeysAndSignatures
-                  )
-              ) <>
-                ( Array.drop 26
-                    ( map (\(pubKey /\ sig) → pubKey /\ Just sig)
+              committeeSignatures =
+                ( Array.take 26
+                    ( map (\(pubKey /\ _sig) → pubKey /\ Nothing)
                         allPubKeysAndSignatures
                     )
-                )
-          -- note that we have 26 less signatures, so 80 - 26 = 54 out of the
-          -- 80 committee members total
+                ) <>
+                  ( Array.drop 26
+                      ( map (\(pubKey /\ sig) → pubKey /\ Just sig)
+                          allPubKeysAndSignatures
+                      )
+                  )
+            -- note that we have 26 less signatures, so 80 - 26 = 54 out of the
+            -- 80 committee members total
 
-          utxo ←
-            CommitteePlainSchnorrSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
-              sidechainParams
-          _ ←
-            CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
-              $
-                { committeeATMSParams: CommitteeATMSParams
-                    { currentCommitteeUtxo: utxo
-                    , committeeCertificateMint:
-                        committeePlainSchnorrSecp256k1ATMSMint
-                    , aggregateSignature: committeeSignatures
-                    , message: sidechainMessageTokenName
-                    }
-                , sidechainParams
-                }
-
-          Test.Utils.assertIHaveOutputWithAsset
-            ( Asset committeePlainSchnorrSecp256k1ATMSCurrencySymbol
-                sidechainMessageTokenName
-            )
-
-        liftContract $ logInfo'
-          "CommitteePlainSchnorrSecp256k1ATMSPolicy a successful mint from the committee where the public keys / signatures are not sorted"
-        void do
-          let
-            sidechainMessageByteArray =
-              -- byte array of 32 bytes which are all 2s.
-              ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 2
-
-            sidechainMessage =
-              sidechainMessageByteArray
-            sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
-              mkAssetName sidechainMessageByteArray
-
-            allPubKeysAndSignatures = generateSignatures
-              { currentCommitteePrvKeys: initCommitteePrvKeys
-              , sidechainMessage: sidechainMessage
-              }
-
-            committeeSignatures =
-              let
-                allPubKeysAndJustSignatures = map
-                  (\(pubKey /\ sig) → pubKey /\ Just sig)
-                  allPubKeysAndSignatures
-              in
-                Array.drop 40 allPubKeysAndJustSignatures <> Array.take 40
-                  allPubKeysAndJustSignatures
-
-          utxo ←
-            CommitteePlainSchnorrSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
-              sidechainParams
-          _ ←
-            CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
-              $
-                { committeeATMSParams: CommitteeATMSParams
-                    { currentCommitteeUtxo: utxo
-                    , committeeCertificateMint:
-                        committeePlainSchnorrSecp256k1ATMSMint
-                    , aggregateSignature: committeeSignatures
-                    , message: sidechainMessageTokenName
-                    }
-                , sidechainParams
-                }
-
-          Test.Utils.assertIHaveOutputWithAsset
-            ( Asset committeePlainSchnorrSecp256k1ATMSCurrencySymbol
-                sidechainMessageTokenName
-            )
-
-        liftContract $ logInfo'
-          "CommitteePlainSchnorrSecp256k1ATMSPolicy an unsuccessful mint where the committee signs all 3s, but we try to mint all 4s"
-        void do
-          let
-            sidechainMessageByteArray =
-              -- byte array of 32 bytes which are all 3s.
-              ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 3
-
-            sidechainMessage =
-              sidechainMessageByteArray
-
-            sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust
-              $ mkAssetName
-              $ ByteArray.byteArrayFromIntArrayUnsafe
-              $ Array.replicate 32 4
-
-            allPubKeysAndSignatures = generateSignatures
-              { -- the current committee stored on chain
-                currentCommitteePrvKeys: initCommitteePrvKeys
-              , sidechainMessage: sidechainMessage
-              }
-
-            committeeSignatures = map (\(pubKey /\ sig) → pubKey /\ Just sig)
-              allPubKeysAndSignatures
-
-          utxo ←
-            CommitteePlainSchnorrSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
-              sidechainParams
-
-          void
-            ( CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
+            utxo ←
+              CommitteePlainSchnorrSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
+                sidechainParams
+            _ ←
+              CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
                 $
                   { committeeATMSParams: CommitteeATMSParams
                       { currentCommitteeUtxo: utxo
@@ -332,41 +240,44 @@ testScenario1 =
                       }
                   , sidechainParams
                   }
-            )
-            # withUnliftApp Test.Utils.fails
 
-        liftContract $ logInfo'
-          "CommitteePlainSchnorrSecp256k1ATMSPolicy an unsuccessful mint where we use wrong committee"
-        void do
-          wrongCommittee ← sequence $ Array.replicate keyCount
-            $ Effect.Class.liftEffect
-            $ Utils.SchnorrSecp256k1.generateRandomPrivateKey
+            Test.Utils.assertIHaveOutputWithAsset
+              ( Asset committeePlainSchnorrSecp256k1ATMSCurrencySymbol
+                  sidechainMessageTokenName
+              )
 
-          let
-            sidechainMessageByteArray =
-              -- byte array of 32 bytes which are all 5s.
-              ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 5
+          liftContract $ logInfo'
+            "CommitteePlainSchnorrSecp256k1ATMSPolicy a successful mint from the committee where the public keys / signatures are not sorted"
+          void do
+            let
+              sidechainMessageByteArray =
+                -- byte array of 32 bytes which are all 2s.
+                ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 2
 
-            sidechainMessage = sidechainMessageByteArray
+              sidechainMessage =
+                sidechainMessageByteArray
+              sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust $
+                mkAssetName sidechainMessageByteArray
 
-            sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust
-              $ mkAssetName
-              $ sidechainMessageByteArray
+              allPubKeysAndSignatures = generateSignatures
+                { currentCommitteePrvKeys: initCommitteePrvKeys
+                , sidechainMessage: sidechainMessage
+                }
 
-            allPubKeysAndSignatures = generateSignatures
-              { -- the current committee stored on chain
-                currentCommitteePrvKeys: wrongCommittee
-              , sidechainMessage: sidechainMessage
-              }
+              committeeSignatures =
+                let
+                  allPubKeysAndJustSignatures = map
+                    (\(pubKey /\ sig) → pubKey /\ Just sig)
+                    allPubKeysAndSignatures
+                in
+                  Array.drop 40 allPubKeysAndJustSignatures <> Array.take 40
+                    allPubKeysAndJustSignatures
 
-            committeeSignatures = map (\(pubKey /\ sig) → pubKey /\ Just sig)
-              allPubKeysAndSignatures
-
-          utxo ←
-            CommitteePlainSchnorrSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
-              sidechainParams
-          void
-            ( CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
+            utxo ←
+              CommitteePlainSchnorrSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
+                sidechainParams
+            _ ←
+              CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
                 $
                   { committeeATMSParams: CommitteeATMSParams
                       { currentCommitteeUtxo: utxo
@@ -377,7 +288,99 @@ testScenario1 =
                       }
                   , sidechainParams
                   }
-            )
-            # withUnliftApp Test.Utils.fails
 
-        pure unit
+            Test.Utils.assertIHaveOutputWithAsset
+              ( Asset committeePlainSchnorrSecp256k1ATMSCurrencySymbol
+                  sidechainMessageTokenName
+              )
+
+          liftContract $ logInfo'
+            "CommitteePlainSchnorrSecp256k1ATMSPolicy an unsuccessful mint where the committee signs all 3s, but we try to mint all 4s"
+          void do
+            let
+              sidechainMessageByteArray =
+                -- byte array of 32 bytes which are all 3s.
+                ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 3
+
+              sidechainMessage =
+                sidechainMessageByteArray
+
+              sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust
+                $ mkAssetName
+                $ ByteArray.byteArrayFromIntArrayUnsafe
+                $ Array.replicate 32 4
+
+              allPubKeysAndSignatures = generateSignatures
+                { -- the current committee stored on chain
+                  currentCommitteePrvKeys: initCommitteePrvKeys
+                , sidechainMessage: sidechainMessage
+                }
+
+              committeeSignatures = map (\(pubKey /\ sig) → pubKey /\ Just sig)
+                allPubKeysAndSignatures
+
+            utxo ←
+              CommitteePlainSchnorrSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
+                sidechainParams
+
+            void
+              ( CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
+                  $
+                    { committeeATMSParams: CommitteeATMSParams
+                        { currentCommitteeUtxo: utxo
+                        , committeeCertificateMint:
+                            committeePlainSchnorrSecp256k1ATMSMint
+                        , aggregateSignature: committeeSignatures
+                        , message: sidechainMessageTokenName
+                        }
+                    , sidechainParams
+                    }
+              )
+              # withUnliftAppPlain Test.Utils.fails
+
+          liftContract $ logInfo'
+            "CommitteePlainSchnorrSecp256k1ATMSPolicy an unsuccessful mint where we use wrong committee"
+          void do
+            wrongCommittee ← sequence $ Array.replicate keyCount
+              $ Effect.Class.liftEffect
+              $ Utils.SchnorrSecp256k1.generateRandomPrivateKey
+
+            let
+              sidechainMessageByteArray =
+                -- byte array of 32 bytes which are all 5s.
+                ByteArray.byteArrayFromIntArrayUnsafe $ Array.replicate 32 5
+
+              sidechainMessage = sidechainMessageByteArray
+
+              sidechainMessageTokenName = Unsafe.unsafePartial $ Maybe.fromJust
+                $ mkAssetName
+                $ sidechainMessageByteArray
+
+              allPubKeysAndSignatures = generateSignatures
+                { -- the current committee stored on chain
+                  currentCommitteePrvKeys: wrongCommittee
+                , sidechainMessage: sidechainMessage
+                }
+
+              committeeSignatures = map (\(pubKey /\ sig) → pubKey /\ Just sig)
+                allPubKeysAndSignatures
+
+            utxo ←
+              CommitteePlainSchnorrSecp256k1ATMSPolicy.findUpdateCommitteeHashUtxoFromSidechainParams
+                sidechainParams
+            void
+              ( CommitteePlainSchnorrSecp256k1ATMSPolicy.runCommitteePlainSchnorrSecp256k1ATMSPolicy
+                  $
+                    { committeeATMSParams: CommitteeATMSParams
+                        { currentCommitteeUtxo: utxo
+                        , committeeCertificateMint:
+                            committeePlainSchnorrSecp256k1ATMSMint
+                        , aggregateSignature: committeeSignatures
+                        , message: sidechainMessageTokenName
+                        }
+                    , sidechainParams
+                    }
+              )
+              # withUnliftAppPlain Test.Utils.fails
+
+          pure unit

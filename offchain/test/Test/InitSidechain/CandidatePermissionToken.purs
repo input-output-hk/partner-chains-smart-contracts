@@ -49,7 +49,9 @@ testInitCandidatePermissionToken =
         , BigNum.fromInt 50_000_000
         ]
     $ \alice → do
-        withUnliftApp (Wallet.withKeyWallet alice)
+        withUnliftApp
+          "Test.InitSidechain.CandidatePermissionToken.testInitCandidatePermissionToken"
+          (Wallet.withKeyWallet alice)
           do
             liftContract $ Log.logInfo'
               "InitSidechain 'testInitCandidatePermissionToken'"
@@ -88,7 +90,9 @@ testInitCandidatePermissionTokenIdempotent =
         , BigNum.fromInt 50_000_000
         ]
     $ \alice → do
-        withUnliftApp (Wallet.withKeyWallet alice)
+        withUnliftApp
+          "Test.InitSidechain.CandidatePermissionToken.testInitCandidatePermissionTokenIdempotent"
+          (Wallet.withKeyWallet alice)
           do
             liftContract $ Log.logInfo'
               "InitSidechain 'testInitCandidatePermissionTokenIdempotent'"

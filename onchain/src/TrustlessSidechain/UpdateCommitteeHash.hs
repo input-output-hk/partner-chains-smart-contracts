@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -13,6 +14,7 @@ module TrustlessSidechain.UpdateCommitteeHash (
   serialisableCommitteeHashValidator,
 ) where
 
+import GHC.Generics (Generic)
 import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusLedgerApi.V2 (
   Credential (ScriptCredential),
@@ -20,21 +22,20 @@ import PlutusLedgerApi.V2 (
   Datum (getDatum),
   LedgerBytes (LedgerBytes),
   OutputDatum (OutputDatum),
-  ScriptContext (scriptContextTxInfo),
   SerialisedScript,
   TokenName (TokenName),
   TxInInfo (txInInfoResolved),
-  TxInfo (txInfoMint, txInfoOutputs, txInfoReferenceInputs),
   TxOut (txOutAddress, txOutDatum, txOutValue),
   Value (getValue),
   addressCredential,
   serialiseCompiledCode,
  )
-import PlutusLedgerApi.V2.Contexts qualified as Contexts
-import PlutusTx qualified
+import PlutusTx
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
+import TrustlessSidechain.CustomScriptContext
+import TrustlessSidechain.HaskellPrelude qualified as Haskell
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   InitTokenAssetClass,
@@ -63,6 +64,25 @@ import TrustlessSidechain.Versioning (
   getVersionedCurrencySymbol,
   merkleRootTokenPolicyId,
  )
+
+data TxInfo = TxInfo
+  { txInfoInputs :: BuiltinData
+  , txInfoReferenceInputs :: [TxInInfo]
+  , txInfoOutputs :: [TxOut]
+  , txInfoFee :: BuiltinData
+  , txInfoMint :: Value
+  , txInfoDCert :: BuiltinData
+  , txInfoWdrl :: BuiltinData
+  , txInfoValidRange :: BuiltinData
+  , txInfoSignatories :: BuiltinData
+  , txInfoRedeemers :: BuiltinData
+  , txInfoData :: BuiltinData
+  , txInfoId :: BuiltinData
+  }
+  deriving stock (Generic, Haskell.Eq)
+
+makeLift ''TxInfo
+makeIsDataIndexed ''TxInfo [('TxInfo, 0)]
 
 -- * Updating the committee hash
 
@@ -110,7 +130,7 @@ mkUpdateCommitteeHashValidator ::
   VersionOracleConfig ->
   UpdateCommitteeDatum BuiltinData ->
   UpdateCommitteeHashRedeemer ->
-  ScriptContext ->
+  CustomScriptContext TxInfo ->
   Bool
 mkUpdateCommitteeHashValidator sp versioningConfig dat red ctx =
   traceIfFalse "ERROR-UPDATE-COMMITTEE-HASH-VALIDATOR-01" committeeOutputIsValid
@@ -126,21 +146,21 @@ mkUpdateCommitteeHashValidator sp versioningConfig dat red ctx =
       getVersionedCurrencySymbol
         versioningConfig
         (VersionOracle {version = 1, scriptId = committeeOraclePolicyId})
-        ctx
+        (txInfoReferenceInputs info)
 
     committeeCertificateVerificationCurrencySymbol :: CurrencySymbol
     committeeCertificateVerificationCurrencySymbol =
       getVersionedCurrencySymbol
         versioningConfig
         (VersionOracle {version = 1, scriptId = committeeCertificateVerificationPolicyId})
-        ctx
+        (txInfoReferenceInputs info)
 
     mptRootTokenCurrencySymbol :: CurrencySymbol
     mptRootTokenCurrencySymbol =
       getVersionedCurrencySymbol
         versioningConfig
         (VersionOracle {version = 1, scriptId = merkleRootTokenPolicyId})
-        ctx
+        (txInfoReferenceInputs info)
 
     committeeOutputIsValid :: Bool
     committeeOutputIsValid =
@@ -216,7 +236,7 @@ mkUpdateCommitteeHashValidator sp versioningConfig dat red ctx =
 -- ERROR-UPDATE-COMMITTEE-HASH-POLICY-02: wrong amount minted
 -- increasing
 {-# INLINEABLE mkCommitteeOraclePolicy #-}
-mkCommitteeOraclePolicy :: InitTokenAssetClass -> () -> ScriptContext -> Bool
+mkCommitteeOraclePolicy :: InitTokenAssetClass -> () -> CustomScriptContext TxInfo -> Bool
 mkCommitteeOraclePolicy itac _red ctx =
   traceIfFalse "ERROR-UPDATE-COMMITTEE-HASH-POLICY-01" initTokenBurned
     && traceIfFalse "ERROR-UPDATE-COMMITTEE-HASH-POLICY-02" checkMintedAmount
@@ -234,7 +254,7 @@ mkCommitteeOraclePolicy itac _red ctx =
     -- Assert that we have minted exactly one of this currency symbol
     checkMintedAmount :: Bool
     checkMintedAmount =
-      case fmap AssocMap.toList $ AssocMap.lookup (Contexts.ownCurrencySymbol ctx) $ getValue mint of
+      case fmap AssocMap.toList $ AssocMap.lookup (ownCurrencySymbol ctx) $ getValue mint of
         Just [(tn', amt)] -> tn' == initCommitteeOracleTn && amt == initCommitteeOracleMintAmount
         _ -> False
 

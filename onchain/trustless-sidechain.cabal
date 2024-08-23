@@ -89,6 +89,7 @@ library
     TrustlessSidechain.CommitteePlainATMSPolicy
     TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy
     TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy
+    TrustlessSidechain.CustomScriptContext
     TrustlessSidechain.DistributedSet
     TrustlessSidechain.DParameter
     TrustlessSidechain.FUELMintingPolicy

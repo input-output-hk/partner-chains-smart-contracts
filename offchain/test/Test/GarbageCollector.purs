@@ -37,7 +37,7 @@ import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePla
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
 import TrustlessSidechain.Effects.Env (Env, READER)
 import TrustlessSidechain.Effects.Log (LOG)
-import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Run (withUnliftApp, withUnliftAppPlain)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
@@ -83,49 +83,51 @@ testScenarioSuccess =
   Mote.Monad.test "Mint atms, fuel mint and fuel burn tokens, then burn them all"
     $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 150_000_000, BigNum.fromInt 150_000_000 ]
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-        { sidechainParams, initCommitteePrvKeys } ← initializeSidechain
-        atmsTokenName ← mintATMSTokens { sidechainParams, initCommitteePrvKeys }
-        mintFuelMintingAndFuelBurningTokens
-          { sidechainParams, initCommitteePrvKeys }
+    $ \alice → withUnliftApp "Test.GarbageCollector.testScenarioSuccess"
+        (Wallet.withKeyWallet alice)
+        do
+          { sidechainParams, initCommitteePrvKeys } ← initializeSidechain
+          atmsTokenName ← mintATMSTokens { sidechainParams, initCommitteePrvKeys }
+          mintFuelMintingAndFuelBurningTokens
+            { sidechainParams, initCommitteePrvKeys }
 
-        void
-          $ GarbageCollector.mkBurnNFTsLookupsAndConstraints sidechainParams
-          >>= balanceSignAndSubmit "Test: burn NFTs"
+          void
+            $ GarbageCollector.mkBurnNFTsLookupsAndConstraints sidechainParams
+            >>= balanceSignAndSubmit "Test: burn NFTs"
 
-        let
-          committeePlainEcdsaSecp256k1ATMSMint =
-            CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams
-              sidechainParams
+          let
+            committeePlainEcdsaSecp256k1ATMSMint =
+              CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSMintFromSidechainParams
+                sidechainParams
 
-        { currencySymbol: committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
-          CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSCurrencyInfo
-            { committeeCertificateMint: committeePlainEcdsaSecp256k1ATMSMint
-            , sidechainParams
-            }
+          { currencySymbol: committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
+            CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSCurrencyInfo
+              { committeeCertificateMint: committeePlainEcdsaSecp256k1ATMSMint
+              , sidechainParams
+              }
 
-        { fuelMintingCurrencySymbol } ← MintingV1.getFuelMintingPolicy
-          sidechainParams
-        { fuelBurningCurrencySymbol } ← BurningV1.getFuelBurningPolicy
-          sidechainParams
+          { fuelMintingCurrencySymbol } ← MintingV1.getFuelMintingPolicy
+            sidechainParams
+          { fuelBurningCurrencySymbol } ← BurningV1.getFuelBurningPolicy
+            sidechainParams
 
-        Test.Utils.assertIHaveOutputWithAsset
-          ( Asset fuelMintingCurrencySymbol
-              MintingV1.fuelAssetName
-          )
-          # withUnliftApp fails
+          Test.Utils.assertIHaveOutputWithAsset
+            ( Asset fuelMintingCurrencySymbol
+                MintingV1.fuelAssetName
+            )
+            # withUnliftAppPlain fails
 
-        Test.Utils.assertIHaveOutputWithAsset
-          ( Asset fuelBurningCurrencySymbol
-              BurningV1.fuelAssetName
-          )
-          # withUnliftApp fails
+          Test.Utils.assertIHaveOutputWithAsset
+            ( Asset fuelBurningCurrencySymbol
+                BurningV1.fuelAssetName
+            )
+            # withUnliftAppPlain fails
 
-        Test.Utils.assertIHaveOutputWithAsset
-          ( Asset committeePlainEcdsaSecp256k1ATMSCurrencySymbol
-              atmsTokenName
-          )
-          # withUnliftApp fails
+          Test.Utils.assertIHaveOutputWithAsset
+            ( Asset committeePlainEcdsaSecp256k1ATMSCurrencySymbol
+                atmsTokenName
+            )
+            # withUnliftAppPlain fails
 
 initializeSidechain ∷
   ∀ r.

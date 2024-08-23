@@ -26,9 +26,7 @@ import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
 import Contract.PlutusData (RedeemerDatum(RedeemerDatum), toData)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Transaction
-  ( TransactionHash
-  )
+import Contract.Transaction (TransactionHash)
 import Contract.TxConstraints (TxConstraints)
 import Contract.TxConstraints as Constraints
 import Data.Array (fromFoldable) as Array
@@ -41,7 +39,7 @@ import Run.Except (EXCEPT, throw)
 import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Env (Env, READER)
-import TrustlessSidechain.Effects.Log (logDebug', logInfo')
+import TrustlessSidechain.Effects.Log (LOG, logDebug', logInfo')
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Transaction as Effect
 import TrustlessSidechain.Effects.Wallet (WALLET)
@@ -69,7 +67,7 @@ mintVersionInitTokens ∷
   , atmsKind ∷ ATMSKinds
   } →
   Int →
-  Run (READER Env + EXCEPT OffchainError + WALLET + r)
+  Run (READER Env + EXCEPT OffchainError + WALLET + LOG + r)
     { lookups ∷ ScriptLookups
     , constraints ∷ TxConstraints
     }
@@ -346,7 +344,7 @@ getExpectedVersionedPoliciesAndValidators ∷
   , atmsKind ∷ ATMSKinds
   } →
   Int →
-  Run (READER Env + EXCEPT OffchainError + WALLET + r)
+  Run (READER Env + EXCEPT OffchainError + WALLET + LOG + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }
@@ -361,7 +359,7 @@ getCommitteeSelectionPoliciesAndValidators ∷
   ATMSKinds →
   SidechainParams →
   Int →
-  Run (EXCEPT OffchainError + WALLET + r)
+  Run (EXCEPT OffchainError + WALLET + LOG + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }
@@ -410,7 +408,7 @@ getActualVersionedPoliciesAndValidators ∷
   , atmsKind ∷ ATMSKinds
   } →
   Int →
-  Run (READER Env + EXCEPT OffchainError + TRANSACTION + WALLET + r)
+  Run (READER Env + EXCEPT OffchainError + TRANSACTION + WALLET + LOG + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }

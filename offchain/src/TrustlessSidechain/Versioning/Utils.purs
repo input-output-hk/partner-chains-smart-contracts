@@ -33,14 +33,10 @@ import Cardano.Types.TransactionUnspentOutput
   )
 import Contract.Address (Address)
 import Contract.Numeric.BigNum as BigNum
-import Contract.PlutusData
-  ( RedeemerDatum(RedeemerDatum)
-  )
+import Contract.PlutusData (RedeemerDatum(RedeemerDatum))
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
-import Contract.Transaction
-  ( ScriptRef(PlutusScriptRef)
-  )
+import Contract.Transaction (ScriptRef(PlutusScriptRef))
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
   , InputWithScriptRef(RefInput)
@@ -54,6 +50,7 @@ import Run (Run)
 import Run.Except (EXCEPT, throw)
 import Run.Except as Run
 import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Log (logTimer, newTimer)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Transaction (utxosAt) as Effect
 import TrustlessSidechain.Effects.Wallet (WALLET)
@@ -188,6 +185,8 @@ initializeVersionLookupsAndConstraints ∷
     }
 initializeVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
   do
+    newTimer "initializeVersionLookupsAndConstraints"
+    let logger = logTimer "initializeVersionLookupsAndConstraints"
     burnVersionInitToken ← burnOneVersionInitToken sp
 
     -- Preparing versioning scripts and tokens
@@ -243,6 +242,8 @@ initializeVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
           (PlutusScriptRef versionedScript)
           oneVersionOracleAsset
           <> initializeVersioningTokensConstraints
+
+    logger "end of initializeVersionLookupsAndConstraints"
 
     pure $ burnVersionInitToken <> { lookups, constraints }
 

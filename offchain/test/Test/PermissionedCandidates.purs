@@ -16,7 +16,7 @@ import Test.Utils (WrappedTests, fails, getOwnTransactionInput, testnetGroup)
 import TrustlessSidechain.CommitteeATMSSchemes
   ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
   )
-import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Run (withUnliftApp, withUnliftAppPlain)
 import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
@@ -51,94 +51,96 @@ testScenarioSuccess =
         , BigNum.fromInt 150_000_000
         , BigNum.fromInt 150_000_000
         ]
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+    $ \alice → withUnliftApp "Test.PermissionedCandidates.testScenarioSuccess"
+        (Wallet.withKeyWallet alice)
+        do
 
-        pkh ← getOwnPaymentPubKeyHash
-        genesisUtxo ← getOwnTransactionInput
-        let
-          keyCount = 25
-        initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
-          keyCount
-          generatePrivKey
-        let
-          initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-          initScParams = InitSidechainParams
-            { initChainId: BigInt.fromInt 1
-            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys
-                $ map unwrap initCommitteePubKeys
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority
-                pkh
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            }
+          pkh ← getOwnPaymentPubKeyHash
+          genesisUtxo ← getOwnTransactionInput
+          let
+            keyCount = 25
+          initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+            keyCount
+            generatePrivKey
+          let
+            initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
+            initScParams = InitSidechainParams
+              { initChainId: BigInt.fromInt 1
+              , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+              , initUtxo: genesisUtxo
+              , initAggregatedCommittee: toData $ aggregateKeys
+                  $ map unwrap initCommitteePubKeys
+              , initSidechainEpoch: zero
+              , initThresholdNumerator: BigInt.fromInt 2
+              , initThresholdDenominator: BigInt.fromInt 3
+              , initCandidatePermissionTokenMintInfo: Nothing
+              , initGovernanceAuthority: Governance.mkGovernanceAuthority
+                  pkh
+              , initATMSKind: ATMSPlainEcdsaSecp256k1
+              }
 
-          sidechainParams = toSidechainParams (unwrap initScParams)
+            sidechainParams = toSidechainParams (unwrap initScParams)
 
-        void
-          $
-            ( PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
-                sidechainParams
-                { permissionedCandidatesToAdd:
-                    [ { sidechainKey: hexToByteArrayUnsafe "bb11"
-                      , auraKey: hexToByteArrayUnsafe "cc11"
-                      , grandpaKey: hexToByteArrayUnsafe "dd11"
-                      }
-                    , { sidechainKey: hexToByteArrayUnsafe "bb22"
-                      , auraKey: hexToByteArrayUnsafe "cc22"
-                      , grandpaKey: hexToByteArrayUnsafe "dd22"
-                      }
-                    ]
-                , permissionedCandidatesToRemove: Nothing
-                }
-                >>=
-                  balanceSignAndSubmitWithoutSpendingUtxo
-                    (unwrap sidechainParams).genesisUtxo
-                    "Test: insert permissioned candidates"
-            )
+          void
+            $
+              ( PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
+                  sidechainParams
+                  { permissionedCandidatesToAdd:
+                      [ { sidechainKey: hexToByteArrayUnsafe "bb11"
+                        , auraKey: hexToByteArrayUnsafe "cc11"
+                        , grandpaKey: hexToByteArrayUnsafe "dd11"
+                        }
+                      , { sidechainKey: hexToByteArrayUnsafe "bb22"
+                        , auraKey: hexToByteArrayUnsafe "cc22"
+                        , grandpaKey: hexToByteArrayUnsafe "dd22"
+                        }
+                      ]
+                  , permissionedCandidatesToRemove: Nothing
+                  }
+                  >>=
+                    balanceSignAndSubmitWithoutSpendingUtxo
+                      (unwrap sidechainParams).genesisUtxo
+                      "Test: insert permissioned candidates"
+              )
 
-        void
-          $
-            ( PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
-                sidechainParams
-                { permissionedCandidatesToAdd:
-                    [ { sidechainKey: hexToByteArrayUnsafe "bb33"
-                      , auraKey: hexToByteArrayUnsafe "cc33"
-                      , grandpaKey: hexToByteArrayUnsafe "dd33"
-                      }
-                    ]
-                , permissionedCandidatesToRemove: Just
-                    [ { sidechainKey: hexToByteArrayUnsafe "bb22"
-                      , auraKey: hexToByteArrayUnsafe "cc22"
-                      , grandpaKey: hexToByteArrayUnsafe "dd22"
-                      }
-                    ]
-                }
-                >>=
-                  balanceSignAndSubmitWithoutSpendingUtxo
-                    (unwrap sidechainParams).genesisUtxo
-                    "Test: update permissioned candidates"
-            )
+          void
+            $
+              ( PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
+                  sidechainParams
+                  { permissionedCandidatesToAdd:
+                      [ { sidechainKey: hexToByteArrayUnsafe "bb33"
+                        , auraKey: hexToByteArrayUnsafe "cc33"
+                        , grandpaKey: hexToByteArrayUnsafe "dd33"
+                        }
+                      ]
+                  , permissionedCandidatesToRemove: Just
+                      [ { sidechainKey: hexToByteArrayUnsafe "bb22"
+                        , auraKey: hexToByteArrayUnsafe "cc22"
+                        , grandpaKey: hexToByteArrayUnsafe "dd22"
+                        }
+                      ]
+                  }
+                  >>=
+                    balanceSignAndSubmitWithoutSpendingUtxo
+                      (unwrap sidechainParams).genesisUtxo
+                      "Test: update permissioned candidates"
+              )
 
-        void
-          $
-            ( PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
-                sidechainParams
-                { permissionedCandidatesToAdd: []
-                , permissionedCandidatesToRemove: Nothing
-                }
-                >>=
-                  balanceSignAndSubmitWithoutSpendingUtxo
-                    (unwrap sidechainParams).genesisUtxo
-                    "Test: remove permissioned candidates"
-            )
+          void
+            $
+              ( PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
+                  sidechainParams
+                  { permissionedCandidatesToAdd: []
+                  , permissionedCandidatesToRemove: Nothing
+                  }
+                  >>=
+                    balanceSignAndSubmitWithoutSpendingUtxo
+                      (unwrap sidechainParams).genesisUtxo
+                      "Test: remove permissioned candidates"
+              )
 
-        _ ← initSidechain initScParams 1
-        pure unit
+          _ ← initSidechain initScParams 1
+          pure unit
 
 testScenarioFailure ∷ TestnetTest
 testScenarioFailure =
@@ -150,76 +152,78 @@ testScenarioFailure =
         , BigNum.fromInt 150_000_000
         , BigNum.fromInt 150_000_000
         ]
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+    $ \alice → withUnliftApp "Test.PermissionedCandidates.testScenarioFailure"
+        (Wallet.withKeyWallet alice)
+        do
 
-        pkh ← getOwnPaymentPubKeyHash
-        genesisUtxo ← getOwnTransactionInput
-        let
-          keyCount = 25
-        initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
-          keyCount
-          generatePrivKey
-        let
-          initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-          initScParams = InitSidechainParams
-            { initChainId: BigInt.fromInt 1
-            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys
-                $ map unwrap initCommitteePubKeys
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority
-                pkh
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            }
+          pkh ← getOwnPaymentPubKeyHash
+          genesisUtxo ← getOwnTransactionInput
+          let
+            keyCount = 25
+          initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+            keyCount
+            generatePrivKey
+          let
+            initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
+            initScParams = InitSidechainParams
+              { initChainId: BigInt.fromInt 1
+              , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+              , initUtxo: genesisUtxo
+              , initAggregatedCommittee: toData $ aggregateKeys
+                  $ map unwrap initCommitteePubKeys
+              , initSidechainEpoch: zero
+              , initThresholdNumerator: BigInt.fromInt 2
+              , initThresholdDenominator: BigInt.fromInt 3
+              , initCandidatePermissionTokenMintInfo: Nothing
+              , initGovernanceAuthority: Governance.mkGovernanceAuthority
+                  pkh
+              , initATMSKind: ATMSPlainEcdsaSecp256k1
+              }
 
-          sidechainParams = toSidechainParams (unwrap initScParams)
+            sidechainParams = toSidechainParams (unwrap initScParams)
 
-        void
-          $
-            ( PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
-                sidechainParams
-                { permissionedCandidatesToAdd:
-                    [ { sidechainKey: hexToByteArrayUnsafe "bb11"
-                      , auraKey: hexToByteArrayUnsafe "cc11"
-                      , grandpaKey: hexToByteArrayUnsafe "dd11"
-                      }
-                    , { sidechainKey: hexToByteArrayUnsafe "bb22"
-                      , auraKey: hexToByteArrayUnsafe "cc22"
-                      , grandpaKey: hexToByteArrayUnsafe "dd22"
-                      }
-                    ]
-                , permissionedCandidatesToRemove: Nothing
-                }
-                >>=
-                  balanceSignAndSubmitWithoutSpendingUtxo
-                    (unwrap sidechainParams).genesisUtxo
-                    "Test: insert permissioned candidates"
-            )
+          void
+            $
+              ( PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
+                  sidechainParams
+                  { permissionedCandidatesToAdd:
+                      [ { sidechainKey: hexToByteArrayUnsafe "bb11"
+                        , auraKey: hexToByteArrayUnsafe "cc11"
+                        , grandpaKey: hexToByteArrayUnsafe "dd11"
+                        }
+                      , { sidechainKey: hexToByteArrayUnsafe "bb22"
+                        , auraKey: hexToByteArrayUnsafe "cc22"
+                        , grandpaKey: hexToByteArrayUnsafe "dd22"
+                        }
+                      ]
+                  , permissionedCandidatesToRemove: Nothing
+                  }
+                  >>=
+                    balanceSignAndSubmitWithoutSpendingUtxo
+                      (unwrap sidechainParams).genesisUtxo
+                      "Test: insert permissioned candidates"
+              )
 
-        ( void
-            ( PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
-                sidechainParams
-                { permissionedCandidatesToAdd:
-                    [ { sidechainKey: hexToByteArrayUnsafe "bb11"
-                      , auraKey: hexToByteArrayUnsafe "cc11"
-                      , grandpaKey: hexToByteArrayUnsafe "dd11"
-                      }
-                    , { sidechainKey: hexToByteArrayUnsafe "bb22"
-                      , auraKey: hexToByteArrayUnsafe "cc22"
-                      , grandpaKey: hexToByteArrayUnsafe "dd22"
-                      }
-                    ]
-                , permissionedCandidatesToRemove: Nothing
-                }
-                >>=
-                  balanceSignAndSubmitWithoutSpendingUtxo
-                    (unwrap sidechainParams).genesisUtxo
-                    "Test: insert permissioned candidates"
-            )
-        ) # withUnliftApp fails
+          ( void
+              ( PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
+                  sidechainParams
+                  { permissionedCandidatesToAdd:
+                      [ { sidechainKey: hexToByteArrayUnsafe "bb11"
+                        , auraKey: hexToByteArrayUnsafe "cc11"
+                        , grandpaKey: hexToByteArrayUnsafe "dd11"
+                        }
+                      , { sidechainKey: hexToByteArrayUnsafe "bb22"
+                        , auraKey: hexToByteArrayUnsafe "cc22"
+                        , grandpaKey: hexToByteArrayUnsafe "dd22"
+                        }
+                      ]
+                  , permissionedCandidatesToRemove: Nothing
+                  }
+                  >>=
+                    balanceSignAndSubmitWithoutSpendingUtxo
+                      (unwrap sidechainParams).genesisUtxo
+                      "Test: insert permissioned candidates"
+              )
+          ) # withUnliftAppPlain fails
 
-        pure unit
+          pure unit

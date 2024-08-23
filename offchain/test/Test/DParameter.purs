@@ -20,7 +20,7 @@ import TrustlessSidechain.CommitteeATMSSchemes
   )
 import TrustlessSidechain.DParameter as DParameter
 import TrustlessSidechain.Effects.Contract (liftContract)
-import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Run (withUnliftApp, withUnliftAppPlain)
 import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain
   ( InitSidechainParams(InitSidechainParams)
@@ -54,61 +54,63 @@ testScenarioSuccess =
         , BigNum.fromInt 150_000_000
         , BigNum.fromInt 150_000_000
         ]
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+    $ \alice → withUnliftApp "Test.DParameter.testScenarioSuccess"
+        (Wallet.withKeyWallet alice)
+        do
 
-        pkh ← getOwnPaymentPubKeyHash
-        genesisUtxo ← getOwnTransactionInput
-        let
-          keyCount = 25
-        initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
-          keyCount
-          generatePrivKey
-        let
-          initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-          initScParams = InitSidechainParams
-            { initChainId: BigInt.fromInt 1
-            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys
-                $ map unwrap initCommitteePubKeys
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            }
+          pkh ← getOwnPaymentPubKeyHash
+          genesisUtxo ← getOwnTransactionInput
+          let
+            keyCount = 25
+          initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+            keyCount
+            generatePrivKey
+          let
+            initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
+            initScParams = InitSidechainParams
+              { initChainId: BigInt.fromInt 1
+              , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+              , initUtxo: genesisUtxo
+              , initAggregatedCommittee: toData $ aggregateKeys
+                  $ map unwrap initCommitteePubKeys
+              , initSidechainEpoch: zero
+              , initThresholdNumerator: BigInt.fromInt 2
+              , initThresholdDenominator: BigInt.fromInt 3
+              , initCandidatePermissionTokenMintInfo: Nothing
+              , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
+              , initATMSKind: ATMSPlainEcdsaSecp256k1
+              }
 
-          sidechainParams = toSidechainParams (unwrap initScParams)
+            sidechainParams = toSidechainParams (unwrap initScParams)
 
-        void
-          $
-            ( DParameter.mkInsertDParameterLookupsAndConstraints
-                sidechainParams
-                { permissionedCandidatesCount: BigInt.fromInt 2
-                , registeredCandidatesCount: BigInt.fromInt 3
-                }
-                >>=
-                  balanceSignAndSubmitWithoutSpendingUtxo
-                    (unwrap sidechainParams).genesisUtxo
-                    "Test: insert D param"
-            )
+          void
+            $
+              ( DParameter.mkInsertDParameterLookupsAndConstraints
+                  sidechainParams
+                  { permissionedCandidatesCount: BigInt.fromInt 2
+                  , registeredCandidatesCount: BigInt.fromInt 3
+                  }
+                  >>=
+                    balanceSignAndSubmitWithoutSpendingUtxo
+                      (unwrap sidechainParams).genesisUtxo
+                      "Test: insert D param"
+              )
 
-        void
-          $
-            ( DParameter.mkUpdateDParameterLookupsAndConstraints
-                sidechainParams
-                { permissionedCandidatesCount: BigInt.fromInt 3
-                , registeredCandidatesCount: BigInt.fromInt 4
-                }
-                >>=
-                  balanceSignAndSubmitWithoutSpendingUtxo
-                    (unwrap sidechainParams).genesisUtxo
-                    "Test: update D param"
-            )
+          void
+            $
+              ( DParameter.mkUpdateDParameterLookupsAndConstraints
+                  sidechainParams
+                  { permissionedCandidatesCount: BigInt.fromInt 3
+                  , registeredCandidatesCount: BigInt.fromInt 4
+                  }
+                  >>=
+                    balanceSignAndSubmitWithoutSpendingUtxo
+                      (unwrap sidechainParams).genesisUtxo
+                      "Test: update D param"
+              )
 
-        _ ← initSidechain initScParams 1
-        pure unit
+          _ ← initSidechain initScParams 1
+          pure unit
 
 testScenarioFailure ∷ TestnetTest
 testScenarioFailure =
@@ -120,51 +122,40 @@ testScenarioFailure =
         , BigNum.fromInt 150_000_000
         , BigNum.fromInt 150_000_000
         ]
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+    $ \alice → withUnliftApp "Test.DParameter.testScenarioFailure"
+        (Wallet.withKeyWallet alice)
+        do
 
-        pkh ← getOwnPaymentPubKeyHash
-        genesisUtxo ← getOwnTransactionInput
-        genesisOutput ← liftContract $ getUtxo genesisUtxo
-        liftContract $ logInfo' (show genesisOutput)
-        let
-          keyCount = 25
-        initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
-          keyCount
-          generatePrivKey
-        let
-          initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-          initScParams = InitSidechainParams
-            { initChainId: BigInt.fromInt 1
-            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ aggregateKeys
-                $ map unwrap initCommitteePubKeys
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            }
+          pkh ← getOwnPaymentPubKeyHash
+          genesisUtxo ← getOwnTransactionInput
+          genesisOutput ← liftContract $ getUtxo genesisUtxo
+          liftContract $ logInfo' (show genesisOutput)
+          let
+            keyCount = 25
+          initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+            keyCount
+            generatePrivKey
+          let
+            initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
+            initScParams = InitSidechainParams
+              { initChainId: BigInt.fromInt 1
+              , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+              , initUtxo: genesisUtxo
+              , initAggregatedCommittee: toData $ aggregateKeys
+                  $ map unwrap initCommitteePubKeys
+              , initSidechainEpoch: zero
+              , initThresholdNumerator: BigInt.fromInt 2
+              , initThresholdDenominator: BigInt.fromInt 3
+              , initCandidatePermissionTokenMintInfo: Nothing
+              , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
+              , initATMSKind: ATMSPlainEcdsaSecp256k1
+              }
 
-          sidechainParams = toSidechainParams (unwrap initScParams)
+            sidechainParams = toSidechainParams (unwrap initScParams)
 
-        void
-          $
-            ( DParameter.mkInsertDParameterLookupsAndConstraints
-                sidechainParams
-                { permissionedCandidatesCount: BigInt.fromInt 2
-                , registeredCandidatesCount: BigInt.fromInt 3
-                }
-                >>=
-                  balanceSignAndSubmitWithoutSpendingUtxo
-                    (unwrap sidechainParams).genesisUtxo
-                    "Test: insert D param"
-            )
-
-        ( void
+          void
             $
-              ( DParameter.mkUpdateDParameterLookupsAndConstraints
+              ( DParameter.mkInsertDParameterLookupsAndConstraints
                   sidechainParams
                   { permissionedCandidatesCount: BigInt.fromInt 2
                   , registeredCandidatesCount: BigInt.fromInt 3
@@ -172,6 +163,19 @@ testScenarioFailure =
                   >>=
                     balanceSignAndSubmitWithoutSpendingUtxo
                       (unwrap sidechainParams).genesisUtxo
-                      "Test: update removed D param"
+                      "Test: insert D param"
               )
-        ) # withUnliftApp fails
+
+          ( void
+              $
+                ( DParameter.mkUpdateDParameterLookupsAndConstraints
+                    sidechainParams
+                    { permissionedCandidatesCount: BigInt.fromInt 2
+                    , registeredCandidatesCount: BigInt.fromInt 3
+                    }
+                    >>=
+                      balanceSignAndSubmitWithoutSpendingUtxo
+                        (unwrap sidechainParams).genesisUtxo
+                        "Test: update removed D param"
+                )
+          ) # withUnliftAppPlain fails

@@ -26,10 +26,7 @@ import Contract.Prelude
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction (TransactionHash)
-import Contract.TxConstraints
-  ( DatumPresence(DatumInline)
-  , TxConstraints
-  )
+import Contract.TxConstraints (DatumPresence(DatumInline), TxConstraints)
 import Contract.TxConstraints as Constraints
 import Contract.Value as Value
 import JS.BigInt (BigInt)
@@ -45,7 +42,7 @@ import TrustlessSidechain.DistributedSet
   )
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Effects.App (APP)
-import TrustlessSidechain.Effects.Log (logDebug', logInfo')
+import TrustlessSidechain.Effects.Log (logDebug', logInfo', logTimer, newTimer)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
   ( OffchainError(GenericInternalError, ConversionError)
@@ -91,6 +88,8 @@ initFuel
   initAggregatedCommittee
   initATMSKind
   version = do
+  newTimer "InitFuel"
+  let logger = logTimer "InitFuel"
 
   -- Attempt to insert scripts into the versioning system
   logDebug' "Attempting to initialize FUEL versioning scripts"
@@ -99,11 +98,15 @@ initFuel
     initATMSKind
     version
 
+  logger "getFuelPoliciesAndValidators"
+
   logDebug' "Attempting to initialize Ds versioning scripts"
   scriptsInitTxIdDs ← insertScriptsIdempotent getDsPoliciesAndValidators
     sidechainParams
     initATMSKind
     version
+
+  logger "getDsPoliciesAndValidators"
 
   logDebug' "Attempting to initialize MerkleRoot versioning scripts"
   scriptsInitTxIdMT ← insertScriptsIdempotent getMerkleRootPoliciesAndValidators
@@ -111,12 +114,16 @@ initFuel
     initATMSKind
     version
 
+  logger "getMerkleRootPoliciesAndValidators"
+
   logDebug' "Attempting to initialize committee selection scripts"
   scriptsInitTxIdCommittee ← insertScriptsIdempotent
     (getCommitteeSelectionPoliciesAndValidators initATMSKind)
     sidechainParams
     initATMSKind
     version
+
+  logger "getCommitteeSelectionPoliciesAndValidators"
 
   let
     scriptsInitTxIds =
@@ -127,17 +134,30 @@ initFuel
   -- required scripts have been succesfully versioned.  We begin by acquiring
   -- the scripts that are actually in the versioning system.
   fuelScripts ← getFuelPoliciesAndValidators sidechainParams version
+
+  logger "getFuelPoliciesAndValidators"
+
   dsScripts ← getDsPoliciesAndValidators sidechainParams version
+
+  logger "getDsPoliciesAndValidators"
+
   merkleRootScripts ←
     getMerkleRootPoliciesAndValidators sidechainParams version
+
+  logger "getMerkleRootPoliciesAndValidators"
+
   committeeScripts ← getCommitteeSelectionPoliciesAndValidators initATMSKind
     sidechainParams
     version
+
+  logger "getCommitteeSelectionPoliciesAndValidators"
 
   { versionedPolicies, versionedValidators } ←
     getScriptsToInsert sidechainParams initATMSKind
       (fuelScripts <> dsScripts <> merkleRootScripts <> committeeScripts)
       version
+
+  logger "getScriptsToInsert"
 
   -- If all versioned scripts have been inserted we can proceed with minting the
   -- NFTs and other tokens.
@@ -159,6 +179,8 @@ initFuel
       "Initialize FUEL, Distributed Set, and committee selection"
       DistributedSet.dsInitTokenName
       sidechainParams
+
+    logger "tokensInitTxId"
 
     pure { scriptsInitTxIds, tokensInitTxId }
 

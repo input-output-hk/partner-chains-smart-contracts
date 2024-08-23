@@ -30,14 +30,13 @@ import TrustlessSidechain.CommitteeCandidateValidator
 import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Effects.Env (Env, READER, ask)
+import TrustlessSidechain.Effects.Log (LOG, logTimer, newTimer)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.FUELBurningPolicy.V1 as FUELBurningPolicy.V1
 import TrustlessSidechain.FUELMintingPolicy.V1 as FUELMintingPolicy.V1
 import TrustlessSidechain.Governance (Governance(MultiSig))
-import TrustlessSidechain.Governance.MultiSig
-  ( multisigGovPolicy
-  )
+import TrustlessSidechain.Governance.MultiSig (multisigGovPolicy)
 import TrustlessSidechain.MerkleRoot as MerkleRoot
 import TrustlessSidechain.NativeTokenManagement.IlliquidCirculationSupply
   ( illiquidCirculationSupplyValidator
@@ -76,7 +75,7 @@ getVersionedPoliciesAndValidators ∷
   { sidechainParams ∷ SidechainParams
   , atmsKind ∷ ATMSKinds
   } →
-  Run (READER Env + EXCEPT OffchainError + WALLET + r)
+  Run (READER Env + EXCEPT OffchainError + WALLET + LOG + r)
     { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
     }
@@ -120,18 +119,21 @@ getCommitteeSelectionPoliciesAndValidators ∷
   ∀ r.
   ATMSKinds →
   SidechainParams →
-  Run (EXCEPT OffchainError + WALLET + r)
+  Run (EXCEPT OffchainError + WALLET + LOG + r)
     { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
     }
 getCommitteeSelectionPoliciesAndValidators atmsKind sp =
   do
+    newTimer "getCommitteeSelectionPoliciesAndValidators"
+    let logger = logTimer "getCommitteeSelectionPoliciesAndValidators"
     -- Getting policies to version
     -----------------------------------
     -- some awkwardness that we need the committee hash policy first.
     { mintingPolicy: committeeOraclePolicy
     } ←
       CommitteeOraclePolicy.committeeOracleCurrencyInfo sp
+    logger "committeeOracleCurrencyInfo"
 
     let
       committeeCertificateMint =
@@ -145,6 +147,8 @@ getCommitteeSelectionPoliciesAndValidators atmsKind sp =
         { committeeCertificateMint, sidechainParams: sp }
         atmsKind
 
+    logger "atmsCommitteeCertificateVerificationMintingPolicyFromATMSKind"
+
     let
       versionedPolicies = List.fromFoldable
         [ CommitteeCertificateVerificationPolicy /\
@@ -157,7 +161,12 @@ getCommitteeSelectionPoliciesAndValidators atmsKind sp =
     { validator: committeeHashValidator } ←
       do
         getUpdateCommitteeHashValidator sp
+
+    logger "getUpdateCommitteeHashValidator"
+
     committeeCandidateValidator ← getCommitteeCandidateValidator sp
+
+    logger "getCommitteeCandidateValidator"
 
     let
       versionedValidators = List.fromFoldable

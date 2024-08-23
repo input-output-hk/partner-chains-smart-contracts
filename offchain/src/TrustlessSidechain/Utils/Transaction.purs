@@ -12,9 +12,10 @@ import Contract.ScriptLookups (ScriptLookups)
 import Contract.Transaction (TransactionHash, TransactionInput)
 import Contract.TxConstraints (TxConstraints)
 import Data.ByteArray (ByteArray)
+import Data.String as String
 import Run (Run)
 import Run.Except (EXCEPT)
-import TrustlessSidechain.Effects.Log (LOG)
+import TrustlessSidechain.Effects.Log (LOG, logTimer, newTimer)
 import TrustlessSidechain.Effects.Log (logInfo') as Effect
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Transaction
@@ -26,9 +27,7 @@ import TrustlessSidechain.Effects.Transaction
   , submit
   ) as Effect
 import TrustlessSidechain.Effects.Util (mapError)
-import TrustlessSidechain.Error
-  ( OffchainError(BalanceTxError, BuildTxError)
-  )
+import TrustlessSidechain.Error (OffchainError(BalanceTxError, BuildTxError))
 import Type.Row (type (+))
 
 -- | Build a transaction from lookups and constraints, balance, sign and submit it to the network
@@ -42,13 +41,22 @@ balanceSignAndSubmit ∷
   } →
   Run (EXCEPT OffchainError + TRANSACTION + LOG + r) TransactionHash
 balanceSignAndSubmit txName { lookups, constraints } = do
+  newTimer "balanceSignAndSubmit"
+  let logger = logTimer "balanceSignAndSubmit"
   ubTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups constraints
+  logger "mkUnbalancedTx"
   bsTx ← mapError BalanceTxError $ Effect.balanceTx ubTx
+  logger "balanceTx"
   signedTx ← Effect.signTransaction bsTx
+  logger "signTransaction"
   txId ← Effect.submit signedTx
+  logger "submit"
   Effect.logInfo' $ "Submitted " <> txName <> " Tx: " <> show txId
   Effect.awaitTxConfirmed txId
+  logger ("awaitTxConfirmed " <> (show $ String.length $ show $ signedTx))
   Effect.logInfo' $ txName <> " Tx confirmed!"
+
+  logger "end of balanceSignAndSubmit"
 
   pure txId
 

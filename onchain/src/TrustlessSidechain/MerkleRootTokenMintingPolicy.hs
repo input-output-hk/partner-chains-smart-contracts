@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -10,25 +11,25 @@ module TrustlessSidechain.MerkleRootTokenMintingPolicy (
   serialisableMintingPolicy,
 ) where
 
+import GHC.Generics (Generic)
 import PlutusLedgerApi.Common (SerialisedScript)
 import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusLedgerApi.V2 (
   CurrencySymbol,
   LedgerBytes (LedgerBytes, getLedgerBytes),
-  ScriptContext,
   TokenName (TokenName, unTokenName),
   TxInInfo (txInInfoResolved),
-  TxInfo (txInfoMint, txInfoOutputs, txInfoReferenceInputs),
   TxOut (txOutAddress, txOutValue),
   Value (getValue),
-  scriptContextTxInfo,
   serialiseCompiledCode,
  )
-import PlutusLedgerApi.V2.Contexts qualified as Contexts
-import PlutusTx (compile)
+import PlutusTx
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class qualified as IsData
+import TrustlessSidechain.CustomScriptContext
+import TrustlessSidechain.CustomScriptContext qualified as Custom
+import TrustlessSidechain.HaskellPrelude qualified as Haskell
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   MerkleRootInsertionMessage (
@@ -50,6 +51,25 @@ import TrustlessSidechain.Versioning (
   getVersionedValidatorAddress,
   merkleRootTokenValidatorId,
  )
+
+data TxInfo = TxInfo
+  { txInfoInputs :: BuiltinData
+  , txInfoReferenceInputs :: [TxInInfo]
+  , txInfoOutputs :: [TxOut]
+  , txInfoFee :: BuiltinData
+  , txInfoMint :: Value
+  , txInfoDCert :: BuiltinData
+  , txInfoWdrl :: BuiltinData
+  , txInfoValidRange :: BuiltinData
+  , txInfoSignatories :: BuiltinData
+  , txInfoRedeemers :: BuiltinData
+  , txInfoData :: BuiltinData
+  , txInfoId :: BuiltinData
+  }
+  deriving stock (Generic, Haskell.Eq)
+
+PlutusTx.makeLift ''TxInfo
+PlutusTx.makeIsDataIndexed ''TxInfo [('TxInfo, 0)]
 
 -- | 'serialiseMte' serialises a 'MerkleTreeEntry' with cbor via 'PlutusTx.Builtins.serialiseData'
 {-# INLINEABLE serialiseMte #-}
@@ -82,7 +102,7 @@ serialiseMrimHash =
 --
 --   ERROR-MERKLE-ROOT-POLICY-04: Token not paid to correct validator address.
 {-# INLINEABLE mkMintingPolicy #-}
-mkMintingPolicy :: SidechainParams -> VersionOracleConfig -> SignedMerkleRootRedeemer -> ScriptContext -> Bool
+mkMintingPolicy :: SidechainParams -> VersionOracleConfig -> SignedMerkleRootRedeemer -> CustomScriptContext TxInfo -> Bool
 mkMintingPolicy
   sp
   versionOracleConfig
@@ -95,8 +115,8 @@ mkMintingPolicy
       info = scriptContextTxInfo ctx
       minted :: Value
       minted = txInfoMint info
-      ownCurrencySymbol :: CurrencySymbol
-      ownCurrencySymbol = Contexts.ownCurrencySymbol ctx
+      ownCurrencySymbol' :: CurrencySymbol
+      ownCurrencySymbol' = Custom.ownCurrencySymbol ctx
 
       merkleRootTokenValidatorAddress =
         getVersionedValidatorAddress
@@ -106,7 +126,7 @@ mkMintingPolicy
               , scriptId = merkleRootTokenValidatorId
               }
           )
-          ctx
+          (txInfoReferenceInputs info)
 
       committeeCertificateVerificationPolicy =
         getVersionedCurrencySymbol
@@ -116,7 +136,7 @@ mkMintingPolicy
               , scriptId = committeeCertificateVerificationPolicyId
               }
           )
-          ctx
+          (txInfoReferenceInputs info)
 
       -- Checks:
       -- @p1@, @p2@ correspond to verifications 1., 2. resp. in the
@@ -130,14 +150,14 @@ mkMintingPolicy
               go (txInInfo : rest) =
                 Value.valueOf
                   (txOutValue (txInInfoResolved txInInfo))
-                  ownCurrencySymbol
+                  ownCurrencySymbol'
                   (TokenName tn)
                   > 0
                   || go rest
               go [] = False
            in go (txInfoReferenceInputs info)
 
-      p2 = case AssocMap.lookup (Contexts.ownCurrencySymbol ctx) $ getValue minted of
+      p2 = case AssocMap.lookup (Custom.ownCurrencySymbol ctx) $ getValue minted of
         Nothing -> False
         Just tns -> case AssocMap.toList tns of
           -- assert that there is a unique token name (and only one) minted of
@@ -164,7 +184,7 @@ mkMintingPolicy
                               go (txOut : txOuts) =
                                 ( ( txOutAddress txOut
                                       == merkleRootTokenValidatorAddress
-                                      && Value.valueOf (txOutValue txOut) ownCurrencySymbol tn
+                                      && Value.valueOf (txOutValue txOut) ownCurrencySymbol' tn
                                       > 0
                                   )
                                     || go txOuts

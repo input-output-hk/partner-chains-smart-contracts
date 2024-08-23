@@ -23,7 +23,6 @@ import PlutusLedgerApi.Common (SerialisedScript)
 import PlutusLedgerApi.V1.Value (valueOf)
 import PlutusLedgerApi.V2 (
   CurrencySymbol,
-  ScriptContext,
   TokenName,
   Value,
   getValue,
@@ -81,9 +80,9 @@ oneTokenBurnedUnsafe txInfo cs tn =
 -- The output will accept BuiltinData instead of concrete types
 {-# INLINE mkUntypedValidator #-}
 mkUntypedValidator ::
-  forall (d :: Type) (r :: Type).
-  (UnsafeFromData d, UnsafeFromData r) =>
-  (d -> r -> ScriptContext -> Bool) ->
+  forall (d :: Type) (r :: Type) (sc :: Type).
+  (UnsafeFromData d, UnsafeFromData r, UnsafeFromData sc) =>
+  (d -> r -> sc -> Bool) ->
   (BuiltinData -> BuiltinData -> BuiltinData -> ())
 -- We can use unsafeFromBuiltinData here as we would fail immediately anyway if
 -- parsing failed
@@ -94,9 +93,11 @@ mkUntypedValidator f d r p =
 -- The output will accept BuiltinData instead of concrete types
 {-# INLINE mkUntypedMintingPolicy #-}
 mkUntypedMintingPolicy ::
-  forall (r :: Type).
-  (UnsafeFromData r) =>
-  (r -> ScriptContext -> Bool) ->
+  forall r sc.
+  ( UnsafeFromData r
+  , UnsafeFromData sc
+  ) =>
+  (r -> sc -> Bool) ->
   (BuiltinData -> BuiltinData -> ())
 -- We can use unsafeFromBuiltinData here as we would fail immediately anyway if
 -- parsing failed

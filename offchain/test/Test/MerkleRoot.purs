@@ -178,99 +178,101 @@ testScenario1 = Mote.Monad.test "Saving a Merkle root"
       , BigNum.fromInt 50_000_000
       , BigNum.fromInt 40_000_000
       ]
-  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-      liftContract $ Log.logInfo' "MerkleRoot testScenario1"
+  $ \alice → withUnliftApp "Test.MerkleRoot.testScenario1"
+      (Wallet.withKeyWallet alice)
+      do
+        liftContract $ Log.logInfo' "MerkleRoot testScenario1"
 
-      -- 1. Setting up the sidechain
-      ---------------------------
-      let
-        committeeSize = 100
-      genesisUtxo ← Test.Utils.getOwnTransactionInput
+        -- 1. Setting up the sidechain
+        ---------------------------
+        let
+          committeeSize = 100
+        genesisUtxo ← Test.Utils.getOwnTransactionInput
 
-      ownPaymentPubKeyHash ← getOwnPaymentPubKeyHash
-      initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
-        committeeSize
-        Crypto.generatePrivKey
-      let
-        initCommitteePubKeys = map Crypto.toPubKeyUnsafe initCommitteePrvKeys
-        initSidechainParams = InitSidechain.InitSidechainParams
-          { initChainId: BigInt.fromInt 69
-          , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-          , initUtxo: genesisUtxo
-          , initAggregatedCommittee: PlutusData.toData
-              $ Crypto.aggregateKeys
-              $ map unwrap
-                  initCommitteePubKeys
-          , initSidechainEpoch: zero
-          , initThresholdNumerator: BigInt.fromInt 2
-          , initThresholdDenominator: BigInt.fromInt 3
-          , initCandidatePermissionTokenMintInfo: Nothing
-          , initATMSKind: ATMSPlainEcdsaSecp256k1
-          , initGovernanceAuthority: Governance.mkGovernanceAuthority
-              ownPaymentPubKeyHash
+        ownPaymentPubKeyHash ← getOwnPaymentPubKeyHash
+        initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+          committeeSize
+          Crypto.generatePrivKey
+        let
+          initCommitteePubKeys = map Crypto.toPubKeyUnsafe initCommitteePrvKeys
+          initSidechainParams = InitSidechain.InitSidechainParams
+            { initChainId: BigInt.fromInt 69
+            , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+            , initUtxo: genesisUtxo
+            , initAggregatedCommittee: PlutusData.toData
+                $ Crypto.aggregateKeys
+                $ map unwrap
+                    initCommitteePubKeys
+            , initSidechainEpoch: zero
+            , initThresholdNumerator: BigInt.fromInt 2
+            , initThresholdDenominator: BigInt.fromInt 3
+            , initCandidatePermissionTokenMintInfo: Nothing
+            , initATMSKind: ATMSPlainEcdsaSecp256k1
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority
+                ownPaymentPubKeyHash
+            }
+
+        { sidechainParams } ← InitSidechain.initSidechain initSidechainParams 1
+
+        -- Building / saving the root that pays lots of FUEL to this wallet :)
+        ----------------------------------------------------------------------
+        let ownRecipient = paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
+        let
+          serialisedEntries = map (toData >>> encodeCbor >>> unwrap) $
+            [ MerkleTreeEntry
+                { index: BigInt.fromInt 0
+                , amount: BigInt.fromInt 69
+                , previousMerkleRoot: Nothing
+                , recipient: ownRecipient
+                }
+            ]
+        merkleTree ← Run.rethrow <<< lmap GenericInternalError $
+          MerkleTree.fromArray serialisedEntries
+
+        let
+          merkleRoot = MerkleTree.rootHash merkleTree
+
+        merkleRootInsertionMessage ←
+          Run.note
+            ( GenericInternalError
+                "error 'Test.MerkleRoot.testScenario1': failed to create merkle root insertion message"
+            )
+            $ MerkleRoot.serialiseMrimHash
+            $ MerkleRootInsertionMessage
+                { sidechainParams: sidechainParams
+                , merkleRoot
+                , previousMerkleRoot: Nothing
+                }
+        let
+          -- We create signatures for every committee member BUT the first key...
+          -- if you wanted to create keys for every committee member, we would write
+          -- ```
+          -- committeeSignatures = Array.zip
+          --     initCommitteePubKeys
+          --     (Just <$> Crypto.multiSign initCommitteePrvKeys merkleRootInsertionMessage)
+          -- ```
+          committeeSignatures =
+            case
+              Array.uncons $ Array.zip
+                initCommitteePubKeys
+                ( Just <$> Crypto.multiSign initCommitteePrvKeys
+                    merkleRootInsertionMessage
+                )
+              of
+              Just { head, tail } →
+                Array.cons ((fst head) /\ Nothing) tail
+              _ → [] -- should never happen
+
+        void $ MerkleRoot.saveRoot $ SaveRootParams
+          { sidechainParams
+          , merkleRoot
+          , previousMerkleRoot: Nothing
+
+          , aggregateSignature: PlainEcdsaSecp256k1
+              committeeSignatures
           }
 
-      { sidechainParams } ← InitSidechain.initSidechain initSidechainParams 1
-
-      -- Building / saving the root that pays lots of FUEL to this wallet :)
-      ----------------------------------------------------------------------
-      let ownRecipient = paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
-      let
-        serialisedEntries = map (toData >>> encodeCbor >>> unwrap) $
-          [ MerkleTreeEntry
-              { index: BigInt.fromInt 0
-              , amount: BigInt.fromInt 69
-              , previousMerkleRoot: Nothing
-              , recipient: ownRecipient
-              }
-          ]
-      merkleTree ← Run.rethrow <<< lmap GenericInternalError $
-        MerkleTree.fromArray serialisedEntries
-
-      let
-        merkleRoot = MerkleTree.rootHash merkleTree
-
-      merkleRootInsertionMessage ←
-        Run.note
-          ( GenericInternalError
-              "error 'Test.MerkleRoot.testScenario1': failed to create merkle root insertion message"
-          )
-          $ MerkleRoot.serialiseMrimHash
-          $ MerkleRootInsertionMessage
-              { sidechainParams: sidechainParams
-              , merkleRoot
-              , previousMerkleRoot: Nothing
-              }
-      let
-        -- We create signatures for every committee member BUT the first key...
-        -- if you wanted to create keys for every committee member, we would write
-        -- ```
-        -- committeeSignatures = Array.zip
-        --     initCommitteePubKeys
-        --     (Just <$> Crypto.multiSign initCommitteePrvKeys merkleRootInsertionMessage)
-        -- ```
-        committeeSignatures =
-          case
-            Array.uncons $ Array.zip
-              initCommitteePubKeys
-              ( Just <$> Crypto.multiSign initCommitteePrvKeys
-                  merkleRootInsertionMessage
-              )
-            of
-            Just { head, tail } →
-              Array.cons ((fst head) /\ Nothing) tail
-            _ → [] -- should never happen
-
-      void $ MerkleRoot.saveRoot $ SaveRootParams
-        { sidechainParams
-        , merkleRoot
-        , previousMerkleRoot: Nothing
-
-        , aggregateSignature: PlainEcdsaSecp256k1
-            committeeSignatures
-        }
-
-      pure unit
+        pure unit
 
 -- | `testScenario2` does the following
 -- |    1. initializes the sidechain
@@ -288,120 +290,26 @@ testScenario2 = Mote.Monad.test "Saving two merkle roots"
       , BigNum.fromInt 50_000_000
       , BigNum.fromInt 40_000_000
       ]
-  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-      liftContract $ Log.logInfo' "MerkleRoot testScenario2"
-
-      -- 1. Setting up the sidechain
-      ---------------------------
-      let
-        committeeSize = 25
-      -- It fails with ~50 (nondeterministically) with budget overspent
-      -- I would really like to get this up to 101 as with the update
-      -- committee hash endpoint! Some room for optimization is certainly
-      -- a possibility..
-      genesisUtxo ← Test.Utils.getOwnTransactionInput
-
-      ownPaymentPubKeyHash ← getOwnPaymentPubKeyHash
-      initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
-        committeeSize
-        Crypto.generatePrivKey
-      let
-        initCommitteePubKeys = map Crypto.toPubKeyUnsafe initCommitteePrvKeys
-        initSidechainParams = InitSidechain.InitSidechainParams
-          { initChainId: BigInt.fromInt 69
-          , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
-          , initUtxo: genesisUtxo
-          , initAggregatedCommittee: PlutusData.toData
-              $ Crypto.aggregateKeys
-              $ map unwrap
-                  initCommitteePubKeys
-          , initSidechainEpoch: zero
-          , initThresholdNumerator: BigInt.fromInt 2
-          , initThresholdDenominator: BigInt.fromInt 3
-          , initCandidatePermissionTokenMintInfo: Nothing
-          , initATMSKind: ATMSPlainEcdsaSecp256k1
-          , initGovernanceAuthority: Governance.mkGovernanceAuthority
-              ownPaymentPubKeyHash
-          }
-
-      { sidechainParams } ← InitSidechain.initSidechain initSidechainParams 1
-
-      -- Building / saving the root that pays lots of FUEL to this wallet :)
-      ----------------------------------------------------------------------
-      let ownRecipient = paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
-
-      { merkleRoot: merkleRoot1 } ←
-        saveRoot
-          { sidechainParams
-          , merkleTreeEntries:
-              [ MerkleTreeEntry
-                  { index: BigInt.fromInt 0
-                  , amount: BigInt.fromInt 69
-                  , previousMerkleRoot: Nothing
-                  , recipient: ownRecipient
-                  }
-              ]
-          , currentCommitteePrvKeys: initCommitteePrvKeys
-          , previousMerkleRoot: Nothing
-          }
-      _ ←
-        saveRoot
-          { sidechainParams
-          , merkleTreeEntries:
-              [ MerkleTreeEntry
-                  { index: BigInt.fromInt 0
-                  , amount: BigInt.fromInt 69
-                  , previousMerkleRoot: Just merkleRoot1
-                  , recipient: ownRecipient
-                  }
-              , MerkleTreeEntry
-                  { index: BigInt.fromInt 1
-                  , amount: BigInt.fromInt 69
-                  , previousMerkleRoot: Just merkleRoot1
-                  , recipient: ownRecipient
-                  }
-              ]
-          , currentCommitteePrvKeys: initCommitteePrvKeys
-          , previousMerkleRoot: Nothing
-          }
-      pure unit
-
--- | `testScenario3` does the following
--- |    1. initializes the sidechain with repeated committee members
--- |
--- |    2. saves a merkle root
--- |
--- | Note: there is significant duplicated code from `testScenario2`
-testScenario3 ∷ TestnetTest
-testScenario3 =
-  Mote.Monad.test "Saving a merkle root with a largely duplicated committee"
-    $ Test.TestnetTest.mkTestnetConfigTest
-        [ BigNum.fromInt 50_000_000
-        , BigNum.fromInt 50_000_000
-        , BigNum.fromInt 50_000_000
-        , BigNum.fromInt 50_000_000
-        ]
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+  $ \alice → withUnliftApp "Test.MerkleRoot.testScenario2"
+      (Wallet.withKeyWallet alice)
+      do
         liftContract $ Log.logInfo' "MerkleRoot testScenario2"
 
         -- 1. Setting up the sidechain
         ---------------------------
         let
-          committeeSize = 60
+          committeeSize = 25
+        -- It fails with ~50 (nondeterministically) with budget overspent
+        -- I would really like to get this up to 101 as with the update
+        -- committee hash endpoint! Some room for optimization is certainly
+        -- a possibility..
         genesisUtxo ← Test.Utils.getOwnTransactionInput
-        pkh ← getOwnPaymentPubKeyHash
 
-        -- Create two distinguished guys that we'll duplicate 5 and 15 times resp.
-        duplicated1PrvKey ← Run.liftEffect $ Crypto.generatePrivKey
-        duplicated2PrvKey ← Run.liftEffect $ Crypto.generatePrivKey
-
-        everyoneElsePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
-          (committeeSize - 20)
+        ownPaymentPubKeyHash ← getOwnPaymentPubKeyHash
+        initCommitteePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+          committeeSize
           Crypto.generatePrivKey
         let
-          initCommitteePrvKeys = Array.replicate 5 duplicated1PrvKey
-            <> everyoneElsePrvKeys
-            <> Array.replicate 15 duplicated2PrvKey
           initCommitteePubKeys = map Crypto.toPubKeyUnsafe initCommitteePrvKeys
           initSidechainParams = InitSidechain.InitSidechainParams
             { initChainId: BigInt.fromInt 69
@@ -412,19 +320,19 @@ testScenario3 =
                 $ map unwrap
                     initCommitteePubKeys
             , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 99999
-            , initThresholdDenominator: BigInt.fromInt 100000
+            , initThresholdNumerator: BigInt.fromInt 2
+            , initThresholdDenominator: BigInt.fromInt 3
             , initCandidatePermissionTokenMintInfo: Nothing
             , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
+            , initGovernanceAuthority: Governance.mkGovernanceAuthority
+                ownPaymentPubKeyHash
             }
 
         { sidechainParams } ← InitSidechain.initSidechain initSidechainParams 1
 
         -- Building / saving the root that pays lots of FUEL to this wallet :)
         ----------------------------------------------------------------------
-
-        let ownRecipient = paymentPubKeyHashToBech32Bytes pkh
+        let ownRecipient = paymentPubKeyHashToBech32Bytes ownPaymentPubKeyHash
 
         { merkleRoot: merkleRoot1 } ←
           saveRoot
@@ -461,3 +369,101 @@ testScenario3 =
             , previousMerkleRoot: Nothing
             }
         pure unit
+
+-- | `testScenario3` does the following
+-- |    1. initializes the sidechain with repeated committee members
+-- |
+-- |    2. saves a merkle root
+-- |
+-- | Note: there is significant duplicated code from `testScenario2`
+testScenario3 ∷ TestnetTest
+testScenario3 =
+  Mote.Monad.test "Saving a merkle root with a largely duplicated committee"
+    $ Test.TestnetTest.mkTestnetConfigTest
+        [ BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        , BigNum.fromInt 50_000_000
+        ]
+    $ \alice → withUnliftApp "Test.MerkleRoot.testScenario3"
+        (Wallet.withKeyWallet alice)
+        do
+          liftContract $ Log.logInfo' "MerkleRoot testScenario2"
+
+          -- 1. Setting up the sidechain
+          ---------------------------
+          let
+            committeeSize = 60
+          genesisUtxo ← Test.Utils.getOwnTransactionInput
+          pkh ← getOwnPaymentPubKeyHash
+
+          -- Create two distinguished guys that we'll duplicate 5 and 15 times resp.
+          duplicated1PrvKey ← Run.liftEffect $ Crypto.generatePrivKey
+          duplicated2PrvKey ← Run.liftEffect $ Crypto.generatePrivKey
+
+          everyoneElsePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+            (committeeSize - 20)
+            Crypto.generatePrivKey
+          let
+            initCommitteePrvKeys = Array.replicate 5 duplicated1PrvKey
+              <> everyoneElsePrvKeys
+              <> Array.replicate 15 duplicated2PrvKey
+            initCommitteePubKeys = map Crypto.toPubKeyUnsafe initCommitteePrvKeys
+            initSidechainParams = InitSidechain.InitSidechainParams
+              { initChainId: BigInt.fromInt 69
+              , initGenesisHash: hexToByteArrayUnsafe "aabbcc"
+              , initUtxo: genesisUtxo
+              , initAggregatedCommittee: PlutusData.toData
+                  $ Crypto.aggregateKeys
+                  $ map unwrap
+                      initCommitteePubKeys
+              , initSidechainEpoch: zero
+              , initThresholdNumerator: BigInt.fromInt 99999
+              , initThresholdDenominator: BigInt.fromInt 100000
+              , initCandidatePermissionTokenMintInfo: Nothing
+              , initATMSKind: ATMSPlainEcdsaSecp256k1
+              , initGovernanceAuthority: Governance.mkGovernanceAuthority pkh
+              }
+
+          { sidechainParams } ← InitSidechain.initSidechain initSidechainParams 1
+
+          -- Building / saving the root that pays lots of FUEL to this wallet :)
+          ----------------------------------------------------------------------
+
+          let ownRecipient = paymentPubKeyHashToBech32Bytes pkh
+
+          { merkleRoot: merkleRoot1 } ←
+            saveRoot
+              { sidechainParams
+              , merkleTreeEntries:
+                  [ MerkleTreeEntry
+                      { index: BigInt.fromInt 0
+                      , amount: BigInt.fromInt 69
+                      , previousMerkleRoot: Nothing
+                      , recipient: ownRecipient
+                      }
+                  ]
+              , currentCommitteePrvKeys: initCommitteePrvKeys
+              , previousMerkleRoot: Nothing
+              }
+          _ ←
+            saveRoot
+              { sidechainParams
+              , merkleTreeEntries:
+                  [ MerkleTreeEntry
+                      { index: BigInt.fromInt 0
+                      , amount: BigInt.fromInt 69
+                      , previousMerkleRoot: Just merkleRoot1
+                      , recipient: ownRecipient
+                      }
+                  , MerkleTreeEntry
+                      { index: BigInt.fromInt 1
+                      , amount: BigInt.fromInt 69
+                      , previousMerkleRoot: Just merkleRoot1
+                      , recipient: ownRecipient
+                      }
+                  ]
+              , currentCommitteePrvKeys: initCommitteePrvKeys
+              , previousMerkleRoot: Nothing
+              }
+          pure unit

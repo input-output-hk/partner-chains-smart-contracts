@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -11,26 +12,27 @@ module TrustlessSidechain.FUELMintingPolicy (
   bech32AddrToPubKeyHash,
 ) where
 
+import GHC.Generics (Generic)
 import PlutusLedgerApi.Common (SerialisedScript)
 import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusLedgerApi.V2 (
   CurrencySymbol,
   LedgerBytes (LedgerBytes),
   PubKeyHash (PubKeyHash),
-  ScriptContext (ScriptContext, scriptContextTxInfo),
   ScriptPurpose (Minting),
   TokenName (TokenName, unTokenName),
   TxInInfo (txInInfoResolved),
-  TxInfo (txInfoMint, txInfoReferenceInputs),
   TxOut (txOutValue),
   Value (getValue),
   serialiseCompiledCode,
  )
-import PlutusLedgerApi.V2.Contexts qualified as Contexts
-import PlutusTx qualified
+import PlutusTx
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins (divideInteger, modInteger)
 import PlutusTx.Builtins qualified as Builtins
+import TrustlessSidechain.CustomScriptContext
+import TrustlessSidechain.CustomScriptContext qualified as CustomContexts
+import TrustlessSidechain.HaskellPrelude qualified as Haskell
 import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTokenMintingPolicy
 import TrustlessSidechain.MerkleTree (RootHash (RootHash))
 import TrustlessSidechain.MerkleTree qualified as MerkleTree
@@ -47,6 +49,25 @@ import TrustlessSidechain.Versioning (
   getVersionedCurrencySymbol,
   merkleRootTokenPolicyId,
  )
+
+data TxInfo = TxInfo
+  { txInfoInputs :: BuiltinData
+  , txInfoReferenceInputs :: [TxInInfo]
+  , txInfoOutputs :: BuiltinData
+  , txInfoFee :: BuiltinData
+  , txInfoMint :: Value
+  , txInfoDCert :: BuiltinData
+  , txInfoWdrl :: BuiltinData
+  , txInfoValidRange :: BuiltinData
+  , txInfoSignatories :: [PubKeyHash]
+  , txInfoRedeemers :: BuiltinData
+  , txInfoData :: BuiltinData
+  , txInfoId :: BuiltinData
+  }
+  deriving stock (Generic, Haskell.Eq)
+
+makeLift ''TxInfo
+makeIsDataIndexed ''TxInfo [('TxInfo, 0)]
 
 -- | 'fuelTokenName' is a constant for the token name of FUEL (the currency of
 -- the side chain).
@@ -96,8 +117,8 @@ fuelTokenName = TokenName "FUEL"
 --
 --  ERROR-FUEL-MINTING-POLICY-08: illegal FUEL minting
 {-# INLINEABLE mkMintingPolicy #-}
-mkMintingPolicy :: SidechainParams -> VersionOracleConfig -> FUELMintingRedeemer -> ScriptContext -> Bool
-mkMintingPolicy _ _ FUELBurningRedeemer (ScriptContext txInfo (Minting currSymbol)) =
+mkMintingPolicy :: SidechainParams -> VersionOracleConfig -> FUELMintingRedeemer -> CustomScriptContext TxInfo -> Bool
+mkMintingPolicy _ _ FUELBurningRedeemer (CustomScriptContext txInfo (Minting currSymbol)) =
   traceIfFalse "ERROR-FUEL-MINTING-POLICY-01" noTokensMinted
   where
     noTokensMinted :: Bool
@@ -144,7 +165,7 @@ mkMintingPolicy _sp versioningConfig (FUELMintingRedeemer mte mp) ctx =
          in RootHash $ LedgerBytes $ unTokenName $ go $ txInfoReferenceInputs info
    in traceIfFalse
         "ERROR-FUEL-MINTING-POLICY-04"
-        (maybe False (Contexts.txSignedBy info) (bech32AddrToPubKeyHash (get @"recipient" mte)))
+        (maybe False (CustomContexts.txSignedBy (txInfoSignatories info)) (bech32AddrToPubKeyHash (get @"recipient" mte)))
         && traceIfFalse "ERROR-FUEL-MINTING-POLICY-05" (fuelAmount == get @"amount" mte)
         && traceIfFalse "ERROR-FUEL-MINTING-POLICY-06" (MerkleTree.memberMp cborMte mp merkleRoot)
         && traceIfFalse "ERROR-FUEL-MINTING-POLICY-07" (dsInserted == cborMteHashed)
@@ -152,25 +173,25 @@ mkMintingPolicy _sp versioningConfig (FUELMintingRedeemer mte mp) ctx =
     -- Aliases:
     info :: TxInfo
     info = scriptContextTxInfo ctx
-    ownCurrencySymbol :: CurrencySymbol
-    ownCurrencySymbol = Contexts.ownCurrencySymbol ctx
+    ownCurrencySymbol' :: CurrencySymbol
+    ownCurrencySymbol' = CustomContexts.ownCurrencySymbol ctx
     merkleRootTnCurrencySymbol :: CurrencySymbol
     merkleRootTnCurrencySymbol =
       getVersionedCurrencySymbol
         versioningConfig
         (VersionOracle {version = 1, scriptId = merkleRootTokenPolicyId})
-        ctx
+        (txInfoReferenceInputs info)
     dsKeyCurrencySymbol :: CurrencySymbol
     dsKeyCurrencySymbol =
       getVersionedCurrencySymbol
         versioningConfig
         (VersionOracle {version = 1, scriptId = dsKeyPolicyId})
-        ctx
+        (txInfoReferenceInputs info)
     minted :: Value
     minted = txInfoMint info
     fuelAmount :: Integer
     fuelAmount
-      | Just tns <- AssocMap.lookup ownCurrencySymbol $ getValue minted
+      | Just tns <- AssocMap.lookup ownCurrencySymbol' $ getValue minted
       , [(tn, amount)] <- AssocMap.toList tns
       , tn == fuelTokenName =
           amount

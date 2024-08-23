@@ -38,7 +38,7 @@ import TrustlessSidechain.CommitteeCandidateValidator
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
 import TrustlessSidechain.Effects.Env (Env, READER)
 import TrustlessSidechain.Effects.Log (LOG)
-import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Run (withUnliftApp, withUnliftAppPlain)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
@@ -170,9 +170,12 @@ testScenarioSuccess1 ∷ TestnetTest
 testScenarioSuccess1 = Mote.Monad.test "Register followed by deregister"
   $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ]
-  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-      void $ runRegister dummySidechainParams
-      runDeregister dummySidechainParams
+  $ \alice → withUnliftApp
+      "Test.CommitteeCandidateValidator.testScenarioSuccess1"
+      (Wallet.withKeyWallet alice)
+      do
+        void $ runRegister dummySidechainParams
+        runDeregister dummySidechainParams
 
 -- Register multipe times then Deregister
 testScenarioSuccess2 ∷ TestnetTest
@@ -184,17 +187,23 @@ testScenarioSuccess2 =
         , BigNum.fromInt 5_000_000
         , BigNum.fromInt 5_000_000
         ]
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-        sequence_ $ replicate 10 $ runRegister dummySidechainParams
-        runDeregister dummySidechainParams
+    $ \alice → withUnliftApp
+        "Test.CommitteeCandidateValidator.testScenarioSuccess2"
+        (Wallet.withKeyWallet alice)
+        do
+          sequence_ $ replicate 10 $ runRegister dummySidechainParams
+          runDeregister dummySidechainParams
 
 -- Deregister without prior registeration (i.e. no registration utxo present)
 testScenarioFailure1 ∷ TestnetTest
 testScenarioFailure1 = Mote.Monad.test "Deregister in isolation (should fail)"
   $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ]
-  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-      runDeregister dummySidechainParams # withUnliftApp fails
+  $ \alice → withUnliftApp
+      "Test.CommitteeCandidateValidator.testScenarioFailure1"
+      (Wallet.withKeyWallet alice)
+      do
+        runDeregister dummySidechainParams # withUnliftAppPlain fails
 
 -- alice registers, bob deregisters. not allowed & should fail
 testScenarioFailure2 ∷ TestnetTest
@@ -207,11 +216,15 @@ testScenarioFailure2 =
         )
     $ \(alice /\ bob) →
         do
-          withUnliftApp (Wallet.withKeyWallet alice) $ void $ runRegister
+          withUnliftApp
+            "Test.CommitteeCandidateValidator.testScenarioFailure2.alice"
+            (Wallet.withKeyWallet alice) $ void $ runRegister
             dummySidechainParams
-          withUnliftApp (Wallet.withKeyWallet bob) $ runDeregister
+          withUnliftApp
+            "Test.CommitteeCandidateValidator.testScenarioFailure2.bob"
+            (Wallet.withKeyWallet bob) $ runDeregister
             dummySidechainParams
-          # withUnliftApp fails
+          # withUnliftAppPlain fails
 
 -- alice registers, then tries to register again with the same set of keys. not allowed & should fail
 testScenarioFailure3 ∷ TestnetTest
@@ -221,7 +234,9 @@ testScenarioFailure3 =
     $ Test.TestnetTest.mkTestnetConfigTest
         ( [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ]
         )
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) $ do
-        void $ runRegisterWithFixedKeys dummySidechainParams
-        (void $ runRegisterWithFixedKeys dummySidechainParams)
-          # withUnliftApp fails
+    $ \alice →
+        withUnliftApp "Test.CommitteeCandidateValidator.testScenarioFailure3"
+          (Wallet.withKeyWallet alice) $ do
+          void $ runRegisterWithFixedKeys dummySidechainParams
+          (void $ runRegisterWithFixedKeys dummySidechainParams)
+            # withUnliftAppPlain fails

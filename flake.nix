@@ -96,7 +96,6 @@
       "https://cache.iog.io"
       "https://public-plutonomicon.cachix.org"
       "https://cache.sc.iog.io"
-      "https://cache.zw3rk.com"
     ];
     extra-trusted-public-keys = [
       "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="

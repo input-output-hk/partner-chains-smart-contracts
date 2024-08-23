@@ -10,9 +10,7 @@ module TrustlessSidechain.GetSidechainAddresses
 import Contract.Prelude
 
 import Cardano.AsCbor (encodeCbor)
-import Cardano.Types.Address
-  ( toBech32
-  )
+import Cardano.Types.Address (toBech32)
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.PlutusScript as PlutusScript
 import Data.Array as Array
@@ -24,13 +22,8 @@ import Run.Except (EXCEPT)
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Checkpoint as Checkpoint
 import TrustlessSidechain.CommitteeATMSSchemes
-  ( ATMSKinds
-      ( ATMSPlainEcdsaSecp256k1
-      , ATMSPlainSchnorrSecp256k1
-      )
-  , CommitteeCertificateMint
-      ( CommitteeCertificateMint
-      )
+  ( ATMSKinds(ATMSPlainEcdsaSecp256k1, ATMSPlainSchnorrSecp256k1)
+  , CommitteeCertificateMint(CommitteeCertificateMint)
   )
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
@@ -38,18 +31,15 @@ import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteeP
 import TrustlessSidechain.DParameter.Utils as DParameter
 import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Effects.Env (Env, READER)
+import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.FUELProxyPolicy (getFuelProxyMintingPolicy)
 import TrustlessSidechain.InitSidechain.Utils as InitSidechain
 import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Address
-  ( toAddress
-  )
-import TrustlessSidechain.Utils.Asset
-  ( currencySymbolToHex
-  )
+import TrustlessSidechain.Utils.Address (toAddress)
+import TrustlessSidechain.Utils.Asset (currencySymbolToHex)
 import TrustlessSidechain.Versioning as Versioning
 import TrustlessSidechain.Versioning.Types
   ( ScriptId
@@ -119,7 +109,7 @@ newtype SidechainAddressesEndpointParams = SidechainAddressesEndpointParams
 getSidechainAddresses ∷
   ∀ r.
   SidechainAddressesEndpointParams →
-  Run (EXCEPT OffchainError + WALLET + READER Env + r) SidechainAddresses
+  Run (EXCEPT OffchainError + WALLET + READER Env + LOG + r) SidechainAddresses
 getSidechainAddresses
   ( SidechainAddressesEndpointParams
       { sidechainParams

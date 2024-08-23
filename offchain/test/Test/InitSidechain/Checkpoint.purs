@@ -59,7 +59,9 @@ testInitCheckpointUninitialised =
         ]
     $ \alice → do
         -- | Test succeeds if action fails.
-        withUnliftApp (Test.Utils.fails <<< Wallet.withKeyWallet alice)
+        withUnliftApp
+          "Test.InitSidechain.Checkpoint.testInitCheckpointUninitialised"
+          (Test.Utils.fails <<< Wallet.withKeyWallet alice)
           do
             liftContract $ Log.logInfo'
               "InitSidechain 'testInitCheckpointUninitialised'"
@@ -95,7 +97,8 @@ testInitCheckpoint =
         , BigNum.fromInt 50_000_000
         ]
     $ \alice → do
-        withUnliftApp (Wallet.withKeyWallet alice)
+        withUnliftApp "Test.InitSidechain.Checkpoint.testInitCheckpoint"
+          (Wallet.withKeyWallet alice)
           do
             liftContract $ Log.logInfo'
               "InitSidechain 'testInitCheckpoint'"
@@ -181,7 +184,9 @@ testInitCheckpointIdempotent =
         , BigNum.fromInt 50_000_000
         ]
     $ \alice → do
-        withUnliftApp (Wallet.withKeyWallet alice)
+        withUnliftApp
+          "Test.InitSidechain.Checkpoint.testInitCheckpointIdempotent"
+          (Wallet.withKeyWallet alice)
           do
             liftContract $ Log.logInfo'
               "InitSidechain 'testInitCheckpointIdempotent'"

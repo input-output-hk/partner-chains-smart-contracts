@@ -74,34 +74,36 @@ testScenario1 = Mote.Monad.test "Calling `initSidechain`"
       , BigNum.fromInt 50_000_000
       ]
   $ \alice →
-      withUnliftApp (Wallet.withKeyWallet alice) do
-        liftContract $ Log.logInfo' "InitSidechain 'testScenario1'"
-        genesisUtxo ← Test.Utils.getOwnTransactionInput
-        -- generate an initialize committee of `committeeSize` committee members
-        let committeeSize = 25
-        committeePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
-          committeeSize
-          Crypto.generatePrivKey
+      withUnliftApp "Test.InitSidechain.testScenario1"
+        (Wallet.withKeyWallet alice)
+        do
+          liftContract $ Log.logInfo' "InitSidechain 'testScenario1'"
+          genesisUtxo ← Test.Utils.getOwnTransactionInput
+          -- generate an initialize committee of `committeeSize` committee members
+          let committeeSize = 25
+          committeePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+            committeeSize
+            Crypto.generatePrivKey
 
-        initGovernanceAuthority ← Governance.mkGovernanceAuthority
-          <$> getOwnPaymentPubKeyHash
-        let
-          initScParams = InitSidechain.InitSidechainParams
-            { initChainId: BigInt.fromInt 69
-            , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ Crypto.aggregateKeys
-                $ map unwrap
-                    (map Crypto.toPubKeyUnsafe committeePrvKeys)
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initGovernanceAuthority
-            }
+          initGovernanceAuthority ← Governance.mkGovernanceAuthority
+            <$> getOwnPaymentPubKeyHash
+          let
+            initScParams = InitSidechain.InitSidechainParams
+              { initChainId: BigInt.fromInt 69
+              , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
+              , initUtxo: genesisUtxo
+              , initAggregatedCommittee: toData $ Crypto.aggregateKeys
+                  $ map unwrap
+                      (map Crypto.toPubKeyUnsafe committeePrvKeys)
+              , initATMSKind: ATMSPlainEcdsaSecp256k1
+              , initSidechainEpoch: zero
+              , initThresholdNumerator: BigInt.fromInt 2
+              , initThresholdDenominator: BigInt.fromInt 3
+              , initCandidatePermissionTokenMintInfo: Nothing
+              , initGovernanceAuthority
+              }
 
-        void $ InitSidechain.initSidechain initScParams 1
+          void $ InitSidechain.initSidechain initScParams 1
 
 -- | `testScenario2` is a bit more complicated (but this should fail!) than
 -- | `testScenario1`. It takes two distinct wallets, say Alice and Bob, grabs a
@@ -123,42 +125,46 @@ testScenario2 = Mote.Monad.test "Verifying `initSidechain` spends `initUtxo`"
           ]
       )
   $ \(alice /\ bob) → do
-      aliceUtxos ← withUnliftApp (Wallet.withKeyWallet alice) $
-        Effect.fromMaybeThrow
-          (GenericInternalError "Failed to query wallet utxos")
-          (liftContract Wallet.getWalletUtxos)
+      aliceUtxos ←
+        withUnliftApp "Test.InitSidechain.testScenario2.alice"
+          (Wallet.withKeyWallet alice) $
+          Effect.fromMaybeThrow
+            (GenericInternalError "Failed to query wallet utxos")
+            (liftContract Wallet.getWalletUtxos)
 
       genesisUtxo ←
         Run.note (GenericInternalError "No utxo found in wallet")
           $ Set.findMin
           $ Map.keys aliceUtxos
 
-      result ← withUnliftApp (MonadError.try <<< Wallet.withKeyWallet bob) do
-        -- generate an initialize committee of `committeeSize` committee members
-        let committeeSize = 1000
-        committeePrvKeys ← liftEffect $ sequence $ Array.replicate
-          committeeSize
-          Crypto.generatePrivKey
-        initGovernanceAuthority ← Governance.mkGovernanceAuthority
-          <$> getOwnPaymentPubKeyHash
-        let
-          initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
-          initScParams = InitSidechain.InitSidechainParams
-            { initChainId: BigInt.fromInt 69
-            , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData $ Crypto.aggregateKeys
-                $ map unwrap
-                    initCommittee
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initGovernanceAuthority
-            }
+      result ← withUnliftApp "Test.InitSidechain.testScenario2.bob"
+        (MonadError.try <<< Wallet.withKeyWallet bob)
+        do
+          -- generate an initialize committee of `committeeSize` committee members
+          let committeeSize = 1000
+          committeePrvKeys ← liftEffect $ sequence $ Array.replicate
+            committeeSize
+            Crypto.generatePrivKey
+          initGovernanceAuthority ← Governance.mkGovernanceAuthority
+            <$> getOwnPaymentPubKeyHash
+          let
+            initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
+            initScParams = InitSidechain.InitSidechainParams
+              { initChainId: BigInt.fromInt 69
+              , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
+              , initUtxo: genesisUtxo
+              , initAggregatedCommittee: toData $ Crypto.aggregateKeys
+                  $ map unwrap
+                      initCommittee
+              , initSidechainEpoch: zero
+              , initThresholdNumerator: BigInt.fromInt 2
+              , initATMSKind: ATMSPlainEcdsaSecp256k1
+              , initThresholdDenominator: BigInt.fromInt 3
+              , initCandidatePermissionTokenMintInfo: Nothing
+              , initGovernanceAuthority
+              }
 
-        void $ InitSidechain.initSidechain initScParams 1
+          void $ InitSidechain.initSidechain initScParams 1
       case result of
         Right _ →
           throw $ GenericInternalError
@@ -183,35 +189,37 @@ testScenario3 =
         , BigNum.fromInt 50_000_000
         ]
     $ \alice →
-        withUnliftApp (Wallet.withKeyWallet alice) do
-          Effect.logInfo' "InitSidechain 'testScenario3'"
-          genesisUtxo ← Test.Utils.getOwnTransactionInput
-          -- generate an initialize committee of `committeeSize` committee members
-          let committeeSize = 25
-          committeePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
-            committeeSize
-            Crypto.generatePrivKey
-          initGovernanceAuthority ← Governance.mkGovernanceAuthority
-            <$> getOwnPaymentPubKeyHash
-          let
-            initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
-            initScParams = InitSidechain.InitSidechainParams
-              { initChainId: BigInt.fromInt 69
-              , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
-              , initUtxo: genesisUtxo
-              , initAggregatedCommittee: toData
-                  $ Crypto.aggregateKeys
-                  $ map unwrap initCommittee
-              , initSidechainEpoch: zero
-              , initThresholdNumerator: BigInt.fromInt 2
-              , initThresholdDenominator: BigInt.fromInt 3
-              , initATMSKind: ATMSPlainEcdsaSecp256k1
-              , initCandidatePermissionTokenMintInfo: Just one
-              , initGovernanceAuthority
-              }
+        withUnliftApp "Test.InitSidechain.testScenario3"
+          (Wallet.withKeyWallet alice)
+          do
+            Effect.logInfo' "InitSidechain 'testScenario3'"
+            genesisUtxo ← Test.Utils.getOwnTransactionInput
+            -- generate an initialize committee of `committeeSize` committee members
+            let committeeSize = 25
+            committeePrvKeys ← Run.liftEffect $ sequence $ Array.replicate
+              committeeSize
+              Crypto.generatePrivKey
+            initGovernanceAuthority ← Governance.mkGovernanceAuthority
+              <$> getOwnPaymentPubKeyHash
+            let
+              initCommittee = map Crypto.toPubKeyUnsafe committeePrvKeys
+              initScParams = InitSidechain.InitSidechainParams
+                { initChainId: BigInt.fromInt 69
+                , initGenesisHash: ByteArray.hexToByteArrayUnsafe "abababababa"
+                , initUtxo: genesisUtxo
+                , initAggregatedCommittee: toData
+                    $ Crypto.aggregateKeys
+                    $ map unwrap initCommittee
+                , initSidechainEpoch: zero
+                , initThresholdNumerator: BigInt.fromInt 2
+                , initThresholdDenominator: BigInt.fromInt 3
+                , initATMSKind: ATMSPlainEcdsaSecp256k1
+                , initCandidatePermissionTokenMintInfo: Just one
+                , initGovernanceAuthority
+                }
 
-          { sidechainParams: sc } ← InitSidechain.initSidechain initScParams 1
-          Test.CandidatePermissionToken.assertIHaveCandidatePermissionToken sc
+            { sidechainParams: sc } ← InitSidechain.initSidechain initScParams 1
+            Test.CandidatePermissionToken.assertIHaveCandidatePermissionToken sc
 
 -- | Utility for tests of getInitTokenStatus with a simple setup,
 -- | taken from testScenario1. If the supplied candidate permission token amount
@@ -303,21 +311,26 @@ testInitTokenStatusEmpty =
     $ \(alice /\ bob) → do
 
         -- Alice init as in testScenario1
-        sidechainParams ← withUnliftApp (Wallet.withKeyWallet alice) do
-          Effect.logInfo' "InitSidechain 'testInitTokenStatusEmpty'"
+        sidechainParams ← withUnliftApp
+          "Test.InitSidechain.testInitTokenStatusEmpty.alice"
+          (Wallet.withKeyWallet alice)
+          do
+            Effect.logInfo' "InitSidechain 'testInitTokenStatusEmpty'"
 
-          -- Initialize with no CandidatePermission tokens
-          initSimpleSidechain Nothing
+            -- Initialize with no CandidatePermission tokens
+            initSimpleSidechain Nothing
 
         -- Bob should have no init tokens
-        withUnliftApp (Wallet.withKeyWallet bob) do
-          { initTokenStatusData: res } ← Init.getInitTokenStatus
-            sidechainParams
+        withUnliftApp "Test.InitSidechain.testInitTokenStatusEmpty.bob"
+          (Wallet.withKeyWallet bob)
+          do
+            { initTokenStatusData: res } ← Init.getInitTokenStatus
+              sidechainParams
 
-          Effect.fromMaybeThrow (GenericInternalError "Unreachable")
-            $ map Just
-            $ liftAff
-            $ assert (failMsg "" res) (Map.isEmpty res)
+            Effect.fromMaybeThrow (GenericInternalError "Unreachable")
+              $ map Just
+              $ liftAff
+              $ assert (failMsg "" res) (Map.isEmpty res)
 
 -- | Run `initSidechain` without creating "CandidatePermission" tokens,
 -- | and therefore leaving one "CandidatePermission InitToken" unspent.
@@ -337,28 +350,30 @@ testInitTokenStatusOneToken =
         , BigNum.fromInt 50_000_000
         ]
     $ \alice → do
-        withUnliftApp (Wallet.withKeyWallet alice) do
-          Effect.logInfo' "InitSidechain 'testInitTokenStatusOneToken'"
+        withUnliftApp "Test.InitSidechain.testInitTokenStatusOneToken"
+          (Wallet.withKeyWallet alice)
+          do
+            Effect.logInfo' "InitSidechain 'testInitTokenStatusOneToken'"
 
-          -- Initialize with no CandidatePermission tokens
-          sidechainParams ← initSimpleSidechain Nothing
+            -- Initialize with no CandidatePermission tokens
+            sidechainParams ← initSimpleSidechain Nothing
 
-          -- The CandidatePermission InitToken is the only one unspent
-          -- since we did not use it to create any CandidatePermission tokens.
-          let
-            expected = foldr (\(k /\ v) → Map.insert k v) Map.empty
-              [ CandidatePermissionToken.candidatePermissionInitTokenName /\
-                  BigNum.fromInt 1
-              ]
+            -- The CandidatePermission InitToken is the only one unspent
+            -- since we did not use it to create any CandidatePermission tokens.
+            let
+              expected = foldr (\(k /\ v) → Map.insert k v) Map.empty
+                [ CandidatePermissionToken.candidatePermissionInitTokenName /\
+                    BigNum.fromInt 1
+                ]
 
-          { initTokenStatusData: res } ← Init.getInitTokenStatus
-            sidechainParams
+            { initTokenStatusData: res } ← Init.getInitTokenStatus
+              sidechainParams
 
-          Effect.fromMaybeThrow (GenericInternalError "Unreachable")
-            $ map Just
-            $ liftAff
-            $ assert (failMsg "Single CandidatePermission InitToken" res)
-                (res == expected)
+            Effect.fromMaybeThrow (GenericInternalError "Unreachable")
+              $ map Just
+              $ liftAff
+              $ assert (failMsg "Single CandidatePermission InitToken" res)
+                  (res == expected)
 
 -- | Directly mint several init tokens but do not spend them.
 -- | Check that you get what you expect.
@@ -378,23 +393,25 @@ testInitTokenStatusMultiTokens =
         , BigNum.fromInt 50_000_000
         ]
     $ \alice → do
-        withUnliftApp (Wallet.withKeyWallet alice) do
-          Effect.logInfo' "InitSidechain 'testInitTokenStatusMultiTokens'"
+        withUnliftApp "Test.InitSidechain.testInitTokenStatusMultiTokens"
+          (Wallet.withKeyWallet alice)
+          do
+            Effect.logInfo' "InitSidechain 'testInitTokenStatusMultiTokens'"
 
-          genesisUtxo ← Test.Utils.getOwnTransactionInput
+            genesisUtxo ← Test.Utils.getOwnTransactionInput
 
-          let
-            sidechainParams = wrap
-              ( (unwrap Test.Utils.dummySidechainParams)
-                  { genesisUtxo = genesisUtxo }
-              )
+            let
+              sidechainParams = wrap
+                ( (unwrap Test.Utils.dummySidechainParams)
+                    { genesisUtxo = genesisUtxo }
+                )
 
-          expected ← mintSeveralInitTokens sidechainParams
+            expected ← mintSeveralInitTokens sidechainParams
 
-          { initTokenStatusData: res } ← Init.getInitTokenStatus
-            sidechainParams
+            { initTokenStatusData: res } ← Init.getInitTokenStatus
+              sidechainParams
 
-          Effect.fromMaybeThrow (GenericInternalError "Unreachable")
-            $ map Just
-            $ liftAff
-            $ assert (failMsg expected res) (unorderedEq expected res)
+            Effect.fromMaybeThrow (GenericInternalError "Unreachable")
+              $ map Just
+              $ liftAff
+              $ assert (failMsg expected res) (unorderedEq expected res)

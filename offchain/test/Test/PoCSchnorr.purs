@@ -41,7 +41,7 @@ import Test.PoCRawScripts as RawScripts
 import Test.TestnetTest (TestnetTest)
 import Test.TestnetTest as Test.TestnetTest
 import Test.Utils as Test.Utils
-import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Run (withUnliftApp, withUnliftAppPlain)
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.Utils.Asset as Utils.Asset
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
@@ -115,52 +115,56 @@ testScenario1 ∷ TestnetTest
 testScenario1 = Mote.Monad.test "PoCSchnorrSecp256k1: valid test scenario"
   $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 10_000_000, BigNum.fromInt 10_000_000 ]
-  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-      privateKey ← Run.liftEffect $
-        Utils.SchnorrSecp256k1.generateRandomPrivateKey
+  $ \alice → withUnliftApp "Test.PoCSchnorrSecp256k1.testScenario1"
+      (Wallet.withKeyWallet alice)
+      do
+        privateKey ← Run.liftEffect $
+          Utils.SchnorrSecp256k1.generateRandomPrivateKey
 
-      let
-        message = ByteArray.hexToByteArrayUnsafe "706F6D6572616E69616E"
-        signature = Utils.SchnorrSecp256k1.sign message privateKey
-        publicKey = Utils.SchnorrSecp256k1.toPubKey privateKey
+        let
+          message = ByteArray.hexToByteArrayUnsafe "706F6D6572616E69616E"
+          signature = Utils.SchnorrSecp256k1.sign message privateKey
+          publicKey = Utils.SchnorrSecp256k1.toPubKey privateKey
 
-        redeemer = SchnorrSecp256k1Redeemer
-          { message
-          , signature: unwrap signature
-          , publicKey: unwrap publicKey
-          }
+          redeemer = SchnorrSecp256k1Redeemer
+            { message
+            , signature: unwrap signature
+            , publicKey: unwrap publicKey
+            }
 
-      void $ mustMintPocSchnorrSecp256k1 redeemer >>=
-        Utils.Transaction.balanceSignAndSubmit "PoCSchnorrSecp256k1"
-      pure unit
+        void $ mustMintPocSchnorrSecp256k1 redeemer >>=
+          Utils.Transaction.balanceSignAndSubmit "PoCSchnorrSecp256k1"
+        pure unit
 
 testScenario2 ∷ TestnetTest
 testScenario2 = Mote.Monad.test "PoCSchnorrSecp256k1: invalid test scenario"
   $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 10_000_000, BigNum.fromInt 10_000_000 ]
-  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-      privateKey ← Run.liftEffect $
-        Utils.SchnorrSecp256k1.generateRandomPrivateKey
+  $ \alice → withUnliftApp "Test.PoCSchnorrSecp256k1.testScenario2"
+      (Wallet.withKeyWallet alice)
+      do
+        privateKey ← Run.liftEffect $
+          Utils.SchnorrSecp256k1.generateRandomPrivateKey
 
-      let
-        message = ByteArray.hexToByteArrayUnsafe "4D61792033312C2031383332"
-        signature = Utils.SchnorrSecp256k1.sign message privateKey
-        publicKey = Utils.SchnorrSecp256k1.toPubKey privateKey
+        let
+          message = ByteArray.hexToByteArrayUnsafe "4D61792033312C2031383332"
+          signature = Utils.SchnorrSecp256k1.sign message privateKey
+          publicKey = Utils.SchnorrSecp256k1.toPubKey privateKey
 
-        wrongMessage = ByteArray.hexToByteArrayUnsafe
-          "4F63746F6265722032352C2031383131"
+          wrongMessage = ByteArray.hexToByteArrayUnsafe
+            "4F63746F6265722032352C2031383131"
 
-        redeemer = SchnorrSecp256k1Redeemer
-          { message: wrongMessage
-          , signature: unwrap signature
-          , publicKey: unwrap publicKey
-          }
+          redeemer = SchnorrSecp256k1Redeemer
+            { message: wrongMessage
+            , signature: unwrap signature
+            , publicKey: unwrap publicKey
+            }
 
-      withUnliftApp Test.Utils.fails $ void
-        $ mustMintPocSchnorrSecp256k1 redeemer
-        >>=
-          Utils.Transaction.balanceSignAndSubmit "PoCSchnorrSecp256k1"
-      pure unit
+        withUnliftAppPlain Test.Utils.fails $ void
+          $ mustMintPocSchnorrSecp256k1 redeemer
+          >>=
+            Utils.Transaction.balanceSignAndSubmit "PoCSchnorrSecp256k1"
+        pure unit
 
 testScenario3 ∷ TestnetTest
 testScenario3 =
@@ -168,55 +172,57 @@ testScenario3 =
     "PoCSchnorrSecp256k1: valid test scenario which includes parsing / serialization of keys"
     $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 10_000_000, BigNum.fromInt 10_000_000 ]
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-        privateKey ← Run.liftEffect $
-          Utils.SchnorrSecp256k1.generateRandomPrivateKey
+    $ \alice → withUnliftApp "Test.PoCSchnorrSecp256k1.testScenario3"
+        (Wallet.withKeyWallet alice)
+        do
+          privateKey ← Run.liftEffect $
+            Utils.SchnorrSecp256k1.generateRandomPrivateKey
 
-        let
-          message = ByteArray.hexToByteArrayUnsafe "6D616C74657365"
-          signature = Utils.SchnorrSecp256k1.sign message privateKey
-          publicKey = Utils.SchnorrSecp256k1.toPubKey privateKey
+          let
+            message = ByteArray.hexToByteArrayUnsafe "6D616C74657365"
+            signature = Utils.SchnorrSecp256k1.sign message privateKey
+            publicKey = Utils.SchnorrSecp256k1.toPubKey privateKey
 
-          serializedPublicKey ∷ String
-          serializedPublicKey = Utils.SchnorrSecp256k1.serializePublicKey
-            publicKey
+            serializedPublicKey ∷ String
+            serializedPublicKey = Utils.SchnorrSecp256k1.serializePublicKey
+              publicKey
 
-          serializedSignature ∷ String
-          serializedSignature = Utils.SchnorrSecp256k1.serializeSignature
-            signature
+            serializedSignature ∷ String
+            serializedSignature = Utils.SchnorrSecp256k1.serializeSignature
+              signature
 
-        -- Verify length assumptions
-        ----------------------------
-        unless (String.length serializedPublicKey == 32 * 2)
-          $ Run.throw
-              ( GenericInternalError
-                  "serialized public keys should be 32 bytes (32 * 2 = 64 hex characters)"
-              )
+          -- Verify length assumptions
+          ----------------------------
+          unless (String.length serializedPublicKey == 32 * 2)
+            $ Run.throw
+                ( GenericInternalError
+                    "serialized public keys should be 32 bytes (32 * 2 = 64 hex characters)"
+                )
 
-        unless (String.length serializedSignature == 64 * 2)
-          $ Run.throw
-              ( GenericInternalError
-                  "serialized public keys should be 64 bytes (64 * 2 = 64 hex characters)"
-              )
+          unless (String.length serializedSignature == 64 * 2)
+            $ Run.throw
+                ( GenericInternalError
+                    "serialized public keys should be 64 bytes (64 * 2 = 64 hex characters)"
+                )
 
-        -- Reparse the signatures
-        ----------------------------
-        parsedPublicKey ← Run.note (GenericInternalError "bad public key parse")
-          $ Utils.SchnorrSecp256k1.parsePublicKey
-          $ ByteArray.hexToByteArrayUnsafe serializedPublicKey
-        parsedSignature ← Run.note (GenericInternalError "bad signature parse")
-          $ Utils.SchnorrSecp256k1.parseSignature
-          $ ByteArray.hexToByteArrayUnsafe serializedSignature
+          -- Reparse the signatures
+          ----------------------------
+          parsedPublicKey ← Run.note (GenericInternalError "bad public key parse")
+            $ Utils.SchnorrSecp256k1.parsePublicKey
+            $ ByteArray.hexToByteArrayUnsafe serializedPublicKey
+          parsedSignature ← Run.note (GenericInternalError "bad signature parse")
+            $ Utils.SchnorrSecp256k1.parseSignature
+            $ ByteArray.hexToByteArrayUnsafe serializedSignature
 
-        -- Running the test
-        ----------------------------
-        let
-          redeemer = SchnorrSecp256k1Redeemer
-            { message
-            , signature: unwrap parsedSignature
-            , publicKey: unwrap parsedPublicKey
-            }
+          -- Running the test
+          ----------------------------
+          let
+            redeemer = SchnorrSecp256k1Redeemer
+              { message
+              , signature: unwrap parsedSignature
+              , publicKey: unwrap parsedPublicKey
+              }
 
-        void $ mustMintPocSchnorrSecp256k1 redeemer >>=
-          Utils.Transaction.balanceSignAndSubmit "PoCSchnorrSecp256k1"
-        pure unit
+          void $ mustMintPocSchnorrSecp256k1 redeemer >>=
+            Utils.Transaction.balanceSignAndSubmit "PoCSchnorrSecp256k1"
+          pure unit

@@ -26,7 +26,7 @@ import TrustlessSidechain.CommitteeATMSSchemes.Types
   )
 import TrustlessSidechain.Effects.Contract (liftContract)
 import TrustlessSidechain.Effects.Env (ask)
-import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Run (withUnliftApp, withUnliftAppPlain)
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.FUELMintingPolicy.V1
   ( MerkleTreeEntry(MerkleTreeEntry)
@@ -66,150 +66,152 @@ testScenario1 = Mote.Monad.test "Merkle root chaining scenario 1"
       , BigNum.fromInt 100_000_000
       , BigNum.fromInt 100_000_000
       ]
-  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-      ownPaymentPubKeyHash ← getOwnPaymentPubKeyHash
-      let
-        ownRecipient = Test.MerkleRoot.paymentPubKeyHashToBech32Bytes
-          ownPaymentPubKeyHash
+  $ \alice → withUnliftApp "Test.MerkleRootChaining.testScenario1"
+      (Wallet.withKeyWallet alice)
+      do
+        ownPaymentPubKeyHash ← getOwnPaymentPubKeyHash
+        let
+          ownRecipient = Test.MerkleRoot.paymentPubKeyHashToBech32Bytes
+            ownPaymentPubKeyHash
 
-      -- 1. Initializing the sidechain
-      -------------------------------
-      liftContract $ Log.logInfo'
-        "'Test.MerkleRootChaining.testScenario1': 1. Initializing the sidechain"
-      genesisUtxo ← Test.Utils.getOwnTransactionInput
+        -- 1. Initializing the sidechain
+        -------------------------------
+        liftContract $ Log.logInfo'
+          "'Test.MerkleRootChaining.testScenario1': 1. Initializing the sidechain"
+        genesisUtxo ← Test.Utils.getOwnTransactionInput
 
-      let keyCount = 25 -- See partner-chains-smart-contracts#64
-      committee1PrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
-        Utils.Crypto.generatePrivKey
-      let
-        isp =
-          InitSidechain.InitSidechainParams
-            { initChainId: BigInt.fromInt 69_420
-            , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData
-                $ Utils.Crypto.aggregateKeys
-                $ map unwrap
-                $ map
-                    Utils.Crypto.toPubKeyUnsafe
-                    committee1PrvKeys
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority
-                ownPaymentPubKeyHash
-            }
-      { sidechainParams } ← InitSidechain.initSidechain isp 1
+        let keyCount = 25 -- See partner-chains-smart-contracts#64
+        committee1PrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
+          Utils.Crypto.generatePrivKey
+        let
+          isp =
+            InitSidechain.InitSidechainParams
+              { initChainId: BigInt.fromInt 69_420
+              , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
+              , initUtxo: genesisUtxo
+              , initAggregatedCommittee: toData
+                  $ Utils.Crypto.aggregateKeys
+                  $ map unwrap
+                  $ map
+                      Utils.Crypto.toPubKeyUnsafe
+                      committee1PrvKeys
+              , initSidechainEpoch: zero
+              , initThresholdNumerator: BigInt.fromInt 2
+              , initThresholdDenominator: BigInt.fromInt 3
+              , initCandidatePermissionTokenMintInfo: Nothing
+              , initATMSKind: ATMSPlainEcdsaSecp256k1
+              , initGovernanceAuthority: Governance.mkGovernanceAuthority
+                  ownPaymentPubKeyHash
+              }
+        { sidechainParams } ← InitSidechain.initSidechain isp 1
 
-      -- 2. Saving a merkle root.
-      -------------------------------
-      liftContract $ Log.logInfo'
-        "'Test.MerkleRootChaining.testScenario1': 2. saving a merkle root"
-      { merkleRoot: merkleRoot2 } ← Test.MerkleRoot.saveRoot
-        { sidechainParams
-        , merkleTreeEntries:
-            [ MerkleTreeEntry
-                { index: BigInt.fromInt 0
-                , amount: BigInt.fromInt 69
-                , previousMerkleRoot: Nothing
-                , recipient: ownRecipient
-                }
-            ]
-        , currentCommitteePrvKeys: committee1PrvKeys
-        , previousMerkleRoot: Nothing
-        }
+        -- 2. Saving a merkle root.
+        -------------------------------
+        liftContract $ Log.logInfo'
+          "'Test.MerkleRootChaining.testScenario1': 2. saving a merkle root"
+        { merkleRoot: merkleRoot2 } ← Test.MerkleRoot.saveRoot
+          { sidechainParams
+          , merkleTreeEntries:
+              [ MerkleTreeEntry
+                  { index: BigInt.fromInt 0
+                  , amount: BigInt.fromInt 69
+                  , previousMerkleRoot: Nothing
+                  , recipient: ownRecipient
+                  }
+              ]
+          , currentCommitteePrvKeys: committee1PrvKeys
+          , previousMerkleRoot: Nothing
+          }
 
-      -- 3. Updating the committee hash
-      -------------------------------
-      liftContract $ Log.logInfo'
-        "'Test.MerkleRootChaining.testScenario1': 3. updating the committee hash"
-      committee3PrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
-        Utils.Crypto.generatePrivKey
-      env ← ask
-      liftContract $ Test.UpdateCommitteeHash.updateCommitteeHash
-        { sidechainParams
-        , currentCommitteePrvKeys: committee1PrvKeys
-        , newCommitteePrvKeys: committee3PrvKeys
-        , previousMerkleRoot: Just merkleRoot2
-        , sidechainEpoch: BigInt.fromInt 1
-        , env
-        }
+        -- 3. Updating the committee hash
+        -------------------------------
+        liftContract $ Log.logInfo'
+          "'Test.MerkleRootChaining.testScenario1': 3. updating the committee hash"
+        committee3PrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
+          Utils.Crypto.generatePrivKey
+        env ← ask
+        liftContract $ Test.UpdateCommitteeHash.updateCommitteeHash
+          { sidechainParams
+          , currentCommitteePrvKeys: committee1PrvKeys
+          , newCommitteePrvKeys: committee3PrvKeys
+          , previousMerkleRoot: Just merkleRoot2
+          , sidechainEpoch: BigInt.fromInt 1
+          , env
+          }
 
-      -- 4. Updating the committee hash
-      -------------------------------
-      liftContract $ Log.logInfo'
-        "'Test.MerkleRootChaining.testScenario1': 4. updating the committee hash"
-      committee4PrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
-        Utils.Crypto.generatePrivKey
-      liftContract $ Test.UpdateCommitteeHash.updateCommitteeHash
-        { sidechainParams
-        , currentCommitteePrvKeys: committee3PrvKeys
-        , newCommitteePrvKeys: committee4PrvKeys
-        , -- Note: this is the same merkle root as the last committee update.
-          previousMerkleRoot: Just merkleRoot2
-        , sidechainEpoch: BigInt.fromInt 2
-        , env
-        }
+        -- 4. Updating the committee hash
+        -------------------------------
+        liftContract $ Log.logInfo'
+          "'Test.MerkleRootChaining.testScenario1': 4. updating the committee hash"
+        committee4PrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
+          Utils.Crypto.generatePrivKey
+        liftContract $ Test.UpdateCommitteeHash.updateCommitteeHash
+          { sidechainParams
+          , currentCommitteePrvKeys: committee3PrvKeys
+          , newCommitteePrvKeys: committee4PrvKeys
+          , -- Note: this is the same merkle root as the last committee update.
+            previousMerkleRoot: Just merkleRoot2
+          , sidechainEpoch: BigInt.fromInt 2
+          , env
+          }
 
-      -- 5. Saving a merkle root
-      -------------------------------
-      liftContract $ Log.logInfo'
-        "'Test.MerkleRootChaining.testScenario1': 5. saving the merkle root"
-      { merkleRoot: merkleRoot5 } ← Test.MerkleRoot.saveRoot
-        { sidechainParams
-        , merkleTreeEntries:
-            [ MerkleTreeEntry
-                { index: BigInt.fromInt 0
-                , amount: BigInt.fromInt 69
-                , -- Note: this is the same merkle root as used in 4.
-                  previousMerkleRoot: Just merkleRoot2
-                , recipient: ownRecipient
-                }
-            ]
-        , -- Note: the current committee is from 4.
-          currentCommitteePrvKeys: committee4PrvKeys
-        , previousMerkleRoot: Just merkleRoot2
-        }
+        -- 5. Saving a merkle root
+        -------------------------------
+        liftContract $ Log.logInfo'
+          "'Test.MerkleRootChaining.testScenario1': 5. saving the merkle root"
+        { merkleRoot: merkleRoot5 } ← Test.MerkleRoot.saveRoot
+          { sidechainParams
+          , merkleTreeEntries:
+              [ MerkleTreeEntry
+                  { index: BigInt.fromInt 0
+                  , amount: BigInt.fromInt 69
+                  , -- Note: this is the same merkle root as used in 4.
+                    previousMerkleRoot: Just merkleRoot2
+                  , recipient: ownRecipient
+                  }
+              ]
+          , -- Note: the current committee is from 4.
+            currentCommitteePrvKeys: committee4PrvKeys
+          , previousMerkleRoot: Just merkleRoot2
+          }
 
-      -- 6. Saving a merkle root
-      -------------------------------
-      liftContract $ Log.logInfo'
-        "'Test.MerkleRootChaining.testScenario1': 6. saving the merkle root"
-      { merkleRoot: merkleRoot6 } ← Test.MerkleRoot.saveRoot
-        { sidechainParams
-        , merkleTreeEntries:
-            [ MerkleTreeEntry
-                { index: BigInt.fromInt 0
-                , amount: BigInt.fromInt 69
-                , -- Note: this is the same merkle root as used in 5.
-                  previousMerkleRoot: Just merkleRoot5
-                , recipient: ownRecipient
-                }
-            ]
-        , -- Note: the current committee is from 4.
-          currentCommitteePrvKeys:
-            committee4PrvKeys
-        , previousMerkleRoot: Just merkleRoot5
-        }
+        -- 6. Saving a merkle root
+        -------------------------------
+        liftContract $ Log.logInfo'
+          "'Test.MerkleRootChaining.testScenario1': 6. saving the merkle root"
+        { merkleRoot: merkleRoot6 } ← Test.MerkleRoot.saveRoot
+          { sidechainParams
+          , merkleTreeEntries:
+              [ MerkleTreeEntry
+                  { index: BigInt.fromInt 0
+                  , amount: BigInt.fromInt 69
+                  , -- Note: this is the same merkle root as used in 5.
+                    previousMerkleRoot: Just merkleRoot5
+                  , recipient: ownRecipient
+                  }
+              ]
+          , -- Note: the current committee is from 4.
+            currentCommitteePrvKeys:
+              committee4PrvKeys
+          , previousMerkleRoot: Just merkleRoot5
+          }
 
-      -- 7. Updating the committee hash
-      -------------------------------
-      liftContract $ Log.logInfo'
-        "'Test.MerkleRootChaining.testScenario1': 7. updating the committee hash"
-      committee7PrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
-        Utils.Crypto.generatePrivKey
-      liftContract $ Test.UpdateCommitteeHash.updateCommitteeHash
-        { sidechainParams
-        , currentCommitteePrvKeys: committee4PrvKeys
-        , newCommitteePrvKeys: committee7PrvKeys
-        , previousMerkleRoot: Just merkleRoot6
-        , sidechainEpoch: BigInt.fromInt 3
-        , env
-        }
+        -- 7. Updating the committee hash
+        -------------------------------
+        liftContract $ Log.logInfo'
+          "'Test.MerkleRootChaining.testScenario1': 7. updating the committee hash"
+        committee7PrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
+          Utils.Crypto.generatePrivKey
+        liftContract $ Test.UpdateCommitteeHash.updateCommitteeHash
+          { sidechainParams
+          , currentCommitteePrvKeys: committee4PrvKeys
+          , newCommitteePrvKeys: committee7PrvKeys
+          , previousMerkleRoot: Just merkleRoot6
+          , sidechainEpoch: BigInt.fromInt 3
+          , env
+          }
 
-      pure unit
+        pure unit
 
 -- | `testScenario2` demonstrates (should fail)
 -- |    1. Initializing the sidechain with a committee.
@@ -224,118 +226,120 @@ testScenario2 = Mote.Monad.test "Merkle root chaining scenario 2 (should fail)"
       , BigNum.fromInt 100_000_000
       , BigNum.fromInt 100_000_000
       ]
-  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-      ownPaymentPubKeyHash ← getOwnPaymentPubKeyHash
-      let
-        ownRecipient = Test.MerkleRoot.paymentPubKeyHashToBech32Bytes
-          ownPaymentPubKeyHash
+  $ \alice → withUnliftApp "Test.MerkleRootChaining.testScenario2"
+      (Wallet.withKeyWallet alice)
+      do
+        ownPaymentPubKeyHash ← getOwnPaymentPubKeyHash
+        let
+          ownRecipient = Test.MerkleRoot.paymentPubKeyHashToBech32Bytes
+            ownPaymentPubKeyHash
 
-      -- 1. Initializing the sidechain
-      -------------------------------
-      liftContract $ Log.logInfo'
-        "'Test.MerkleRootChaining.testScenario2': 1. Initializing the sidechain"
-      genesisUtxo ← Test.Utils.getOwnTransactionInput
+        -- 1. Initializing the sidechain
+        -------------------------------
+        liftContract $ Log.logInfo'
+          "'Test.MerkleRootChaining.testScenario2': 1. Initializing the sidechain"
+        genesisUtxo ← Test.Utils.getOwnTransactionInput
 
-      let keyCount = 80
-      committee1PrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
-        Utils.Crypto.generatePrivKey
-      let
-        isp =
-          InitSidechain.InitSidechainParams
-            { initChainId: BigInt.fromInt 69_420
-            , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
-            , initUtxo: genesisUtxo
-            , initAggregatedCommittee: toData
-                $ Utils.Crypto.aggregateKeys
-                $ map unwrap
-                $ map
-                    Utils.Crypto.toPubKeyUnsafe
-                    committee1PrvKeys
-            , initSidechainEpoch: zero
-            , initThresholdNumerator: BigInt.fromInt 2
-            , initThresholdDenominator: BigInt.fromInt 3
-            , initCandidatePermissionTokenMintInfo: Nothing
-            , initATMSKind: ATMSPlainEcdsaSecp256k1
-            , initGovernanceAuthority: Governance.mkGovernanceAuthority
-                ownPaymentPubKeyHash
-            }
-      { sidechainParams } ← InitSidechain.initSidechain isp 1
+        let keyCount = 80
+        committee1PrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
+          Utils.Crypto.generatePrivKey
+        let
+          isp =
+            InitSidechain.InitSidechainParams
+              { initChainId: BigInt.fromInt 69_420
+              , initGenesisHash: ByteArray.hexToByteArrayUnsafe "aabbcc"
+              , initUtxo: genesisUtxo
+              , initAggregatedCommittee: toData
+                  $ Utils.Crypto.aggregateKeys
+                  $ map unwrap
+                  $ map
+                      Utils.Crypto.toPubKeyUnsafe
+                      committee1PrvKeys
+              , initSidechainEpoch: zero
+              , initThresholdNumerator: BigInt.fromInt 2
+              , initThresholdDenominator: BigInt.fromInt 3
+              , initCandidatePermissionTokenMintInfo: Nothing
+              , initATMSKind: ATMSPlainEcdsaSecp256k1
+              , initGovernanceAuthority: Governance.mkGovernanceAuthority
+                  ownPaymentPubKeyHash
+              }
+        { sidechainParams } ← InitSidechain.initSidechain isp 1
 
-      -- 2. Saving a merkle root
-      -------------------------------
-      liftContract $ Log.logInfo'
-        "'Test.MerkleRootChaining.testScenario2': 2. saving the merkle root"
-      { merkleRoot: merkleRoot2 } ← Test.MerkleRoot.saveRoot
-        { sidechainParams
-        , merkleTreeEntries:
-            [ MerkleTreeEntry
-                { index: BigInt.fromInt 0
-                , amount: BigInt.fromInt 69
-                , previousMerkleRoot: Nothing
-                , recipient: ownRecipient
+        -- 2. Saving a merkle root
+        -------------------------------
+        liftContract $ Log.logInfo'
+          "'Test.MerkleRootChaining.testScenario2': 2. saving the merkle root"
+        { merkleRoot: merkleRoot2 } ← Test.MerkleRoot.saveRoot
+          { sidechainParams
+          , merkleTreeEntries:
+              [ MerkleTreeEntry
+                  { index: BigInt.fromInt 0
+                  , amount: BigInt.fromInt 69
+                  , previousMerkleRoot: Nothing
+                  , recipient: ownRecipient
+                  }
+              ]
+          , currentCommitteePrvKeys: committee1PrvKeys
+          , previousMerkleRoot: Nothing
+          }
+
+        -- 3. Updating the committee hash with the wrong merkle root.
+        -------------------------------
+        liftContract $ Log.logInfo'
+          "'Test.MerkleRootChaining.testScenario2': 3. updating the committee hash incorrectly"
+        -- create a new committee
+        committee3PrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
+          Utils.Crypto.generatePrivKey
+        let
+          committee1PubKeys = map Utils.Crypto.toPubKeyUnsafe committee1PrvKeys
+          committee3PubKeys = map Utils.Crypto.toPubKeyUnsafe committee3PrvKeys
+        -- the message updates committee1 to be committee3
+
+        { validatorHash: updateCommitteeHashValidatorHash } ←
+          UpdateCommitteeHash.getUpdateCommitteeHashValidator sidechainParams
+
+        -- finally, build the message
+        committee1Message ←
+          Run.note
+            ( GenericInternalError
+                "error 'Test.MerkleRootChaining.testScenario2': failed to serialise and hash update committee hash message"
+            )
+            $ UpdateCommitteeHash.serialiseUchmHash
+            $ UpdateCommitteeHashMessage
+                { sidechainParams: sidechainParams
+                , newAggregatePubKeys: Utils.Crypto.aggregateKeys $ map
+                    unwrap
+                    committee3PubKeys
+                ,
+                  -- Note: since we can trust the committee will sign the "correct" root,
+                  -- we necessarily know that the message that they sign should be
+                  -- the previousMerkleRoot which is `merkleRoot2` in this case.
+                  previousMerkleRoot: Just merkleRoot2
+                , sidechainEpoch: BigInt.fromInt 1
+                , validatorHash: updateCommitteeHashValidatorHash
                 }
-            ]
-        , currentCommitteePrvKeys: committee1PrvKeys
-        , previousMerkleRoot: Nothing
-        }
 
-      -- 3. Updating the committee hash with the wrong merkle root.
-      -------------------------------
-      liftContract $ Log.logInfo'
-        "'Test.MerkleRootChaining.testScenario2': 3. updating the committee hash incorrectly"
-      -- create a new committee
-      committee3PrvKeys ← Run.liftEffect $ sequence $ Array.replicate keyCount
-        Utils.Crypto.generatePrivKey
-      let
-        committee1PubKeys = map Utils.Crypto.toPubKeyUnsafe committee1PrvKeys
-        committee3PubKeys = map Utils.Crypto.toPubKeyUnsafe committee3PrvKeys
-      -- the message updates committee1 to be committee3
-
-      { validatorHash: updateCommitteeHashValidatorHash } ←
-        UpdateCommitteeHash.getUpdateCommitteeHashValidator sidechainParams
-
-      -- finally, build the message
-      committee1Message ←
-        Run.note
-          ( GenericInternalError
-              "error 'Test.MerkleRootChaining.testScenario2': failed to serialise and hash update committee hash message"
-          )
-          $ UpdateCommitteeHash.serialiseUchmHash
-          $ UpdateCommitteeHashMessage
-              { sidechainParams: sidechainParams
+        withUnliftAppPlain Test.Utils.fails
+          $ void
+          $ UpdateCommitteeHash.updateCommitteeHash
+          $
+            UpdateCommitteeHashParams
+              { sidechainParams
               , newAggregatePubKeys: Utils.Crypto.aggregateKeys $ map
                   unwrap
                   committee3PubKeys
+              , aggregateSignature:
+                  PlainEcdsaSecp256k1 $
+                    Array.zip
+                      committee1PubKeys
+                      ( Just <$> Utils.Crypto.multiSign committee1PrvKeys
+                          committee1Message
+                      )
               ,
-                -- Note: since we can trust the committee will sign the "correct" root,
-                -- we necessarily know that the message that they sign should be
-                -- the previousMerkleRoot which is `merkleRoot2` in this case.
-                previousMerkleRoot: Just merkleRoot2
+                -- Note: this is the EVIL thing -- we try to update the
+                -- committee hash without really putting in the previous merkle
+                -- root
+                previousMerkleRoot: Nothing
               , sidechainEpoch: BigInt.fromInt 1
-              , validatorHash: updateCommitteeHashValidatorHash
+              , mNewCommitteeValidatorHash: Nothing
               }
-
-      withUnliftApp Test.Utils.fails
-        $ void
-        $ UpdateCommitteeHash.updateCommitteeHash
-        $
-          UpdateCommitteeHashParams
-            { sidechainParams
-            , newAggregatePubKeys: Utils.Crypto.aggregateKeys $ map
-                unwrap
-                committee3PubKeys
-            , aggregateSignature:
-                PlainEcdsaSecp256k1 $
-                  Array.zip
-                    committee1PubKeys
-                    ( Just <$> Utils.Crypto.multiSign committee1PrvKeys
-                        committee1Message
-                    )
-            ,
-              -- Note: this is the EVIL thing -- we try to update the
-              -- committee hash without really putting in the previous merkle
-              -- root
-              previousMerkleRoot: Nothing
-            , sidechainEpoch: BigInt.fromInt 1
-            , mNewCommitteeValidatorHash: Nothing
-            }

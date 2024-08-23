@@ -26,7 +26,7 @@ import Test.TestnetTest as Test.TestnetTest
 import Test.Utils as Test.Utils
 import TrustlessSidechain.Effects.Contract (liftContract)
 import TrustlessSidechain.Effects.Log (logInfo') as Effect
-import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Run (withUnliftApp, withUnliftAppPlain)
 import TrustlessSidechain.Effects.Transaction
   ( awaitTxConfirmed
   , balanceTx
@@ -61,75 +61,79 @@ testScenario1 = Mote.Monad.test "PoCSerialiseData: testScenario1"
       , BigNum.fromInt 50_000_000
       , BigNum.fromInt 50_000_000
       ]
-  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-      -- 1.
-      let
-        script = decodeTextEnvelope RawScripts.rawPoCSerialiseData >>=
-          plutusScriptFromEnvelope
-
-      validator ← Run.note (InvalidScript "Decoding text envelope failed.") script
-      let
-        scriptHash = PlutusScript.hash validator
-      validatorAddress ← toAddress scriptHash
-      -- Getting this validator's datum is a bit confusing..
-      -- First, we have
-      --  - The integer 69
-      --  - Convert it to Plutus Data
-      --  - Serialise it to cbor (this is ByteArray)
-      --  - Then we need to convert the ByteArray back into PlutusData (the validator's datum must be PlutusData!)
-      let
-        validatorDat = PlutusData.Bytes
-          $ unwrap
-          $ encodeCbor
-          $ PlutusData.Integer
-          $ BigInt.fromInt 69
-
-      -- 2.
-      void do
+  $ \alice → withUnliftApp "Test.PoCSerialiseData.testScenario1"
+      (Wallet.withKeyWallet alice)
+      do
+        -- 1.
         let
-          constraints ∷ TxConstraints
-          constraints = TxConstraints.mustPayToScript scriptHash validatorDat
-            DatumWitness
-            (Value.lovelaceValueOf BigNum.one)
+          script = decodeTextEnvelope RawScripts.rawPoCSerialiseData >>=
+            plutusScriptFromEnvelope
 
-          lookups ∷ ScriptLookups
-          lookups = mempty
-
-        unbalancedTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups
-          constraints
-        balancedTx ← mapError BalanceTxError $ Effect.balanceTx unbalancedTx
-        signedTx ← Effect.signTransaction balancedTx
-        txId ← Effect.submit signedTx
-        Effect.logInfo' $ "Transaction submitted: " <> show txId
-        Effect.awaitTxConfirmed txId
-        Effect.logInfo' $ "Transaction confirmed: " <> show txId
-
-      -- 3.
-      void do
-        (txIn /\ txOut) ← liftContract $ Test.Utils.getUniqueUtxoAt
-          validatorAddress
+        validator ← Run.note (InvalidScript "Decoding text envelope failed.")
+          script
         let
-          validatorRedeemer = RedeemerDatum $ PlutusData.Integer $ BigInt.fromInt
-            69
+          scriptHash = PlutusScript.hash validator
+        validatorAddress ← toAddress scriptHash
+        -- Getting this validator's datum is a bit confusing..
+        -- First, we have
+        --  - The integer 69
+        --  - Convert it to Plutus Data
+        --  - Serialise it to cbor (this is ByteArray)
+        --  - Then we need to convert the ByteArray back into PlutusData (the validator's datum must be PlutusData!)
+        let
+          validatorDat = PlutusData.Bytes
+            $ unwrap
+            $ encodeCbor
+            $ PlutusData.Integer
+            $ BigInt.fromInt 69
 
-          constraints ∷ TxConstraints
-          constraints = TxConstraints.mustSpendScriptOutput txIn validatorRedeemer
+        -- 2.
+        void do
+          let
+            constraints ∷ TxConstraints
+            constraints = TxConstraints.mustPayToScript scriptHash validatorDat
+              DatumWitness
+              (Value.lovelaceValueOf BigNum.one)
 
-          lookups ∷ ScriptLookups
-          lookups = ScriptLookups.unspentOutputs (Map.singleton txIn txOut)
-            <> ScriptLookups.validator validator
-            <> ScriptLookups.datum validatorDat
+            lookups ∷ ScriptLookups
+            lookups = mempty
 
-        unbalancedTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups
-          constraints
-        balancedTx ← mapError BalanceTxError $ Effect.balanceTx unbalancedTx
-        signedTx ← Effect.signTransaction balancedTx
-        txId ← Effect.submit signedTx
-        Effect.logInfo' $ "Transaction submitted: " <> show txId
-        Effect.awaitTxConfirmed txId
-        Effect.logInfo' $ "Transaction confirmed: " <> show txId
+          unbalancedTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups
+            constraints
+          balancedTx ← mapError BalanceTxError $ Effect.balanceTx unbalancedTx
+          signedTx ← Effect.signTransaction balancedTx
+          txId ← Effect.submit signedTx
+          Effect.logInfo' $ "Transaction submitted: " <> show txId
+          Effect.awaitTxConfirmed txId
+          Effect.logInfo' $ "Transaction confirmed: " <> show txId
 
-      pure unit
+        -- 3.
+        void do
+          (txIn /\ txOut) ← liftContract $ Test.Utils.getUniqueUtxoAt
+            validatorAddress
+          let
+            validatorRedeemer = RedeemerDatum $ PlutusData.Integer $ BigInt.fromInt
+              69
+
+            constraints ∷ TxConstraints
+            constraints = TxConstraints.mustSpendScriptOutput txIn
+              validatorRedeemer
+
+            lookups ∷ ScriptLookups
+            lookups = ScriptLookups.unspentOutputs (Map.singleton txIn txOut)
+              <> ScriptLookups.validator validator
+              <> ScriptLookups.datum validatorDat
+
+          unbalancedTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups
+            constraints
+          balancedTx ← mapError BalanceTxError $ Effect.balanceTx unbalancedTx
+          signedTx ← Effect.signTransaction balancedTx
+          txId ← Effect.submit signedTx
+          Effect.logInfo' $ "Transaction submitted: " <> show txId
+          Effect.awaitTxConfirmed txId
+          Effect.logInfo' $ "Transaction confirmed: " <> show txId
+
+        pure unit
 
 -- | `testScenario2` should fail. It is essentially identical to
 -- | `testScenario1`, except for step 3. In full, it does the following
@@ -148,72 +152,76 @@ testScenario2 ∷ TestnetTest
 testScenario2 = Mote.Monad.test "PoCSerialiseData: testScenario2"
   $ Test.TestnetTest.mkTestnetConfigTest
       [ BigNum.fromInt 10_000_000, BigNum.fromInt 10_000_000 ]
-  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-      -- 1.
-      let
-        script = decodeTextEnvelope RawScripts.rawPoCSerialiseData >>=
-          plutusScriptFromEnvelope
-
-      validator ← Run.note (InvalidScript "Decoding text envelope failed.") script
-      let
-        scriptHash = PlutusScript.hash validator
-      validatorAddress ← toAddress scriptHash
-      -- Getting this validator's datum is a bit confusing..
-      -- First, we have
-      --  - The integer 69
-      --  - Convert it to Plutus Data
-      --  - Serialise it to cbor (this is ByteArray)
-      --  - Then we need to convert the ByteArray back into PlutusData (the validator's datum must be PlutusData!)
-      let
-        validatorDat = PlutusData.Bytes
-          $ unwrap
-          $ encodeCbor
-          $ PlutusData.Integer
-          $ BigInt.fromInt 69
-
-      -- 2.
-      void do
+  $ \alice → withUnliftApp "Test.PoCSerialiseData.testScenario2"
+      (Wallet.withKeyWallet alice)
+      do
+        -- 1.
         let
-          constraints ∷ TxConstraints
-          constraints = TxConstraints.mustPayToScript scriptHash validatorDat
-            DatumWitness
-            (Value.lovelaceValueOf BigNum.one)
+          script = decodeTextEnvelope RawScripts.rawPoCSerialiseData >>=
+            plutusScriptFromEnvelope
 
-          lookups ∷ ScriptLookups
-          lookups = mempty
-
-        unbalancedTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups
-          constraints
-        balancedTx ← mapError BalanceTxError $ Effect.balanceTx unbalancedTx
-        signedTx ← Effect.signTransaction balancedTx
-        txId ← Effect.submit signedTx
-        Effect.logInfo' $ "Transaction submitted: " <> show txId
-        Effect.awaitTxConfirmed txId
-        Effect.logInfo' $ "Transaction confirmed: " <> show txId
-
-      -- 3.
-      withUnliftApp (Test.Utils.fails) do
-        (txIn /\ txOut) ← liftContract $ Test.Utils.getUniqueUtxoAt
-          validatorAddress
+        validator ← Run.note (InvalidScript "Decoding text envelope failed.")
+          script
         let
-          -- The only distinct line from `testScenario1`.
-          validatorRedeemer = RedeemerDatum $ PlutusData.Integer $ BigInt.fromInt
-            70
+          scriptHash = PlutusScript.hash validator
+        validatorAddress ← toAddress scriptHash
+        -- Getting this validator's datum is a bit confusing..
+        -- First, we have
+        --  - The integer 69
+        --  - Convert it to Plutus Data
+        --  - Serialise it to cbor (this is ByteArray)
+        --  - Then we need to convert the ByteArray back into PlutusData (the validator's datum must be PlutusData!)
+        let
+          validatorDat = PlutusData.Bytes
+            $ unwrap
+            $ encodeCbor
+            $ PlutusData.Integer
+            $ BigInt.fromInt 69
 
-          constraints ∷ TxConstraints
-          constraints = TxConstraints.mustSpendScriptOutput txIn validatorRedeemer
+        -- 2.
+        void do
+          let
+            constraints ∷ TxConstraints
+            constraints = TxConstraints.mustPayToScript scriptHash validatorDat
+              DatumWitness
+              (Value.lovelaceValueOf BigNum.one)
 
-          lookups ∷ ScriptLookups
-          lookups = ScriptLookups.unspentOutputs (Map.singleton txIn txOut)
-            <> ScriptLookups.validator validator
+            lookups ∷ ScriptLookups
+            lookups = mempty
 
-        unbalancedTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups
-          constraints
-        balancedTx ← mapError BalanceTxError $ Effect.balanceTx unbalancedTx
-        signedTx ← Effect.signTransaction balancedTx
-        txId ← Effect.submit signedTx
-        Effect.logInfo' $ "Transaction submitted: " <> show txId
-        Effect.awaitTxConfirmed txId
-        Effect.logInfo' $ "Transaction confirmed: " <> show txId
+          unbalancedTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups
+            constraints
+          balancedTx ← mapError BalanceTxError $ Effect.balanceTx unbalancedTx
+          signedTx ← Effect.signTransaction balancedTx
+          txId ← Effect.submit signedTx
+          Effect.logInfo' $ "Transaction submitted: " <> show txId
+          Effect.awaitTxConfirmed txId
+          Effect.logInfo' $ "Transaction confirmed: " <> show txId
 
-      pure unit
+        -- 3.
+        withUnliftAppPlain (Test.Utils.fails) do
+          (txIn /\ txOut) ← liftContract $ Test.Utils.getUniqueUtxoAt
+            validatorAddress
+          let
+            -- The only distinct line from `testScenario1`.
+            validatorRedeemer = RedeemerDatum $ PlutusData.Integer $ BigInt.fromInt
+              70
+
+            constraints ∷ TxConstraints
+            constraints = TxConstraints.mustSpendScriptOutput txIn
+              validatorRedeemer
+
+            lookups ∷ ScriptLookups
+            lookups = ScriptLookups.unspentOutputs (Map.singleton txIn txOut)
+              <> ScriptLookups.validator validator
+
+          unbalancedTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups
+            constraints
+          balancedTx ← mapError BalanceTxError $ Effect.balanceTx unbalancedTx
+          signedTx ← Effect.signTransaction balancedTx
+          txId ← Effect.submit signedTx
+          Effect.logInfo' $ "Transaction submitted: " <> show txId
+          Effect.awaitTxConfirmed txId
+          Effect.logInfo' $ "Transaction confirmed: " <> show txId
+
+        pure unit

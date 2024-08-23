@@ -52,54 +52,56 @@ initTokensMintScenario1 =
         , BigNum.fromInt 50_000_000
         ]
     $ \alice →
-        withUnliftApp (Wallet.withKeyWallet alice) do
-          Effect.logInfo' "InitSidechain 'initTokensMintScenario1'"
+        withUnliftApp "Test.InitSidechain.TokensMint.initTokensMintScenario1"
+          (Wallet.withKeyWallet alice)
+          do
+            Effect.logInfo' "InitSidechain 'initTokensMintScenario1'"
 
-          genesisUtxo ← Test.Utils.getOwnTransactionInput
+            genesisUtxo ← Test.Utils.getOwnTransactionInput
 
-          initGovernanceAuthority ←
-            Governance.mkGovernanceAuthority
-              <$> getOwnPaymentPubKeyHash
+            initGovernanceAuthority ←
+              Governance.mkGovernanceAuthority
+                <$> getOwnPaymentPubKeyHash
 
-          let
-            version = 1
-            initATMSKind = ATMSPlainEcdsaSecp256k1
-            sidechainParams = SidechainParams.SidechainParams
-              { chainId: BigInt.fromInt 9
-              , genesisUtxo: genesisUtxo
-              , thresholdNumerator: BigInt.fromInt 2
-              , thresholdDenominator: BigInt.fromInt 3
-              , governanceAuthority: initGovernanceAuthority
-              }
+            let
+              version = 1
+              initATMSKind = ATMSPlainEcdsaSecp256k1
+              sidechainParams = SidechainParams.SidechainParams
+                { chainId: BigInt.fromInt 9
+                , genesisUtxo: genesisUtxo
+                , thresholdNumerator: BigInt.fromInt 2
+                , thresholdDenominator: BigInt.fromInt 3
+                , governanceAuthority: initGovernanceAuthority
+                }
 
-          -- Command being tested
-          void $ InitMint.initTokensMint sidechainParams initATMSKind version
+            -- Command being tested
+            void $ InitMint.initTokensMint sidechainParams initATMSKind version
 
-          -- For computing the number of versionOracle init tokens
-          { versionedPolicies, versionedValidators } ←
-            Versioning.getExpectedVersionedPoliciesAndValidators
-              { atmsKind: initATMSKind
-              , sidechainParams
-              }
-              version
+            -- For computing the number of versionOracle init tokens
+            { versionedPolicies, versionedValidators } ←
+              Versioning.getExpectedVersionedPoliciesAndValidators
+                { atmsKind: initATMSKind
+                , sidechainParams
+                }
+                version
 
-          let
-            expected = expectedInitTokens 0 versionedPolicies versionedValidators
-              [ Checkpoint.checkpointInitTokenName
-              , DistributedSet.dsInitTokenName
-              , CommitteeOraclePolicy.committeeOracleInitTokenName
-              , CandidatePermissionToken.candidatePermissionInitTokenName
-              ]
+            let
+              expected = expectedInitTokens 0 versionedPolicies versionedValidators
+                [ Checkpoint.checkpointInitTokenName
+                , DistributedSet.dsInitTokenName
+                , CommitteeOraclePolicy.committeeOracleInitTokenName
+                , CandidatePermissionToken.candidatePermissionInitTokenName
+                ]
 
-          -- Get the tokens just created
-          { initTokenStatusData: res } ← Init.getInitTokenStatus
-            sidechainParams
+            -- Get the tokens just created
+            { initTokenStatusData: res } ← Init.getInitTokenStatus
+              sidechainParams
 
-          Effect.fromMaybeThrow (GenericInternalError "Unreachable")
-            $ map Just
-            $ liftAff
-            $ assert (failMsg expected res)
-                (unorderedEq expected res)
+            Effect.fromMaybeThrow (GenericInternalError "Unreachable")
+              $ map Just
+              $ liftAff
+              $ assert (failMsg expected res)
+                  (unorderedEq expected res)
 
 -- | Same as `initTokensMintScenario1`, except this
 -- | attempts to mint the tokens twice. The tokens should
@@ -115,64 +117,66 @@ initTokensMintIdempotent =
         , BigNum.fromInt 50_000_000
         ]
     $ \alice →
-        withUnliftApp (Wallet.withKeyWallet alice) do
-          Effect.logInfo' "InitSidechain 'initTokensMintIdempotent'"
+        withUnliftApp "Test.InitSidechain.TokensMint.initTokensMintIdempotent"
+          (Wallet.withKeyWallet alice)
+          do
+            Effect.logInfo' "InitSidechain 'initTokensMintIdempotent'"
 
-          genesisUtxo ← Test.Utils.getOwnTransactionInput
+            genesisUtxo ← Test.Utils.getOwnTransactionInput
 
-          initGovernanceAuthority ←
-            Governance.mkGovernanceAuthority
-              <$> getOwnPaymentPubKeyHash
+            initGovernanceAuthority ←
+              Governance.mkGovernanceAuthority
+                <$> getOwnPaymentPubKeyHash
 
-          let
-            version = 1
-            initATMSKind = ATMSPlainEcdsaSecp256k1
-            sidechainParams = SidechainParams.SidechainParams
-              { chainId: BigInt.fromInt 9
-              , genesisUtxo: genesisUtxo
-              , thresholdNumerator: BigInt.fromInt 2
-              , thresholdDenominator: BigInt.fromInt 3
-              , governanceAuthority: initGovernanceAuthority
-              }
+            let
+              version = 1
+              initATMSKind = ATMSPlainEcdsaSecp256k1
+              sidechainParams = SidechainParams.SidechainParams
+                { chainId: BigInt.fromInt 9
+                , genesisUtxo: genesisUtxo
+                , thresholdNumerator: BigInt.fromInt 2
+                , thresholdDenominator: BigInt.fromInt 3
+                , governanceAuthority: initGovernanceAuthority
+                }
 
-          -- Mint them once
-          void $ InitMint.initTokensMint sidechainParams
-            initATMSKind
-            version
-
-          -- Then do it again.
-          { transactionId } ← InitMint.initTokensMint sidechainParams
-            initATMSKind
-            version
-
-          -- For computing the number of versionOracle init tokens
-          { versionedPolicies, versionedValidators } ←
-            Versioning.getExpectedVersionedPoliciesAndValidators
-              { atmsKind: initATMSKind
-              , sidechainParams
-              }
+            -- Mint them once
+            void $ InitMint.initTokensMint sidechainParams
+              initATMSKind
               version
 
-          let
-            expected = expectedInitTokens 0 versionedPolicies versionedValidators
-              [ Checkpoint.checkpointInitTokenName
-              , DistributedSet.dsInitTokenName
-              , CommitteeOraclePolicy.committeeOracleInitTokenName
-              , CandidatePermissionToken.candidatePermissionInitTokenName
-              ]
+            -- Then do it again.
+            { transactionId } ← InitMint.initTokensMint sidechainParams
+              initATMSKind
+              version
 
-          -- Get the tokens just created
-          { initTokenStatusData: res } ← Init.getInitTokenStatus
-            sidechainParams
+            -- For computing the number of versionOracle init tokens
+            { versionedPolicies, versionedValidators } ←
+              Versioning.getExpectedVersionedPoliciesAndValidators
+                { atmsKind: initATMSKind
+                , sidechainParams
+                }
+                version
 
-          -- Resulting tokens are as expected
-          Effect.fromMaybeThrow (GenericInternalError "Unreachable")
-            $ map Just
-            $ liftAff
-            $ assert (failMsg expected res)
-                (unorderedEq expected res)
+            let
+              expected = expectedInitTokens 0 versionedPolicies versionedValidators
+                [ Checkpoint.checkpointInitTokenName
+                , DistributedSet.dsInitTokenName
+                , CommitteeOraclePolicy.committeeOracleInitTokenName
+                , CandidatePermissionToken.candidatePermissionInitTokenName
+                ]
 
-          Effect.fromMaybeThrow (GenericInternalError "Unreachable")
-            $ map Just
-            $ liftAff
-            $ assert (failMsg "Nothing" transactionId) (isNothing transactionId)
+            -- Get the tokens just created
+            { initTokenStatusData: res } ← Init.getInitTokenStatus
+              sidechainParams
+
+            -- Resulting tokens are as expected
+            Effect.fromMaybeThrow (GenericInternalError "Unreachable")
+              $ map Just
+              $ liftAff
+              $ assert (failMsg expected res)
+                  (unorderedEq expected res)
+
+            Effect.fromMaybeThrow (GenericInternalError "Unreachable")
+              $ map Just
+              $ liftAff
+              $ assert (failMsg "Nothing" transactionId) (isNothing transactionId)

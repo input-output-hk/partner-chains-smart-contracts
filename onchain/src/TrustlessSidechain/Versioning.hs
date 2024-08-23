@@ -62,7 +62,6 @@ import PlutusLedgerApi.V2 (
   CurrencySymbol (CurrencySymbol),
   Datum (Datum),
   OutputDatum (OutputDatum),
-  ScriptContext (ScriptContext),
   ScriptHash (..),
   SerialisedScript,
   TokenName (TokenName),
@@ -70,7 +69,6 @@ import PlutusLedgerApi.V2 (
   TxOut (TxOut),
   serialiseCompiledCode,
  )
-import PlutusLedgerApi.V2.Contexts (txInfoReferenceInputs)
 import PlutusTx qualified
 import TrustlessSidechain.Governance.Admin qualified as Governance
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
@@ -548,7 +546,7 @@ serialisableVersionOracleValidator =
 getVersionedValidatorAddress ::
   VersionOracleConfig ->
   VersionOracle ->
-  ScriptContext ->
+  [TxInInfo] ->
   Address
 getVersionedValidatorAddress voConfig vo =
   scriptHashAddress . ScriptHash . getVersionedScriptHash voConfig vo
@@ -569,10 +567,10 @@ getVersionedValidatorAddressUnsafe voConfig vo =
 getVersionedCurrencySymbol ::
   VersionOracleConfig ->
   VersionOracle ->
-  ScriptContext ->
+  [TxInInfo] ->
   CurrencySymbol
-getVersionedCurrencySymbol voConfig vo sc =
-  CurrencySymbol (getVersionedScriptHash voConfig vo sc)
+getVersionedCurrencySymbol voConfig vo referenceInputs =
+  CurrencySymbol (getVersionedScriptHash voConfig vo referenceInputs)
 
 {-# INLINEABLE getVersionedCurrencySymbolUnsafe #-}
 getVersionedCurrencySymbolUnsafe ::
@@ -594,12 +592,12 @@ getVersionedCurrencySymbolUnsafe voConfig vo sc =
 getVersionedScriptHash ::
   VersionOracleConfig ->
   VersionOracle ->
-  ScriptContext ->
+  [TxInInfo] ->
   BuiltinByteString
 getVersionedScriptHash
   VersionOracleConfig {versionOracleCurrencySymbol}
   versionOracle
-  (ScriptContext txInfo _) =
+  referenceInputs =
     fromSingleton "ERROR-VERSION-CURRENCY-01"
       $ [ hash
         | -- Lookup reference input that:
@@ -611,7 +609,7 @@ getVersionedScriptHash
               (OutputDatum (Datum datum))
               (Just (ScriptHash hash))
             ) <-
-          txInfoReferenceInputs txInfo
+          referenceInputs
         , -- 1. Contains datum that matches desired version and scriptId.
         Just (VersionOracleDatum versionOracle' _) <- [PlutusTx.fromBuiltinData datum]
         , versionOracle' == versionOracle
