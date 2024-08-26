@@ -2,10 +2,6 @@ module Main (main) where
 
 import Contract.Prelude
 
-import Cardano.AsCbor (encodeCbor)
-import Cardano.ToData (toData)
-import Cardano.Types.BigNum as BigNum
-import Contract.CborBytes (cborBytesToByteArray)
 import Contract.Monad (launchAff_)
 import Contract.PlutusData as PlutusData
 import Contract.Prim.ByteArray (ByteArray)
@@ -20,8 +16,6 @@ import Options.Applicative (execParser)
 import Run (EFFECT, Run)
 import TrustlessSidechain.CLIVersion (versionString)
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
-import TrustlessSidechain.Checkpoint as Checkpoint
-import TrustlessSidechain.CommitteeATMSSchemes as CommitteeATMSSchemes
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.ConfigFile as ConfigFile
 import TrustlessSidechain.DParameter as DParameter
@@ -30,23 +24,13 @@ import TrustlessSidechain.Effects.Run (runAppLive)
 import TrustlessSidechain.Effects.Util as Effect
 import TrustlessSidechain.EndpointResp
   ( EndpointResp
-      ( ClaimActRespV1
-      , BurnActRespV1
-      , ClaimActRespV2
-      , BurnActRespV2
-      , CommitteeCandidateRegResp
+      ( CommitteeCandidateRegResp
       , CandidatePermissionTokenResp
       , CommitteeCandidateDeregResp
       , GetAddrsResp
-      , CommitteeHashResp
-      , SaveRootResp
-      , InitCheckpointResp
       , InitCandidatePermissionTokenResp
       , InitTokensMintResp
-      , InitFuelResp
       , InitReserveManagementResp
-      , CommitteeHandoverResp
-      , SaveCheckpointResp
       , InsertVersionResp
       , UpdateVersionResp
       , InvalidateVersionResp
@@ -54,17 +38,11 @@ import TrustlessSidechain.EndpointResp
       , SchnorrSecp256k1KeyGenResp
       , EcdsaSecp256k1SignResp
       , SchnorrSecp256k1SignResp
-      , CborUpdateCommitteeMessageResp
-      , CborMerkleRootInsertionMessageResp
       , CborBlockProducerRegistrationMessageResp
-      , CborMerkleTreeEntryResp
-      , CborMerkleTreeResp
-      , CborCombinedMerkleProofResp
       , CborPlainAggregatePublicKeysResp
       , InsertDParameterResp
       , UpdateDParameterResp
       , UpdatePermissionedCandidatesResp
-      , BurnNFTsResp
       , InitTokenStatusResp
       , ListVersionedScriptsResp
       , ReserveResp
@@ -72,10 +50,6 @@ import TrustlessSidechain.EndpointResp
   , stringifyEndpointResp
   )
 import TrustlessSidechain.Error (OffchainError(NotFoundUtxo))
-import TrustlessSidechain.FUELMintingPolicy.V1 as Mint.V1
-import TrustlessSidechain.FUELMintingPolicy.V2 as Mint.V2
-import TrustlessSidechain.FUELProxyPolicy as FUELProxyPolicy
-import TrustlessSidechain.GarbageCollector as GarbageCollector
 import TrustlessSidechain.GetSidechainAddresses
   ( SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
   )
@@ -87,16 +61,11 @@ import TrustlessSidechain.Governance.MultiSig
 import TrustlessSidechain.InitSidechain.CandidatePermissionToken
   ( initCandidatePermissionToken
   )
-import TrustlessSidechain.InitSidechain.Checkpoint (initCheckpoint)
-import TrustlessSidechain.InitSidechain.FUEL (initFuel)
 import TrustlessSidechain.InitSidechain.Init (getInitTokenStatus)
 import TrustlessSidechain.InitSidechain.NativeTokenManagement
   ( initNativeTokenMgmt
   )
 import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
-import TrustlessSidechain.MerkleRoot (SaveRootParams(SaveRootParams))
-import TrustlessSidechain.MerkleRoot as MerkleRoot
-import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.NativeTokenManagement.Reserve
   ( depositToReserve
   , findOneReserveUtxo
@@ -110,30 +79,19 @@ import TrustlessSidechain.Options.Types
   ( Options(TxOptions, UtilsOptions, CLIVersion)
   , SidechainEndpointParams
   , TxEndpoint
-      ( BurnActV1
-      , BurnActV2
-      , ClaimActV1
-      , ClaimActV2
-      , GetAddrs
+      ( GetAddrs
       , CommitteeCandidateReg
       , CandidiatePermissionTokenAct
       , CommitteeCandidateDereg
-      , CommitteeHash
-      , SaveRoot
-      , InitCheckpoint
       , InitCandidatePermissionToken
       , InitTokensMint
-      , InitFuel
       , InitReserveManagement
-      , CommitteeHandover
-      , SaveCheckpoint
       , InsertVersion2
       , UpdateVersion
       , InvalidateVersion
       , InsertDParameter
       , UpdateDParameter
       , UpdatePermissionedCandidates
-      , BurnNFTs
       , InitTokenStatus
       , ListVersionedScripts
       , CreateReserve
@@ -147,21 +105,12 @@ import TrustlessSidechain.Options.Types
       , SchnorrSecp256k1KeyGenAct
       , EcdsaSecp256k1SignAct
       , SchnorrSecp256k1SignAct
-      , CborUpdateCommitteeMessageAct
       , CborBlockProducerRegistrationMessageAct
-      , CborMerkleRootInsertionMessageAct
-      , CborMerkleTreeEntryAct
-      , CborMerkleTreeAct
-      , CborCombinedMerkleProofAct
       , CborPlainAggregatePublicKeysAct
       )
   )
 import TrustlessSidechain.PermissionedCandidates as PermissionedCandidates
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
-import TrustlessSidechain.UpdateCommitteeHash
-  ( UpdateCommitteeHashParams(UpdateCommitteeHashParams)
-  )
-import TrustlessSidechain.UpdateCommitteeHash as UpdateCommitteeHash
 import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
 import TrustlessSidechain.Utils.Transaction
@@ -239,65 +188,8 @@ runTxEndpoint ∷
 runTxEndpoint sidechainEndpointParams endpoint =
   let
     scParams = (unwrap sidechainEndpointParams).sidechainParams
-    atmsKind = (unwrap sidechainEndpointParams).atmsKind
   in
     case endpoint of
-      ClaimActV1
-        { amount, recipient, merkleProof, index, previousMerkleRoot, dsUtxo } →
-        FUELProxyPolicy.mkFuelProxyMintLookupsAndConstraints scParams
-          ( FUELProxyPolicy.FuelMintParamsV1 $ Mint.V1.FuelMintParams
-              { amount
-              , recipient
-              , sidechainParams: scParams
-              , merkleProof
-              , index
-              , previousMerkleRoot
-              , dsUtxo
-              }
-          )
-          >>= balanceSignAndSubmit "ClaimActV1"
-          <#> txHashToByteArray
-          >>> { transactionId: _ }
-          >>> ClaimActRespV1
-
-      BurnActV1 { amount, recipient } →
-        FUELProxyPolicy.mkFuelProxyBurnLookupsAndConstraints
-          { amount
-          , recipient
-          , sidechainParams: scParams
-          , version: BigNum.fromInt 1
-          }
-          >>= balanceSignAndSubmit "BurnActV1"
-          <#> txHashToByteArray
-          >>> { transactionId: _ }
-          >>>
-            BurnActRespV1
-
-      ClaimActV2
-        { amount } →
-        FUELProxyPolicy.mkFuelProxyMintLookupsAndConstraints scParams
-          ( FUELProxyPolicy.FuelMintParamsV2 $ Mint.V2.FuelMintParams
-              { amount
-              }
-          )
-          >>= balanceSignAndSubmit "ClaimActV2"
-          <#> txHashToByteArray
-          >>> { transactionId: _ }
-          >>> ClaimActRespV2
-
-      BurnActV2 { amount, recipient } →
-        FUELProxyPolicy.mkFuelProxyBurnLookupsAndConstraints
-          { amount
-          , recipient
-          , sidechainParams: scParams
-          , version: BigNum.fromInt 2
-          }
-          >>= balanceSignAndSubmit "BurnActV2"
-          <#> txHashToByteArray
-          >>> { transactionId: _ }
-          >>>
-            BurnActRespV2
-
       CommitteeCandidateReg
         { stakeOwnership
         , sidechainPubKey
@@ -347,91 +239,10 @@ runTxEndpoint sidechainEndpointParams endpoint =
         sidechainAddresses ← GetSidechainAddresses.getSidechainAddresses
           $ SidechainAddressesEndpointParams
               { sidechainParams: scParams
-              , atmsKind
               , usePermissionToken: extraInfo.usePermissionToken
               , version: extraInfo.version
               }
         pure $ GetAddrsResp { sidechainAddresses }
-
-      CommitteeHash
-        { newCommitteePubKeysInput
-        , committeeSignaturesInput
-        , previousMerkleRoot
-        , sidechainEpoch
-        , mNewCommitteeValidatorHash
-        } → do
-        committeeSignatures ← ConfigFile.getCommitteeSignatures
-          committeeSignaturesInput
-        aggregateSignature ←
-          CommitteeATMSSchemes.toATMSAggregateSignatures
-            { atmsKind
-            , committeePubKeyAndSigs: NonEmpty.toUnfoldable committeeSignatures
-            }
-
-        rawNewCommitteePubKeys ← ConfigFile.getCommittee newCommitteePubKeysInput
-
-        newAggregatePubKeys ←
-          CommitteeATMSSchemes.aggregateATMSPublicKeys
-            { atmsKind
-            , committeePubKeys: NonEmpty.toUnfoldable rawNewCommitteePubKeys
-            }
-        let
-          params = UpdateCommitteeHashParams
-            { sidechainParams: scParams
-            , newAggregatePubKeys: newAggregatePubKeys
-            , aggregateSignature
-            , previousMerkleRoot
-            , sidechainEpoch
-            , mNewCommitteeValidatorHash
-            }
-        UpdateCommitteeHash.updateCommitteeHash params
-          <#> txHashToByteArray
-          >>> { transactionId: _ }
-          >>> CommitteeHashResp
-
-      SaveRoot { merkleRoot, previousMerkleRoot, committeeSignaturesInput } → do
-        committeeSignatures ← ConfigFile.getCommitteeSignatures
-          committeeSignaturesInput
-        aggregateSignature ←
-          CommitteeATMSSchemes.toATMSAggregateSignatures
-            { atmsKind
-            , committeePubKeyAndSigs: NonEmpty.toUnfoldable committeeSignatures
-            }
-        let
-          params = SaveRootParams
-            { sidechainParams: scParams
-            , merkleRoot
-            , previousMerkleRoot
-            , aggregateSignature
-            }
-        MerkleRoot.saveRoot params
-          <#> txHashToByteArray
-          >>> { transactionId: _ }
-          >>> SaveRootResp
-      InitCheckpoint
-        { genesisHash
-        , version
-        } → do
-        let
-          sc = unwrap scParams
-          sidechainParams =
-            SidechainParams
-              { chainId: sc.chainId
-              , genesisUtxo: sc.genesisUtxo
-              , thresholdNumerator: sc.thresholdNumerator
-              , thresholdDenominator: sc.thresholdDenominator
-              , governanceAuthority: sc.governanceAuthority
-              }
-
-        resp ← initCheckpoint
-          sidechainParams
-          genesisHash
-          atmsKind
-          version
-        pure $ InitCheckpointResp
-          { scriptsInitTxIds: map txHashToByteArray resp.scriptsInitTxIds
-          , tokensInitTxId: map txHashToByteArray resp.tokensInitTxId
-          }
 
       InitTokensMint
         { version } →
@@ -440,7 +251,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
           , sidechainParams
           , sidechainAddresses
           } ←
-            initTokensMint scParams atmsKind version
+            initTokensMint scParams version
 
           pure $ InitTokensMintResp
             { transactionId: map txHashToByteArray transactionId
@@ -457,125 +268,19 @@ runTxEndpoint sidechainEndpointParams endpoint =
           { initTransactionId: map txHashToByteArray resp
           }
 
-      InitFuel { initSidechainEpoch, committeePubKeysInput, version } → do
-        rawCommitteePubKeys ← ConfigFile.getCommittee
-          committeePubKeysInput
-
-        committeePubKeys ← CommitteeATMSSchemes.aggregateATMSPublicKeys
-          { atmsKind
-          , committeePubKeys: NonEmpty.toUnfoldable rawCommitteePubKeys
-          }
-
-        resp ←
-          initFuel scParams
-            initSidechainEpoch
-            committeePubKeys
-            atmsKind
-            version
-
-        pure $ InitFuelResp
-          { scriptsInitTxIds: map txHashToByteArray resp.scriptsInitTxIds
-          , tokensInitTxId: map txHashToByteArray resp.tokensInitTxId
-          }
-
       InitReserveManagement { version } → do
-        resp ← initNativeTokenMgmt scParams atmsKind version
+        resp ← initNativeTokenMgmt scParams version
 
         pure $ InitReserveManagementResp
           { scriptsInitTxIds: map txHashToByteArray resp.scriptsInitTxIds
           }
-
-      CommitteeHandover
-        { merkleRoot
-        , previousMerkleRoot
-        , newCommitteePubKeysInput
-        , newCommitteeSignaturesInput
-        , newMerkleRootSignaturesInput
-        , sidechainEpoch
-        , mNewCommitteeValidatorHash
-        } → do
-
-        newCommitteeSignatures ← ConfigFile.getCommitteeSignatures
-          newCommitteeSignaturesInput
-        newCommitteeAggregateSignature ←
-          CommitteeATMSSchemes.toATMSAggregateSignatures
-            { atmsKind
-            , committeePubKeyAndSigs: NonEmpty.toUnfoldable newCommitteeSignatures
-            }
-
-        newMerkleRootSignatures ← ConfigFile.getCommitteeSignatures
-          newMerkleRootSignaturesInput
-        newMerkleRootAggregateSignature ←
-          CommitteeATMSSchemes.toATMSAggregateSignatures
-            { atmsKind
-            , committeePubKeyAndSigs: NonEmpty.toUnfoldable newMerkleRootSignatures
-            }
-
-        rawNewCommitteePubKeys ← ConfigFile.getCommittee newCommitteePubKeysInput
-
-        newAggregatePubKeys ←
-          CommitteeATMSSchemes.aggregateATMSPublicKeys
-            { atmsKind
-            , committeePubKeys: NonEmpty.toUnfoldable rawNewCommitteePubKeys
-            }
-
-        let
-          saveRootParams = SaveRootParams
-            { sidechainParams: scParams
-            , merkleRoot
-            , previousMerkleRoot
-            , aggregateSignature: newMerkleRootAggregateSignature
-            }
-          uchParams = UpdateCommitteeHashParams
-            { sidechainParams: scParams
-            , newAggregatePubKeys:
-                newAggregatePubKeys
-            , aggregateSignature: newCommitteeAggregateSignature
-            , -- the previous merkle root is the merkle root we just saved..
-              previousMerkleRoot: Just merkleRoot
-            , sidechainEpoch
-            , mNewCommitteeValidatorHash
-            }
-        saveRootTransactionId ← txHashToByteArray <$> MerkleRoot.saveRoot
-          saveRootParams
-        committeeHashTransactionId ← txHashToByteArray <$>
-          UpdateCommitteeHash.updateCommitteeHash uchParams
-        pure $ CommitteeHandoverResp
-          { saveRootTransactionId, committeeHashTransactionId }
-
-      SaveCheckpoint
-        { committeeSignaturesInput
-        , newCheckpointBlockHash
-        , newCheckpointBlockNumber
-        , sidechainEpoch
-        } → do
-
-        committeeSignatures ← ConfigFile.getCommitteeSignatures
-          committeeSignaturesInput
-        aggregateSignature ←
-          CommitteeATMSSchemes.toATMSAggregateSignatures
-            { atmsKind
-            , committeePubKeyAndSigs: NonEmpty.toUnfoldable committeeSignatures
-            }
-        let
-          params = Checkpoint.CheckpointEndpointParam
-            { sidechainParams: scParams
-            , aggregateSignature
-            , newCheckpointBlockHash
-            , newCheckpointBlockNumber
-            , sidechainEpoch
-            }
-        Checkpoint.saveCheckpoint params
-          <#> txHashToByteArray
-          >>> { transactionId: _ }
-          >>> SaveCheckpointResp
 
       -- TODO: sanitize version arguments here, making sure they are not negative
       -- (or perhaps come from a known range of versions?).  See Issue #9
       -- Version hardcoded to 2 here, since that is the only valid choice currently.
       -- See Note [Supporting version insertion beyond version 2]
       InsertVersion2 → do
-        txIds ← Versioning.insertVersion { sidechainParams: scParams, atmsKind } 2
+        txIds ← Versioning.insertVersion scParams 2
         let versioningTransactionIds = map txHashToByteArray txIds
         pure $ InsertVersionResp { versioningTransactionIds }
 
@@ -583,7 +288,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
         { oldVersion
         , newVersion
         } → do
-        txIds ← Versioning.updateVersion { sidechainParams: scParams, atmsKind }
+        txIds ← Versioning.updateVersion scParams
           oldVersion
           newVersion
         let versioningTransactionIds = map txHashToByteArray txIds
@@ -593,7 +298,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
         { version
         } → do
         txIds ← Versioning.invalidateVersion
-          { sidechainParams: scParams, atmsKind }
+          scParams
           version
         let versioningTransactionIds = map txHashToByteArray txIds
         pure $ InvalidateVersionResp { versioningTransactionIds }
@@ -636,20 +341,13 @@ runTxEndpoint sidechainEndpointParams endpoint =
           >>> { transactionId: _ }
           >>> UpdatePermissionedCandidatesResp
 
-      BurnNFTs →
-        GarbageCollector.mkBurnNFTsLookupsAndConstraints scParams
-          >>= balanceSignAndSubmit "BurnNFTs"
-          <#> txHashToByteArray
-          >>> { transactionId: _ }
-          >>> BurnNFTsResp
-
       InitTokenStatus → map InitTokenStatusResp (getInitTokenStatus scParams)
 
       ListVersionedScripts
         { version } →
         map ListVersionedScriptsResp
           ( Versioning.getActualVersionedPoliciesAndValidators
-              { sidechainParams: scParams, atmsKind }
+              scParams
               version
           )
 
@@ -747,15 +445,6 @@ runUtilsEndpoint = case _ of
         , signature
         , signedMessage: realMessage
         }
-  CborUpdateCommitteeMessageAct
-    { updateCommitteeHashMessage
-    } → do
-    let
-      plutusData = PlutusData.toData updateCommitteeHashMessage
-    pure $
-      CborUpdateCommitteeMessageResp
-        { plutusData
-        }
 
   CborBlockProducerRegistrationMessageAct
     { blockProducerRegistrationMsg
@@ -769,67 +458,7 @@ runUtilsEndpoint = case _ of
         CborBlockProducerRegistrationMessageResp
           { plutusData
           }
-  CborMerkleTreeEntryAct
-    { merkleTreeEntry
-    } →
-    let
-      plutusData =
-        PlutusData.toData $ merkleTreeEntry
-    in
-      pure $
-        CborMerkleTreeEntryResp
-          { plutusData
-          }
 
-  CborMerkleTreeAct
-    { merkleTreeEntries
-    } → do
-    merkleTree ←
-      case
-        MerkleTree.fromList
-          $ map (cborBytesToByteArray <<< encodeCbor <<< toData)
-          $ Data.List.Types.toList merkleTreeEntries
-        of
-        Left err → throwError $ error err
-        Right x → pure x
-    let merkleRootHash = MerkleTree.rootHash merkleTree
-    pure $
-      CborMerkleTreeResp
-        { merkleTree
-        , merkleRootHash
-        }
-
-  CborMerkleRootInsertionMessageAct
-    { merkleRootInsertionMessage
-    } → do
-    let plutusData = PlutusData.toData $ merkleRootInsertionMessage
-    pure $
-      CborMerkleRootInsertionMessageResp
-        { plutusData
-        }
-
-  CborCombinedMerkleProofAct
-    { merkleTreeEntry
-    , merkleTree
-    } →
-    let
-      cborMerkleTreeEntry = cborBytesToByteArray $ encodeCbor $ toData
-        merkleTreeEntry
-    in
-      case MerkleTree.lookupMp cborMerkleTreeEntry merkleTree of
-        Just merkleProof → do
-          let
-            combinedMerkleProof =
-              Mint.V1.CombinedMerkleProof
-                { transaction: merkleTreeEntry
-                , merkleProof
-                }
-          pure $
-            CborCombinedMerkleProofResp
-              { combinedMerkleProof
-              }
-        Nothing → throwError $ error
-          "Merkle tree entry was not in the provided Merkle tree"
   CborPlainAggregatePublicKeysAct
     { publicKeys
     } →

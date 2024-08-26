@@ -15,7 +15,7 @@
   , "const"
   , "control"
   , "datetime"
-  , "effect"
+  , "debug"
   , "either"
   , "exceptions"
   , "foldable-traversable"
@@ -49,7 +49,6 @@
   , "tuples"
   , "typelevel-prelude"
   , "uint"
-  , "unfoldable"
   , "uplc-apply-args"
   ]
 , packages = ./packages.dhall

@@ -1,16 +1,12 @@
 module TrustlessSidechain.Versioning
   ( getActualVersionedPoliciesAndValidators
   , getCommitteeSelectionPoliciesAndValidators
-  , getCheckpointPoliciesAndValidators
   , getExpectedVersionedPoliciesAndValidators
   , initializeVersion
   , insertVersion
   , invalidateVersion
   , mintVersionInitTokens
   , updateVersion
-  , getFuelPoliciesAndValidators
-  , getDsPoliciesAndValidators
-  , getMerkleRootPoliciesAndValidators
   , getNativeTokenManagementPoliciesAndValidators
   ) where
 
@@ -36,9 +32,9 @@ import Data.List (List)
 import Data.List as List
 import Data.Map as Map
 import Data.Set as Set
+import Debug (trace)
 import Run (Run)
 import Run.Except (EXCEPT, throw)
-import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Env (Env, READER)
 import TrustlessSidechain.Effects.Log (logDebug', logInfo')
@@ -65,17 +61,15 @@ import Type.Row (type (+))
 -- | protocol version.
 mintVersionInitTokens ∷
   ∀ r.
-  { sidechainParams ∷ SidechainParams
-  , atmsKind ∷ ATMSKinds
-  } →
+  SidechainParams →
   Int →
   Run (READER Env + EXCEPT OffchainError + WALLET + r)
     { lookups ∷ ScriptLookups
     , constraints ∷ TxConstraints
     }
-mintVersionInitTokens { sidechainParams, atmsKind } version = do
+mintVersionInitTokens sidechainParams version = do
   { versionedPolicies, versionedValidators } ←
-    getExpectedVersionedPoliciesAndValidators { sidechainParams, atmsKind }
+    getExpectedVersionedPoliciesAndValidators sidechainParams
       version
 
   let
@@ -94,15 +88,13 @@ mintVersionInitTokens { sidechainParams, atmsKind } version = do
 
 initializeVersion ∷
   ∀ r.
-  { sidechainParams ∷ SidechainParams
-  , atmsKind ∷ ATMSKinds
-  } →
+  SidechainParams →
   Int →
   Run (APP + r)
     (Array TransactionHash)
-initializeVersion { sidechainParams, atmsKind } version = do
+initializeVersion sidechainParams version = do
   { versionedPolicies, versionedValidators } ←
-    getExpectedVersionedPoliciesAndValidators { sidechainParams, atmsKind }
+    getExpectedVersionedPoliciesAndValidators sidechainParams
       version
 
   validatorsTxIds ←
@@ -151,13 +143,11 @@ initializeVersion { sidechainParams, atmsKind } version = do
 -- | If a script is already present for `version`, do not try to re-insert it.
 insertVersion ∷
   ∀ r.
-  { sidechainParams ∷ SidechainParams
-  , atmsKind ∷ ATMSKinds
-  } →
+  SidechainParams →
   Int →
   Run (APP + r)
     (Array TransactionHash)
-insertVersion { sidechainParams, atmsKind } version = do
+insertVersion sidechainParams version = do
   let
     prevVersion = version - 1
 
@@ -189,21 +179,21 @@ insertVersion { sidechainParams, atmsKind } version = do
   , versionedValidators: prevVersionedValidators
   } ←
     getActualVersionedPoliciesAndValidators
-      { sidechainParams, atmsKind }
+      sidechainParams
       prevVersion
 
   { versionedPolicies: actualVersionedPolicies
   , versionedValidators: actualVersionedValidators
   } ←
     getActualVersionedPoliciesAndValidators
-      { sidechainParams, atmsKind }
+      sidechainParams
       version
 
   { versionedPolicies: expectedVersionedPolicies
   , versionedValidators: expectedVersionedValidators
   } ←
     getExpectedVersionedPoliciesAndValidators
-      { sidechainParams, atmsKind }
+      sidechainParams
       version
 
   -- Compute sets of policies / validators to insert.
@@ -250,15 +240,13 @@ insertVersion { sidechainParams, atmsKind } version = do
 
 invalidateVersion ∷
   ∀ r.
-  { sidechainParams ∷ SidechainParams
-  , atmsKind ∷ ATMSKinds
-  } →
+  SidechainParams →
   Int →
   Run (APP + r) (Array TransactionHash)
-invalidateVersion { sidechainParams, atmsKind } version = do
+invalidateVersion sidechainParams version = do
   { versionedPolicies, versionedValidators } ←
     getExpectedVersionedPoliciesAndValidators
-      { sidechainParams, atmsKind }
+      sidechainParams
       version
 
   validatorsTxIds ←
@@ -282,21 +270,19 @@ invalidateVersion { sidechainParams, atmsKind } version = do
 
 updateVersion ∷
   ∀ r.
-  { sidechainParams ∷ SidechainParams
-  , atmsKind ∷ ATMSKinds
-  } →
+  SidechainParams →
   Int → -- old version
   Int → -- new version
   Run (APP + r) (Array TransactionHash)
-updateVersion { sidechainParams, atmsKind } oldVersion newVersion = do
+updateVersion sidechainParams oldVersion newVersion = do
   { versionedPolicies: oldVersionedPolicies
   , versionedValidators: oldVersionedValidators
-  } ← getExpectedVersionedPoliciesAndValidators { sidechainParams, atmsKind }
+  } ← getExpectedVersionedPoliciesAndValidators sidechainParams
     oldVersion
 
   { versionedPolicies: newVersionedPolicies
   , versionedValidators: newVersionedValidators
-  } ← getExpectedVersionedPoliciesAndValidators { sidechainParams, atmsKind }
+  } ← getExpectedVersionedPoliciesAndValidators sidechainParams
     newVersion
 
   newValidatorsTxIds ←
@@ -342,47 +328,30 @@ updateVersion { sidechainParams, atmsKind } oldVersion newVersion = do
 -- See Note [Expected vs actual versioned policies and validators]
 getExpectedVersionedPoliciesAndValidators ∷
   ∀ r.
-  { sidechainParams ∷ SidechainParams
-  , atmsKind ∷ ATMSKinds
-  } →
+  SidechainParams →
   Int →
   Run (READER Env + EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }
-getExpectedVersionedPoliciesAndValidators { sidechainParams, atmsKind } version =
+getExpectedVersionedPoliciesAndValidators sidechainParams version =
   case version of
-    1 → V1.getVersionedPoliciesAndValidators { sidechainParams, atmsKind }
+    1 → V1.getVersionedPoliciesAndValidators sidechainParams
     2 → V2.getVersionedPoliciesAndValidators sidechainParams
     _ → throw $ GenericInternalError ("Invalid version: " <> show version)
 
 getCommitteeSelectionPoliciesAndValidators ∷
   ∀ r.
-  ATMSKinds →
   SidechainParams →
   Int →
   Run (EXCEPT OffchainError + WALLET + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }
-getCommitteeSelectionPoliciesAndValidators atmsKind sidechainParams version = do
+getCommitteeSelectionPoliciesAndValidators sidechainParams version = do
   case version of
-    1 → V1.getCommitteeSelectionPoliciesAndValidators atmsKind sidechainParams
+    1 → V1.getCommitteeSelectionPoliciesAndValidators sidechainParams
     2 → V2.getCommitteeSelectionPoliciesAndValidators sidechainParams
-    _ → throw $ GenericInternalError ("Invalid version: " <> show version)
-
-getCheckpointPoliciesAndValidators ∷
-  ∀ r.
-  SidechainParams →
-  Int →
-  Run (EXCEPT OffchainError + WALLET + r)
-    { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
-    , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
-    }
-getCheckpointPoliciesAndValidators sidechainParams version = do
-  case version of
-    1 → V1.getCheckpointPoliciesAndValidators sidechainParams
-    2 → V2.getCheckpointPoliciesAndValidators sidechainParams
     _ → throw $ GenericInternalError ("Invalid version: " <> show version)
 
 getNativeTokenManagementPoliciesAndValidators ∷
@@ -406,16 +375,14 @@ getNativeTokenManagementPoliciesAndValidators sidechainParams version = do
 -- Used in the 'ListVersionedScripts' endpoint.
 getActualVersionedPoliciesAndValidators ∷
   ∀ r.
-  { sidechainParams ∷ SidechainParams
-  , atmsKind ∷ ATMSKinds
-  } →
+  SidechainParams →
   Int →
   Run (READER Env + EXCEPT OffchainError + TRANSACTION + WALLET + r)
     { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
     }
 
-getActualVersionedPoliciesAndValidators { sidechainParams, atmsKind } version =
+getActualVersionedPoliciesAndValidators sidechainParams version =
   do
     vValidator ← versionOracleValidator sidechainParams
 
@@ -425,7 +392,7 @@ getActualVersionedPoliciesAndValidators { sidechainParams, atmsKind } version =
 
     -- Get scripts that should be versioned
     { versionedPolicies, versionedValidators } ←
-      getExpectedVersionedPoliciesAndValidators { sidechainParams, atmsKind }
+      getExpectedVersionedPoliciesAndValidators sidechainParams
         version
 
     -- Create Map of type 'Map ScriptHash (ScriptId, Script)' for fast retrieval
@@ -468,56 +435,18 @@ getActualVersionedPoliciesAndValidators { sidechainParams, atmsKind } version =
             (\scriptHash → Map.lookup scriptHash versionedValidatorsIndexedByHash)
             actualVersionedScriptHashes
 
+    trace ("00: " <> show version) $ \_ → pure unit
+    trace
+      ( "AA: " <> show (length actualVersionedPolicies ∷ Int) <> "\nBB: " <> show
+          (actualVersionedValidators)
+      ) $ \_ → pure unit
+    trace ("CC: " <> show (length actualVersionedScriptHashes ∷ Int)) $ \_ → pure
+      unit
+
     pure
       { versionedPolicies: actualVersionedPolicies
       , versionedValidators: actualVersionedValidators
       }
-
--- | Get versioned policies and validators for
--- | FUEL minting and burning.
-getFuelPoliciesAndValidators ∷
-  ∀ r.
-  SidechainParams →
-  Int →
-  Run (EXCEPT OffchainError + WALLET + r)
-    { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
-    , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
-    }
-getFuelPoliciesAndValidators sidechainParams version =
-  case version of
-    1 → V1.getFuelPoliciesAndValidators sidechainParams
-    2 → V2.getFuelPoliciesAndValidators sidechainParams
-    _ → throw $ GenericInternalError ("Invalid version: " <> show version)
-
--- | Get versioned policies and validators for
--- | Ds* script ids.
-getDsPoliciesAndValidators ∷
-  ∀ r.
-  SidechainParams →
-  Int →
-  Run (EXCEPT OffchainError + WALLET + r)
-    { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
-    , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
-    }
-getDsPoliciesAndValidators sidechainParams version =
-  case version of
-    1 → V1.getDsPoliciesAndValidators sidechainParams
-    2 → V2.getDsPoliciesAndValidators sidechainParams
-    _ → throw $ GenericInternalError ("Invalid version: " <> show version)
-
-getMerkleRootPoliciesAndValidators ∷
-  ∀ r.
-  SidechainParams →
-  Int →
-  Run (EXCEPT OffchainError + WALLET + r)
-    { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
-    , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
-    }
-getMerkleRootPoliciesAndValidators sidechainParams version =
-  case version of
-    1 → V1.getMerkleRootPoliciesAndValidators sidechainParams
-    2 → V2.getMerkleRootPoliciesAndValidators sidechainParams
-    _ → throw $ GenericInternalError ("Invalid version: " <> show version)
 
 -- Note [Expected vs actual versioned policies and validators]
 --

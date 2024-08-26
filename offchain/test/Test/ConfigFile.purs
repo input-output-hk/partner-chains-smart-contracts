@@ -15,9 +15,6 @@ import Partial.Unsafe (unsafePartial)
 import Test.Unit (Test)
 import Test.Unit.Assert (shouldEqual)
 import Test.Utils (WrappedTests, pureGroup)
-import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
-  )
 import TrustlessSidechain.ConfigFile (readConfigJson)
 
 type ConfigFileTest = Mote (Const Void) Test Unit
@@ -73,7 +70,6 @@ test1 =
                               )
                           )
                       , threshold: (Just { denominator: 3, numerator: 2 })
-                      , atmsKind: Just ATMSPlainEcdsaSecp256k1
                       , governanceAuthority: hexToByteArray
                           "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
                       }

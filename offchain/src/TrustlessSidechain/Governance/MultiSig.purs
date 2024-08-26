@@ -106,7 +106,7 @@ instance FromData MultiSigGovRedeemer where
 instance Show MultiSigGovRedeemer where
   show = genericShow
 
--- | A name for the checkpoint initialization token.  Must be unique among
+-- | A name for the multiSigGov initialization token.  Must be unique among
 -- | initialization tokens.
 multisigGovTokenName ∷ TokenName
 multisigGovTokenName = emptyAssetName

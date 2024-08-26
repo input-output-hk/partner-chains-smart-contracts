@@ -32,25 +32,16 @@ import System.IO qualified as IO
 import System.IO.Error qualified as Error
 import TrustlessSidechain.AlwaysPassingScripts qualified as AlwaysPassing
 import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as CandidatePermissionMintingPolicy
-import TrustlessSidechain.CheckpointValidator qualified as CheckpointValidator
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
-import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy qualified as CommitteePlainEcdsaSecp256k1ATMSPolicy
-import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy qualified as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import TrustlessSidechain.DParameter qualified as DParameter
-import TrustlessSidechain.DistributedSet qualified as DistributedSet
-import TrustlessSidechain.FUELMintingPolicy qualified as FUELMintingPolicy
-import TrustlessSidechain.FUELProxyPolicy qualified as FUELProxyPolicy
 import TrustlessSidechain.Governance.MultiSig qualified as MultiSig
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.IlliquidCirculationSupply qualified as IlliquidCirculationSupply
 import TrustlessSidechain.InitToken qualified as InitToken
-import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRootTokenMintingPolicy
-import TrustlessSidechain.MerkleRootTokenValidator qualified as MerkleRootTokenValidator
 import TrustlessSidechain.OnlyMintMintingPolicy as OnlyMintMintingPolicy
 import TrustlessSidechain.PermissionedCandidates qualified as PermissionedCandidates
 import TrustlessSidechain.Reserve qualified as Reserve
 import TrustlessSidechain.ScriptCache qualified as ScriptCache
-import TrustlessSidechain.UpdateCommitteeHash qualified as UpdateCommitteeHash
 import TrustlessSidechain.Utils (scriptToPlutusScript)
 import TrustlessSidechain.Versioning qualified as Versioning
 
@@ -237,11 +228,7 @@ main =
   getOpts >>= \options ->
     -- See Note [Serialized script names]
     let plutusScripts =
-          [ ("FUELMintingPolicy", FUELMintingPolicy.serialisableMintingPolicy)
-          , ("FUELBurningPolicy", FUELMintingPolicy.serialisableBurningPolicy)
-          , ("MerkleRootTokenValidator", MerkleRootTokenValidator.serialisableValidator)
-          , ("MerkleRootTokenPolicy", MerkleRootTokenMintingPolicy.serialisableMintingPolicy)
-          ,
+          [
             ( "CommitteeCandidateValidator"
             , CommitteeCandidateValidator.serialisableValidator
             )
@@ -249,40 +236,15 @@ main =
             ( "CandidatePermissionPolicy"
             , CandidatePermissionMintingPolicy.serialisableCandidatePermissionMintingPolicy
             )
-          ,
-            ( "CommitteeOraclePolicy"
-            , UpdateCommitteeHash.serialisableCommitteeOraclePolicy
-            )
-          ,
-            ( "CommitteeHashValidator"
-            , UpdateCommitteeHash.serialisableCommitteeHashValidator
-            )
-          , ("CheckpointValidator", CheckpointValidator.serialisableCheckpointValidator)
-          , ("CheckpointPolicy", CheckpointValidator.serialisableCheckpointPolicy)
           , ("InitTokenPolicy", InitToken.serialisableInitTokenPolicy)
           , ("ScriptCache", ScriptCache.serialisableScriptCache)
           , -- Versioning System
             ("VersionOraclePolicy", Versioning.serialisableVersionOraclePolicy)
           , ("VersionOracleValidator", Versioning.serialisableVersionOracleValidator)
-          , ("FUELProxyPolicy", FUELProxyPolicy.serialisableFuelProxyPolicy)
-          , -- ATMS schemes
-
-            ( "CommitteePlainEcdsaSecp256k1ATMSPolicy"
-            , CommitteePlainEcdsaSecp256k1ATMSPolicy.serialisableMintingPolicy
-            )
-          ,
-            ( "CommitteePlainSchnorrSecp256k1ATMSPolicy"
-            , CommitteePlainSchnorrSecp256k1ATMSPolicy.serialisableMintingPolicy
-            )
           ,
             ( "MultiSigPolicy"
             , MultiSig.serialisableGovernanceMultiSigPolicy
             )
-          , -- Distributed set validators / minting policies
-            ("DsInsertValidator", DistributedSet.serialisableInsertValidator)
-          , ("DsConfValidator", DistributedSet.serialisableDsConfValidator)
-          , ("DsConfPolicy", DistributedSet.serialisableDsConfPolicy)
-          , ("DsKeyPolicy", DistributedSet.serialisableDsKeyPolicy)
           , -- Scripts for DParameter
             ("DParameterPolicy", DParameter.serialisableMintingPolicy)
           , ("DParameterValidator", DParameter.serialisableValidator)

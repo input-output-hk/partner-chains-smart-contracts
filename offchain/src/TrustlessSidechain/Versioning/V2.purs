@@ -2,7 +2,6 @@ module TrustlessSidechain.Versioning.V2
   ( getCommitteeSelectionPoliciesAndValidators
   , getCheckpointPoliciesAndValidators
   , getVersionedPoliciesAndValidators
-  , getFuelPoliciesAndValidators
   , getDsPoliciesAndValidators
   , getMerkleRootPoliciesAndValidators
   , getNativeTokenManagementPoliciesAndValidators
@@ -16,8 +15,6 @@ import Data.List as List
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.Error (OffchainError)
-import TrustlessSidechain.FUELBurningPolicy.V2 as FUELBurningPolicy.V2
-import TrustlessSidechain.FUELMintingPolicy.V2 as FUELMintingPolicy.V2
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Versioning.Types as Types
 import Type.Row (type (+))
@@ -33,11 +30,10 @@ getVersionedPoliciesAndValidators ∷
 getVersionedPoliciesAndValidators sp = do
   committeeScripts ← getCommitteeSelectionPoliciesAndValidators sp
   checkpointScripts ← getCheckpointPoliciesAndValidators sp
-  fuelScripts ← getFuelPoliciesAndValidators sp
   dsScripts ← getDsPoliciesAndValidators sp
   merkleRootScripts ← getMerkleRootPoliciesAndValidators sp
 
-  pure $ committeeScripts <> checkpointScripts <> fuelScripts <> dsScripts
+  pure $ committeeScripts <> checkpointScripts <> dsScripts
     <> merkleRootScripts
 
 getCommitteeSelectionPoliciesAndValidators ∷
@@ -53,26 +49,6 @@ getCommitteeSelectionPoliciesAndValidators _ =
     versionedValidators = List.fromFoldable []
   in
     pure $ { versionedPolicies, versionedValidators }
-
--- | Get V2 policies and validators for FUEL minting and burning.
-getFuelPoliciesAndValidators ∷
-  ∀ r.
-  SidechainParams →
-  Run (EXCEPT OffchainError + r)
-    { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
-    , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
-    }
-getFuelPoliciesAndValidators sp = do
-  { fuelMintingPolicy } ← FUELMintingPolicy.V2.getFuelMintingPolicy sp
-  { fuelBurningPolicy } ← FUELBurningPolicy.V2.getFuelBurningPolicy sp
-  let
-    versionedValidators = mempty
-    versionedPolicies = List.fromFoldable
-      [ Types.FUELMintingPolicy /\ fuelMintingPolicy
-      , Types.FUELBurningPolicy /\ fuelBurningPolicy
-      ]
-
-  pure { versionedPolicies, versionedValidators }
 
 -- | Get V2 policies and validators for the Ds* types.
 getDsPoliciesAndValidators ∷

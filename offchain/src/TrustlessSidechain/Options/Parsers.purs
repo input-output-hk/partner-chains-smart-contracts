@@ -1,6 +1,5 @@
 module TrustlessSidechain.Options.Parsers
   ( assetNameParser
-  , atmsKind
   , bech32AddressParser
   , bech32BytesParser
   , bech32ValidatorHashParser
@@ -8,8 +7,6 @@ module TrustlessSidechain.Options.Parsers
   , blockHash
   , byteArray
   , cborEncodedAddressParser
-  , combinedMerkleProofParser
-  , combinedMerkleProofParserWithPkh
   , committeeSignature
   , currencySymbolParser
   , denominator
@@ -19,7 +16,6 @@ module TrustlessSidechain.Options.Parsers
   , governanceAuthority
   , mkCurrencySymbol
   , numerator
-  , parseATMSKind
   , parsePubKeyAndSignature
   , parsePubKeyBytesAndSignatureBytes
   , parseAssetName
@@ -33,7 +29,6 @@ module TrustlessSidechain.Options.Parsers
   , pubKeyBytesAndSignatureBytes
   , pubKeyHash
   , registeredCandidatesCount
-  , rootHash
   , schnorrSecp256k1PrivateKey
   , sidechainAddress
   , sidechainSignature
@@ -51,8 +46,8 @@ import Cardano.AsCbor (decodeCbor)
 import Cardano.FromData (fromData)
 import Cardano.Plutus.Types.Address (fromCardano)
 import Cardano.Plutus.Types.Credential (Credential(ScriptCredential))
-import Cardano.Serialization.Lib (fromBytes, toBytes)
-import Cardano.Types.Address (Address, fromBech32, fromCsl, toCsl)
+import Cardano.Serialization.Lib (toBytes)
+import Cardano.Types.Address (Address, fromBech32, toCsl)
 import Cardano.Types.AssetName as AssetName
 import Cardano.Types.BigNum (BigNum, fromBigInt)
 import Cardano.Types.NetworkId (NetworkId(MainnetId, TestnetId))
@@ -74,19 +69,7 @@ import JS.BigInt (BigInt)
 import JS.BigInt as BigInt
 import Options.Applicative (ReadM, eitherReader, maybeReader, readerError)
 import Partial.Unsafe (unsafePartial)
-import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSKinds
-      ( ATMSPlainEcdsaSecp256k1
-      , ATMSPlainSchnorrSecp256k1
-      , ATMSDummy
-      , ATMSPoK
-      , ATMSMultisignature
-      )
-  )
-import TrustlessSidechain.FUELMintingPolicy.V1 (CombinedMerkleProof)
 import TrustlessSidechain.Governance.Admin as Governance
-import TrustlessSidechain.MerkleTree (RootHash)
-import TrustlessSidechain.MerkleTree as MerkleTree
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PrivateKey
   , EcdsaSecp256k1PubKey
@@ -100,23 +83,6 @@ hexToByteArray ∷ String → Maybe ByteArray
 hexToByteArray s = ByteArray.hexToByteArray $ fromMaybe s $ stripPrefix
   (Pattern "0x")
   s
-
--- | Wraps `parseATMSKind`
-atmsKind ∷ ReadM ATMSKinds
-atmsKind = eitherReader parseATMSKind
-
--- | Parses one of the possible kinds of committee certificate verifications
-parseATMSKind ∷ String → Either String ATMSKinds
-parseATMSKind str = case str of
-  "plain-ecdsa-secp256k1" → Right
-    ATMSPlainEcdsaSecp256k1
-  "plain-schnorr-secp256k1" → Right
-    ATMSPlainSchnorrSecp256k1
-  "pok" → Right ATMSPoK
-  "dummy" → Right ATMSDummy
-  "multisignature" → Right ATMSMultisignature
-  _ → Left
-    "invalid ATMS kind expected either 'plain-ecdsa-secp256k1', 'plain-schnorr-secp256k1', 'multisignature', 'pok', or 'dummy'"
 
 -- | Parses a hex encoded cbor of plutus data
 parsePlutusData ∷ ∀ a. FromData a ⇒ String → Either String a
@@ -204,25 +170,6 @@ bech32ValidatorHashParser = eitherReader parseHumanReadableBech32ToValidatorHash
 -- | Wraps `parseHumanReadableBech32ToBech32Bytes  `
 bech32BytesParser ∷ ReadM ByteArray
 bech32BytesParser = eitherReader parseHumanReadableBech32ToBech32Bytes
-
-combinedMerkleProofParser ∷ ReadM CombinedMerkleProof
-combinedMerkleProofParser = cbor >>= (fromData <=< decodeCbor) >>>
-  maybe (readerError "Error while parsing supplied CBOR as CombinedMerkleProof.")
-    pure
-
--- | This parser will convert the raw bytestring to a valid Cardano address
-combinedMerkleProofParserWithPkh ∷
-  ReadM (CombinedMerkleProof /\ Address)
-combinedMerkleProofParserWithPkh = do
-  cmp ← combinedMerkleProofParser
-  -- Getting the parsed recipient from the combined proof and deserialising to
-  -- an address
-  let
-    recipient = (unwrap (unwrap cmp).transaction).recipient
-    maybeAddr = fromCsl <$> fromBytes recipient
-  case maybeAddr of
-    Just addr → pure (cmp /\ addr)
-    Nothing → readerError "Couldn't convert recipient bech32 to Plutus address"
 
 -- | Parse ByteArray from hexadecimal representation
 byteArray ∷ ReadM ByteArray
@@ -338,10 +285,6 @@ epoch = eitherReader
 -- | Parse UInt
 uint ∷ ReadM UInt
 uint = maybeReader UInt.fromString
-
--- | Parses the raw bytes of a `RootHash`
-rootHash ∷ ReadM RootHash
-rootHash = maybeReader (MerkleTree.rootHashFromByteArray <=< hexToByteArray)
 
 sidechainAddress ∷ ReadM ByteArray
 sidechainAddress = hexString

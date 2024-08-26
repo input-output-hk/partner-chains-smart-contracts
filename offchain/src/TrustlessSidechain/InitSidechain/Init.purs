@@ -20,7 +20,6 @@ import Data.Map (Map)
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT)
-import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSKinds)
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
@@ -45,17 +44,16 @@ insertScriptsIdempotent ∷
       }
   ) →
   SidechainParams →
-  ATMSKinds →
   Int →
   Run (APP + r)
     (Array TransactionHash)
-insertScriptsIdempotent f sidechainParams initATMSKind version = do
+insertScriptsIdempotent f sidechainParams version = do
   scripts ← f sidechainParams version
 
   toInsert ∷
     { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
     , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
-    } ← getScriptsToInsert sidechainParams initATMSKind scripts version
+    } ← getScriptsToInsert sidechainParams scripts version
 
   validatorsTxIds ←
     (traverse ∷ ∀ m a b. Applicative m ⇒ (a → m b) → Array a → m (Array b))
@@ -76,7 +74,6 @@ insertScriptsIdempotent f sidechainParams initATMSKind version = do
 getScriptsToInsert ∷
   ∀ r.
   SidechainParams →
-  ATMSKinds →
   { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
   , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
   } →
@@ -87,13 +84,12 @@ getScriptsToInsert ∷
     }
 getScriptsToInsert
   sidechainParams
-  initATMSKind
   toFilterScripts
   version = do
 
   comparisonScripts ←
     getActualVersionedPoliciesAndValidators
-      { atmsKind: initATMSKind, sidechainParams }
+      sidechainParams
       version
 
   let

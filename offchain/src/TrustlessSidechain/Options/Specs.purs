@@ -16,7 +16,6 @@ import Contract.Config
   , testnetConfig
   )
 import Contract.Prim.ByteArray (ByteArray)
-import Contract.Scripts (ValidatorHash)
 import Contract.Time (POSIXTime)
 import Contract.Value (AssetName)
 import Contract.Wallet
@@ -61,37 +60,24 @@ import TrustlessSidechain.CommitteeCandidateValidator
   ( BlockProducerRegistrationMsg(BlockProducerRegistrationMsg)
   , StakeOwnership(AdaBasedStaking, TokenBasedStaking)
   )
-import TrustlessSidechain.FUELMintingPolicy.V1
-  ( MerkleTreeEntry(MerkleTreeEntry)
-  )
 import TrustlessSidechain.Governance.Admin as Governance
-import TrustlessSidechain.MerkleRoot.Types
-  ( MerkleRootInsertionMessage(MerkleRootInsertionMessage)
-  )
-import TrustlessSidechain.MerkleTree (MerkleTree, RootHash)
 import TrustlessSidechain.NativeTokenManagement.Types
   ( ImmutableReserveSettings(ImmutableReserveSettings)
   , MutableReserveSettings(MutableReserveSettings)
   )
 import TrustlessSidechain.Options.Parsers
-  ( bech32BytesParser
-  , bech32ValidatorHashParser
-  , bigInt
+  ( bigInt
   , blockHash
   , byteArray
-  , combinedMerkleProofParserWithPkh
   , denominator
   , ecdsaSecp256k1PrivateKey
   , governanceAuthority
   , networkId
   , numerator
   , permissionedCandidateKeys
-  , plutusDataParser
   , pubKeyBytesAndSignatureBytes
   , registrationSidechainKeys
-  , rootHash
   , schnorrSecp256k1PrivateKey
-  , sidechainAddress
   , uint
   , validatorHashParser
   )
@@ -102,30 +88,19 @@ import TrustlessSidechain.Options.Types
   , Options(TxOptions, UtilsOptions, CLIVersion)
   , SidechainEndpointParams(SidechainEndpointParams)
   , TxEndpoint
-      ( ClaimActV1
-      , BurnActV1
-      , ClaimActV2
-      , BurnActV2
-      , GetAddrs
+      ( GetAddrs
       , CandidiatePermissionTokenAct
       , InitTokensMint
-      , InitCheckpoint
-      , InitFuel
       , InitReserveManagement
       , InitCandidatePermissionToken
       , CommitteeCandidateReg
       , CommitteeCandidateDereg
-      , CommitteeHash
-      , SaveRoot
-      , CommitteeHandover
-      , SaveCheckpoint
       , InsertVersion2
       , UpdateVersion
       , InvalidateVersion
       , InsertDParameter
       , UpdateDParameter
       , UpdatePermissionedCandidates
-      , BurnNFTs
       , InitTokenStatus
       , ListVersionedScripts
       , CreateReserve
@@ -138,19 +113,11 @@ import TrustlessSidechain.Options.Types
       , EcdsaSecp256k1SignAct
       , SchnorrSecp256k1KeyGenAct
       , SchnorrSecp256k1SignAct
-      , CborUpdateCommitteeMessageAct
       , CborBlockProducerRegistrationMessageAct
-      , CborMerkleTreeEntryAct
-      , CborMerkleTreeAct
-      , CborCombinedMerkleProofAct
-      , CborMerkleRootInsertionMessageAct
       , CborPlainAggregatePublicKeysAct
       )
   )
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
-import TrustlessSidechain.UpdateCommitteeHash.Types
-  ( UpdateCommitteeHashMessage(UpdateCommitteeHashMessage)
-  )
 import TrustlessSidechain.Utils.Logging (environment, fileLogger)
 
 -- | Argument option parser for sidechain-main-cli
@@ -172,14 +139,6 @@ optSpec maybeConfig =
         ( info (withCommonOpts maybeConfig initReserveManagementSpec)
             (progDesc "Initialise native token reserve management system")
         )
-    , command "init-checkpoint"
-        ( info (withCommonOpts maybeConfig initCheckpointSpec)
-            (progDesc "Initialise checkpoint")
-        )
-    , command "init-fuel"
-        ( info (withCommonOpts maybeConfig initFuelSpec)
-            (progDesc "Initialise the FUEL and committee selection mechanisms")
-        )
     , command "init-candidate-permission-token"
         ( info (withCommonOpts maybeConfig initCandidatePermissionTokenSpec)
             (progDesc "Initialise candidate permission token")
@@ -187,22 +146,6 @@ optSpec maybeConfig =
     , command "addresses"
         ( info (withCommonOpts maybeConfig getAddrSpec)
             (progDesc "Get the script addresses for a given sidechain")
-        )
-    , command "claim-v1"
-        ( info (withCommonOpts maybeConfig claimSpecV1)
-            (progDesc "Claim a FUEL tokens from a proof")
-        )
-    , command "burn-v1"
-        ( info (withCommonOpts maybeConfig burnSpecV1)
-            (progDesc "Burn a certain amount of FUEL tokens")
-        )
-    , command "claim-v2"
-        ( info (withCommonOpts maybeConfig claimSpecV2)
-            (progDesc "Claim FUEL tokens from thin air")
-        )
-    , command "burn-v2"
-        ( info (withCommonOpts maybeConfig burnSpecV2)
-            (progDesc "Burn a certain amount of FUEL tokens")
         )
     , command "register"
         ( info (withCommonOpts maybeConfig regSpec)
@@ -216,25 +159,6 @@ optSpec maybeConfig =
         ( info (withCommonOpts maybeConfig deregSpec)
             (progDesc "Deregister a committee member")
         )
-    , command "committee-hash"
-        ( info (withCommonOpts maybeConfig committeeHashSpec)
-            (progDesc "Update the committee hash")
-        )
-    , command "save-root"
-        ( info (withCommonOpts maybeConfig saveRootSpec)
-            (progDesc "Saving a new merkle root")
-        )
-    , command "committee-handover"
-        ( info (withCommonOpts maybeConfig committeeHandoverSpec)
-            ( progDesc
-                "An alias for saving the merkle root, followed by updating the committee hash"
-            )
-        )
-    , command "save-checkpoint"
-        ( info (withCommonOpts maybeConfig saveCheckpointSpec)
-            (progDesc "Saving a new checkpoint")
-        )
-
     , command "reserve-create"
         ( info (withCommonOpts maybeConfig createReserveSpec)
             (progDesc "Create a new token reserve")
@@ -282,10 +206,6 @@ optSpec maybeConfig =
     , command "update-permissioned-candidates"
         ( info (withCommonOpts maybeConfig updatePermissionedCandidatesSpec)
             (progDesc "Update a Permissioned Candidates list")
-        )
-    , command "collect-garbage"
-        ( info (withCommonOpts maybeConfig burnNFTsSpec)
-            (progDesc "Burn unneccessary NFTs")
         )
     , command "init-token-status"
         ( info (withCommonOpts maybeConfig initTokenStatusSpec)
@@ -339,43 +259,13 @@ utilsSpec maybeConfig =
 
     encodeSpecs ∷ Parser Options
     encodeSpecs = hsubparser $ fold
-      [ command "cbor-update-committee-message"
-          ( info (cborUpdateCommitteeMessageSpec maybeConfig)
-              (progDesc "Generate the CBOR of an update committee message")
-          )
-
-      , command "cbor-block-producer-registration-message"
+      [ command "cbor-block-producer-registration-message"
           ( info (cborBlockProducerRegistrationMessageSpec maybeConfig)
               ( progDesc
                   "Generate the CBOR of a block producer registration message"
               )
           )
 
-      , command "cbor-merkle-root-insertion-message"
-          ( info (cborMerkleRootInsertionMessageSpec maybeConfig)
-              ( progDesc
-                  "Generate the CBOR of a Merkle root insertion message"
-              )
-          )
-
-      , command "cbor-merkle-tree-entry"
-          ( info cborMerkleTreeEntrySpec
-              (progDesc "Generate the CBOR of a Merkle tree entry")
-          )
-
-      , command "cbor-merkle-tree"
-          ( info cborMerkleTreeSpec
-              ( progDesc
-                  "Generate the CBOR of a Merkle tree and the Merkle root hash from the provided Merkle tree entries"
-              )
-          )
-
-      , command "cbor-combined-merkle-proof"
-          ( info cborCombinedMerkleProofSpec
-              ( progDesc
-                  "Generate the combined Merkle proof from the provided Merkle tree and Merkle tree entry"
-              )
-          )
       , command "cbor-plain-aggregate-public-keys"
           ( info cborPlainAggregatePublicKeys
               ( progDesc
@@ -592,90 +482,10 @@ sidechainParamsSpec maybeConfig = ado
 sidechainEndpointParamsSpec ∷ Maybe Config → Parser SidechainEndpointParams
 sidechainEndpointParamsSpec maybeConfig = ado
   sidechainParams ← sidechainParamsSpec maybeConfig
-
-  atmsKind ← option Parsers.atmsKind $ fold
-    [ short 'm'
-    , long "atms-kind"
-    , metavar "ATMS_KIND"
-    , help
-        "ATMS kind for the sidechain -- either 'plain-ecdsa-secp256k1', 'multisignature', 'pok', or 'dummy'"
-    , maybe mempty value
-        (maybeConfig >>= _.sidechainParameters >>= _.atmsKind)
-    ]
   in
     SidechainEndpointParams
       { sidechainParams
-      , atmsKind
       }
-
--- | Parse all parameters for the `claim` endpoint
-claimSpecV1 ∷ Parser TxEndpoint
-claimSpecV1 = ado
-  (combinedMerkleProof /\ recipient) ← option combinedMerkleProofParserWithPkh
-    $ fold
-        [ short 'p'
-        , long "combined-proof"
-        , metavar "CBOR"
-        , help "CBOR-encoded Combined Merkle Proof"
-        ]
-  dsUtxo ← optional $ option Parsers.transactionInput $ fold
-    [ long "distributed-set-utxo"
-    , metavar "TX_ID#TX_IDX"
-    , help
-        "UTxO to use for the distributed set to ensure uniqueness of claiming the transaction"
-    ]
-
-  let
-    { transaction, merkleProof } = unwrap combinedMerkleProof
-    { amount, index, previousMerkleRoot } = unwrap transaction
-  in
-    ClaimActV1
-      { amount
-      , recipient
-      , merkleProof
-      , index
-      , previousMerkleRoot
-      , dsUtxo
-      }
-
--- | Parse all parameters for the `burn` endpoint
-burnSpecV1 ∷ Parser TxEndpoint
-burnSpecV1 = ado
-  amount ← parseAmount
-  recipient ← option sidechainAddress $ fold
-    [ long "recipient"
-    , metavar "ADDRESS"
-    , help "Address of the sidechain recipient"
-    ]
-  in BurnActV1 { amount, recipient }
-
--- | Parse all parameters for the `claim-v2` endpoint
-claimSpecV2 ∷ Parser TxEndpoint
-claimSpecV2 = ado
-  amount ← parseAmount
-  in
-    ClaimActV2
-      { amount }
-
--- | Parse all parameters for the `burn-v2` endpoint
-burnSpecV2 ∷ Parser TxEndpoint
-burnSpecV2 = ado
-  amount ← parseAmount
-  recipient ← option sidechainAddress $ fold
-    [ long "recipient"
-    , metavar "ADDRESS"
-    , help "Address of the sidechain recipient"
-    ]
-  in BurnActV2 { amount, recipient }
-
--- | Token amount parser
-parseAmount ∷ Parser BigInt
-parseAmount = option bigInt $ fold
-  [ short 'a'
-  , long "amount"
-  , metavar "1"
-  , help "Amount of FUEL token to be burnt/minted"
-  ]
 
 -- | Parse required data for a stake ownership variant
 stakeOwnershipSpec ∷ Parser StakeOwnership
@@ -766,122 +576,6 @@ parseSpoPubKey = option byteArray $ fold
   , help "SPO cold verification key value"
   ]
 
--- | Parse all parameters for the `committee-hash` endpoint
-committeeHashSpec ∷ Parser TxEndpoint
-committeeHashSpec = ado
-  newCommitteePubKeysInput ← parseNewCommitteePubKeys
-  committeeSignaturesInput ←
-    ( parseCommitteeSignatures
-        "committee-pub-key-and-signature"
-        "Public key and (optionally) the signature of the new committee hash separated by a colon"
-        "committee-pub-key-and-signature-file-path"
-        "Filepath of a JSON file containing public keys and associated\
-        \ signatures e.g. `[{\"public-key\":\"aabb...\", \"signature\":null}, ...]`"
-    )
-  previousMerkleRoot ← parsePreviousMerkleRoot
-  sidechainEpoch ← parseSidechainEpoch
-  mNewCommitteeValidatorHash ← optional parseNewCommitteeValidatorHash
-  in
-    CommitteeHash
-      { newCommitteePubKeysInput
-      , committeeSignaturesInput
-      , previousMerkleRoot
-      , sidechainEpoch
-      , mNewCommitteeValidatorHash
-      }
-
-parseNewCommitteeValidatorHash ∷ Parser ValidatorHash
-parseNewCommitteeValidatorHash =
-  ( option
-      validatorHashParser
-      ( fold
-          [ long "new-committee-validator-hash"
-          , metavar "VALIDATOR_HASH"
-          , help
-              "Hex encoded validator hash to send the committee oracle to"
-          ]
-      )
-  )
-    <|>
-      ( option
-          bech32ValidatorHashParser
-          ( fold
-              [ long "new-committee-validator-bech32-address"
-              , metavar "BECH32_ADDRESS"
-              , help
-                  "bech32 of a validator address to send the committee oracle to"
-              ]
-          )
-      )
-
--- | Parse all parameters for the `save-root` endpoint
-saveRootSpec ∷ Parser TxEndpoint
-saveRootSpec = ado
-  merkleRoot ← parseMerkleRoot
-  previousMerkleRoot ← parsePreviousMerkleRoot
-  committeeSignaturesInput ←
-    parseCommitteeSignatures
-      "committee-pub-key-and-signature"
-      "Public key and (optionally) the signature of the new merkle root separated by a colon"
-      "committee-pub-key-and-signature-file-path"
-      "Filepath of a JSON file containing public keys and associated\
-      \ signatures e.g. `[{\"public-key\":\"aabb...\", \"signature\":null}, ...]`"
-  in SaveRoot { merkleRoot, previousMerkleRoot, committeeSignaturesInput }
-
--- | Parse all parameters for the `committee-handover` endpoint
-committeeHandoverSpec ∷ Parser TxEndpoint
-committeeHandoverSpec = ado
-  merkleRoot ← parseMerkleRoot
-  previousMerkleRoot ← parsePreviousMerkleRoot
-  newCommitteePubKeysInput ← parseNewCommitteePubKeys
-  newCommitteeSignaturesInput ← parseCommitteeSignatures
-    "committee-pub-key-and-new-committee-signature"
-    "Public key and (optionally) the signature of the new committee hash separated by a colon"
-    "committee-pub-key-and-new-committee-file-path"
-    "Filepath of a JSON file containing public keys and associated\
-    \ signatures e.g. `[{\"public-key\":\"aabb...\", \"signature\":null}, ...]`"
-  newMerkleRootSignaturesInput ← parseCommitteeSignatures
-    "committee-pub-key-and-new-merkle-root-signature"
-    "Public key and (optionally) the signature of the merkle root separated by a colon"
-    "committee-pub-key-and-new-merkle-root-file-path"
-    "Filepath of a JSON file containing public keys and associated\
-    \ signatures e.g. `[{\"public-key\":\"aabb...\", \"signature\":null}, ...]`"
-  sidechainEpoch ← parseSidechainEpoch
-  mNewCommitteeValidatorHash ← optional parseNewCommitteeValidatorHash
-  in
-    CommitteeHandover
-      { merkleRoot
-      , previousMerkleRoot
-      , newCommitteePubKeysInput
-      , newCommitteeSignaturesInput
-      , newMerkleRootSignaturesInput
-      , sidechainEpoch
-      , mNewCommitteeValidatorHash
-      }
-
--- | Parse all parameters for the `save-checkpoint` endpoint
-saveCheckpointSpec ∷ Parser TxEndpoint
-saveCheckpointSpec = ado
-  committeeSignaturesInput ←
-    ( parseCommitteeSignatures
-        "committee-pub-key-and-signature"
-        "Public key and (optionally) the signature of the new checkpoint separated by a colon"
-        "committee-pub-key-and-signature-file-path"
-        "Filepath of a JSON file containing public keys and associated\
-        \ signatures e.g. `[{\"public-key\":\"aabb...\", \"signature\":null}, ...]`"
-    )
-  newCheckpointBlockHash ← parseNewCheckpointBlockHash
-  newCheckpointBlockNumber ← parseNewCheckpointBlockNumber
-  sidechainEpoch ← parseSidechainEpoch
-  in
-    SaveCheckpoint
-      { committeeSignaturesInput
-      , newCheckpointBlockHash
-      , newCheckpointBlockNumber
-      , sidechainEpoch
-
-      }
-
 -- `parseCommittee` parses the committee public keys and takes the long
 -- flag / help message as parameters
 parseCommittee ∷
@@ -913,16 +607,6 @@ parseCommittee longflag hdesc filelongflag filehdesc =
                 ]
             )
         )
-
--- `parseNewCommitteePubKeys` wraps `parseCommittee` with sensible defaults.
-parseNewCommitteePubKeys ∷ Parser (InputArgOrFile (NonEmptyList ByteArray))
-parseNewCommitteePubKeys =
-  parseCommittee
-    "new-committee-pub-key"
-    "Public key of a new committee member"
-    "new-committee-pub-key-file-path"
-    "Filepath of a JSON file containing public keys of the new committee\
-    \ e.g. `[{\"public-key\":\"aabb...\", }, ...]`"
 
 -- `parseCommitteeSignatures` gives the options for parsing the current
 -- committees' signatures.
@@ -956,33 +640,6 @@ parseCommitteeSignatures longflag hdesc filelongflag filehdesc =
             )
         )
 
--- `parseMerkleRoot` parses the option of a new merkle root. This is used
--- in `saveRootSpec` and `committeeHashSpec`
-parseMerkleRoot ∷ Parser RootHash
-parseMerkleRoot = option
-  rootHash
-  ( fold
-      [ long "merkle-root"
-      , metavar "MERKLE_ROOT"
-      , help "Raw hex encoded Merkle root signed by the committee"
-      ]
-  )
-
--- `parsePreviousMerkleRoot` gives the options for parsing a merkle root (this is
--- used in both `saveRootSpec` and `committeeHashSpec`).
-parsePreviousMerkleRoot ∷ Parser (Maybe RootHash)
-parsePreviousMerkleRoot =
-  optional
-    ( option
-        rootHash
-        ( fold
-            [ long "previous-merkle-root"
-            , metavar "MERKLE_ROOT"
-            , help "Raw hex encoded previous merkle root if it exists"
-            ]
-        )
-    )
-
 -- | Sidechain epoch CLI parser
 parseSidechainEpoch ∷ Parser BigInt
 parseSidechainEpoch =
@@ -992,28 +649,6 @@ parseSidechainEpoch =
         [ long "sidechain-epoch"
         , metavar "INT"
         , help "Sidechain epoch"
-        ]
-    )
-
-parseNewCheckpointBlockNumber ∷ Parser BigInt
-parseNewCheckpointBlockNumber =
-  option
-    bigInt
-    ( fold
-        [ long "new-checkpoint-block-number"
-        , metavar "INT"
-        , help "Block number of the new checkpoint"
-        ]
-    )
-
-parseNewCheckpointBlockHash ∷ Parser ByteArray
-parseNewCheckpointBlockHash =
-  option
-    blockHash
-    ( fold
-        [ long "new-checkpoint-block-hash"
-        , metavar "BLOCK_HASH"
-        , help "Hex encoded block hash of the new checkpoint"
         ]
     )
 
@@ -1066,41 +701,12 @@ initCandidatePermissionTokenSpec = ado
       { initCandidatePermissionTokenMintInfo
       }
 
--- `initSpec` includes the sub parser from `initTokensSpec` (to optionally mint
--- candidate permission tokens), and parsers for the initial committee
-initCheckpointSpec ∷ Parser TxEndpoint
-initCheckpointSpec = ado
-  genesisHash ← parseGenesisHash
-  version ← parseVersion
-  in
-    InitCheckpoint
-      { genesisHash
-      , version
-      }
-
 initReserveManagementSpec ∷ Parser TxEndpoint
 initReserveManagementSpec = ado
   version ← parseVersion
   in
     InitReserveManagement
       { version
-      }
-
-initFuelSpec ∷ Parser TxEndpoint
-initFuelSpec = ado
-  committeePubKeysInput ← parseCommittee
-    "committee-pub-key"
-    "Public key for a committee member at sidechain initialisation"
-    "committee-pub-key-file-path"
-    "Filepath of a JSON file containing public keys of the new committee\
-    \ e.g. `[{\"public-key\":\"aabb...\", }, ...]`"
-  initSidechainEpoch ← parseSidechainEpoch
-  version ← parseVersion
-  in
-    InitFuel
-      { committeePubKeysInput
-      , initSidechainEpoch
-      , version
       }
 
 insertVersionSpec ∷ Parser TxEndpoint
@@ -1254,9 +860,6 @@ updatePermissionedCandidatesSpec = ado
     UpdatePermissionedCandidates
       { permissionedCandidatesToAdd, permissionedCandidatesToRemove }
 
-burnNFTsSpec ∷ Parser TxEndpoint
-burnNFTsSpec = pure BurnNFTs
-
 initTokenStatusSpec ∷ Parser TxEndpoint
 initTokenStatusSpec = pure InitTokenStatus
 
@@ -1361,32 +964,6 @@ schnorrSecp256k1SignSpec = ado
             }
       }
 
-cborUpdateCommitteeMessageSpec ∷ Maybe Config → Parser Options
-cborUpdateCommitteeMessageSpec mConfig = ado
-  scParams ← sidechainParamsSpec mConfig
-  sidechainEpoch ← parseSidechainEpoch
-  previousMerkleRoot ← parsePreviousMerkleRoot
-  newAggregatePubKeys ←
-    option plutusDataParser $ fold
-      [ long "cbor-aggregated-public-keys"
-      , metavar "AGGREGATED_SIDECHAIN_PUBLIC_KEYS"
-      , help "A CBOR encoded aggregated public key of the sidechain committee"
-      ]
-  validatorHash ← parseNewCommitteeValidatorHash
-  in
-    UtilsOptions
-      { utilsOptions: CborUpdateCommitteeMessageAct
-          { updateCommitteeHashMessage:
-              UpdateCommitteeHashMessage
-                { sidechainParams: scParams
-                , newAggregatePubKeys
-                , validatorHash
-                , previousMerkleRoot
-                , sidechainEpoch
-                }
-          }
-      }
-
 cborBlockProducerRegistrationMessageSpec ∷ Maybe Config → Parser Options
 cborBlockProducerRegistrationMessageSpec mConfig = ado
   scParams ← sidechainParamsSpec mConfig
@@ -1414,73 +991,6 @@ cborBlockProducerRegistrationMessageSpec mConfig = ado
           }
       }
 
-cborMerkleRootInsertionMessageSpec ∷ Maybe Config → Parser Options
-cborMerkleRootInsertionMessageSpec mConfig = ado
-  scParams ← sidechainParamsSpec mConfig
-  merkleRoot ← parseMerkleRoot
-  previousMerkleRoot ← parsePreviousMerkleRoot
-  in
-    UtilsOptions
-      { utilsOptions: CborMerkleRootInsertionMessageAct
-          { merkleRootInsertionMessage:
-              MerkleRootInsertionMessage
-                { sidechainParams: scParams
-                , merkleRoot
-                , previousMerkleRoot
-                }
-          }
-      }
-
-cborMerkleTreeEntrySpec ∷ Parser Options
-cborMerkleTreeEntrySpec = ado
-  index ← option bigInt $ fold
-    [ long "index"
-    , metavar "INDEX"
-    , help "Integer to ensure uniqueness amongst Merkle tree entries"
-    ]
-  amount ← parseAmount
-  recipient ← option bech32BytesParser $ fold
-    [ long "recipient"
-    , metavar "BECH32_ADDRESS"
-    , help "Human readable bech32 address of the recipient."
-    ]
-  previousMerkleRoot ← parsePreviousMerkleRoot
-
-  in
-    UtilsOptions
-      { utilsOptions:
-          CborMerkleTreeEntryAct
-            { merkleTreeEntry:
-                MerkleTreeEntry
-                  { index
-                  , amount
-                  , recipient
-                  , previousMerkleRoot
-                  }
-            }
-      }
-
-parseCborMerkleTreeEntry ∷ Parser MerkleTreeEntry
-parseCborMerkleTreeEntry = option plutusDataParser $ fold
-  [ long "cbor-merkle-tree-entry"
-  , metavar "CBOR_MERKLE_TREE_ENTRY"
-  , help "Cbor encoded Merkle tree entry"
-  ]
-
-parseCborMerkleTree ∷ Parser MerkleTree
-parseCborMerkleTree = option plutusDataParser $ fold
-  [ long "cbor-merkle-tree"
-  , metavar "CBOR_MERKLE_TREE"
-  , help "Cbor encoded Merkle tree"
-  ]
-
-cborMerkleTreeSpec ∷ Parser Options
-cborMerkleTreeSpec = ado
-  merkleTreeEntries ← some parseCborMerkleTreeEntry
-  in
-    UtilsOptions
-      { utilsOptions: CborMerkleTreeAct { merkleTreeEntries } }
-
 cborPlainAggregatePublicKeys ∷ Parser Options
 cborPlainAggregatePublicKeys = ado
   publicKeys ← some
@@ -1493,14 +1003,6 @@ cborPlainAggregatePublicKeys = ado
   in
     UtilsOptions
       { utilsOptions: CborPlainAggregatePublicKeysAct { publicKeys } }
-
-cborCombinedMerkleProofSpec ∷ Parser Options
-cborCombinedMerkleProofSpec = ado
-  merkleTreeEntry ← parseCborMerkleTreeEntry
-  merkleTree ← parseCborMerkleTree
-  in
-    UtilsOptions
-      { utilsOptions: CborCombinedMerkleProofAct { merkleTree, merkleTreeEntry } }
 
 parseDepositAmount ∷ Parser BigNum
 parseDepositAmount = option Parsers.tokenAmount
