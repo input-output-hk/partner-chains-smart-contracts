@@ -60,46 +60,14 @@ instance Show ScriptId where
   show = genericShow
 
 instance FromData ScriptId where
-  -- fromData (Integer i) | i == BigInt.fromInt 0 =
-  --   Nothing -- formerly FUELMintingPolicy
-  -- fromData (Integer i) | i == BigInt.fromInt 1 =
-  --   Just MerkleRootTokenPolicy
-  -- fromData (Integer i) | i == BigInt.fromInt 2 =
-  --   Just MerkleRootTokenValidator
   fromData (Integer i) | i == BigInt.fromInt 3 =
     Just CommitteeCandidateValidator
   fromData (Integer i) | i == BigInt.fromInt 4 =
     Just CandidatePermissionPolicy
-  -- fromData (Integer i) | i == BigInt.fromInt 7 =
-  --   Just CommitteeHashValidator
-  -- fromData (Integer i) | i == BigInt.fromInt 8 =
-  --   Just DsKeyPolicy
-  -- fromData (Integer i) | i == BigInt.fromInt 9 =
-  --   Just DsConfPolicy
-  -- fromData (Integer i) | i == BigInt.fromInt 10 =
-  --   Just DsConfValidator
-  -- fromData (Integer i) | i == BigInt.fromInt 11 =
-  --   Just DsInsertValidator
-  -- fromData (Integer i) | i == BigInt.fromInt 12 =
-  --   Just CheckpointValidator
-  -- fromData (Integer i) | i == BigInt.fromInt 13 =
-  --   Just CheckpointPolicy
-  -- fromData (Integer i) | i == BigInt.fromInt 14 =
-  --   Nothing -- formerly FUELBurningPolicy
   fromData (Integer i) | i == BigInt.fromInt 15 =
     Just VersionOraclePolicy
   fromData (Integer i) | i == BigInt.fromInt 16 =
     Just VersionOracleValidator
-  -- fromData (Integer i) | i == BigInt.fromInt 17 =
-  --   Nothing -- formerly FUELProxyPolicy
-  -- fromData (Integer i) | i == BigInt.fromInt 18 =
-  --   Just CommitteeCertificateVerificationPolicy
-  -- fromData (Integer i) | i == BigInt.fromInt 19 =
-  --   Just CommitteeOraclePolicy
-  -- fromData (Integer i) | i == BigInt.fromInt 20 =
-  --   Just CommitteePlainEcdsaSecp256k1ATMSPolicy
-  -- fromData (Integer i) | i == BigInt.fromInt 21 =
-  --   Just CommitteePlainSchnorrSecp256k1ATMSPolicy
   fromData (Integer i) | i == BigInt.fromInt 22 =
     Just DParameterPolicy
   fromData (Integer i) | i == BigInt.fromInt 23 =
@@ -133,26 +101,10 @@ instance FromData ScriptId where
   fromData _ = Nothing
 
 instance ToData ScriptId where
-  -- toData FUELMintingPolicy = Integer (BigInt.fromInt 0)
-  -- toData MerkleRootTokenPolicy = Integer (BigInt.fromInt 1)
-  -- toData MerkleRootTokenValidator = Integer (BigInt.fromInt 2)
   toData CommitteeCandidateValidator = Integer (BigInt.fromInt 3)
   toData CandidatePermissionPolicy = Integer (BigInt.fromInt 4)
-  -- toData CommitteeHashValidator = Integer (BigInt.fromInt 7)
-  -- toData DsKeyPolicy = Integer (BigInt.fromInt 8)
-  -- toData DsConfPolicy = Integer (BigInt.fromInt 9)
-  -- toData DsConfValidator = Integer (BigInt.fromInt 10)
-  -- toData DsInsertValidator = Integer (BigInt.fromInt 11)
-  -- toData CheckpointValidator = Integer (BigInt.fromInt 12)
-  -- toData CheckpointPolicy = Integer (BigInt.fromInt 13)
-  -- toData FUELBurningPolicy = Integer (BigInt.fromInt 14)
   toData VersionOraclePolicy = Integer (BigInt.fromInt 15)
   toData VersionOracleValidator = Integer (BigInt.fromInt 16)
-  -- toData FUELProxyPolicy = Integer (BigInt.fromInt 17)
-  -- toData CommitteeCertificateVerificationPolicy = Integer (BigInt.fromInt 18)
-  -- toData CommitteeOraclePolicy = Integer (BigInt.fromInt 19)
-  -- toData CommitteePlainEcdsaSecp256k1ATMSPolicy = Integer (BigInt.fromInt 20)
-  -- toData CommitteePlainSchnorrSecp256k1ATMSPolicy = Integer (BigInt.fromInt 21)
   toData DParameterPolicy = Integer (BigInt.fromInt 22)
   toData DParameterValidator = Integer (BigInt.fromInt 23)
   toData PermissionedCandidatesPolicy = Integer (BigInt.fromInt 24)

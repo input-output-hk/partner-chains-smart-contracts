@@ -15,7 +15,6 @@
   , "const"
   , "control"
   , "datetime"
-  , "debug"
   , "either"
   , "exceptions"
   , "foldable-traversable"

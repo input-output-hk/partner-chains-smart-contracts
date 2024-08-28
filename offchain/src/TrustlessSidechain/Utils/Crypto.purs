@@ -25,7 +25,6 @@ module TrustlessSidechain.Utils.Crypto
   , getEcdsaSecp256k1MessageByteArray
   , byteArrayToEcdsaSecp256k1SignatureUnsafe
   , ecdsaSecp256k1Signature
-  , aggregateKeys
   , countEnoughSignatures
   , takeExactlyEnoughSignatures
   , serialiseEcdsaSecp256k1PubKey
@@ -403,10 +402,3 @@ isSorted xss = case Array.tail xss of
 foreign import blake2b256 ∷ String → String
 
 foreign import blake2b256Hash ∷ ByteArray → ByteArray
-
--- | `aggregateKeys` aggregates a list of keys s.t. the resulting `ByteArray`
--- | may be stored in the `UpdateCommitteeDatum` in an onchain compatible way.
--- | Note: this sorts the input array
-aggregateKeys ∷ Array ByteArray → ByteArray
-aggregateKeys keys = blake2b256Hash $ mconcat $ Array.sort keys
-

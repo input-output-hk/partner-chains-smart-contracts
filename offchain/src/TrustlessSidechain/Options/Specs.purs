@@ -50,7 +50,6 @@ import Options.Applicative
   , progDesc
   , short
   , showDefault
-  , some
   , str
   , switch
   , value
@@ -110,7 +109,6 @@ import TrustlessSidechain.Options.Types
       , SchnorrSecp256k1KeyGenAct
       , SchnorrSecp256k1SignAct
       , CborBlockProducerRegistrationMessageAct
-      , CborPlainAggregatePublicKeysAct
       )
   )
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
@@ -259,13 +257,6 @@ utilsSpec maybeConfig =
           ( info (cborBlockProducerRegistrationMessageSpec maybeConfig)
               ( progDesc
                   "Generate the CBOR of a block producer registration message"
-              )
-          )
-
-      , command "cbor-plain-aggregate-public-keys"
-          ( info cborPlainAggregatePublicKeys
-              ( progDesc
-                  "Aggregate the raw hex encoded public keys with the plain ATMS scheme which sorts, concatenates, and hashes"
               )
           )
       ]
@@ -899,19 +890,6 @@ cborBlockProducerRegistrationMessageSpec mConfig = ado
                 }
           }
       }
-
-cborPlainAggregatePublicKeys ∷ Parser Options
-cborPlainAggregatePublicKeys = ado
-  publicKeys ← some
-    $ option byteArray
-    $ fold
-        [ long "public-key"
-        , metavar "PUBLIC_KEY"
-        , help "Hex encoded raw bytes of a sidechain public key"
-        ]
-  in
-    UtilsOptions
-      { utilsOptions: CborPlainAggregatePublicKeysAct { publicKeys } }
 
 parseDepositAmount ∷ Parser BigNum
 parseDepositAmount = option Parsers.tokenAmount

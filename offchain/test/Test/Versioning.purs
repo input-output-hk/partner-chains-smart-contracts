@@ -110,18 +110,14 @@ testInsertAndInvalidateSuccessScenario =
             >>=
               balanceSignAndSubmit "Test: invalidate old version of policy"
 
-          -- At this point we expect the following 5 policies to be inserted
+          -- At this point we expect the following policies to be inserted
           -- into the versioning system by the call to `initSidechain`:
           --
-          --   * CommitteeCertificateVerificationPolicy
-          --   * CommitteeOraclePolicy
           --   * ReserveAuthPolicy
           --   * GovernancePolicy
-          --   * DsKeyPolicy
           --
-          -- We also expect the following validators (5 in total):
+          -- We also expect the following validators:
           --
-          --   * CommitteeHashValidator
           --   * CommitteeCandidateValidator
           --   * ReserveValidator
           --   * IlliquidCirculationSupplyValidator

@@ -100,26 +100,10 @@ committeeCandidateValidatorId
   , governancePolicyId
   , multiSigPolicyId ::
     Integer
--- fuelMintingPolicyId = 0
--- merkleRootTokenPolicyId = 1
--- merkleRootTokenValidatorId = 2
 committeeCandidateValidatorId = 3
 candidatePermissionPolicyId = 4
--- committeeHashValidatorId = 7
--- dsKeyPolicyId = 8
--- dsConfPolicyId = 9
--- dsConfValidatorId = 10
--- dsInsertValidatorId = 11
--- checkpointValidatorId = 12
--- checkpointPolicyId = 13
--- fuelBurningPolicyId = 14
 versionOraclePolicyId = 15
 versionOracleValidatorId = 16
--- fuelProxyPolicyId = 17
--- committeeCertificateVerificationPolicyId = 18
--- committeeOraclePolicyId = 19
--- committeePlainEcdsaSecp256k1ATMSPolicyId = 20
--- committeePlainSchnorrSecp256k1ATMSPolicyId = 21
 dParameterPolicyId = 22
 dParameterValidatorId = 23
 permissionedCandidatesPolicyId = 24

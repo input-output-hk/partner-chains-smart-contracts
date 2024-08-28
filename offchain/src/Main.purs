@@ -4,11 +4,8 @@ import Contract.Prelude
 
 import Contract.Monad (launchAff_)
 import Contract.PlutusData as PlutusData
-import Contract.Prim.ByteArray (ByteArray)
 import Control.Monad.Error.Class (throwError)
 import Data.Array as Array
-import Data.List as List
-import Data.List.Types as Data.List.Types
 import Effect.Exception (error)
 import JS.BigInt as BigInt
 import Options.Applicative (execParser)
@@ -38,7 +35,6 @@ import TrustlessSidechain.EndpointResp
       , EcdsaSecp256k1SignResp
       , SchnorrSecp256k1SignResp
       , CborBlockProducerRegistrationMessageResp
-      , CborPlainAggregatePublicKeysResp
       , InsertDParameterResp
       , UpdateDParameterResp
       , UpdatePermissionedCandidatesResp
@@ -105,7 +101,6 @@ import TrustlessSidechain.Options.Types
       , EcdsaSecp256k1SignAct
       , SchnorrSecp256k1SignAct
       , CborBlockProducerRegistrationMessageAct
-      , CborPlainAggregatePublicKeysAct
       )
   )
 import TrustlessSidechain.PermissionedCandidates as PermissionedCandidates
@@ -454,22 +449,6 @@ runUtilsEndpoint = case _ of
       pure $
         CborBlockProducerRegistrationMessageResp
           { plutusData
-          }
-
-  CborPlainAggregatePublicKeysAct
-    { publicKeys
-    } →
-    let
-      publicKeysArray ∷ Array ByteArray
-      publicKeysArray = List.toUnfoldable $ Data.List.Types.toList $ publicKeys
-
-      aggregatedPublicKeys ∷ ByteArray
-      aggregatedPublicKeys = Utils.Crypto.aggregateKeys publicKeysArray
-    in
-      pure $
-        CborPlainAggregatePublicKeysResp
-          { aggregatedPublicKeys:
-              PlutusData.toData aggregatedPublicKeys
           }
 
 printEndpointResp ∷ EndpointResp → Effect Unit

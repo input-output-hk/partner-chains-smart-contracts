@@ -99,9 +99,6 @@ data EndpointResp
   | CborBlockProducerRegistrationMessageResp
       { plutusData ∷ PlutusData
       }
-  | CborPlainAggregatePublicKeysResp
-      { aggregatedPublicKeys ∷ PlutusData
-      }
   | InsertDParameterResp
       { transactionId ∷ ByteArray }
   | UpdateDParameterResp
@@ -293,14 +290,6 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         [ "endpoint" /\ J.fromString "CborBlockProducerRegistrationMessage"
         , "cborHexBlockProducerRegistrationMessage" /\ J.fromString
             (serialisePlutusDataToHex plutusData)
-        ]
-    CborPlainAggregatePublicKeysResp
-      { aggregatedPublicKeys
-      } →
-      J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "CborPlainAggregatePublicKeys"
-        , "cborHexPlainAggregatedPublicKeys" /\ J.fromString
-            (serialisePlutusDataToHex aggregatedPublicKeys)
         ]
     InsertDParameterResp
       { transactionId } →

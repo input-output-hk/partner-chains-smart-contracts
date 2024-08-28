@@ -81,4 +81,4 @@ to the CTL side. The format used is `TextEnvelope`. See:
 
 * When serialising scripts, make sure they take their args separately as `BuiltinData`. See:
   * [The docs](https://github.com/Plutonomicon/cardano-transaction-lib/blob/develop/doc/plutus-comparison.md#applying-arguments-to-parameterized-scripts)
-  * [serialisableMintingPolicy](../src/TrustlessSidechain/OnChain/FUELMintingPolicy.hs)
+  * [serialisableReserveAuthPolicy](../onchain/src/TrustlessSidechain/Reserve.hs)

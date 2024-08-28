@@ -17,7 +17,6 @@ import Contract.Config (ContractParams, ServerConfig)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Transaction (TransactionInput)
 import Data.List (List)
-import Data.List.NonEmpty (NonEmptyList)
 import JS.BigInt (BigInt)
 import Node.Path (FilePath)
 import TrustlessSidechain.CommitteeCandidateValidator
@@ -115,9 +114,6 @@ data UtilsEndpoint
 
   | CborBlockProducerRegistrationMessageAct
       { blockProducerRegistrationMsg ∷ BlockProducerRegistrationMsg
-      }
-  | CborPlainAggregatePublicKeysAct
-      { publicKeys ∷ NonEmptyList ByteArray
       }
 
 -- | Data for CLI endpoints which submit a transaction to the blockchain.
