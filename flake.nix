@@ -10,9 +10,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.iohk-nix.follows = "iohk-nix";
       inputs.nix2container.follows = "blank";
-      inputs.easy-purescript-nix.follows = "cardano-transaction-lib/easy-purescript-nix";
       inputs.nixpkgs-stable.follows = "nixpkgs";
-      inputs.pre-commit-hooks-nix.follows = "cardano-nix/pre-commit-hooks-nix";
     };
     blank.url = "github:input-output-hk/empty-flake";
 
@@ -20,28 +18,19 @@
       url = "github:input-output-hk/flake-compat/fixes";
       flake = false;
     };
-    cardano-nix = {
-      url = "github:tgunnoe/cardano.nix/add-darwin";
-      inputs."cardano-node-8.7.3".follows = "blank";
-      inputs."cardano-node-8.1.1".follows = "blank";
-      inputs.cardano-db-sync.follows = "blank";
-      inputs.blockfrost.follows = "blank";
-      inputs.nixpkgs.follows = "nixpkgs";
+    iohk-nix.url = "github:input-output-hk/iohk-nix";
+    iohk-nix.inputs.nixpkgs.follows = "nixpkgs";
+
+    purescript-overlay.url = "github:thomashoneyman/purescript-overlay";
+    purescript-overlay.inputs.nixpkgs.follows = "nixpkgs";
+
+    npmlock2nix.url = "github:nix-community/npmlock2nix";
+    npmlock2nix.flake = false;
+
+    spago2nix = {
+      url = "github:justinwoo/spago2nix";
+      flake = false;
     };
-    cardano-transaction-lib = {
-      url = "github:Plutonomicon/cardano-transaction-lib/3c134eabb573c5b7b9eed3a064be194c8273d1c3";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.nixpkgs-arion.follows = "blank";
-      inputs.cardano-node.follows = "blank";
-      inputs.db-sync.follows = "blank";
-      inputs.cardano-nix.follows = "cardano-nix";
-      inputs.haskell-nix.follows = "haskell-nix";
-      inputs.hackage-nix.follows = "hackage";
-      inputs.hercules-ci-effects.follows = "blank";
-      inputs.blockfrost.follows = "blank";
-      inputs.CHaP.follows = "CHaP";
-    };
-    iohk-nix.follows = "cardano-transaction-lib/iohk-nix";
 
     nixpkgs.follows = "haskell-nix/nixpkgs";
 
@@ -82,8 +71,7 @@
         overlays = [
           inputs.iohk-nix.overlays.crypto
           inputs.haskell-nix.overlay
-          inputs.cardano-transaction-lib.overlays.purescript
-          inputs.cardano-transaction-lib.overlays.spago
+          inputs.purescript-overlay.overlays.default
         ];
       };
     };

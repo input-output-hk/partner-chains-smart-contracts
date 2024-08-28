@@ -51,20 +51,30 @@
 
       touch $out
     '';
-  trustless-sidechain-ctl =
+  partner-chains-smart-contracts =
     let
       project = repoRoot.nix.offchain;
     in
-    project.runPursTest {
-      testMain = "Test.Main";
-      builtProject = project.compiled;
-      buildInputs = with inputs.self._packages; [
-        ogmios
-        kupo
-        cardano-testnet
-        cardano-node
-        cardano-cli
-        #pkgs.psmisc # breaks tests on macos
-      ];
-    };
+    pkgs.runCommand "pc-contracts-check"
+      {
+        src = project.src;
+        nativeBuildInputs = with inputs.self.packages; [
+          ogmios
+          kupo
+          cardano-testnet
+          cardano-node
+          cardano-cli
+        ];
+      } ''
+
+        cp -r ${project.compiled}/* .
+
+        # Does the following step really make sense? comes from the CTL...
+        cp -r ${../offchain}/* .
+        export LC_ALL=C.UTF-8
+
+        ${pkgs.nodejs-18_x}/bin/node --enable-source-maps -e 'import("./output/Test.Main/index.js").then(m => m.main())'
+
+        touch $out
+      '';
 }

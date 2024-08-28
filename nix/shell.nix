@@ -6,9 +6,9 @@
 ,
 }: cabalProject:
 let
-  cardano-cli = inputs.self._packages.cardano-cli;
-  cardano-node = inputs.self._packages.cardano-node;
-  cardano-testnet = inputs.self._packages.cardano-testnet;
+  cardano-cli = inputs.self.packages.cardano-cli;
+  cardano-node = inputs.self.packages.cardano-node;
+  cardano-testnet = inputs.self.packages.cardano-testnet;
 in
 {
   name = "trustless-sidechain";
@@ -22,7 +22,7 @@ in
     pkgs.nixci
     pkgs.haskellPackages.hoogle
     pkgs.watchexec
-    pkgs.spago
+    inputs.nixpkgs.legacyPackages.spago
     pkgs.purescript
   ];
   env = {

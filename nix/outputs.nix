@@ -37,57 +37,49 @@ in
       };
       profiled = onchain.variants.profiled.devShell;
       hs = inputs.self.devShell;
-      ps =
-        pkgs.mkShell {
-          packages = with pkgs; [
-            # Shell Utils
-            bashInteractive
-            git
-            jq
+      ps = pkgs.mkShell {
+        packages = with pkgs; [
+          # Shell Utils
+          bashInteractive
+          git
+          jq
 
-            # Lint / Format
-            fd
-            dhall
+          # Lint / Format
+          fd
+          dhall
 
-            # CTL Runtime
-            docker
+          # CTL Runtime
+          docker
 
-            nodejs-18_x
-            nodePackages.node2nix
+          nodejs-18_x
+          nodePackages.node2nix
 
-            # Purescript
-            easy-ps.spago
-            easy-ps.psa
-            easy-ps.spago2nix
-            easy-ps.pscid
-            easy-ps.purs
-            easy-ps.purs-tidy
+          # Purescript
+          purescript-psa
+          pscid
+          purs
+          purs-tidy
+          # no aarch64-darwin from purescript-overlay's spago
+          inputs.nixpkgs.legacyPackages.spago
 
-            inputs.self._packages.ogmios
-            inputs.self._packages.kupo
+          inputs.self.packages.spago2nix
 
-          ];
-          shellHook = ''
-            PROJ_ROOT=$(git rev-parse --show-toplevel)
-            if [ ! -e "$PROJ_ROOT/offchain/src/TrustlessSidechain/CLIVersion.purs" ]; then
-              pushd $PROJ_ROOT/offchain
-              make version
-              popd
-            fi
-          '';
-        };
-    };
-    packages = repoRoot.nix.packages;
-    _packages =
-      let
-        flake-compat = import inputs.flake-compat;
-        cardanoPackages = (flake-compat { src = inputs.cardano-node; }).defaultNix.packages.${system};
-      in
-      {
-        inherit (cardanoPackages) cardano-node cardano-cli cardano-testnet;
-        ogmios = inputs.cardano-nix.packages.${system}."ogmios-6.5.0";
-        kupo = inputs.cardano-nix.packages.${system}."kupo-2.9.0";
+          inputs.self.packages.kupo
+          inputs.self.packages.ogmios
+
+        ];
+        shellHook = ''
+          PROJ_ROOT=$(git rev-parse --show-toplevel)
+          if [ ! -e "$PROJ_ROOT/offchain/src/TrustlessSidechain/CLIVersion.purs" ]; then
+            pushd $PROJ_ROOT/offchain
+            make version
+            popd
+          fi
+        '';
       };
+    };
+    packages = repoRoot.nix.packages.default;
+
     _checks = repoRoot.nix.checks;
 
     # This is used for nix build .#check.<system> because nix flake check
