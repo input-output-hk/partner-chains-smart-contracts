@@ -43,10 +43,9 @@ failMsg exp act = "Expected: "
   <> show act
 
 -- | Collection of init tokens expected to be minted by
--- | `initTokensMint`. It does not care about
--- | ATMSKinds or the particular version, just the token name
--- | and quantity. Requires the number of version oracle init tokens
--- | to be passed.
+-- | `initTokensMint`. It does not care about the particular version,
+-- | just the token name and quantity. Requires the number of version
+-- | oracle init tokens to be passed.
 expectedInitTokens ∷
   Int → -- How many version init tokens should have been burned at this point?
   List (Tuple Types.ScriptId PlutusScript) →

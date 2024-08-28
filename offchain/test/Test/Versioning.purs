@@ -3,10 +3,7 @@ module Test.Versioning (tests) where
 import Contract.Prelude
 
 import Cardano.Types.BigNum as BigNum
-import Contract.PlutusData (toData)
-import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
-import Data.Array as Array
 import Data.List as List
 import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
@@ -22,37 +19,25 @@ import Test.Utils
   , testnetGroup
   , withSingleMultiSig
   )
-import TrustlessSidechain.CommitteeATMSSchemes
-  ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
-  )
 import TrustlessSidechain.CommitteeCandidateValidator
   ( getCommitteeCandidateValidator
+  )
+import TrustlessSidechain.DParameter.Utils
+  ( getDParameterMintingPolicyAndCurrencySymbol
   )
 import TrustlessSidechain.Effects.Env (Env, READER)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
-import TrustlessSidechain.FUELMintingPolicy.V2 as FUELMintingPolicy.V2
 import TrustlessSidechain.Governance.Admin as Governance
-import TrustlessSidechain.InitSidechain.Checkpoint (initCheckpoint)
-import TrustlessSidechain.InitSidechain.FUEL (initFuel)
-import TrustlessSidechain.InitSidechain.NativeTokenManagement
-  ( initNativeTokenMgmt
-  )
 import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
-import TrustlessSidechain.MerkleRoot (merkleRootCurrencyInfo)
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
-import TrustlessSidechain.Utils.Crypto
-  ( aggregateKeys
-  , generatePrivKey
-  , toPubKeyUnsafe
-  )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning
   ( getActualVersionedPoliciesAndValidators
-  , insertVersion
+  , initializeVersion
   ) as Versioning
 import TrustlessSidechain.Versioning.Types (ScriptId(..))
 import TrustlessSidechain.Versioning.Utils
@@ -68,8 +53,6 @@ tests = testnetGroup "Minting and burning versioning tokens" $ do
   testInsertSameScriptTwiceSuccessScenario
   testInsertUnversionedScriptSuccessScenario
   testRemovingTwiceSameScriptFailScenario
-  testRemovingScriptInsertedMultipleTimesSuccessScenario
-  testInsertScriptsPresentInPreviousVersion
 
 -- | We insert a new version of a script, and invalidate the old one.
 testInsertAndInvalidateSuccessScenario ∷ TestnetTest
@@ -88,15 +71,6 @@ testInsertAndInvalidateSuccessScenario =
         withSingleMultiSig (unwrap pkh) $ do
           genesisUtxo ← getOwnTransactionInput
           let
-            keyCount = 25
-          initCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
-            generatePrivKey
-          let
-            initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-            initATMSKind = ATMSPlainEcdsaSecp256k1
-            genesisHash = hexToByteArrayUnsafe "aabbcc"
-            aggregatedCommittee = toData $ aggregateKeys $ map unwrap
-              initCommitteePubKeys
             sidechainParams =
               SidechainParams
                 { chainId: BigInt.fromInt 1
@@ -105,78 +79,55 @@ testInsertAndInvalidateSuccessScenario =
                 , thresholdDenominator: BigInt.fromInt 3
                 , governanceAuthority: Governance.mkGovernanceAuthority pkh
                 }
-            sidechainParamsWithATMSKind =
-              { sidechainParams
-              , atmsKind: initATMSKind
-              }
 
           -- No versioned scripts are inserted.
           -- Assert that the actual versioned scripts set is empty
-          assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 0 0
-          assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
+          assertNumberOfActualVersionedScripts sidechainParams 1 0 0
+          assertNumberOfActualVersionedScripts sidechainParams 2 0 0
 
           -- Insert all initial versioned scripts
-          void $ initTokensMint sidechainParams ATMSPlainEcdsaSecp256k1 1
-          void $ initFuel sidechainParams zero aggregatedCommittee
-            ATMSPlainEcdsaSecp256k1
-            1
-          void $ initCheckpoint sidechainParams genesisHash
-            ATMSPlainEcdsaSecp256k1
-            1
-          void $ initNativeTokenMgmt sidechainParams ATMSPlainEcdsaSecp256k1 1
+          void $ initTokensMint sidechainParams 1
+          void $ Versioning.initializeVersion sidechainParams 1
+          -- void $ initNativeTokenMgmt sidechainParams 1
+          -- This policy was already inserted by 'initSidechain'.
 
-          -- At this point we expect the following 8 policies to be inserted
+          committeeCandidateValidator ←
+            getCommitteeCandidateValidator sidechainParams
+
+          void
+            $ Versioning.insertVersionLookupsAndConstraints
+                sidechainParams
+                2
+                (CommitteeCandidateValidator /\ committeeCandidateValidator)
+            >>=
+              balanceSignAndSubmit "Test: insert new version of policy"
+
+          void
+            $ Versioning.invalidateVersionLookupsAndConstraints
+                sidechainParams
+                1
+                CommitteeCandidateValidator
+            >>=
+              balanceSignAndSubmit "Test: invalidate old version of policy"
+
+          -- At this point we expect the following policies to be inserted
           -- into the versioning system by the call to `initSidechain`:
           --
-          --   * CommitteeCertificateVerificationPolicy
-          --   * CommitteeOraclePolicy
           --   * ReserveAuthPolicy
           --   * GovernancePolicy
-          --   * FUELMintingPolicy
-          --   * FUELBurningPolicy
-          --   * DsKeyPolicy
-          --   * MerkleRootTokenPolicy
           --
-          -- We also expect the following validators (6 in total):
+          -- We also expect the following validators:
           --
-          --   * CommitteeHashValidator
           --   * CommitteeCandidateValidator
-          --   * CheckpointValidator
           --   * ReserveValidator
           --   * IlliquidCirculationSupplyValidator
-          --   * MerkleRootTokenValidator
           --
           -- Note that we have defined a multisig governance for this test,
           -- which means that ReserveAuthPolicy and GovernancePolicy policies,
           -- as well as ReserveValidator and IlliquidCirculationSupplyValidator
           -- get inserted.
-          assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 8 6
-          assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
-
-          -- We now invalidate FUELMintingPolicy, which should result in one
-          -- less policy present in the versioning system, for a total of 7.
-          void
-            $ Versioning.invalidateVersionLookupsAndConstraints
-                sidechainParams
-                1
-                FUELMintingPolicy
-            >>= balanceSignAndSubmit "Test: invalidate policy version"
-          assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 7 6
-          assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
-
-          -- Now we insert a policy in version 2.  This should leave the count
-          -- of version 1 scripts unaffected.
-          fuelMintingPolicyV2 ← FUELMintingPolicy.V2.getFuelMintingPolicy
-            sidechainParams
-          void
-            $ Versioning.insertVersionLookupsAndConstraints
-                sidechainParams
-                2
-                (FUELMintingPolicy /\ fuelMintingPolicyV2.fuelMintingPolicy)
-            >>=
-              balanceSignAndSubmit "Test: insert new policy version"
-          assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 7 6
-          assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 1 0
+          assertNumberOfActualVersionedScripts sidechainParams 1 2 2
+          assertNumberOfActualVersionedScripts sidechainParams 2 0 0
 
 -- | We insert the same script (same ScriptId and same version) twice. That
 -- should work.
@@ -193,79 +144,45 @@ testInsertSameScriptTwiceSuccessScenario =
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         pkh ← getOwnPaymentPubKeyHash
-        genesisUtxo ← getOwnTransactionInput
-        let
-          keyCount = 25
-        initCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
-          generatePrivKey
-        let
-          initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-          initATMSKind = ATMSPlainEcdsaSecp256k1
-          genesisHash = hexToByteArrayUnsafe "aabbcc"
-          aggregatedCommittee = toData $ aggregateKeys $ map unwrap
-            initCommitteePubKeys
-          sidechainParams =
-            SidechainParams
-              { chainId: BigInt.fromInt 1
-              , genesisUtxo
-              , thresholdNumerator: BigInt.fromInt 2
-              , thresholdDenominator: BigInt.fromInt 3
-              , governanceAuthority: Governance.mkGovernanceAuthority pkh
-              }
-          sidechainParamsWithATMSKind =
-            { sidechainParams
-            , atmsKind: initATMSKind
-            }
+        withSingleMultiSig (unwrap pkh) $ do
+          genesisUtxo ← getOwnTransactionInput
+          let
+            sidechainParams =
+              SidechainParams
+                { chainId: BigInt.fromInt 1
+                , genesisUtxo
+                , thresholdNumerator: BigInt.fromInt 2
+                , thresholdDenominator: BigInt.fromInt 3
+                , governanceAuthority: Governance.mkGovernanceAuthority pkh
+                }
 
-        void $ initTokensMint sidechainParams ATMSPlainEcdsaSecp256k1 1
-        void $ initFuel sidechainParams zero aggregatedCommittee
-          ATMSPlainEcdsaSecp256k1
-          1
-        void $ initCheckpoint sidechainParams genesisHash ATMSPlainEcdsaSecp256k1
-          1
-        void $ initNativeTokenMgmt sidechainParams ATMSPlainEcdsaSecp256k1 1
+          assertNumberOfActualVersionedScripts sidechainParams 1 0 0
+          assertNumberOfActualVersionedScripts sidechainParams 2 0 0
 
-        -- In this test we have not defined any governance.  As a result call to
-        -- `initSidechain` does not initialize the native token management
-        -- system and as a result there are two policies less and two validators
-        -- less being inserted than in testInsertAndInvalidateSuccessScenario
-        -- test.
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 6 4
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
+          void $ initTokensMint sidechainParams 1
+          void $ Versioning.initializeVersion sidechainParams 1
 
-        { mintingPolicy: merkleRootTokenMintingPolicy } ←
-          merkleRootCurrencyInfo sidechainParams
+          committeeCandidateValidator ←
+            getCommitteeCandidateValidator sidechainParams
 
-        -- This policy was already inserted by 'initSidechain'.  However, by
-        -- using these low-level functions of the versioning system we can
-        -- insert the same script multiple times.
-        void
-          $ Versioning.insertVersionLookupsAndConstraints
-              sidechainParams
-              1
-              (MerkleRootTokenPolicy /\ merkleRootTokenMintingPolicy)
-          >>=
-            balanceSignAndSubmit "Test: insert already versioned policy version"
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 7 4
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
+          void
+            $ Versioning.insertVersionLookupsAndConstraints
+                sidechainParams
+                1
+                (CommitteeCandidateValidator /\ committeeCandidateValidator)
+            >>=
+              balanceSignAndSubmit "Test: insert versioned policy"
 
-        void
-          $ Versioning.invalidateVersionLookupsAndConstraints
-              sidechainParams
-              1
-              MerkleRootTokenPolicy
-          >>= balanceSignAndSubmit "Test: invalidate policy version 1"
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 6 4
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
+          void
+            $ Versioning.insertVersionLookupsAndConstraints
+                sidechainParams
+                1
+                (CommitteeCandidateValidator /\ committeeCandidateValidator)
+            >>=
+              balanceSignAndSubmit "Test: insert the same version of policy"
 
-        void
-          $ Versioning.invalidateVersionLookupsAndConstraints
-              sidechainParams
-              1
-              MerkleRootTokenPolicy
-          >>= balanceSignAndSubmit "Test: invalidate policy version 1, once more"
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 5 4
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
+          assertNumberOfActualVersionedScripts sidechainParams 1 2 5
+          assertNumberOfActualVersionedScripts sidechainParams 2 0 0
 
 -- | We insert an script that is not part of the initial versioned scripts.
 testInsertUnversionedScriptSuccessScenario ∷ TestnetTest
@@ -281,55 +198,39 @@ testInsertUnversionedScriptSuccessScenario =
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         pkh ← getOwnPaymentPubKeyHash
-        genesisUtxo ← getOwnTransactionInput
-        let
-          keyCount = 25
-        initCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
-          generatePrivKey
-        let
-          initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-          initATMSKind = ATMSPlainEcdsaSecp256k1
-          genesisHash = hexToByteArrayUnsafe "aabbcc"
-          aggregatedCommittee = toData $ aggregateKeys $ map unwrap
-            initCommitteePubKeys
-          sidechainParams =
-            SidechainParams
-              { chainId: BigInt.fromInt 1
-              , genesisUtxo
-              , thresholdNumerator: BigInt.fromInt 2
-              , thresholdDenominator: BigInt.fromInt 3
-              , governanceAuthority: Governance.mkGovernanceAuthority pkh
-              }
-          sidechainParamsWithATMSKind =
-            { sidechainParams
-            , atmsKind: initATMSKind
-            }
+        withSingleMultiSig (unwrap pkh) $ do
+          genesisUtxo ← getOwnTransactionInput
+          let
+            sidechainParams =
+              SidechainParams
+                { chainId: BigInt.fromInt 1
+                , genesisUtxo
+                , thresholdNumerator: BigInt.fromInt 2
+                , thresholdDenominator: BigInt.fromInt 3
+                , governanceAuthority: Governance.mkGovernanceAuthority pkh
+                }
 
-        void $ initTokensMint sidechainParams ATMSPlainEcdsaSecp256k1 1
-        void $ initFuel sidechainParams zero aggregatedCommittee
-          ATMSPlainEcdsaSecp256k1
-          1
-        void $ initCheckpoint sidechainParams genesisHash ATMSPlainEcdsaSecp256k1
-          1
-        void $ initNativeTokenMgmt sidechainParams ATMSPlainEcdsaSecp256k1 1
+          assertNumberOfActualVersionedScripts sidechainParams 1 0 0
+          assertNumberOfActualVersionedScripts sidechainParams 2 0 0
 
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 6 4
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
+          void $ initTokensMint sidechainParams 1
+          void $ Versioning.initializeVersion sidechainParams 1
 
-        committeeCandidateValidator ← getCommitteeCandidateValidator
-          sidechainParams
-
-        -- This validator is not part of the versioned scripts hardcoded list,
-        -- so it should *not* be inserted.
-        void
-          $ Versioning.insertVersionLookupsAndConstraints
-              sidechainParams
-              2
-              (CommitteeCandidateValidator /\ committeeCandidateValidator)
-          >>=
-            balanceSignAndSubmit "Test: insert non-versioned validator version"
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 6 5
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
+          { dParameterMintingPolicy } ←
+            getDParameterMintingPolicyAndCurrencySymbol sidechainParams
+          assertNumberOfActualVersionedScripts sidechainParams 1 2 3
+          assertNumberOfActualVersionedScripts sidechainParams 2 0 0
+          -- This validator is not part of the versioned scripts hardcoded list,
+          -- so it should *not* be inserted.
+          void
+            $ Versioning.insertVersionLookupsAndConstraints
+                sidechainParams
+                1
+                (DParameterPolicy /\ dParameterMintingPolicy)
+            >>=
+              balanceSignAndSubmit "Test: insert non-versioned validator version"
+          assertNumberOfActualVersionedScripts sidechainParams 1 2 3
+          assertNumberOfActualVersionedScripts sidechainParams 2 0 0
 
 -- | After inserting a versioned script, invalidating it twice should fail in the second
 -- | invalidation call.
@@ -346,222 +247,42 @@ testRemovingTwiceSameScriptFailScenario =
         ]
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         pkh ← getOwnPaymentPubKeyHash
-        genesisUtxo ← getOwnTransactionInput
-        let
-          keyCount = 25
-        initCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
-          generatePrivKey
-        let
-          initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-          initATMSKind = ATMSPlainEcdsaSecp256k1
-          genesisHash = hexToByteArrayUnsafe "aabbcc"
-          aggregatedCommittee = toData $ aggregateKeys $ map unwrap
-            initCommitteePubKeys
-          sidechainParams =
-            SidechainParams
-              { chainId: BigInt.fromInt 1
-              , genesisUtxo
-              , thresholdNumerator: BigInt.fromInt 2
-              , thresholdDenominator: BigInt.fromInt 3
-              , governanceAuthority: Governance.mkGovernanceAuthority pkh
-              }
-          sidechainParamsWithATMSKind =
-            { sidechainParams
-            , atmsKind: initATMSKind
-            }
+        withSingleMultiSig (unwrap pkh) $ do
+          genesisUtxo ← getOwnTransactionInput
+          let
+            sidechainParams =
+              SidechainParams
+                { chainId: BigInt.fromInt 1
+                , genesisUtxo
+                , thresholdNumerator: BigInt.fromInt 2
+                , thresholdDenominator: BigInt.fromInt 3
+                , governanceAuthority: Governance.mkGovernanceAuthority pkh
+                }
 
-        void $ initTokensMint sidechainParams ATMSPlainEcdsaSecp256k1 1
-        void $ initFuel sidechainParams zero aggregatedCommittee
-          ATMSPlainEcdsaSecp256k1
-          1
-        void $ initCheckpoint sidechainParams genesisHash ATMSPlainEcdsaSecp256k1
-          1
-        void $ initNativeTokenMgmt sidechainParams ATMSPlainEcdsaSecp256k1 1
+          void $ initTokensMint sidechainParams 1
+          void $ Versioning.initializeVersion sidechainParams 1
 
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 6 4
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
-
-        -- We assume this policy was already inserted by 'initSidechain', and thus try to invalidate
-        -- it.
-        void
-          $ Versioning.invalidateVersionLookupsAndConstraints
-              sidechainParams
-              1
-              MerkleRootTokenPolicy
-          >>= balanceSignAndSubmit "Test: invalidate policy version"
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 5 4
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
-
-        -- We already invalidated that script. Re-invalidating it should fail.
-        withUnliftApp fails $ do
           void
             $ Versioning.invalidateVersionLookupsAndConstraints
                 sidechainParams
                 1
-                MerkleRootTokenPolicy
-            >>= balanceSignAndSubmit
-              "Test: invalidate an already invalidated policy version"
+                CommitteeCandidateValidator
+            >>=
+              balanceSignAndSubmit "Test: insert the same version of policy"
 
--- | Executing a single versioned script invalidation transaction should remove a single versioned
--- | script, even if multiple scripts with the same ID and version were inserted.
-testRemovingScriptInsertedMultipleTimesSuccessScenario ∷ TestnetTest
-testRemovingScriptInsertedMultipleTimesSuccessScenario =
-  Mote.Monad.test "Removing the same script twice should fail"
-    $ Test.TestnetTest.mkTestnetConfigTest
-        [ BigNum.fromInt 50_000_000
-        , BigNum.fromInt 50_000_000
-        , BigNum.fromInt 50_000_000
-        , BigNum.fromInt 40_000_000
-        , BigNum.fromInt 40_000_000
-        , BigNum.fromInt 40_000_000
-        ]
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-        pkh ← getOwnPaymentPubKeyHash
-        genesisUtxo ← getOwnTransactionInput
-        let
-          keyCount = 25
-        initCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
-          generatePrivKey
-        let
-          initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-          initATMSKind = ATMSPlainEcdsaSecp256k1
-          genesisHash = hexToByteArrayUnsafe "aabbcc"
-          aggregatedCommittee = toData $ aggregateKeys $ map unwrap
-            initCommitteePubKeys
-          sidechainParams =
-            SidechainParams
-              { chainId: BigInt.fromInt 1
-              , genesisUtxo
-              , thresholdNumerator: BigInt.fromInt 2
-              , thresholdDenominator: BigInt.fromInt 3
-              , governanceAuthority: Governance.mkGovernanceAuthority pkh
-              }
-          sidechainParamsWithATMSKind =
-            { sidechainParams
-            , atmsKind: initATMSKind
-            }
-
-        void $ initTokensMint sidechainParams ATMSPlainEcdsaSecp256k1 1
-        void $ initFuel sidechainParams zero aggregatedCommittee
-          ATMSPlainEcdsaSecp256k1
-          1
-        void $ initCheckpoint sidechainParams genesisHash ATMSPlainEcdsaSecp256k1
-          1
-        void $ initNativeTokenMgmt sidechainParams ATMSPlainEcdsaSecp256k1 1
-
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 6 4
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
-
-        { mintingPolicy: merkleRootTokenMintingPolicy } ←
-          merkleRootCurrencyInfo sidechainParams
-
-        -- This policy was already inserted by 'initSidechain'.
-        void
-          $ Versioning.insertVersionLookupsAndConstraints
-              sidechainParams
-              1
-              (MerkleRootTokenPolicy /\ merkleRootTokenMintingPolicy)
-          >>=
-            balanceSignAndSubmit "Test: insert already versioned policy version"
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 7 4
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
-
-        -- We assume this policy was already inserted by 'initSidechain', and thus try to invalidate
-        -- it.
-        void
-          $ Versioning.invalidateVersionLookupsAndConstraints
-              sidechainParams
-              1
-              MerkleRootTokenPolicy
-          >>= balanceSignAndSubmit "Test: invalidate policy version"
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 6 4
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
-
-        -- Now, we invalidate the duplicated policy.
-        void
-          $ Versioning.invalidateVersionLookupsAndConstraints
-              sidechainParams
-              1
-              MerkleRootTokenPolicy
-          >>= balanceSignAndSubmit "Test: invalidate policy version"
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 5 4
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
-
--- | `insertVersion` only inserts a script with `version` for elements with
--- | `ScriptId` present among policies / validators of `version - 1`.
-testInsertScriptsPresentInPreviousVersion ∷ TestnetTest
-testInsertScriptsPresentInPreviousVersion =
-  Mote.Monad.test "Insert new version of a script only if present in version - 1"
-    $ Test.TestnetTest.mkTestnetConfigTest
-        [ BigNum.fromInt 50_000_000
-        , BigNum.fromInt 50_000_000
-        , BigNum.fromInt 50_000_000
-        , BigNum.fromInt 40_000_000
-        , BigNum.fromInt 40_000_000
-        , BigNum.fromInt 40_000_000
-        ]
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) $ do
-        pkh ← getOwnPaymentPubKeyHash
-        genesisUtxo ← getOwnTransactionInput
-        let
-          keyCount = 25
-        initCommitteePrvKeys ← liftEffect $ sequence $ Array.replicate keyCount
-          generatePrivKey
-        let
-          initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-          initATMSKind = ATMSPlainEcdsaSecp256k1
-          genesisHash = hexToByteArrayUnsafe "aabbcc"
-          aggregatedCommittee = toData $ aggregateKeys $ map unwrap
-            initCommitteePubKeys
-          sidechainParams =
-            SidechainParams
-              { chainId: BigInt.fromInt 1
-              , genesisUtxo
-              , thresholdNumerator: BigInt.fromInt 2
-              , thresholdDenominator: BigInt.fromInt 3
-              , governanceAuthority: Governance.mkGovernanceAuthority pkh
-              }
-          sidechainParamsWithATMSKind =
-            { sidechainParams
-            , atmsKind: initATMSKind
-            }
-
-        -- Insert all initial versioned scripts
-        void $ initTokensMint sidechainParams ATMSPlainEcdsaSecp256k1 1
-        void $ initFuel sidechainParams zero aggregatedCommittee
-          ATMSPlainEcdsaSecp256k1
-          1
-        void $ initCheckpoint sidechainParams genesisHash ATMSPlainEcdsaSecp256k1
-          1
-        void $ initNativeTokenMgmt sidechainParams ATMSPlainEcdsaSecp256k1 1
-
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 6 4
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
-
-        -- Invalidate FUELMintingPolicy. It should not get updated.
-        void
-          $ Versioning.invalidateVersionLookupsAndConstraints
-              sidechainParams
-              1
-              FUELMintingPolicy
-          >>= balanceSignAndSubmit
-            "Test: invalidate fuel minting policy version 1"
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 5 4
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 0 0
-
-        -- Update all possible scripts to V2.
-        -- NOTE: V2 currently contains only FuelMintingPolicy and FUELBurningPolicy,
-        -- so without the minting policy this should insert only one V2 script.
-        void $ Versioning.insertVersion sidechainParamsWithATMSKind 2
-
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 1 5 4
-        assertNumberOfActualVersionedScripts sidechainParamsWithATMSKind 2 1 0
+          ( void
+              $ Versioning.invalidateVersionLookupsAndConstraints
+                  sidechainParams
+                  1
+                  CommitteeCandidateValidator
+              >>=
+                balanceSignAndSubmit "Test: insert the same version of policy"
+          )
+            # withUnliftApp fails
 
 assertNumberOfActualVersionedScripts ∷
   ∀ r.
-  { sidechainParams ∷ SidechainParams
-  , atmsKind ∷ ATMSKinds
-  } →
+  SidechainParams →
   -- | Version number
   Int →
   -- | Number of expected versionned minting policy scripts
@@ -572,11 +293,11 @@ assertNumberOfActualVersionedScripts ∷
     (EXCEPT OffchainError + TRANSACTION + WALLET + READER Env + AFF + EFFECT + r)
     Unit
 assertNumberOfActualVersionedScripts
-  sidechainParamsWithATMSKind
+  sidechainParams
   version
   numExpectedVersionedPolicies
   numExpectedVersionedValidators = do
-  Versioning.getActualVersionedPoliciesAndValidators sidechainParamsWithATMSKind
+  Versioning.getActualVersionedPoliciesAndValidators sidechainParams
     version >>=
     \{ versionedPolicies, versionedValidators } → do
       liftAff

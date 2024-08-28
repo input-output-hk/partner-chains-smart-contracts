@@ -22,25 +22,11 @@ import Data.List as List
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
-import TrustlessSidechain.Checkpoint as Checkpoint
-import TrustlessSidechain.CommitteeATMSSchemes
-  ( ATMSKinds
-      ( ATMSPlainEcdsaSecp256k1
-      , ATMSPlainSchnorrSecp256k1
-      )
-  , CommitteeCertificateMint
-      ( CommitteeCertificateMint
-      )
-  )
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
-import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy as CommitteePlainEcdsaSecp256k1ATMSPolicy
-import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy as CommitteePlainSchnorrSecp256k1ATMSPolicy
 import TrustlessSidechain.DParameter.Utils as DParameter
-import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Effects.Env (Env, READER)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
-import TrustlessSidechain.FUELProxyPolicy (getFuelProxyMintingPolicy)
 import TrustlessSidechain.InitSidechain.Utils as InitSidechain
 import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -53,18 +39,11 @@ import TrustlessSidechain.Utils.Asset
 import TrustlessSidechain.Versioning as Versioning
 import TrustlessSidechain.Versioning.Types
   ( ScriptId
-      ( DsConfPolicy
-      , CandidatePermissionPolicy
-      , CheckpointPolicy
-      , FUELProxyPolicy
+      ( CandidatePermissionPolicy
       , VersionOraclePolicy
       , PermissionedCandidatesPolicy
       , DParameterPolicy
-      , CommitteePlainEcdsaSecp256k1ATMSPolicy
-      , CommitteePlainSchnorrSecp256k1ATMSPolicy
       , CommitteeCandidateValidator
-      , DsConfValidator
-      , DsInsertValidator
       , VersionOracleValidator
       , PermissionedCandidatesValidator
       , DParameterValidator
@@ -104,7 +83,6 @@ type SidechainAddressesExtra =
 -- | bundling the required data to grab all the sidechain addresses.
 newtype SidechainAddressesEndpointParams = SidechainAddressesEndpointParams
   { sidechainParams ∷ SidechainParams
-  , atmsKind ∷ ATMSKinds
   , -- Used to optionally grab the minting policy of candidate permission
     -- token.
     usePermissionToken ∷ Boolean
@@ -123,27 +101,12 @@ getSidechainAddresses ∷
 getSidechainAddresses
   ( SidechainAddressesEndpointParams
       { sidechainParams
-      , atmsKind
       , usePermissionToken
       , version
       }
   ) = do
 
   -- Minting policies
-  let
-    committeeCertificateMint =
-      CommitteeCertificateMint
-        { thresholdNumerator: (unwrap sidechainParams).thresholdNumerator
-        , thresholdDenominator: (unwrap sidechainParams).thresholdDenominator
-        }
-
-  ds ← DistributedSet.getDs sidechainParams
-
-  { mintingPolicy: dsConfPolicy } ← DistributedSet.dsConfCurrencyInfo
-    sidechainParams
-  let
-    dsConfPolicyId = currencySymbolToHex $ PlutusScript.hash
-      dsConfPolicy
 
   mCandidatePermissionPolicyId ←
     if usePermissionToken then do
@@ -155,21 +118,10 @@ getSidechainAddresses
       pure $ Just candidatePermissionPolicyId
     else pure Nothing
 
-  { currencySymbol: checkpointCurrencySymbol } ← do
-    Checkpoint.checkpointCurrencyInfo sidechainParams
-  let
-    checkpointPolicyId = currencySymbolToHex
-      checkpointCurrencySymbol
-
   { versionOracleCurrencySymbol } ← getVersionOraclePolicy sidechainParams
   let
     versionOraclePolicyId = currencySymbolToHex
       versionOracleCurrencySymbol
-
-  { fuelProxyCurrencySymbol } ← getFuelProxyMintingPolicy sidechainParams
-  let
-    fuelProxyPolicyId = currencySymbolToHex
-      fuelProxyCurrencySymbol
 
   { permissionedCandidatesCurrencySymbol } ←
     PermissionedCandidates.getPermissionedCandidatesMintingPolicyAndCurrencySymbol
@@ -195,15 +147,12 @@ getSidechainAddresses
   committeeCandidateValidator ←
     CommitteeCandidateValidator.getCommitteeCandidateValidator sidechainParams
 
-  dsInsertValidator ← DistributedSet.insertValidator ds
-  dsConfValidator ← DistributedSet.dsConfValidator ds
-
   versionOracleValidator ←
     versionOracleValidator sidechainParams
 
   { versionedPolicies, versionedValidators } ←
     Versioning.getExpectedVersionedPoliciesAndValidators
-      { sidechainParams: sidechainParams, atmsKind }
+      sidechainParams
       version
   let
     versionedCurrencySymbols = Array.fromFoldable $ map
@@ -211,22 +160,6 @@ getSidechainAddresses
           (Tuple scriptId (currencySymbolToHex $ PlutusScript.hash mps))
       )
       versionedPolicies
-
-  { currencySymbol: committeePlainEcdsaSecp256k1ATMSCurrencySymbol } ←
-    CommitteePlainEcdsaSecp256k1ATMSPolicy.committeePlainEcdsaSecp256k1ATMSCurrencyInfo
-      { committeeCertificateMint, sidechainParams }
-  let
-    committeePlainEcdsaSecp256k1ATMSCurrencyInfoId = byteArrayToHex $ unwrap $
-      encodeCbor
-        committeePlainEcdsaSecp256k1ATMSCurrencySymbol
-
-  { currencySymbol: committeePlainSchnorrSecp256k1ATMSCurrencySymbol } ←
-    CommitteePlainSchnorrSecp256k1ATMSPolicy.committeePlainSchnorrSecp256k1ATMSCurrencyInfo
-      { committeeCertificateMint, sidechainParams }
-  let
-    committeePlainSchnorrSecp256k1ATMSCurrencyInfoId = byteArrayToHex $ unwrap $
-      encodeCbor
-        committeePlainSchnorrSecp256k1ATMSCurrencySymbol
 
   { permissionedCandidatesValidator } ←
     PermissionedCandidates.getPermissionedCandidatesValidatorAndAddress
@@ -238,10 +171,7 @@ getSidechainAddresses
   let
     mintingPolicies ∷ Array (Tuple ScriptId String)
     mintingPolicies =
-      [ DsConfPolicy /\ dsConfPolicyId
-      , CheckpointPolicy /\ checkpointPolicyId
-      , FUELProxyPolicy /\ fuelProxyPolicyId
-      , VersionOraclePolicy /\ versionOraclePolicyId
+      [ VersionOraclePolicy /\ versionOraclePolicyId
       , PermissionedCandidatesPolicy /\ permissionedCandidatesPolicyId
       , DParameterPolicy /\ dParameterPolicyId
       , InitTokenPolicy /\ initTokenPolicyId
@@ -252,23 +182,9 @@ getSidechainAddresses
                 mCandidatePermissionPolicyId
             ]
         <> versionedCurrencySymbols
-        <>
-          ( case atmsKind of
-              ATMSPlainEcdsaSecp256k1 →
-                [ CommitteePlainEcdsaSecp256k1ATMSPolicy
-                    /\ committeePlainEcdsaSecp256k1ATMSCurrencyInfoId
-                ]
-              ATMSPlainSchnorrSecp256k1 →
-                [ CommitteePlainSchnorrSecp256k1ATMSPolicy
-                    /\ committeePlainSchnorrSecp256k1ATMSCurrencyInfoId
-                ]
-              _ → []
-          )
 
     validators =
       [ CommitteeCandidateValidator /\ committeeCandidateValidator
-      , DsConfValidator /\ dsConfValidator
-      , DsInsertValidator /\ dsInsertValidator
       , VersionOracleValidator /\ versionOracleValidator
       , PermissionedCandidatesValidator /\ permissionedCandidatesValidator
       , DParameterValidator /\ dParameterValidator

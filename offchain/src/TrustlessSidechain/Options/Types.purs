@@ -1,6 +1,6 @@
 module TrustlessSidechain.Options.Types
-  ( InputArgOrFile(..)
-  , Config(..)
+  ( Config(..)
+  , InputArgOrFile(..)
   , Options(..)
   , RuntimeConfig(..)
   , SidechainEndpointParams(..)
@@ -13,32 +13,23 @@ import Contract.Prelude
 import Cardano.Types.Asset (Asset)
 import Cardano.Types.BigNum (BigNum)
 import Cardano.Types.NetworkId (NetworkId)
-import Contract.Address (Address)
 import Contract.Config (ContractParams, ServerConfig)
-import Contract.PlutusData (PlutusData)
 import Contract.Prim.ByteArray (ByteArray)
-import Contract.Scripts (ValidatorHash)
 import Contract.Transaction (TransactionInput)
 import Data.List (List)
-import Data.List.NonEmpty (NonEmptyList)
 import JS.BigInt (BigInt)
 import Node.Path (FilePath)
-import TrustlessSidechain.CommitteeATMSSchemes.Types (ATMSKinds)
 import TrustlessSidechain.CommitteeCandidateValidator
   ( BlockProducerRegistrationMsg
   , StakeOwnership
   )
-import TrustlessSidechain.FUELMintingPolicy.V1 (MerkleTreeEntry)
 import TrustlessSidechain.GetSidechainAddresses (SidechainAddressesExtra)
-import TrustlessSidechain.MerkleRoot.Types (MerkleRootInsertionMessage)
-import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree, RootHash)
 import TrustlessSidechain.NativeTokenManagement.Types
   ( ImmutableReserveSettings
   , MutableReserveSettings
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey)
-import TrustlessSidechain.UpdateCommitteeHash.Types (UpdateCommitteeHashMessage)
 import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1PrivateKey)
 import TrustlessSidechain.Utils.SchnorrSecp256k1 (SchnorrSecp256k1PrivateKey)
 
@@ -47,7 +38,6 @@ import TrustlessSidechain.Utils.SchnorrSecp256k1 (SchnorrSecp256k1PrivateKey)
 -- | This is essentially `SidechainParams` with a little bit more information.
 newtype SidechainEndpointParams = SidechainEndpointParams
   { sidechainParams ∷ SidechainParams
-  , atmsKind ∷ ATMSKinds
   }
 
 derive instance Newtype SidechainEndpointParams _
@@ -87,7 +77,6 @@ type Config =
               { numerator ∷ Int
               , denominator ∷ Int
               }
-        , atmsKind ∷ Maybe ATMSKinds
         -- governanceAuthority should really be a PubKeyHash but there's no
         -- (easy) way of pulling a dummy PubKeyHash value out of thin air in
         -- TrustlessSidechain.ConfigFile.optExample
@@ -123,42 +112,13 @@ data UtilsEndpoint
       -- false ===> hash the message
       }
 
-  | CborUpdateCommitteeMessageAct
-      { updateCommitteeHashMessage ∷ UpdateCommitteeHashMessage PlutusData }
   | CborBlockProducerRegistrationMessageAct
       { blockProducerRegistrationMsg ∷ BlockProducerRegistrationMsg
-      }
-  | CborMerkleTreeEntryAct { merkleTreeEntry ∷ MerkleTreeEntry }
-  | CborMerkleTreeAct
-      { merkleTreeEntries ∷ NonEmptyList MerkleTreeEntry
-      }
-  | CborMerkleRootInsertionMessageAct
-      { merkleRootInsertionMessage ∷ MerkleRootInsertionMessage
-      }
-  | CborCombinedMerkleProofAct
-      { merkleTreeEntry ∷ MerkleTreeEntry
-      , merkleTree ∷ MerkleTree
-      }
-  | CborPlainAggregatePublicKeysAct
-      { publicKeys ∷ NonEmptyList ByteArray
       }
 
 -- | Data for CLI endpoints which submit a transaction to the blockchain.
 data TxEndpoint
-  = ClaimActV1
-      { amount ∷ BigInt
-      , recipient ∷ Address
-      , merkleProof ∷ MerkleProof
-      , index ∷ BigInt
-      , previousMerkleRoot ∷ Maybe RootHash
-      , dsUtxo ∷ Maybe TransactionInput
-      }
-  | BurnActV1 { amount ∷ BigInt, recipient ∷ ByteArray }
-  | ClaimActV2
-      { amount ∷ BigInt
-      }
-  | BurnActV2 { amount ∷ BigInt, recipient ∷ ByteArray }
-  | CommitteeCandidateReg
+  = CommitteeCandidateReg
       { stakeOwnership ∷ StakeOwnership
       , sidechainPubKey ∷ ByteArray
       , sidechainSig ∷ ByteArray
@@ -170,59 +130,15 @@ data TxEndpoint
   | CandidiatePermissionTokenAct
       { candidatePermissionTokenAmount ∷ BigInt }
   | CommitteeCandidateDereg { spoPubKey ∷ Maybe PubKey }
-  | CommitteeHash
-      { newCommitteePubKeysInput ∷ InputArgOrFile (NonEmptyList ByteArray)
-      , committeeSignaturesInput ∷
-          InputArgOrFile (NonEmptyList (ByteArray /\ Maybe ByteArray))
-      , previousMerkleRoot ∷ Maybe RootHash
-      , sidechainEpoch ∷ BigInt
-      , mNewCommitteeValidatorHash ∷ Maybe ValidatorHash
-      }
-  | SaveRoot
-      { merkleRoot ∷ RootHash
-      , previousMerkleRoot ∷ Maybe RootHash
-      , committeeSignaturesInput ∷
-          InputArgOrFile (NonEmptyList (ByteArray /\ Maybe ByteArray))
-      }
-  |
-    -- `CommitteeHandover` is a convenient alias for saving the root,
-    -- followed by updating the committee hash.
-    CommitteeHandover
-      { merkleRoot ∷ RootHash
-      , previousMerkleRoot ∷ Maybe RootHash
-      , newCommitteePubKeysInput ∷ InputArgOrFile (NonEmptyList ByteArray)
-      , newCommitteeSignaturesInput ∷
-          InputArgOrFile (NonEmptyList (ByteArray /\ Maybe ByteArray))
-      , newMerkleRootSignaturesInput ∷
-          InputArgOrFile (NonEmptyList (ByteArray /\ Maybe ByteArray))
-      , sidechainEpoch ∷ BigInt
-      , mNewCommitteeValidatorHash ∷ Maybe ValidatorHash
-      }
   | GetAddrs
       SidechainAddressesExtra
   | InitTokensMint
       { version ∷ Int }
-  | InitCheckpoint
-      { genesisHash ∷ ByteArray
-      , version ∷ Int
-      }
-  | InitFuel
-      { committeePubKeysInput ∷ InputArgOrFile (NonEmptyList ByteArray)
-      , initSidechainEpoch ∷ BigInt
-      , version ∷ Int
-      }
   | InitReserveManagement
       { version ∷ Int
       }
   | InitCandidatePermissionToken
       { initCandidatePermissionTokenMintInfo ∷ Maybe BigInt
-      }
-  | SaveCheckpoint
-      { committeeSignaturesInput ∷
-          InputArgOrFile (NonEmptyList (ByteArray /\ Maybe ByteArray))
-      , newCheckpointBlockHash ∷ ByteArray
-      , newCheckpointBlockNumber ∷ BigInt
-      , sidechainEpoch ∷ BigInt
       }
 
   -- See Note [Supporting version insertion beyond version 2]
@@ -261,7 +177,6 @@ data TxEndpoint
                 }
             )
       }
-  | BurnNFTs
 
   -- | reserve initialization for an asset class
   | InitTokenStatus

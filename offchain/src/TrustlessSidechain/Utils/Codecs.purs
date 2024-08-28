@@ -2,7 +2,6 @@ module TrustlessSidechain.Utils.Codecs
   ( byteArrayCodec
   , transactionInputCodec
   , thresholdCodec
-  , atmsKindCodec
   , scParamsCodec
   , pubKeyHashCodec
   , encodeInitTokenStatusData
@@ -40,20 +39,10 @@ import Foreign.Object as Object
 import JS.BigInt (BigInt)
 import JS.BigInt as BigInt
 import Partial.Unsafe (unsafePartial)
-import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSKinds
-      ( ATMSPlainEcdsaSecp256k1
-      , ATMSPlainSchnorrSecp256k1
-      , ATMSDummy
-      , ATMSPoK
-      , ATMSMultisignature
-      )
-  )
 import TrustlessSidechain.Governance.Admin
   ( GovernanceAuthority
   , mkGovernanceAuthority
   )
-import TrustlessSidechain.Options.Parsers as Parsers
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 
 -- Note [BigInt values and JSON]
@@ -97,27 +86,6 @@ transactionInputCodec =
     where
     indexStr = UInt.toString txIn.index
     txHashStr = byteArrayToHex $ unwrap $ encodeCbor $ txIn.transactionId
-
--- | JSON codec for the atms kind. Note that this should match
--- | `TrustlessSidechain.Options.Parsers.parseATMSKind` (both the parsing and the
--- | printing for documentation)
-atmsKindCodec ∷ CA.JsonCodec ATMSKinds
-atmsKindCodec =
-  CA.prismaticCodec "atms-kind" toF fromF CA.string
-  where
-  toF ∷ String → Maybe ATMSKinds
-  toF str = case Parsers.parseATMSKind str of
-    Right atmsKind → Just atmsKind
-    Left _err → Nothing
-
-  fromF ∷ ATMSKinds → String
-  fromF ATMSPlainEcdsaSecp256k1 =
-    "plain-ecdsa-secp256k1"
-  fromF ATMSPlainSchnorrSecp256k1 =
-    "plain-schnorr-secp256k1"
-  fromF ATMSDummy = "dummy"
-  fromF ATMSPoK = "pok"
-  fromF ATMSMultisignature = "multisignature"
 
 -- | `thresholdCodec` is the codec for the threshold in `Options.Types.Config`.
 -- | Note that this codec has no relation to the `thresholdNumerator` and

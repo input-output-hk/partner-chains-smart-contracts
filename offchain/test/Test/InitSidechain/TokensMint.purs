@@ -15,12 +15,6 @@ import Test.Unit.Assert (assert)
 import Test.Utils (WrappedTests, testnetGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
-import TrustlessSidechain.Checkpoint.Utils as Checkpoint
-import TrustlessSidechain.CommitteeATMSSchemes
-  ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
-  )
-import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
-import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Effects.Log (logInfo') as Effect
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow) as Effect
@@ -63,7 +57,6 @@ initTokensMintScenario1 =
 
           let
             version = 1
-            initATMSKind = ATMSPlainEcdsaSecp256k1
             sidechainParams = SidechainParams.SidechainParams
               { chainId: BigInt.fromInt 9
               , genesisUtxo: genesisUtxo
@@ -73,22 +66,17 @@ initTokensMintScenario1 =
               }
 
           -- Command being tested
-          void $ InitMint.initTokensMint sidechainParams initATMSKind version
+          void $ InitMint.initTokensMint sidechainParams version
 
           -- For computing the number of versionOracle init tokens
           { versionedPolicies, versionedValidators } ←
             Versioning.getExpectedVersionedPoliciesAndValidators
-              { atmsKind: initATMSKind
-              , sidechainParams
-              }
+              sidechainParams
               version
 
           let
             expected = expectedInitTokens 0 versionedPolicies versionedValidators
-              [ Checkpoint.checkpointInitTokenName
-              , DistributedSet.dsInitTokenName
-              , CommitteeOraclePolicy.committeeOracleInitTokenName
-              , CandidatePermissionToken.candidatePermissionInitTokenName
+              [ CandidatePermissionToken.candidatePermissionInitTokenName
               ]
 
           -- Get the tokens just created
@@ -126,7 +114,6 @@ initTokensMintIdempotent =
 
           let
             version = 1
-            initATMSKind = ATMSPlainEcdsaSecp256k1
             sidechainParams = SidechainParams.SidechainParams
               { chainId: BigInt.fromInt 9
               , genesisUtxo: genesisUtxo
@@ -137,28 +124,21 @@ initTokensMintIdempotent =
 
           -- Mint them once
           void $ InitMint.initTokensMint sidechainParams
-            initATMSKind
             version
 
           -- Then do it again.
           { transactionId } ← InitMint.initTokensMint sidechainParams
-            initATMSKind
             version
 
           -- For computing the number of versionOracle init tokens
           { versionedPolicies, versionedValidators } ←
             Versioning.getExpectedVersionedPoliciesAndValidators
-              { atmsKind: initATMSKind
-              , sidechainParams
-              }
+              sidechainParams
               version
 
           let
             expected = expectedInitTokens 0 versionedPolicies versionedValidators
-              [ Checkpoint.checkpointInitTokenName
-              , DistributedSet.dsInitTokenName
-              , CommitteeOraclePolicy.committeeOracleInitTokenName
-              , CandidatePermissionToken.candidatePermissionInitTokenName
+              [ CandidatePermissionToken.candidatePermissionInitTokenName
               ]
 
           -- Get the tokens just created

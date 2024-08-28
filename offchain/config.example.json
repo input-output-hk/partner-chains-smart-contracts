@@ -6,7 +6,6 @@
       "numerator": 2,
       "denominator": 3
     },
-    "atmsKind": "plain-ecdsa-secp256k1",
     "governanceAuthority": "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
   },
   "runtimeConfig": {

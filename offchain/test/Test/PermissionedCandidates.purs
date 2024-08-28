@@ -10,9 +10,6 @@ import Mote.Monad as Mote.Monad
 import Test.TestnetTest (TestnetTest)
 import Test.TestnetTest as Test.TestnetTest
 import Test.Utils (WrappedTests, fails, getOwnTransactionInput, testnetGroup)
-import TrustlessSidechain.CommitteeATMSSchemes
-  ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
-  )
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
@@ -112,7 +109,7 @@ testScenarioSuccess =
                     "Test: remove permissioned candidates"
             )
 
-        _ ← initTokensMint sidechainParams ATMSPlainEcdsaSecp256k1 1
+        _ ← initTokensMint sidechainParams 1
         pure unit
 
 testScenarioFailure ∷ TestnetTest

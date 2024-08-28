@@ -14,9 +14,6 @@ import Test.TestnetTest as Test.TestnetTest
 import Test.Unit.Assert (assert)
 import Test.Utils (WrappedTests, testnetGroup)
 import Test.Utils as Test.Utils
-import TrustlessSidechain.CommitteeATMSSchemes
-  ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
-  )
 import TrustlessSidechain.Effects.Contract (liftContract)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow) as Effect
@@ -59,7 +56,6 @@ testInitCandidatePermissionToken =
             let
               version = 1
               initCandidatePermissionTokenMintInfo = Just (fromInt 1)
-              initATMSKind = ATMSPlainEcdsaSecp256k1
               sidechainParams = SidechainParams.SidechainParams
                 { chainId: BigInt.fromInt 9
                 , genesisUtxo: genesisUtxo
@@ -69,7 +65,7 @@ testInitCandidatePermissionToken =
                 }
 
             -- First create init tokens
-            void $ InitMint.initTokensMint sidechainParams initATMSKind version
+            void $ InitMint.initTokensMint sidechainParams version
 
             void $ InitCandidatePermission.initCandidatePermissionToken
               sidechainParams
@@ -98,7 +94,6 @@ testInitCandidatePermissionTokenIdempotent =
             let
               version = 1
               initCandidatePermissionTokenMintInfo = Just (fromInt 1)
-              initATMSKind = ATMSPlainEcdsaSecp256k1
               sidechainParams = SidechainParams.SidechainParams
                 { chainId: BigInt.fromInt 9
                 , genesisUtxo: genesisUtxo
@@ -109,10 +104,9 @@ testInitCandidatePermissionTokenIdempotent =
 
             -- Initialise tokens
             void $ InitMint.initTokensMint sidechainParams
-              initATMSKind
               version
 
-            -- Initialise checkpoint
+            -- Initialise candidate permission token
             void $ InitCandidatePermission.initCandidatePermissionToken
               sidechainParams
               initCandidatePermissionTokenMintInfo

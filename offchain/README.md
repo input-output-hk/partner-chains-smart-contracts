@@ -22,29 +22,7 @@ runtime dependencies:
 - ogmios
 - kupo
 
-Luckily, we have a dockerised setup, that spins up all these easily with a
-preset Preview or Preprod. Just run:
-
-```
-nix run .#ctl-runtime-preview
-```
-
-To change the testnet you're using, you have to change the network name in the `flake.nix`
-
-```
-      runtimeConfig = {
-        network = {
-          name = "NETWORK_NAME";
-          magic = NETWORK_MAGIC;
-        };
-      };
-```
-
-**TODO**: the above statement is incorrect, we no longer seem to have testnet
-configuration in `flake.nix`.
-
-You can also run these components directly without using Docker, more about these
-can be found [here](https://github.com/Plutonomicon/cardano-transaction-lib/blob/develop/doc/runtime.md).
+More about these can be found [here](https://github.com/Plutonomicon/cardano-transaction-lib/blob/develop/doc/runtime.md).
 
 Or by using a nix derivation, that brings required runtime dependencies into
 scope:
@@ -123,7 +101,6 @@ file `$CWD/config.json` in the following format:
       "numerator": 2,
       "denominator": 3
     },
-    "atmsKind": "plain-ecdsa-secp256k1",
     "governanceAuthority": "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
   },
   "runtimeConfig": {
@@ -147,12 +124,11 @@ file `$CWD/config.json` in the following format:
 
 This allows to shorten a CLI call from:
 ```
-nix run .#sidechain-main-cli -- burn-v1 \
+nix run .#sidechain-main-cli -- deregister \
   --sidechain-id 123 \
   --genesis-committee-hash-utxo 3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1 \
   --threshold-numerator 2 \
   --threshold-denominator 3 \
-  --atms-kind plain-ecdsa-secp256k1 \
   --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
   --network testnet \
   --ogmios-host localhost \
@@ -163,16 +139,14 @@ nix run .#sidechain-main-cli -- burn-v1 \
   --kupo-secure false \
   --payment-signing-key-file payment.skey \
   --stake-signing-key-file stake.skey \
-  --amount 5 \
-  --recipient aabbcc
+  --spo-public-key aabbcc
 ```
 
 to:
 
 ```
-nix run .#sidechain-main-cli -- burn-v1 \
-  --amount 5 \
-  --recipient aabbcc
+nix run .#sidechain-main-cli -- deregister \
+  --spo-public-key aabbcc
 ```
 
 **We henceforth assume that these common options are located in the
@@ -208,25 +182,13 @@ Available commands:
   init                     Initialise sidechain
   init-tokens-mint         Mint all sidechain initialisation tokens
   init-reserve-management  Initialise native token reserve management system
-  init-checkpoint          Initialise checkpoint
-  init-fuel                Initialise the FUEL and committee selection
-                           mechanisms
   init-candidate-permission-token
                            Initialise candidate permission token
   addresses                Get the script addresses for a given sidechain
-  claim-v1                 Claim a FUEL tokens from a proof
-  burn-v1                  Burn a certain amount of FUEL tokens
-  claim-v2                 Claim FUEL tokens from thin air
-  burn-v2                  Burn a certain amount of FUEL tokens
   register                 Register a committee candidate
   candidate-permission-token
                            Mint candidate permission tokens
   deregister               Deregister a committee member
-  committee-hash           Update the committee hash
-  save-root                Saving a new merkle root
-  committee-handover       An alias for saving the merkle root, followed by
-                           updating the committee hash
-  save-checkpoint          Saving a new checkpoint
   reserve-create           Create a new token reserve
   reserve-handover         Empty and remove an existing reserve
   reserve-deposit          Deposit assets to existing reserve
@@ -241,7 +203,6 @@ Available commands:
   update-d-parameter       Update a D parameter
   update-permissioned-candidates
                            Update a Permissioned Candidates list
-  collect-garbage          Burn unneccessary NFTs
   init-token-status        List the number of each init token the wallet still
                            holds
   cli-version              Display semantic version of the CLI and its git hash
@@ -256,8 +217,6 @@ the genesis UTxO and mints required initialization tokens, and then uses these
 initialization tokens to initialize the following functionalities of a
 sidechain:
 
-  * claiming and burning the fuel as well as the committee selection mechanism
-  * checkpointing
   * candidate permission tokens (optional - see below)
   * native token reserve management system
 
@@ -301,8 +260,6 @@ of whether there's an intention to use all of them.
 Spends Genesis Utxo
 
 Mints:
-* `"Checkpoint InitToken"`
-* `"DistributedSet InitToken"`
 * `"CandidatePermission InitToken"`
 * `"Committee oracle InitToken"`
 * `"Version oracle InitToken"` (multiple tokens)
@@ -311,53 +268,10 @@ Mints:
 nix run .#sidechain-main-cli -- init-tokens-mint --version 1
 ```
 
-##### Init FUEL and committee selection
-
-Initialise the FUEL and committee selection mechanisms.  Burn `"DistributedSet
-InitToken"` and `"Committee oracle InitToken"`.
-
-Insert policies:
-* `CommitteeCertificateVerificationMintingPolicy`
-* `CommitteeOraclePolicy`
-* `DsKeyPolicy`
-* `FUELMintingPolicy`
-* `FUELBurningPolicy`
-* `MerkleRootTokenPolicy`
-
-Insert validators:
-* `CommitteeHashValidator`
-* `CommitteeCandidateValidator`
-* `MerkleRootTokenValidator`
-
-```
-nix run .#sidechain-main-cli -- init-fuel
-  --committee-pub-key aabbcc \
-  --committee-pub-key ccbbaa \
-  --sidechain-epoch 0 \
-  --version 1
-```
-
-##### Init Checkpoint
-
-Initialise the Checkpoint mechanism. Burns `"Checkpoint InitToken"`.
-
-Insert validator: `CheckpointValidator`
-
-```
-nix run .#sidechain-main-cli -- init-checkpoint \
-  --committee-pub-key aabbcc \
-  --committee-pub-key ccbbaa \
-  --sidechain-epoch 0 \
-  --version 1
-  --candidate-permission-token-amount 42
-```
-
 ##### Initialise Candidate Permission Token
 
 Initialise the Candidate Permission Token mechanism.
 Burns `"Candidate permission token init"`.
-
-Insert validator: `CheckpointValidator`
 
 ```
 nix run .#sidechain-main-cli -- init-candidate-permission-token \
@@ -393,42 +307,7 @@ nix run .#sidechain-main-cli -- addresses \
 An optional `--use-candidate-permission-token` flag can be used to also display
 policy of the candidate permission tokens.
 
-#### 3.2.4. Claim FUEL tokens
-
-```
-nix run .#sidechain-main-cli -- claim-v1 \
-  --combined-proof aabb \
-  --distributed-set-utxo "a21f14faf41ffdecf311598f2a858f565b5eba0a9c8d6238988485a3ed64cf1f#0"
-    # ^ Optional flag to avoid a linear scan through the UTxO set
-```
-
-Note: at the moment there also exists `claim-v2` command, which works with
-scripts in version 2 - see below for how versions are managed.  `claim-v2`
-exists for demonstration purposes only and does not require any proofs, allowing
-to claim FUEL out of thin air:
-```
-nix run .#sidechain-main-cli -- claim-v2 \
-  --amount 13
-```
-
-#### 3.2.5. Burn user owned FUEL tokens
-
-```
-nix run .#sidechain-main-cli -- burn-v1 \
-  --amount 5 \
-  --recipient aabbcc
-```
-
-Note: at the moment there also exists `burn-v2` command, which works with
-scripts in version 2 - see below for how versions are managed.  `burn-v2` exists
-for demonstration purposes only and uses same arguments as `burn-v1`.
-```
-nix run .#sidechain-main-cli -- burn-v2 \
-  --amount 5 \
-  --recipient aabbcc
-```
-
-#### 3.2.6. Register committee candidate
+#### 3.2.4. Register committee candidate
 
 In order to generate the signatures, you can use the signature generator tool:
 ```
@@ -460,81 +339,21 @@ nix run .#sidechain-main-cli -- register \
   --use-candidate-permission-token
 ```
 
-#### 3.2.7. Deregister committee candidate
+#### 3.2.5. Deregister committee candidate
 
 ```
 nix run .#sidechain-main-cli -- deregister \
   --spo-public-key aabbcc
 ```
 
-#### 3.2.8. Committee hash update
-
-```
-nix run .#sidechain-main-cli -- committee-hash \
-  --committee-pub-key-and-signature aabbcc01:aaaaaa \
-  --committee-pub-key-and-signature aabbcc02 \
-  --committee-pub-key-and-signature aabbcc03:bbbbbb \
-  --committee-pub-key-and-signature aabbcc04:cccccc \
-  --new-committee-pub-key ddeeff01 \
-  --new-committee-pub-key ddeeff02 \
-  --new-committee-pub-key ddeeff03 \
-  --new-committee-pub-key ddeeff04 \
-  --sidechain-epoch 6 \
-  --new-committee-validator-cbor-encoded-address aadd \
-  --previous-merkle-root abcdef
-```
-
-Note that `--new-committee-validator-cbor-encoded-address` can be found
-from the JSON key `cborEncodedAddresses` from the output of the `addresses`
-subcommand.
-
-#### 3.2.9. Save merkle root
-
-```
-nix run .#sidechain-main-cli -- save-root \
-  --merkle-root abababab \
-  --committee-pub-key-and-signature aabbcc01:aaaaaa \
-  --committee-pub-key-and-signature aabbcc02 \
-  --committee-pub-key-and-signature aabbcc03:bbbbbb \
-  --committee-pub-key-and-signature aabbcc04:cccccc \
-  --previous-merkle-root abcdef
-```
-
-#### 3.2.10 Committee handover
-
-```
-nix run .#sidechain-main-cli -- committee-handover \
-  --merkle-root abababab \
-  --sidechain-epoch 6 \
-  --previous-merkle-root abcdef \
-  --new-committee-pub-key ddeeff01 \
-  --new-committee-pub-key ddeeff02 \
-  --new-committee-pub-key ddeeff03 \
-  --committee-pub-key-and-new-committee-signature aabbcc01:aaaaaa \
-  --committee-pub-key-and-new-committee-signature aabbcc02 \
-  --committee-pub-key-and-new-committee-signature aabbcc03:bbbbbb \
-  --committee-pub-key-and-new-merkle-root-signature aabbcc01:aaaaaa \
-  --committee-pub-key-and-new-merkle-root-signature aabbcc02 \
-  --committee-pub-key-and-new-merkle-root-signature aabbcc03:bbbbbb
-```
-
-#### 3.2.11 Candidiate permission token
+#### 3.2.6 Candidiate permission token
 
 ```
 nix run .#sidechain-main-cli -- candidate-permission-token \
   --candidate-permission-token-amount 10
 ```
 
-#### 3.2.12 Save checkpoint
-
-```
-nix run .#sidechain-main-cli -- save-checkpoint \
-  --new-checkpoint-block-hash d8063cc6e907f497360ca50238af5c2e2a95a8869a2ce74ab3e75fe6c9dcabd0d8063cc6e907f497360ca50238af5c2e2a95a8869a2ce74ab3e75fe6c9dcabd0 \
-  --new-checkpoint-block-number 42 \
-  --sidechain-epoch 5
-```
-
-#### 3.2.13 Create a new token reserve
+#### 3.2.7 Create a new token reserve
 
 ```
 nix run .#sidechain-main-cli -- reserve-create \
@@ -553,7 +372,7 @@ Optionally one might also pass `--reserve-initial-incentive-amount
 RESERVE-INCENTIVE-AMOUNT` option to set the incentive, i.e. the amount of tokens
 awarded for a reserve release.
 
-#### 3.2.14 Empty and remove an existing reserve
+#### 3.2.8 Empty and remove an existing reserve
 
 ```
 nix run .#sidechain-main-cli -- reserve-handover
@@ -561,7 +380,7 @@ nix run .#sidechain-main-cli -- reserve-handover
 
 Perform the reserve handover.
 
-#### 3.2.15 Deposit assets to existing reserve
+#### 3.2.9 Deposit assets to existing reserve
 
 ```
 nix run .#sidechain-main-cli -- reserve-deposit \
@@ -574,7 +393,7 @@ Instead of `--deposit-reserve-asset` and `--reserve-asset-name` one might
 specify `--reserve-ada-asset` flag to indicate that Ada is being used as the
 reserve asset.
 
-#### 3.2.16 Release currently available funds from an existing reserve
+#### 3.2.10 Release currently available funds from an existing reserve
 
 
 ```
@@ -583,7 +402,7 @@ nix run .#sidechain-main-cli -- reserve-release-funds \
   --reserve-transaction-input RESERVE-TRANSACTION-INPUT
 ```
 
-#### 3.2.17 Insert new protocol version
+#### 3.2.11 Insert new protocol version
 
 This command is only for testing purposes and shouldn't be used.
 
@@ -591,7 +410,7 @@ This command is only for testing purposes and shouldn't be used.
 nix run .#sidechain-main-cli --insert-version-2
 ```
 
-#### 3.2.18 Update existing protocol version
+#### 3.2.12 Update existing protocol version
 
 ```
 nix run .#sidechain-main-cli -- update-version \
@@ -599,14 +418,14 @@ nix run .#sidechain-main-cli -- update-version \
   --new-version 2
 ```
 
-#### 3.2.19 Invalidate protocol version
+#### 3.2.13 Invalidate protocol version
 
 ```
 nix run .#sidechain-main-cli -- invalidate-version \
   --version 1
 ```
 
-#### 3.2.20 Insert a D parameter value
+#### 3.2.14 Insert a D parameter value
 
 ```
 nix run .#sidechain-main-cli -- insert-d-parameter \
@@ -618,7 +437,7 @@ where N and M are integers.  Note that this should be only done once and then
 `update-d-parameter` value should be used (see below).  However, there is no
 safeguard against inserting multiple D parameter values.
 
-#### 3.2.21 Update a D parameter value
+#### 3.2.15 Update a D parameter value
 
 ```
 nix run .#sidechain-main-cli -- update-d-parameter \
@@ -630,7 +449,7 @@ where N and M are integers.  If more than one D parameter value was inserted
 this will remove all inserted values first and then replace them with a single
 new value.
 
-#### 3.2.22 Insert a list of permissioned candidates
+#### 3.2.16 Insert a list of permissioned candidates
 
 ```
 nix run .#sidechain-main-cli -- update-permissioned-candidates \
@@ -646,7 +465,7 @@ only be used once to initialize the list.  All subsequent updates should be done
 using the `update-permissioned-candidates` command below, though there is no
 safeguard against calling `insert-permissioned-candidates` multiple times.
 
-#### 3.2.23 Update a list of permissioned candidates
+#### 3.2.17 Update a list of permissioned candidates
 
 ```
 nix run .#sidechain-main-cli -- update-permissioned-candidates \
@@ -659,7 +478,7 @@ You can add and remove candidates in a single transaction.  Each candidate is
 listed separately using the `--add-candidate` or `--remove-candidate` flag
 followed by a string of four keys separated from each other by a single colon.
 
-#### 3.2.24 Remove all permissioned candidates
+#### 3.2.18 Remove all permissioned candidates
 
 ```
 nix run .#sidechain-main-cli -- update-permissioned-candidates \
@@ -670,19 +489,7 @@ Remove all currently registered permissioned candidates. You can also remove all
 candidates and add new ones in a single transaction. Just provide
 `--add-candidate` as described above.
 
-#### 3.2.25 Garbage collect redundant tokens
-
-```
-nix run .#sidechain-main-cli -- collect-garbage
-```
-
-Burn all waste tokens found on a user's PubKey address. These tokens include
-ATMS Tokens and FUEL Mint and Burn tokens. These tokens don't play any role in
-the system after they are minted. Their only purpose is to be minted alongside
-some other tokens, as a proof that some kind of check has passed. After that
-there is no other way to use them.
-
-#### 3.2.26 Utils
+#### 3.2.19 Utils
 
 All commands in this section are supposed to be used mostly by developers.
 
@@ -697,7 +504,7 @@ Utils commands that start with `encode` allow for producing messages in CBOR for
 One needs to provide all necessary fields of a message as CLI arguments and the command
 produces CBOR encoded message of a desired type.
 
-##### 3.2.26.1 Generate an ECDSA SECP256k1 public / private key pair
+##### 3.2.19.1 Generate an ECDSA SECP256k1 public / private key pair
 
 ```
 nix run .#sidechain-main-cli -- utils key-gen ecdsa-secp256k1
@@ -712,7 +519,7 @@ Sample output:
 }
 ```
 
-##### 3.2.26.2 Generate an Schnorr SECP256k1 public / private key pair
+##### 3.2.19.2 Generate an Schnorr SECP256k1 public / private key pair
 
 ```
 nix run .#sidechain-main-cli -- utils key-gen schnorr-secp256k1
@@ -727,7 +534,7 @@ Sample output:
 }
 ```
 
-##### 3.2.26.3 Sign a message with an ECDSA SECP256k1 private key
+##### 3.2.19.3 Sign a message with an ECDSA SECP256k1 private key
 
 Available options:
   - `--private-key SIDECHAIN_PRIVATE_KEY` \
@@ -752,53 +559,16 @@ Sample output:
 }
 ```
 
-##### 3.2.26.4 Sign a message with a Schnorr SECP256k1 private key
+##### 3.2.19.4 Sign a message with a Schnorr SECP256k1 private key
 
-Arguments and the output format are the same as in 3.2.26.3.
+Arguments and the output format are the same as in 3.2.19.3.
 ```
 nix run .#sidechain-main-cli -- utils sign schnorr-secp256k1 \
   --private-key "d2a77accb66f065001dc225fb0b0e570aac266241ab9358e823cb909ad62e07f" \
   --message "0xab40"
 ```
 
-##### 3.2.26.5 Produce a CBOR encoded aggregated public key of the sidechain committee
-
-The result corresponds to `UpdateCommitteeHashMessage` type in the code.
-
-Available options:
-  - `-i,--sidechain-id` \
-    Sidechain ID
-  - `-c,--genesis-committee-hash-utxo TX_ID#TX_IDX` \
-    Input UTxO to be spent with the first committee hash setup
-  - `-g,--governance-authority PUB_KEY_HASH` \
-    Public key hash of governance authority
-  - `--threshold-numerator INT` \
-    The numerator for the ratio of the threshold
-  - `--threshold-denominator INT` \
-    The denominator for the ratio of the threshold
-  - `--sidechain-epoch INT` \
-    Sidechain epoch
-  - `--previous-merkle-root MERKLE_ROOT` \
-    Raw hex encoded previous merkle root if it exists
-  - `--cbor-aggregated-public-keys AGGREGATED_SIDECHAIN_PUBLIC_KEYS` \
-    A CBOR encoded aggregated public key of the sidechain committee
-  - `--new-committee-validator-hash VALIDATOR_HASH` \
-    Hex encoded validator hash to send the committee oracle to
-  - `--new-committee-validator-bech32-address BECH32_ADDRESS` \
-    bech32 of a validator address to send the committee oracle to
-
-```
-nix run .#sidechain-main-cli -- utils encode cbor-update-committee-message \
-  --sidechain-epoch 5 \
-  --cbor-aggregated-public-keys aabb \
-  --new-committee-validator-hash ab2d6145e1700cd11dc074cad9f4194cc53b0dbab6bd25dfea6c501c
-```
-
-where we note that `--cbor-aggregated-public-keys` can be found
-from the JSON key `cborEncodedAddresses` from the output of the `addresses`
-subcommand.
-
-##### 3.2.26.6 Produce a CBOR encoded block producer registration message
+##### 3.2.19.6 Produce a CBOR encoded block producer registration message
 
 The result corresponds to `BlockProducerRegistrationMsg` type in the code.
 
@@ -822,92 +592,4 @@ Available options:
 nix run .#sidechain-main-cli -- utils encode cbor-block-producer-registration-message \
   --sidechain-public-key 02599181389043ba0b83e53d3d665c2dfaa187453a24a4538723766f8f0509c55d \
   --input-utxo ab24c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#5
-```
-
-##### 3.2.26.7 Produce a CBOR of a Merkle tree entry
-
-The result corresponds to `MerkleTreeEntry` type in the code.
-
-Available options:
-  - `--index INDEX` \
-    Integer to ensure uniqueness amongst Merkle tree entries
-  - `-a,--amount` \
-    Amount of FUEL token to be burnt/minted
-  - `--recipient BECH32_ADDRESS` \
-    Human readable bech32 address of the recipient.
-  - `--previous-merkle-root MERKLE_ROOT` \
-    Raw hex encoded previous merkle root if it exists
-
-```
-nix run .#sidechain-main-cli -- utils encode cbor-merkle-tree-entry \
-  --index 5 \
-  --amount 100 \
-  --previous-merkle-root 0xabababababababaabababababababaababababababababbbabababababababab \
-  --recipient aabbcc
-```
-
-##### 3.2.26.8 Produce a CBOR of a Merkle tree and the Merkle root hash from the provided Merkle tree entries
-
-The result corresponds to `List MerkleTreeEntry` type in the code.
-
-Available options:
-  - `--cbor-merkle-tree-entry CBOR_MERKLE_TREE_ENTRY` \
-    Cbor encoded Merkle tree entry
-
-```
-nix run .#sidechain-main-cli -- utils encode cbor-merkle-tree \
-  --cbor-merkle-tree-entry abababababababaabababababababaababababababababbbabababababababab
-```
-
-##### 3.2.26.9 Produce a CBOR of a combined Merkle proof from the provided Merkle tree and Merkle tree entry
-
-The result corresponds to `(MerkleTreeEntry, MerkleTree)` type in the code.
-
-Available options:
-  - `--cbor-merkle-tree-entry CBOR_MERKLE_TREE_ENTRY` \
-    Cbor encoded Merkle tree entry
-  - `--cbor-merkle-tree CBOR_MERKLE_TREE` \
-    Cbor encoded Merkle tree
-
-```
-nix run .#sidechain-main-cli -- utils encode cbor-combined-merkle-proof \
-  --cbor-merkle-tree-entry abababababababaabababababababaababababababababbbabababababababab \
-  --cbor-merkle-tree abababababababaabababababababaababababababababbbabababababababab
-```
-
-##### 3.2.26.10 Produce a CBOR of a Merkle root insertion message
-
-The result corresponds to `MerkleRootInsertionMessage` type in the code.
-
-Available options:
-  - `-i,--sidechain-id` \
-    Sidechain ID
-  - `-c,--genesis-committee-hash-utxo TX_ID#TX_IDX` \
-    Input UTxO to be spent with the first committee hash setup
-  - `-g,--governance-authority PUB_KEY_HASH` \
-    Public key hash of governance authority
-  - `--threshold-numerator INT` \
-    The numerator for the ratio of the threshold
-  - `--threshold-denominator INT` \
-    The denominator for the ratio of the threshold
-  - `--merkle-root MERKLE_ROOT` \
-    Raw hex encoded Merkle root signed by the committee
-  - `--previous-merkle-root MERKLE_ROOT` \
-    Raw hex encoded previous merkle root if it exists
-
-```
-nix run .#sidechain-main-cli -- utils encode cbor-merkle-root-insertion-message \
-  --merkle-root 0xabababababababaabababababababaababababababababbbabababababababab \
-  --previous-merkle-root 0xabababababababaabababababababaababababababababbbabababababababab
-```
-
-##### 3.2.26.11 Aggregate the raw hex encoded public keys with the plain ATMS scheme which sorts, concatenates, and hashes
-
-Available options:
-  - `--public-key PUBLIC_KEY` \
-    Hex encoded raw bytes of a sidechain public key
-
-```
-nix run .#sidechain-main-cli -- utils encode cbor-plain-aggregate-public-keys \
-  --public-key 0xabababababababaabababababababaababababababababbbabababababababab
 ```

@@ -17,10 +17,6 @@ import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT, throw)
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
-import TrustlessSidechain.Checkpoint as Checkpoint
-import TrustlessSidechain.CommitteeATMSSchemes (ATMSKinds)
-import TrustlessSidechain.CommitteeOraclePolicy as CommitteeOraclePolicy
-import TrustlessSidechain.DistributedSet as DistributedSet
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Log (logDebug', logInfo')
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
@@ -46,14 +42,13 @@ import Type.Row (type (+))
 initTokensMint ∷
   ∀ r.
   SidechainParams →
-  ATMSKinds →
   Int →
   Run (APP r)
     { transactionId ∷ Maybe TransactionHash
     , sidechainParams ∷ SidechainParams
     , sidechainAddresses ∷ SidechainAddresses
     }
-initTokensMint sidechainParams initATMSKind version = do
+initTokensMint sidechainParams version = do
   let txIn = (unwrap sidechainParams).genesisUtxo
 
   logDebug' $ "Querying genesisUtxo from TxIn: " <> show txIn
@@ -66,14 +61,12 @@ initTokensMint sidechainParams initATMSKind version = do
     Just _ → do
       logInfo' "Minting sidechain initialization tokens"
       map (Just <<< _.transactionId) $ mintAllTokens sidechainParams
-        initATMSKind
         version
 
   sidechainAddresses ←
     GetSidechainAddresses.getSidechainAddresses $
       SidechainAddressesEndpointParams
         { sidechainParams
-        , atmsKind: initATMSKind
         -- NOTE: This field is used to configure minting the candidate
         -- permission tokens themselves, not the candidate permission
         -- init tokens.
@@ -91,21 +84,15 @@ initTokensMint sidechainParams initATMSKind version = do
 mintAllTokens ∷
   ∀ r.
   SidechainParams →
-  ATMSKinds →
   Int →
   Run (APP r) { transactionId ∷ TransactionHash }
-mintAllTokens sidechainParams initATMSKind version = do
+mintAllTokens sidechainParams version = do
   { constraints, lookups } ← foldM (\acc f → (append acc) <$> f sidechainParams)
     mempty
-    [ Checkpoint.mintOneCheckpointInitToken
-    , DistributedSet.mintOneDsInitToken
-    , CandidatePermissionToken.mintOneCandidatePermissionInitToken
-    , CommitteeOraclePolicy.mintOneCommitteeOracleInitToken
+    [ CandidatePermissionToken.mintOneCandidatePermissionInitToken
     , initSpendGenesisUtxo
     , \sps → Versioning.mintVersionInitTokens
-        { atmsKind: initATMSKind
-        , sidechainParams: sps
-        }
+        sps
         version
     ]
   map { transactionId: _ } $ balanceSignAndSubmit

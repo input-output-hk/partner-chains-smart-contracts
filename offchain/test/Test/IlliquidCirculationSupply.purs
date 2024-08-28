@@ -36,9 +36,6 @@ import Test.TestnetTest (TestnetTest)
 import Test.TestnetTest as Test.TestnetTest
 import Test.Utils (WrappedTests, testnetGroup)
 import Test.Utils as Test.Utils
-import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
-  )
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
 import TrustlessSidechain.Effects.Env (Env, READER)
@@ -98,8 +95,8 @@ dummyInitialiseSidechain pkh = do
         , governanceAuthority: Governance.mkGovernanceAuthority pkh
         }
 
-  _ ← initTokensMint sidechainParams ATMSPlainEcdsaSecp256k1 1
-  _ ← initNativeTokenMgmt sidechainParams ATMSPlainEcdsaSecp256k1 1
+  _ ← initTokensMint sidechainParams 1
+  _ ← initNativeTokenMgmt sidechainParams 1
 
   pure sidechainParams
 

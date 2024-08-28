@@ -3,16 +3,12 @@
 module Main (main) where
 
 import Crypto.Secp256k1 qualified as SECP
-import Data.Bits (unsafeShiftL)
 import GHC.Exts (fromList)
 import Laws (toDataSafeLaws', toDataUnsafeLaws')
-
 import PlutusLedgerApi.V1.Value (AssetClass (AssetClass))
 import PlutusLedgerApi.V2 (
-  CurrencySymbol,
   LedgerBytes (LedgerBytes),
   POSIXTime (POSIXTime),
-  ScriptHash,
  )
 import System.IO.Unsafe (unsafePerformIO)
 import Test.QuickCheck (
@@ -21,10 +17,7 @@ import Test.QuickCheck (
   NonNegative (NonNegative),
   Positive (Positive),
   arbitrary,
-  chooseBoundedIntegral,
   chooseInteger,
-  elements,
-  frequency,
   liftArbitrary,
   liftShrink,
   oneof,
@@ -32,44 +25,22 @@ import Test.QuickCheck (
   vectorOf,
  )
 import Test.QuickCheck.Extra (
-  ArbitraryAssetClass (ArbitraryAssetClass),
   ArbitraryBytes (ArbitraryBytes),
   ArbitraryCurrencySymbol (ArbitraryCurrencySymbol),
   ArbitraryPubKeyHash (ArbitraryPubKeyHash),
-  ArbitraryScriptHash (ArbitraryScriptHash),
   ArbitraryTokenName (ArbitraryTokenName),
   ArbitraryTxOutRef (ArbitraryTxOutRef),
-  DA,
  )
 import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (QuickCheckTests (QuickCheckTests), testProperty)
-import TrustlessSidechain.DistributedSet (
-  Ds (Ds),
-  DsConfDatum (DsConfDatum),
-  DsDatum (DsDatum),
-  DsKeyMint (DsKeyMint),
-  Ib (Ib),
-  Node (Node),
- )
-import TrustlessSidechain.FUELProxyPolicy (FuelProxyRedeemer (FuelProxyBurn, FuelProxyMint))
 import TrustlessSidechain.Governance.Admin (GovernanceAuthority (GovernanceAuthority))
 import TrustlessSidechain.Governance.MultiSig (
   MultiSigGovParams (MultiSigGovParams),
   MultiSigGovRedeemer (MultiSigTokenGC, MultiSignatureCheck),
  )
 import TrustlessSidechain.HaskellPrelude
-import TrustlessSidechain.MerkleTree (
-  MerkleProof (MerkleProof),
-  MerkleTree (Bin, Tip),
-  RootHash (RootHash),
-  Side (L, R),
-  Up (Up),
- )
 import TrustlessSidechain.PlutusPrelude qualified as PTPrelude
 import TrustlessSidechain.Types (
-  ATMSPlainAggregatePubKey (ATMSPlainAggregatePubKey),
-  ATMSPlainMultisignature (ATMSPlainMultisignature),
-  ATMSRedeemer (ATMSBurn, ATMSMint),
   BlockProducerRegistration (
     BlockProducerRegistration,
     auraKey,
@@ -86,22 +57,8 @@ import TrustlessSidechain.Types (
     sidechainParams,
     sidechainPubKey
   ),
-  CheckpointDatum (CheckpointDatum),
-  CheckpointMessage (CheckpointMessage),
-  CheckpointParameter (
-    CheckpointParameter,
-    assetClass,
-    sidechainParams
-  ),
-  CombinedMerkleProof (CombinedMerkleProof),
-  CommitteeCertificateMint (
-    CommitteeCertificateMint,
-    thresholdDenominator,
-    thresholdNumerator
-  ),
   DParameterValidatorDatum (DParameterValidatorDatum),
   EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey),
-  FUELMintingRedeemer (FUELBurningRedeemer, FUELMintingRedeemer),
   IlliquidCirculationSupplyRedeemer (DepositMoreToSupply, WithdrawFromSupply),
   ImmutableReserveSettings (ImmutableReserveSettings),
   InitTokenAssetClass (
@@ -110,19 +67,6 @@ import TrustlessSidechain.Types (
   InitTokenRedeemer (
     BurnInitToken,
     MintInitToken
-  ),
-  MerkleRootInsertionMessage (
-    MerkleRootInsertionMessage,
-    merkleRoot,
-    previousMerkleRoot,
-    sidechainParams
-  ),
-  MerkleTreeEntry (
-    MerkleTreeEntry,
-    amount,
-    index,
-    previousMerkleRoot,
-    recipient
   ),
   MutableReserveSettings (MutableReserveSettings),
   PermissionedCandidateKeys (PermissionedCandidateKeys),
@@ -143,18 +87,7 @@ import TrustlessSidechain.Types (
     thresholdNumerator
   ),
   Signature (Signature),
-  SignedMerkleRootRedeemer (SignedMerkleRootRedeemer),
   StakeOwnership (AdaBasedStaking, TokenBasedStaking),
-  UpdateCommitteeDatum (UpdateCommitteeDatum),
-  UpdateCommitteeHashMessage (
-    UpdateCommitteeHashMessage,
-    newAggregateCommitteePubKeys,
-    previousMerkleRoot,
-    sidechainEpoch,
-    sidechainParams,
-    validatorHash
-  ),
-  UpdateCommitteeHashRedeemer (UpdateCommitteeHashRedeemer),
  )
 import TrustlessSidechain.Versioning (
   VersionOracle (VersionOracle),
@@ -174,72 +107,16 @@ main =
       , testProperty "BlockProducerRegistration (unsafe)" . toDataUnsafeLaws' genBPR shrinkBPR $ show
       , testProperty "BlockProducerRegistrationMsg (safe)" . toDataSafeLaws' genBPRM shrinkBPRM $ show
       , testProperty "BlockProducerRegistrationMsg (unsafe)" . toDataUnsafeLaws' genBPRM shrinkBPRM $ show
-      , testProperty "MerkleTreeEntry (safe)" . toDataSafeLaws' genMTE shrinkMTE $ show
-      , testProperty "MerkleTreeEntry (unsafe)" . toDataUnsafeLaws' genMTE shrinkMTE $ show
-      , testProperty "MerkleTree (safe)" . toDataSafeLaws' genMT shrinkMT $ show
-      , testProperty "MerkleTree (unsafe)" . toDataUnsafeLaws' genMT shrinkMT $ show
-      , testProperty "MerkleRootInsertionMessage (safe)" . toDataSafeLaws' genMRIM shrinkMRIM $ show
-      , testProperty "MerkleRootInsertionMessage (unsafe)" . toDataUnsafeLaws' genMRIM shrinkMRIM $ show
-      , testProperty "SignedMerkleRootRedeemer (safe)" . toDataSafeLaws' genSMRR shrinkSMRR $ show
-      , testProperty "SignedMerkleRootRedeemer (unsafe)" . toDataUnsafeLaws' genSMRR shrinkSMRR $ show
-      , testProperty "RootHash (safe)" . toDataSafeLaws' genRH shrinkRH $ show
-      , testProperty "RootHash (unsafe)" . toDataUnsafeLaws' genRH shrinkRH $ show
-      , testProperty "Side (safe)" . toDataSafeLaws' genSide shrinkSide $ show
-      , testProperty "Side (unsafe)" . toDataUnsafeLaws' genSide shrinkSide $ show
-      , testProperty "Up (safe)" . toDataSafeLaws' genUp shrinkUp $ show
-      , testProperty "Up (unsafe)" . toDataUnsafeLaws' genUp shrinkUp $ show
-      , testProperty "MerkleProof (safe)" . toDataSafeLaws' genMP shrinkMP $ show
-      , testProperty "MerkleProof (unsafe)" . toDataUnsafeLaws' genMP shrinkMP $ show
       , testProperty "VersionOracle (safe)" . toDataSafeLaws' genVO shrinkVO $ show
       , testProperty "VersionOracle (unsafe)" . toDataUnsafeLaws' genVO shrinkVO $ show
       , testProperty "VersionOracleConfig (safe)" . toDataSafeLaws' genVOC shrinkVOC $ show
       , testProperty "VersionOracleConfig (unsafe)" . toDataUnsafeLaws' genVOC shrinkVOC $ show
-      , testProperty "FUELProxyRedeemer (safe)" . toDataSafeLaws' genFPR shrinkFPR $ show
-      , testProperty "FUELProxyRedeemer (unsafe)" . toDataUnsafeLaws' genFPR shrinkFPR $ show
-      , testProperty "CombinedMerkleProof (safe)" . toDataSafeLaws' genCMP shrinkCMP $ show
-      , testProperty "CombinedMerkleProof (unsafe)" . toDataUnsafeLaws' genCMP shrinkCMP $ show
-      , testProperty "UpdateCommitteeDatum (safe)" . toDataSafeLaws' genUPD shrinkUPD $ show
-      , testProperty "UpdateCommitteeDatum (unsafe)" . toDataUnsafeLaws' genUPD shrinkUPD $ show
-      , testProperty "ATMSPlainAggregatePubKey (safe)" . toDataSafeLaws' genAPAPK shrinkAPAPK $ show
-      , testProperty "ATMSPlainAggregatePubKey (unsafe)" . toDataUnsafeLaws' genAPAPK shrinkAPAPK $ show
-      , testProperty "UpdateCommitteeHashMessage (safe)" . toDataSafeLaws' genUCHM shrinkUCHM $ show
-      , testProperty "UpdateCommitteeHashMessage (unsafe)" . toDataUnsafeLaws' genUCHM shrinkUCHM $ show
-      , testProperty "UpdateCommitteeHashRedeemer (safe)" . toDataSafeLaws' genUCHR shrinkUCHR $ show
-      , testProperty "UpdateCommitteeHashRedeemer (unsafe)" . toDataUnsafeLaws' genUCHR shrinkUCHR $ show
-      , testProperty "CommitteeCertificateMint (safe)" . toDataSafeLaws' genCCM shrinkCCM $ show
-      , testProperty "CommitteeCertificateMint (unsafe)" . toDataUnsafeLaws' genCCM shrinkCCM $ show
       , testProperty "InitTokenRedeemer (safe)" . toDataSafeLaws' genITR shrinkITR $ show
       , testProperty "InitTokenRedeemer (unsafe)" . toDataUnsafeLaws' genITR shrinkITR $ show
       , testProperty "InitTokenAssetClass (safe)" . toDataSafeLaws' genITAC shrinkITAC $ show
       , testProperty "InitTokenAssetClass (unsafe)" . toDataUnsafeLaws' genITAC shrinkITAC $ show
-      , -- CheckpointDatum needs format clarification
-        testProperty "ATMSPlainMultisignature (safe)" . toDataSafeLaws' genAPM shrinkAPM $ show
-      , testProperty "ATMSPlainMultisignature (unsafe)" . toDataUnsafeLaws' genAPM shrinkAPM $ show
-      , testProperty "CheckpointParameter (safe)" . toDataSafeLaws' genCP shrinkCP $ show
-      , testProperty "CheckpointParameter (unsafe)" . toDataUnsafeLaws' genCP shrinkCP $ show
-      , -- CheckpointMessage needs format clarification
-        testProperty "Ds (safe)" . toDataSafeLaws' genDs shrinkDs $ show
-      , testProperty "Ds (unsafe)" . toDataUnsafeLaws' genDs shrinkDs $ show
-      , testProperty "DsDatum (safe)" . toDataSafeLaws' genDsDatum shrinkDsDatum $ show
-      , testProperty "DsDatum (unsafe)" . toDataUnsafeLaws' genDsDatum shrinkDsDatum $ show
-      , testProperty "Node (safe)" . toDataSafeLaws' genNode shrinkNode $ show
-      , testProperty "Node (unsafe)" . toDataUnsafeLaws' genNode shrinkNode $ show
-      , testProperty "DsConfDatum (safe)" . toDataSafeLaws' genDsConfDatum shrinkDsConfDatum $ show
-      , testProperty "DsConfDatum (unsafe)" . toDataUnsafeLaws' genDsConfDatum shrinkDsConfDatum $ show
-      , testProperty "Ib (safe)" . toDataSafeLaws' genIb shrinkIb $ show
-      , testProperty "Ib (unsafe)" . toDataUnsafeLaws' genIb shrinkIb $ show
-      , testProperty "DsKeyMint (safe)" . toDataSafeLaws' genDsKeyMint shrinkDsKeyMint $ show
-      , testProperty "DsKeyMint (unsafe)" . toDataUnsafeLaws' genDsKeyMint shrinkDsKeyMint $ show
-      , testProperty "ATMSRedeemer (safe)" . toDataSafeLaws' genATMSR shrinkATMSR $ show
-      , testProperty "ATMSRedeemer (unsafe)" . toDataUnsafeLaws' genATMSR shrinkATMSR $ show
-      , testProperty "CheckpointDatum (safe)" . toDataSafeLaws' genCHPD shrinkCHPD $ show
-      , testProperty "CheckpointDatum (unsafe)" . toDataUnsafeLaws' genCHPD shrinkCHPD $ show
-      , testProperty "CheckpointMessage (safe)" . toDataSafeLaws' genCHPM shrinkCHPM $ show
-      , testProperty "CheckpointMessage (unsafe)" . toDataUnsafeLaws' genCHPM shrinkCHPM $ show
       , testProperty "DParameterValidatorDatum (safe)" . toDataSafeLaws' genDPVD shrinkDPVD $ show
       , testProperty "DParameterValidatorDatum (unsafe)" . toDataUnsafeLaws' genDPVD shrinkDPVD $ show
-      , testProperty "FUELMintingRedeemer (safe)" . toDataSafeLaws' genFMR shrinkFRM $ show
-      , testProperty "FUELMintingRedeemer (unsafe)" . toDataUnsafeLaws' genFMR shrinkFRM $ show
       , testProperty "PermissionedCandidateKeys (safe)" . toDataSafeLaws' genPCK shrinkPCK $ show
       , testProperty "PermissionedCandidateKeys (unsafe)" . toDataUnsafeLaws' genPCK shrinkPCK $ show
       , testProperty "PermissionedCandidatesPolicyRedeemer (safe)" . toDataSafeLaws' genPCPR shrinkPCPR $ show
@@ -268,86 +145,14 @@ main =
 -- Helpers
 
 -- Generators
-
-genNode :: Gen Node
-genNode = Node <$> go <*> go
-  where
-    go :: Gen PTPrelude.BuiltinByteString
-    go = do
-      ArbitraryBytes (LedgerBytes bbs) <- arbitrary
-      pure bbs
-
-genDs :: Gen Ds
-genDs =
-  Ds <$> do
-    ArbitraryCurrencySymbol sym <- arbitrary
-    pure sym
-
-genDsDatum :: Gen DsDatum
-genDsDatum =
-  DsDatum <$> do
-    ArbitraryBytes (LedgerBytes bbs) <- arbitrary
-    pure bbs
-
-genDsConfDatum :: Gen DsConfDatum
-genDsConfDatum = DsConfDatum <$> go <*> go
-  where
-    go :: Gen CurrencySymbol
-    go = do
-      ArbitraryCurrencySymbol sym <- arbitrary
-      pure sym
-
-genIb :: Gen (Ib DA)
-genIb = Ib <$> arbitrary
-
-genDsKeyMint :: Gen DsKeyMint
-genDsKeyMint = DsKeyMint <$> go <*> go2
-  where
-    go :: Gen ScriptHash
-    go = do
-      ArbitraryScriptHash vh <- arbitrary
-      pure vh
-    go2 :: Gen CurrencySymbol
-    go2 = do
-      ArbitraryCurrencySymbol sym <- arbitrary
-      pure sym
-
 genITAC :: Gen InitTokenAssetClass
 genITAC = do
   ArbitraryCurrencySymbol itcs <- arbitrary
   ArbitraryTokenName itn <- arbitrary
   pure $ InitTokenAssetClass itcs itn
 
-genATMSR :: Gen ATMSRedeemer
-genATMSR =
-  oneof
-    [ ATMSMint <$> genAPM
-    , pure ATMSBurn
-    ]
-
-genCHPD :: Gen CheckpointDatum
-genCHPD = do
-  ArbitraryBytes lb <- arbitrary
-  bn <- arbitrary
-  pure $ CheckpointDatum lb bn
-
-genCHPM :: Gen CheckpointMessage
-genCHPM = do
-  sp <- genSP
-  ArbitraryBytes lb <- arbitrary
-  bn <- arbitrary
-  se <- arbitrary
-  pure $ CheckpointMessage sp lb bn se
-
 genDPVD :: Gen DParameterValidatorDatum
 genDPVD = DParameterValidatorDatum <$> arbitrary <*> arbitrary
-
-genFMR :: Gen FUELMintingRedeemer
-genFMR =
-  oneof
-    [ pure FUELBurningRedeemer
-    , FUELMintingRedeemer <$> genMTE <*> genMP
-    ]
 
 genPCK :: Gen PermissionedCandidateKeys
 genPCK = do
@@ -416,51 +221,7 @@ genMSGR =
     , pure MultiSigTokenGC
     ]
 
-genCP :: Gen CheckpointParameter
-genCP = do
-  sp <- genSP
-  ArbitraryAssetClass (AssetClass (cs, tn)) <- arbitrary
-  pure . CheckpointParameter sp $ (AssetClass (cs, tn))
-
 -- Generates arbitrary bytes
-genAPM :: Gen ATMSPlainMultisignature
-genAPM = ATMSPlainMultisignature <$> go <*> go
-  where
-    go :: Gen [LedgerBytes]
-    go = liftArbitrary $ do
-      ArbitraryBytes lb <- arbitrary
-      pure lb
-
-genUCHR :: Gen UpdateCommitteeHashRedeemer
-genUCHR = UpdateCommitteeHashRedeemer <$> genPMR
-
-genUCHM :: Gen (UpdateCommitteeHashMessage DA)
-genUCHM = do
-  sp <- genSP
-  nacpk <- arbitrary
-  pmr <- genPMR
-  NonNegative se <- arbitrary
-  ArbitraryScriptHash vh <- arbitrary
-  pure . UpdateCommitteeHashMessage sp nacpk pmr se $ vh
-
-genAPAPK :: Gen ATMSPlainAggregatePubKey
-genAPAPK =
-  ATMSPlainAggregatePubKey <$> do
-    ArbitraryBytes lb <- arbitrary
-    pure lb
-
-genUPD :: Gen (UpdateCommitteeDatum DA)
-genUPD =
-  UpdateCommitteeDatum <$> arbitrary <*> do
-    NonNegative i <- arbitrary
-    pure i
-
-genCMP :: Gen CombinedMerkleProof
-genCMP = CombinedMerkleProof <$> genMTE <*> genMP
-
-genMP :: Gen MerkleProof
-genMP = MerkleProof <$> liftArbitrary genUp
-
 genVO :: Gen VersionOracle
 genVO = VersionOracle <$> arbitrary <*> arbitrary
 
@@ -469,61 +230,6 @@ genVOC =
   VersionOracleConfig <$> do
     ArbitraryCurrencySymbol sym <- arbitrary
     pure sym
-
-genFPR :: Gen FuelProxyRedeemer
-genFPR =
-  oneof
-    [ FuelProxyMint <$> arbitrary
-    , FuelProxyBurn <$> arbitrary <*> pure ""
-    ]
-
-genUp :: Gen Up
-genUp = Up <$> genSide <*> genRH
-
-genSide :: Gen Side
-genSide = elements [L, R]
-
-genRH :: Gen RootHash
-genRH = RootHash <$> genMR
-
--- This makes arbitrary bytes for 'recipient': for what we need, it works fine,
--- and it's due to change to Address anyway: https://github.com/mlabs-haskell/trustless-sidechain/blob/e6476e24183e17c87e29b2b1bfa3a53342afedf2/docs/SIPs/09-Generalizing-Token-Transfer-From-Sidechain-to-Mainchain.md?plain=1#L98-L99
-genMTE :: Gen MerkleTreeEntry
-genMTE = do
-  i <- fromIntegral <$> chooseBoundedIntegral (minBound :: Word32, maxBound)
-  a <- chooseInteger (0, (1 `unsafeShiftL` 32) - 1)
-  ArbitraryBytes r <- arbitrary
-  pmr <- genPMR
-  pure . MerkleTreeEntry i a r $ pmr
-
-genMT :: Gen MerkleTree
-genMT =
-  frequency
-    [ (2, Bin <$> genRH <*> genMT <*> genMT)
-    , (8, Tip <$> genRH)
-    ]
-
-genSMRR :: Gen SignedMerkleRootRedeemer
-genSMRR = SignedMerkleRootRedeemer <$> genPMR
-
-genMRIM :: Gen MerkleRootInsertionMessage
-genMRIM = do
-  sp <- genSP
-  mr <- genMR
-  pmr <- genPMR
-  pure . MerkleRootInsertionMessage sp mr $ pmr
-
--- | Generates a Merkle root, which is a 256-bit hash.
-genMR :: Gen LedgerBytes
-genMR =
-  LedgerBytes
-    . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
-    . fromList @ByteString
-    <$> vectorOf 32 arbitrary
-
--- | Generates a previous Merkle root, which could be empty.
-genPMR :: Gen (Maybe LedgerBytes)
-genPMR = liftArbitrary genMR
 
 genBPRM :: Gen BlockProducerRegistrationMsg
 genBPRM = do
@@ -578,12 +284,6 @@ genPK = do
         $ privKey
     Nothing -> genPK -- we assume this isn't gonna happen too often
 
-genCCM :: Gen CommitteeCertificateMint
-genCCM = do
-  Positive tn <- arbitrary
-  Positive td <- arbitrary
-  pure . CommitteeCertificateMint tn $ td
-
 genGA :: Gen GovernanceAuthority
 genGA = do
   ArbitraryPubKeyHash pkh <- arbitrary
@@ -603,72 +303,14 @@ genITR = oneof [pure MintInitToken, pure BurnInitToken]
 
 -- Shrinkers
 
-shrinkDs :: Ds -> [Ds]
-shrinkDs (Ds sym) =
-  Ds <$> do
-    ArbitraryCurrencySymbol sym' <- shrink (ArbitraryCurrencySymbol sym)
-    pure sym'
-
-shrinkDsDatum :: DsDatum -> [DsDatum]
-shrinkDsDatum (DsDatum bbs) =
-  DsDatum <$> do
-    ArbitraryBytes (LedgerBytes bbs') <- shrink (ArbitraryBytes (LedgerBytes bbs))
-    pure bbs'
-
-shrinkNode :: Node -> [Node]
-shrinkNode (Node k n) = do
-  ArbitraryBytes (LedgerBytes k') <- shrink (ArbitraryBytes (LedgerBytes k))
-  ArbitraryBytes (LedgerBytes n') <- shrink (ArbitraryBytes (LedgerBytes n))
-  pure . Node k' $ n'
-
-shrinkDsConfDatum :: DsConfDatum -> [DsConfDatum]
-shrinkDsConfDatum (DsConfDatum kp fp) = do
-  ArbitraryCurrencySymbol kp' <- shrink (ArbitraryCurrencySymbol kp)
-  ArbitraryCurrencySymbol fp' <- shrink (ArbitraryCurrencySymbol fp)
-  pure . DsConfDatum kp' $ fp'
-
-shrinkIb :: Ib DA -> [Ib DA]
-shrinkIb (Ib x) = Ib <$> shrink x
-
-shrinkDsKeyMint :: DsKeyMint -> [DsKeyMint]
-shrinkDsKeyMint (DsKeyMint vh cs) = do
-  ArbitraryScriptHash vh' <- shrink (ArbitraryScriptHash vh)
-  ArbitraryCurrencySymbol cs' <- shrink (ArbitraryCurrencySymbol cs)
-  pure . DsKeyMint vh' $ cs'
-
 shrinkITAC :: InitTokenAssetClass -> [InitTokenAssetClass]
 shrinkITAC (InitTokenAssetClass itcs itn) = do
   ArbitraryCurrencySymbol itcs' <- shrink $ ArbitraryCurrencySymbol itcs
   ArbitraryTokenName itn' <- shrink $ ArbitraryTokenName itn
   pure $ InitTokenAssetClass itcs' itn'
 
-shrinkATMSR :: ATMSRedeemer -> [ATMSRedeemer]
-shrinkATMSR = \case
-  ATMSMint apm -> ATMSMint <$> shrinkAPM apm
-  ATMSBurn -> []
-
-shrinkCHPD :: CheckpointDatum -> [CheckpointDatum]
-shrinkCHPD (CheckpointDatum lb bn) = do
-  ArbitraryBytes lb' <- shrink $ ArbitraryBytes lb
-  bn' <- shrink bn
-  pure $ CheckpointDatum lb' bn'
-
-shrinkCHPM :: CheckpointMessage -> [CheckpointMessage]
-shrinkCHPM (CheckpointMessage sp bh bn se) = do
-  sp' <- shrinkSP sp
-  ArbitraryBytes bh' <- shrink $ ArbitraryBytes bh
-  bn' <- shrink bn
-  se' <- shrink se
-  pure $ CheckpointMessage sp' bh' bn' se'
-
 shrinkDPVD :: DParameterValidatorDatum -> [DParameterValidatorDatum]
 shrinkDPVD (DParameterValidatorDatum pcc rcc) = DParameterValidatorDatum <$> shrink pcc <*> shrink rcc
-
-shrinkFRM :: FUELMintingRedeemer -> [FUELMintingRedeemer]
-shrinkFRM = \case
-  FUELBurningRedeemer -> []
-  FUELMintingRedeemer mte mp ->
-    FUELMintingRedeemer <$> shrinkMTE mte <*> shrinkMP mp
 
 shrinkPCK :: PermissionedCandidateKeys -> [PermissionedCandidateKeys]
 shrinkPCK (PermissionedCandidateKeys sk ak gk) = do
@@ -709,61 +351,6 @@ shrinkMSGP (MultiSigGovParams pkhs a) = do
 shrinkMSGR :: MultiSigGovRedeemer -> [MultiSigGovRedeemer]
 shrinkMSGR = const []
 
-shrinkCP :: CheckpointParameter -> [CheckpointParameter]
-shrinkCP (CheckpointParameter {..}) = do
-  sp' <- shrinkSP sidechainParams
-  ArbitraryAssetClass assetClass' <- shrink (ArbitraryAssetClass assetClass)
-  pure . CheckpointParameter sp' $ assetClass'
-
-shrinkAPM ::
-  ATMSPlainMultisignature ->
-  [ATMSPlainMultisignature]
-shrinkAPM (ATMSPlainMultisignature pks sigs) =
-  ATMSPlainMultisignature <$> go pks <*> go sigs
-  where
-    go :: [LedgerBytes] -> [[LedgerBytes]]
-    go xs = flip liftShrink xs $ \lb -> do
-      ArbitraryBytes lb' <- shrink (ArbitraryBytes lb)
-      pure lb'
-
-shrinkUCHR ::
-  UpdateCommitteeHashRedeemer ->
-  [UpdateCommitteeHashRedeemer]
-shrinkUCHR (UpdateCommitteeHashRedeemer pmr) =
-  UpdateCommitteeHashRedeemer <$> shrinkPMR pmr
-
-shrinkUCHM ::
-  UpdateCommitteeHashMessage DA ->
-  [UpdateCommitteeHashMessage DA]
-shrinkUCHM (UpdateCommitteeHashMessage {..}) = do
-  sp' <- shrinkSP sidechainParams
-  nacpk' <- shrink newAggregateCommitteePubKeys
-  pmr' <- shrinkPMR previousMerkleRoot
-  NonNegative se' <- shrink (NonNegative sidechainEpoch)
-  ArbitraryScriptHash vh' <- shrink (ArbitraryScriptHash validatorHash)
-  pure . UpdateCommitteeHashMessage sp' nacpk' pmr' se' $ vh'
-
-shrinkAPAPK ::
-  ATMSPlainAggregatePubKey ->
-  [ATMSPlainAggregatePubKey]
-shrinkAPAPK (ATMSPlainAggregatePubKey lb) =
-  ATMSPlainAggregatePubKey <$> do
-    ArbitraryBytes lb' <- shrink (ArbitraryBytes lb)
-    pure lb'
-
-shrinkUPD :: UpdateCommitteeDatum DA -> [UpdateCommitteeDatum DA]
-shrinkUPD (UpdateCommitteeDatum pks se) =
-  UpdateCommitteeDatum <$> shrink pks <*> do
-    NonNegative se' <- shrink (NonNegative se)
-    pure se'
-
-shrinkCMP :: CombinedMerkleProof -> [CombinedMerkleProof]
-shrinkCMP (CombinedMerkleProof t mp) =
-  CombinedMerkleProof <$> shrinkMTE t <*> shrinkMP mp
-
-shrinkMP :: MerkleProof -> [MerkleProof]
-shrinkMP (MerkleProof ups) = MerkleProof <$> liftShrink shrinkUp ups
-
 shrinkVO :: VersionOracle -> [VersionOracle]
 shrinkVO (VersionOracle version scriptID) = do
   v <- shrink version
@@ -774,55 +361,6 @@ shrinkVOC :: VersionOracleConfig -> [VersionOracleConfig]
 shrinkVOC (VersionOracleConfig versionOracleCurrencySymbol) = do
   ArbitraryCurrencySymbol sym <- shrink (ArbitraryCurrencySymbol versionOracleCurrencySymbol)
   pure $ VersionOracleConfig sym
-
-shrinkFPR :: FuelProxyRedeemer -> [FuelProxyRedeemer]
-shrinkFPR = \case
-  FuelProxyMint n -> FuelProxyMint <$> shrink n
-  FuelProxyBurn n _ ->
-    FuelProxyBurn <$> shrink n <*> pure ""
-
-shrinkUp :: Up -> [Up]
-shrinkUp (Up ss sib) =
-  Up <$> shrinkSide ss <*> shrinkRH sib
-
-shrinkSide :: Side -> [Side]
-shrinkSide = const []
-
-shrinkRH :: RootHash -> [RootHash]
-shrinkRH (RootHash mr) = RootHash <$> shrinkMR mr
-
-shrinkMTE :: MerkleTreeEntry -> [MerkleTreeEntry]
-shrinkMTE (MerkleTreeEntry {..}) = do
-  i' <- shrink index
-  a' <- shrink amount
-  ArbitraryBytes r' <- shrink (ArbitraryBytes recipient)
-  pmr' <- shrinkPMR previousMerkleRoot
-  guard (i' >= 0)
-  guard (a' >= 0)
-  pure . MerkleTreeEntry i' a' r' $ pmr'
-
-shrinkMT :: MerkleTree -> [MerkleTree]
-shrinkMT = \case
-  Bin _ l r -> [l, r]
-  Tip _ -> []
-
-shrinkSMRR :: SignedMerkleRootRedeemer -> [SignedMerkleRootRedeemer]
-shrinkSMRR (SignedMerkleRootRedeemer pmr) =
-  SignedMerkleRootRedeemer <$> shrinkPMR pmr
-
-shrinkMRIM :: MerkleRootInsertionMessage -> [MerkleRootInsertionMessage]
-shrinkMRIM (MerkleRootInsertionMessage {..}) = do
-  sp' <- shrinkSP sidechainParams
-  mr' <- shrinkMR merkleRoot
-  pmr' <- shrinkPMR previousMerkleRoot
-  pure . MerkleRootInsertionMessage sp' mr' $ pmr'
-
--- We don't shrink these, as it wouldn't make much sense to
-shrinkMR :: LedgerBytes -> [LedgerBytes]
-shrinkMR = const []
-
-shrinkPMR :: Maybe LedgerBytes -> [Maybe LedgerBytes]
-shrinkPMR = liftShrink shrinkMR
 
 shrinkBPRM :: BlockProducerRegistrationMsg -> [BlockProducerRegistrationMsg]
 shrinkBPRM (BlockProducerRegistrationMsg {..}) = do
@@ -861,12 +399,6 @@ shrinkBPR (BlockProducerRegistration {..}) = do
 -- We don't shrink these, as it wouldn't make much sense to
 shrinkPK :: EcdsaSecp256k1PubKey -> [EcdsaSecp256k1PubKey]
 shrinkPK = const []
-
-shrinkCCM :: CommitteeCertificateMint -> [CommitteeCertificateMint]
-shrinkCCM (CommitteeCertificateMint {..}) = do
-  Positive tn' <- shrink (Positive thresholdNumerator)
-  Positive td' <- shrink (Positive thresholdDenominator)
-  pure . CommitteeCertificateMint tn' $ td'
 
 shrinkGA :: GovernanceAuthority -> [GovernanceAuthority]
 shrinkGA (GovernanceAuthority pkh) = do

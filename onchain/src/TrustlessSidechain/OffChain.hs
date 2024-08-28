@@ -14,10 +14,7 @@ module TrustlessSidechain.OffChain (
   encodeHexBuiltinBS,
   encodeScPubKeyAndSig,
   showThreshold,
-  encodeHexMerkleTree,
-  encodeHexMerkleProof,
   encodeHexSecpPrivKey,
-  encodeHexCombinedMerkleProof,
   encodeHexOfCborBuiltinData,
   toSpoPubKey,
   vKeyToSpoPubKey,
@@ -29,9 +26,6 @@ module TrustlessSidechain.OffChain (
   strToSecpPrivKey,
   strToSecpPubKey,
   bech32RecipientFromText,
-  ATMSKind (..),
-  showATMSKind,
-  parseATMSKind,
 ) where
 
 import Cardano.Codec.Bech32.Prefixes qualified as Bech32.Prefixes
@@ -82,10 +76,8 @@ import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.Builtins.Internal qualified as Builtins.Internal
 import System.IO.Unsafe (unsafePerformIO)
 import TrustlessSidechain.HaskellPrelude
-import TrustlessSidechain.MerkleTree (MerkleProof, MerkleTree)
 import TrustlessSidechain.Types (
   BlockProducerRegistrationMsg,
-  CombinedMerkleProof,
   EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey, getEcdsaSecp256k1PubKey),
   PubKey (PubKey),
   Signature (Signature, getSignature),
@@ -362,21 +354,6 @@ showThreshold ::
   Text
 showThreshold n m = Text.pack (show n) <> "/" <> Text.pack (show m)
 
--- | 'encodeHexMerkleTree' seralises a merkle tree to the hex encoded cbor builtin
--- data representation
-encodeHexMerkleTree :: MerkleTree -> ByteString
-encodeHexMerkleTree = encodeHexOfCborBuiltinData
-
--- | 'encodeHexMerkleProof' seralises a merkle tree proof to the hex encoded cbor builtin
--- data representation
-encodeHexMerkleProof :: MerkleProof -> ByteString
-encodeHexMerkleProof = encodeHexOfCborBuiltinData
-
--- | 'encodeHexCombinedMerkleProof' seralises a combined merkle proof to the hex encoded
--- cbor builtin data representation
-encodeHexCombinedMerkleProof :: CombinedMerkleProof -> ByteString
-encodeHexCombinedMerkleProof = encodeHexOfCborBuiltinData
-
 -- | 'encodeHexOfCborBuiltinData' shows the hex of the cbor serialized
 -- BuiltinData representation of the given argument.
 --
@@ -413,24 +390,3 @@ toSidechainPubKey =
 -- | Converts a 'SECP.PubKey' to a 'SidechainPubKey'
 secpPubKeyToSidechainPubKey :: SECP.PubKey -> EcdsaSecp256k1PubKey
 secpPubKeyToSidechainPubKey = EcdsaSecp256k1PubKey . LedgerBytes . Builtins.toBuiltin . SECP.exportPubKey ctx True
-
--- * ATMS offchain types
-
--- | 'ATMSKind' denotes the ATMS scheme used for the sidechain
-data ATMSKind
-  = Plain
-  | Multisignature
-  | PoK
-  | Dummy
-  deriving (Eq)
-
--- | 'showATMSKind' shows the 'ATMSKind' in a CTL compatible way.
-showATMSKind :: ATMSKind -> ByteString
-showATMSKind Plain = "plain"
-showATMSKind _ = error "unimplemented ATMSKind"
-
--- | 'showATMSKind' shows the 'ATMSKind' in a CTL compatible way.
-parseATMSKind :: ByteString -> Maybe ATMSKind
-parseATMSKind str = case str of
-  "plain" -> Just Plain
-  _ -> Nothing
