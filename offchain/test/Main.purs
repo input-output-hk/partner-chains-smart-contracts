@@ -15,7 +15,7 @@ import Test.Options.Parsers as Options.Parsers
 import Test.PermissionedCandidates as PermissionedCandidates
 import Test.Reserve as Reserve
 import Test.Unit.Main as Test.Unit.Main
-import Test.Utils (interpretWrappedTest, testnetGroup)
+import Test.Utils (interpretWrappedTest)
 import Test.Utils.Address as AddressUtils
 import Test.Versioning as Versioning
 
@@ -38,15 +38,15 @@ main = do
           ConfigFile.tests
 
         group "Testnet integration tests" do
-          -- IlliquidCirculationSupply.tests
-          -- Reserve.tests
-          -- InitCandidatePermissionToken.tests
-          -- InitMint.tests
-          -- CommitteeCandidateValidator.tests
-          -- CandidatePermissionToken.tests
+          IlliquidCirculationSupply.tests
+          Reserve.tests
+          InitCandidatePermissionToken.tests
+          InitMint.tests
+          CommitteeCandidateValidator.tests
+          CandidatePermissionToken.tests
           Versioning.tests
--- DParameter.tests
--- PermissionedCandidates.tests
+          DParameter.tests
+          PermissionedCandidates.tests
 
--- group "Roundtrips" $ do
---   Data.tests
+        group "Roundtrips" $ do
+          Data.tests

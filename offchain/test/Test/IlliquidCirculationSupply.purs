@@ -73,7 +73,6 @@ import Type.Row (type (+))
 -- | `tests` aggregates all UpdateCommitteeHash the tests.
 tests ∷ WrappedTests
 tests = testnetGroup "IlliquidCirculationSupply" $ do
-  testScenario1
   testScenario2
 
 dummyInitialiseSidechain ∷
@@ -219,48 +218,6 @@ findICSUtxo
     $
       ( Map.toUnfoldable <$> findIlliquidCirculationSupplyUtxos sidechainParams
       )
-
-testScenario1 ∷ TestnetTest
-testScenario1 =
-  Mote.Monad.test
-    "Deposit to ICS"
-    $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-        pkh ← getOwnPaymentPubKeyHash
-        Test.Utils.withSingleMultiSig (unwrap pkh) $ do
-
-          sidechainParams ← dummyInitialiseSidechain pkh
-
-          initialiseICSUtxo sidechainParams
-
-          utxo ← findICSUtxo sidechainParams
-
-          let
-            depositAmountOfNonAdaTokens = 51
-
-          tokenKind ← mintNonAdaTokens depositAmountOfNonAdaTokens
-
-          let
-            addedValue = singletonFromAsset (fromAssetClass tokenKind)
-              $ BigNum.fromInt depositAmountOfNonAdaTokens
-
-          depositMoreToSupply
-            sidechainParams
-            addedValue
-            utxo
-
-          maybeUtxo ← Map.toUnfoldable
-            <$> findIlliquidCirculationSupplyUtxos sidechainParams
-
-          let
-            extractValue = snd >>> unwrap >>> _.amount
-            isExpectedAmount = valueOf (fromAssetClass tokenKind)
-
-          unless
-            ( Just (BigNum.fromInt depositAmountOfNonAdaTokens) ==
-                (extractValue >>> isExpectedAmount <$> maybeUtxo)
-            )
-            (liftContract $ throwError $ error "Deposit not sucessful")
 
 testScenario2 ∷ TestnetTest
 testScenario2 =

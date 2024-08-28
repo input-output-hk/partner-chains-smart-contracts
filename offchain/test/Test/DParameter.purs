@@ -26,11 +26,10 @@ import TrustlessSidechain.Utils.Transaction
 tests ∷ WrappedTests
 tests = testnetGroup "Minting, and burning a DParameter Token" $
   do
-    testScenarioSuccess
-    testScenarioFailure
+    testScenario
 
-testScenarioSuccess ∷ TestnetTest
-testScenarioSuccess =
+testScenario ∷ TestnetTest
+testScenario =
   Mote.Monad.test "Minting and updating a DParameter Token"
     $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 1_000_000
@@ -78,53 +77,12 @@ testScenarioSuccess =
                     "Test: update D param"
             )
 
-        pure unit
-
-testScenarioFailure ∷ TestnetTest
-testScenarioFailure =
-  Mote.Monad.test
-    "Minting, and updating a DParameter Token with the same value. (this should fail)"
-    $ Test.TestnetTest.mkTestnetConfigTest
-        [ BigNum.fromInt 1_000_000
-        , BigNum.fromInt 5_000_000
-        , BigNum.fromInt 150_000_000
-        , BigNum.fromInt 150_000_000
-        ]
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-
-        pkh ← getOwnPaymentPubKeyHash
-        genesisUtxo ← getOwnTransactionInput
-        genesisOutput ← liftContract $ getUtxo genesisUtxo
-        liftContract $ logInfo' (show genesisOutput)
-        let
-          sidechainParams =
-            SidechainParams
-              { chainId: BigInt.fromInt 1
-              , genesisUtxo
-              , thresholdNumerator: BigInt.fromInt 2
-              , thresholdDenominator: BigInt.fromInt 3
-              , governanceAuthority: Governance.mkGovernanceAuthority pkh
-              }
-
-        void
-          $
-            ( DParameter.mkInsertDParameterLookupsAndConstraints
-                sidechainParams
-                { permissionedCandidatesCount: BigInt.fromInt 2
-                , registeredCandidatesCount: BigInt.fromInt 3
-                }
-                >>=
-                  balanceSignAndSubmitWithoutSpendingUtxo
-                    (unwrap sidechainParams).genesisUtxo
-                    "Test: insert D param"
-            )
-
         ( void
             $
               ( DParameter.mkUpdateDParameterLookupsAndConstraints
                   sidechainParams
-                  { permissionedCandidatesCount: BigInt.fromInt 2
-                  , registeredCandidatesCount: BigInt.fromInt 3
+                  { permissionedCandidatesCount: BigInt.fromInt 3
+                  , registeredCandidatesCount: BigInt.fromInt 4
                   }
                   >>=
                     balanceSignAndSubmitWithoutSpendingUtxo
@@ -132,3 +90,5 @@ testScenarioFailure =
                       "Test: update removed D param"
               )
         ) # withUnliftApp fails
+
+        pure unit

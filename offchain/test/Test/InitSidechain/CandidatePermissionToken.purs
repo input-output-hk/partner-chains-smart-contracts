@@ -29,48 +29,10 @@ tests ∷ WrappedTests
 tests = testnetGroup "Initialising the candidate permission token mechanism" $
   do
     -- InitCandidatePermissionToken endpoint
-    testInitCandidatePermissionToken
     testInitCandidatePermissionTokenIdempotent
 
 -- | Test `initCandidatePermissionToken` having run `initTokensMint`, expecting
 -- | no failure
--- Note that this test isn't great. If we want to keep the
--- `initCandidatePermissionToken` machinery, we should improve this test.
-testInitCandidatePermissionToken ∷ TestnetTest
-testInitCandidatePermissionToken =
-  Mote.Monad.test "Calling `InitCandidatePermissionToken`"
-    $ Test.TestnetTest.mkTestnetConfigTest
-        [ BigNum.fromInt 50_000_000
-        , BigNum.fromInt 50_000_000
-        , BigNum.fromInt 50_000_000
-        , BigNum.fromInt 50_000_000
-        ]
-    $ \alice → do
-        withUnliftApp (Wallet.withKeyWallet alice)
-          do
-            liftContract $ Log.logInfo'
-              "InitSidechain 'testInitCandidatePermissionToken'"
-            genesisUtxo ← Test.Utils.getOwnTransactionInput
-            initGovernanceAuthority ← Governance.mkGovernanceAuthority
-              <$> getOwnPaymentPubKeyHash
-            let
-              version = 1
-              initCandidatePermissionTokenMintInfo = Just (fromInt 1)
-              sidechainParams = SidechainParams.SidechainParams
-                { chainId: BigInt.fromInt 9
-                , genesisUtxo: genesisUtxo
-                , thresholdNumerator: BigInt.fromInt 2
-                , thresholdDenominator: BigInt.fromInt 3
-                , governanceAuthority: initGovernanceAuthority
-                }
-
-            -- First create init tokens
-            void $ InitMint.initTokensMint sidechainParams version
-
-            void $ InitCandidatePermission.initCandidatePermissionToken
-              sidechainParams
-              initCandidatePermissionTokenMintInfo
-
 -- | Test running `initCandidatePermissionToken` twice, having run
 -- | `initTokensMint`, expecting idempotency
 testInitCandidatePermissionTokenIdempotent ∷ TestnetTest

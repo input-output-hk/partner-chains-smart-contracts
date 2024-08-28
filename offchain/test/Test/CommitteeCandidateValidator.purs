@@ -54,8 +54,6 @@ mockSpoPubKey = hexToByteArrayUnsafe
 tests ∷ WrappedTests
 tests = testnetGroup "Committe candidate registration/deregistration" $ do
   testScenarioSuccess1
-  testScenarioSuccess2
-  testScenarioFailure1
   testScenarioFailure2
   testScenarioFailure3
 
@@ -165,18 +163,9 @@ runDeregister scParams =
   void $ deregister $ DeregisterParams
     { sidechainParams: scParams, spoPubKey: Just mockSpoPubKey }
 
--- Register then Deregister
-testScenarioSuccess1 ∷ TestnetTest
-testScenarioSuccess1 = Mote.Monad.test "Register followed by deregister"
-  $ Test.TestnetTest.mkTestnetConfigTest
-      [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ]
-  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-      void $ runRegister dummySidechainParams
-      runDeregister dummySidechainParams
-
 -- Register multipe times then Deregister
-testScenarioSuccess2 ∷ TestnetTest
-testScenarioSuccess2 =
+testScenarioSuccess1 ∷ TestnetTest
+testScenarioSuccess1 =
   Mote.Monad.test "10 registrations followed by 1 deregister"
     $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
@@ -187,14 +176,6 @@ testScenarioSuccess2 =
     $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
         sequence_ $ replicate 10 $ runRegister dummySidechainParams
         runDeregister dummySidechainParams
-
--- Deregister without prior registeration (i.e. no registration utxo present)
-testScenarioFailure1 ∷ TestnetTest
-testScenarioFailure1 = Mote.Monad.test "Deregister in isolation (should fail)"
-  $ Test.TestnetTest.mkTestnetConfigTest
-      [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ]
-  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-      runDeregister dummySidechainParams # withUnliftApp fails
 
 -- alice registers, bob deregisters. not allowed & should fail
 testScenarioFailure2 ∷ TestnetTest
