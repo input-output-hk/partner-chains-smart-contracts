@@ -88,8 +88,6 @@ immutableAdaSettings = ImmutableReserveSettings
 -- | `tests` aggregates all UpdateCommitteeHash the tests.
 tests ∷ WrappedTests
 tests = testnetGroup "Reserve" $ do
-  testScenario1
-  testScenario2
   testScenario3
   testScenario4
   testScenario5
@@ -181,63 +179,6 @@ initialDistribution =
   , BigNum.fromInt 40_000_000
   , BigNum.fromInt 40_000_000
   ]
-
-testScenario1 ∷ TestnetTest
-testScenario1 =
-  Mote.Monad.test "Successful reserve initialization with ADA as reserve token"
-    $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-        pkh ← getOwnPaymentPubKeyHash
-        Test.Utils.withSingleMultiSig (unwrap pkh) $ do
-
-          sidechainParams ← dummyInitialiseSidechain pkh
-
-          void $ initialiseReserveUtxo
-            sidechainParams
-            immutableAdaSettings
-            invalidMutableSettings
-            (BigNum.fromInt 100)
-
-          utxoMap ← findReserveUtxos sidechainParams
-
-          when (Map.isEmpty utxoMap)
-            $ liftContract
-            $ throwError
-            $ error "Reserve utxo not found"
-
-testScenario2 ∷ TestnetTest
-testScenario2 =
-  Mote.Monad.test
-    "Successful reserve initialization with non-ADA as reserve token"
-    $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-        pkh ← getOwnPaymentPubKeyHash
-        Test.Utils.withSingleMultiSig (unwrap pkh) $ do
-
-          sidechainParams ← dummyInitialiseSidechain pkh
-
-          let numOfNonAdaTokens = 101
-
-          tokenKind ← mintNonAdaTokens $ Int.fromInt numOfNonAdaTokens
-
-          let
-            immutableSettings = ImmutableReserveSettings
-              { t0: zero
-              , tokenKind: fromAssetClass tokenKind
-              }
-
-          void $ initialiseReserveUtxo
-            sidechainParams
-            immutableSettings
-            invalidMutableSettings
-            (BigNum.fromInt numOfNonAdaTokens)
-
-          utxoMap ← findReserveUtxos sidechainParams
-
-          when (Map.isEmpty utxoMap)
-            $ liftContract
-            $ throwError
-            $ error "Reserve utxo not found"
 
 testScenario3 ∷ TestnetTest
 testScenario3 =

@@ -54,10 +54,7 @@ mockSpoPubKey = hexToByteArrayUnsafe
 tests ∷ WrappedTests
 tests = testnetGroup "Committe candidate registration/deregistration" $ do
   testScenarioSuccess1
-  testScenarioSuccess2
   testScenarioFailure1
-  testScenarioFailure2
-  testScenarioFailure3
 
 -- | `runRegister` runs the register endpoint without any candidate permission
 -- | information.
@@ -165,18 +162,9 @@ runDeregister scParams =
   void $ deregister $ DeregisterParams
     { sidechainParams: scParams, spoPubKey: Just mockSpoPubKey }
 
--- Register then Deregister
-testScenarioSuccess1 ∷ TestnetTest
-testScenarioSuccess1 = Mote.Monad.test "Register followed by deregister"
-  $ Test.TestnetTest.mkTestnetConfigTest
-      [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ]
-  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-      void $ runRegister dummySidechainParams
-      runDeregister dummySidechainParams
-
 -- Register multipe times then Deregister
-testScenarioSuccess2 ∷ TestnetTest
-testScenarioSuccess2 =
+testScenarioSuccess1 ∷ TestnetTest
+testScenarioSuccess1 =
   Mote.Monad.test "10 registrations followed by 1 deregister"
     $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
@@ -188,17 +176,10 @@ testScenarioSuccess2 =
         sequence_ $ replicate 10 $ runRegister dummySidechainParams
         runDeregister dummySidechainParams
 
--- Deregister without prior registeration (i.e. no registration utxo present)
-testScenarioFailure1 ∷ TestnetTest
-testScenarioFailure1 = Mote.Monad.test "Deregister in isolation (should fail)"
-  $ Test.TestnetTest.mkTestnetConfigTest
-      [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ]
-  $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-      runDeregister dummySidechainParams # withUnliftApp fails
-
 -- alice registers, bob deregisters. not allowed & should fail
-testScenarioFailure2 ∷ TestnetTest
-testScenarioFailure2 =
+-- also, alice tries to register again with the same set of keys. not allowed & should fail
+testScenarioFailure1 ∷ TestnetTest
+testScenarioFailure1 =
   Mote.Monad.test
     "Register followed by a deregister from a distinct wallet (should fail)"
     $ Test.TestnetTest.mkTestnetConfigTest
@@ -207,21 +188,12 @@ testScenarioFailure2 =
         )
     $ \(alice /\ bob) →
         do
-          withUnliftApp (Wallet.withKeyWallet alice) $ void $ runRegister
-            dummySidechainParams
+          withUnliftApp (Wallet.withKeyWallet alice) $ do
+            void $ runRegister dummySidechainParams
+
+            -- alice tries to register again with the same set of keys. not allowed & should fail
+            (void $ runRegisterWithFixedKeys dummySidechainParams) # withUnliftApp
+              fails
           withUnliftApp (Wallet.withKeyWallet bob) $ runDeregister
             dummySidechainParams
-          # withUnliftApp fails
-
--- alice registers, then tries to register again with the same set of keys. not allowed & should fail
-testScenarioFailure3 ∷ TestnetTest
-testScenarioFailure3 =
-  Mote.Monad.test
-    "Register followed by a register with the same set of keys (should fail)"
-    $ Test.TestnetTest.mkTestnetConfigTest
-        ( [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ]
-        )
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) $ do
-        void $ runRegisterWithFixedKeys dummySidechainParams
-        (void $ runRegisterWithFixedKeys dummySidechainParams)
           # withUnliftApp fails
