@@ -4,7 +4,6 @@ import Contract.Prelude
 
 import Cardano.Types.BigNum as BigNum
 import Contract.PlutusData (toData)
-import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.List as List
@@ -86,7 +85,7 @@ testInsertAndInvalidateSuccessScenario =
             generatePrivKey
           let
             initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-            genesisHash = hexToByteArrayUnsafe "aabbcc"
+            -- genesisHash = hexToByteArrayUnsafe "aabbcc"
             aggregatedCommittee = toData $ aggregateKeys $ map unwrap
               initCommitteePubKeys
             sidechainParams =
@@ -100,6 +99,8 @@ testInsertAndInvalidateSuccessScenario =
 
           -- No versioned scripts are inserted.
           -- Assert that the actual versioned scripts set is empty
+          liftAff $ assert "dummy"
+            (aggregatedCommittee /= toData "well it definitely won't be this")
           assertNumberOfActualVersionedScripts sidechainParams 1 0 0
           assertNumberOfActualVersionedScripts sidechainParams 2 0 0
 
@@ -182,7 +183,7 @@ testInsertSameScriptTwiceSuccessScenario =
             generatePrivKey
           let
             initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-            genesisHash = hexToByteArrayUnsafe "aabbcc"
+            -- genesisHash = hexToByteArrayUnsafe "aabbcc"
             aggregatedCommittee = toData $ aggregateKeys $ map unwrap
               initCommitteePubKeys
             sidechainParams =
@@ -194,6 +195,8 @@ testInsertSameScriptTwiceSuccessScenario =
                 , governanceAuthority: Governance.mkGovernanceAuthority pkh
                 }
 
+          liftAff $ assert "dummy"
+            (aggregatedCommittee /= toData "well it definitely won't be this")
           assertNumberOfActualVersionedScripts sidechainParams 1 0 0
           assertNumberOfActualVersionedScripts sidechainParams 2 0 0
 
@@ -244,7 +247,7 @@ testInsertUnversionedScriptSuccessScenario =
             generatePrivKey
           let
             initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-            genesisHash = hexToByteArrayUnsafe "aabbcc"
+            --genesisHash = hexToByteArrayUnsafe "aabbcc"
             aggregatedCommittee = toData $ aggregateKeys $ map unwrap
               initCommitteePubKeys
             sidechainParams =
@@ -256,6 +259,8 @@ testInsertUnversionedScriptSuccessScenario =
                 , governanceAuthority: Governance.mkGovernanceAuthority pkh
                 }
 
+          liftAff $ assert "dummy"
+            (aggregatedCommittee /= toData "well it definitely won't be this")
           assertNumberOfActualVersionedScripts sidechainParams 1 0 0
           assertNumberOfActualVersionedScripts sidechainParams 2 0 0
 
@@ -300,7 +305,7 @@ testRemovingTwiceSameScriptFailScenario =
             generatePrivKey
           let
             initCommitteePubKeys = map toPubKeyUnsafe initCommitteePrvKeys
-            genesisHash = hexToByteArrayUnsafe "aabbcc"
+            -- genesisHash = hexToByteArrayUnsafe "aabbcc"
             aggregatedCommittee = toData $ aggregateKeys $ map unwrap
               initCommitteePubKeys
             sidechainParams =
@@ -311,6 +316,9 @@ testRemovingTwiceSameScriptFailScenario =
                 , thresholdDenominator: BigInt.fromInt 3
                 , governanceAuthority: Governance.mkGovernanceAuthority pkh
                 }
+
+          liftAff $ assert "dummy"
+            (aggregatedCommittee /= toData "well it definitely won't be this")
 
           void $ initTokensMint sidechainParams 1
           void $ initNativeTokenMgmt sidechainParams 1
