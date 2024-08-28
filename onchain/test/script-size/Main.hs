@@ -6,21 +6,13 @@ import Sizer (scriptFitsInto, scriptFitsUnder)
 import Test.Tasty (defaultMain, testGroup)
 import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as CPMP
 import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as PermissionedCandidates
-import TrustlessSidechain.CheckpointValidator qualified as CV
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CCV
-import TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy qualified as CPEATMSP
-import TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy qualified as CPSATMSP
 import TrustlessSidechain.DParameter qualified as DParameter
-import TrustlessSidechain.DistributedSet qualified as DS
-import TrustlessSidechain.FUELMintingPolicy qualified as FUEL
-import TrustlessSidechain.FUELProxyPolicy qualified as FUELProxyPolicy
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.IlliquidCirculationSupply qualified as IlliquidCirculationSupply
 import TrustlessSidechain.InitToken qualified as InitToken
-import TrustlessSidechain.MerkleRootTokenMintingPolicy qualified as MerkleRoot
 import TrustlessSidechain.PermissionedCandidates qualified as PermissionedCandidates
 import TrustlessSidechain.Reserve qualified as Reserve
-import TrustlessSidechain.UpdateCommitteeHash qualified as UCH
 import TrustlessSidechain.Versioning qualified as Versioning
 
 -- Process for adding a new script to measurements:
@@ -56,18 +48,6 @@ main =
     $ [ testGroup
           "Core"
           [ scriptFitsInto
-              "mkMintingPolicy (FUEL) serialized"
-              FUEL.serialisableMintingPolicy
-              3_259
-          , scriptFitsInto
-              "mkBurningPolicy (FUEL) serialized"
-              FUEL.serialisableBurningPolicy
-              9
-          , scriptFitsInto
-              "mkMintingPolicy (MerkleRoot) serialized"
-              MerkleRoot.serialisableMintingPolicy
-              2_934
-          , scriptFitsInto
               "mkCommitteeCandidateValidator (serialized)"
               CCV.serialisableValidator
               315
@@ -76,30 +56,6 @@ main =
               CPMP.serialisableCandidatePermissionMintingPolicy
               396
           , scriptFitsInto
-              "mkCommitteeOraclePolicy (serialized)"
-              UCH.serialisableCommitteeOraclePolicy
-              1_988
-          , scriptFitsInto
-              "mkUpdateCommitteeHashValidator (serialized)"
-              UCH.serialisableCommitteeHashValidator
-              2_763
-          , scriptFitsInto
-              "mkCheckpointValidator (serialized)"
-              CV.serialisableCheckpointValidator
-              2_536
-          , scriptFitsInto
-              "mkCheckpointPolicy (serialized)"
-              CV.serialisableCheckpointPolicy
-              604
-          , scriptFitsInto
-              "mkMintingPolicy (CommitteePlainEcdsaSecp256k1ATMSPolicy) serialized"
-              CPEATMSP.serialisableMintingPolicy
-              2_390
-          , scriptFitsInto
-              "mkMintingPolicy (CommitteePlainSchnorrSecp256k1ATMSPolicy) serialized"
-              CPSATMSP.serialisableMintingPolicy
-              2_390
-          , scriptFitsInto
               "mkDParameterValidatorCode (DParameter) serialized"
               DParameter.serialisableValidator
               498
@@ -107,10 +63,6 @@ main =
               "mkDParameterPolicyCode (DParameter) serialized"
               DParameter.serialisableMintingPolicy
               984
-          , scriptFitsInto
-              "mkFuelProxyPolicyCode (FUELProxyPolicy) serialized"
-              FUELProxyPolicy.serialisableFuelProxyPolicy
-              2_765
           , scriptFitsInto
               "mkPermissionedCandidatePolicyCode (PermissionedCandidates) serialized"
               PermissionedCandidates.serialisableCandidatePermissionMintingPolicy
@@ -143,21 +95,6 @@ main =
               "mkIlliquidCirculationSupplyValidator (IlliquidCirculationSupply) serialized"
               IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyValidator
               3_268
-          ]
-      , testGroup
-          "Distributed set"
-          [ scriptFitsInto
-              "mkInsertValidator (serialized)"
-              DS.serialisableInsertValidator
-              2_704
-          , scriptFitsInto
-              "mkDsConfPolicy (serialized)"
-              DS.serialisableDsConfPolicy
-              645
-          , scriptFitsInto
-              "mkDsKeyPolicy (serialized)"
-              DS.serialisableDsKeyPolicy
-              1_374
           ]
       , testGroup
           "Data rep"

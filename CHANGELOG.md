@@ -8,6 +8,9 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 ## Removed
   * Removed `init` command
   * the PoC test modules were removed
+  * Removed `burn-v1` and `burn-v2` commands
+  * Removed `claim-v1` and `claim-v2` commands
+  * Removed `save-root`, `committee-hash`, `committee-handover` and `collect-garbage` commands.
 
 # v6.1.0
 

@@ -26,8 +26,6 @@ module TrustlessSidechain.Types.Unsafe (
   thresholdNumerator,
   Signature (..),
   StakeOwnership (..),
-  UpdateCommitteeHashRedeemer (..),
-  previousMerkleRoot,
   -- | From Plutus.V2.Ledger.Api
   Address (..),
   addressCredential,
@@ -143,7 +141,6 @@ makeUnsafeNewtypes ''Types.GovernanceAuthority
 makeUnsafeNewtypes ''Types.SidechainParams
 makeUnsafeNewtypes ''Types.Signature
 makeUnsafeNewtypes ''Types.StakeOwnership
-makeUnsafeNewtypes ''Types.UpdateCommitteeHashRedeemer
 makeUnsafeNewtypes ''V2.Address
 makeUnsafeNewtypes ''V2.Credential
 makeUnsafeNewtypes ''V2.CurrencySymbol
@@ -168,7 +165,6 @@ makeUnsafeNewtypes ''PTPrelude.Integer
 
 makeUnsafeGetters ''Types.BlockProducerRegistration
 makeUnsafeGetters ''Types.SidechainParams
-makeUnsafeGetters ''Types.UpdateCommitteeHashRedeemer
 makeUnsafeGetters ''V2.Address
 makeUnsafeGetters ''V2.Credential
 makeUnsafeGetters ''V2.OutputDatum

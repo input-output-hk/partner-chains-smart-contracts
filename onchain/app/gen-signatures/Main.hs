@@ -21,7 +21,6 @@ import GetOpts (
   Args (Args),
   Command (
     GenCliCommand,
-    MerkleTreeCommand,
     SidechainKeyCommand
   ),
  )
@@ -38,9 +37,6 @@ main =
         $ GenOutput.genCliCommand
           gccSigningKeyFile
           gccSidechainParams
-          gccATMSKind
           gccCliCommand
-    MerkleTreeCommand {..} ->
-      GenOutput.merkleTreeCommand mtcCommand >>= ByteString.Char8.putStrLn
     SidechainKeyCommand {..} ->
       GenOutput.sidechainKeyCommand skCommand >>= ByteString.Char8.putStrLn

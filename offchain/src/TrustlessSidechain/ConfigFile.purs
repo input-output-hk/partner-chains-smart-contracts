@@ -22,9 +22,6 @@ import Node.Encoding (Encoding(ASCII))
 import Node.FS.Sync (exists, readTextFile)
 import Partial.Unsafe (unsafePartial)
 import Run (EFFECT, Run)
-import TrustlessSidechain.CommitteeATMSSchemes.Types
-  ( ATMSKinds(ATMSPlainEcdsaSecp256k1)
-  )
 import TrustlessSidechain.ConfigFile.Codecs
   ( committeeCodec
   , committeeSignaturesCodec
@@ -53,7 +50,6 @@ optExample =
           { numerator: 2
           , denominator: 3
           }
-      , atmsKind: Just ATMSPlainEcdsaSecp256k1
       , governanceAuthority: Just $ hexToByteArrayUnsafe "123456789abcdef0"
       }
   , paymentSigningKeyFile: Just "/absolute/path/to/payment.skey"

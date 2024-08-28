@@ -85,23 +85,13 @@ library
   exposed-modules:
     TrustlessSidechain.AlwaysPassingScripts
     TrustlessSidechain.CandidatePermissionMintingPolicy
-    TrustlessSidechain.CheckpointValidator
     TrustlessSidechain.CommitteeCandidateValidator
-    TrustlessSidechain.CommitteePlainATMSPolicy
-    TrustlessSidechain.CommitteePlainEcdsaSecp256k1ATMSPolicy
-    TrustlessSidechain.CommitteePlainSchnorrSecp256k1ATMSPolicy
-    TrustlessSidechain.DistributedSet
     TrustlessSidechain.DParameter
-    TrustlessSidechain.FUELMintingPolicy
-    TrustlessSidechain.FUELProxyPolicy
     TrustlessSidechain.Governance
     TrustlessSidechain.Governance.Admin
     TrustlessSidechain.Governance.MultiSig
     TrustlessSidechain.IlliquidCirculationSupply
     TrustlessSidechain.InitToken
-    TrustlessSidechain.MerkleRootTokenMintingPolicy
-    TrustlessSidechain.MerkleRootTokenValidator
-    TrustlessSidechain.MerkleTree
     TrustlessSidechain.OffChain
     TrustlessSidechain.OnlyMintMintingPolicy
     TrustlessSidechain.PermissionedCandidates
@@ -109,7 +99,6 @@ library
     TrustlessSidechain.ScriptCache
     TrustlessSidechain.Types
     TrustlessSidechain.Types.Unsafe
-    TrustlessSidechain.UpdateCommitteeHash
     TrustlessSidechain.Utils
     TrustlessSidechain.Versioning
 
@@ -225,18 +214,6 @@ executable trustless-sidechain-serialise
 
   hs-source-dirs: app/serialise
 
-executable trustless-sidechain-merkle-tree
-  import:         common-lang, common-optimized-parallel, common-script-lang
-  main-is:        Main.hs
-  build-depends:
-    , bytestring
-    , optparse-applicative
-    , serialise
-    , trustless-sidechain
-    , trustless-sidechain-prelude
-
-  hs-source-dirs: app/merkle-tree
-
 -- Tests
 
 test-suite trustless-sidechain-test
@@ -244,15 +221,10 @@ test-suite trustless-sidechain-test
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
-    Test.TrustlessSidechain.Golden.DistributedSet
-    Test.TrustlessSidechain.Golden.FUELProxyPolicy
     Test.TrustlessSidechain.Golden.Tests
     Test.TrustlessSidechain.Golden.Types
     Test.TrustlessSidechain.Golden.Versioning
     Test.TrustlessSidechain.GoldenTest
-    Test.TrustlessSidechain.MerkleProofSerialisation
-    Test.TrustlessSidechain.MerkleTree
-    Test.TrustlessSidechain.MultiSig
 
   build-depends:
     , base16-bytestring

@@ -8,7 +8,6 @@ module GetOpts (
   Args (..),
   Command (..),
   GenCliCommand (..),
-  MerkleTreeCommand (..),
   SidechainKeyCommand (..),
 ) where
 
@@ -19,21 +18,15 @@ import Cardano.Crypto.DSIGN.Class (
   genKeyDSIGN,
  )
 import Cardano.Crypto.Seed (mkSeedFromBytes)
-import Codec.Serialise qualified as Serialise
 import Control.Exception (ioError)
 import Control.Monad (MonadPlus (mzero), guard, join, return)
 import Crypto.Secp256k1 qualified as SECP
-import Data.Aeson (FromJSON (parseJSON))
 import Data.Aeson qualified as Aeson
-import Data.Aeson.Types qualified as Aeson.Types
 import Data.Attoparsec.Text (Parser, char, decimal, parseOnly, takeWhile)
-import Data.Bifunctor qualified as Bifunctor
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as ByteString.Char8
 import Data.ByteString.Char8 qualified as Char8
-import Data.ByteString.Lazy qualified as ByteString.Lazy
 import Data.Char qualified as Char
-import Data.Coerce as Coerce
 import Data.Either.Combinators (mapLeft)
 import Data.List qualified as List
 import Data.String qualified as HString
@@ -49,7 +42,6 @@ import Options.Applicative (
   helper,
   info,
   long,
-  maybeReader,
   metavar,
   option,
   progDesc,
@@ -58,19 +50,11 @@ import Options.Applicative (
  )
 import Options.Applicative qualified as OptParse
 import PlutusLedgerApi.V2 (
-  FromData (fromBuiltinData),
-  LedgerBytes (LedgerBytes),
   PubKeyHash (PubKeyHash),
-  ScriptHash (..),
   TxId (TxId),
   TxOutRef (TxOutRef),
-  toBuiltin,
  )
 import PlutusTx.Builtins qualified as Builtins
-import PlutusTx.Builtins.Internal (
-  BuiltinByteString (BuiltinByteString),
-  BuiltinData (BuiltinData),
- )
 import System.IO (FilePath)
 import System.IO.Error (userError)
 import TrustlessSidechain.Governance.Admin (
@@ -78,19 +62,13 @@ import TrustlessSidechain.Governance.Admin (
   mkGovernanceAuthority,
  )
 import TrustlessSidechain.HaskellPrelude
-import TrustlessSidechain.MerkleTree (
-  MerkleTree,
- )
 import TrustlessSidechain.OffChain (
-  ATMSKind,
-  Bech32Recipient (bech32RecipientBytes),
   SidechainCommittee (SidechainCommittee),
   SidechainCommitteeMember (..),
  )
 import TrustlessSidechain.OffChain qualified as OffChain
 import TrustlessSidechain.Types (
   EcdsaSecp256k1PubKey,
-  MerkleTreeEntry (..),
   SidechainParams (..),
  )
 
@@ -112,12 +90,10 @@ data Command
   = GenCliCommand
       { gccSigningKeyFile :: FilePath
       , gccSidechainParams :: SidechainParams
-      , gccATMSKind :: ATMSKind
       -- ^ The 'String' which identifies the ATMS kind used by the sidechain.
       -- Note that this 'String' is simply forwarded to Purescript CLI.
       , gccCliCommand :: GenCliCommand
       }
-  | MerkleTreeCommand {mtcCommand :: MerkleTreeCommand}
   | SidechainKeyCommand {skCommand :: SidechainKeyCommand}
 
 -- | 'SidechainKeyCommand' is for commands related to working with sidechain
@@ -137,26 +113,6 @@ data SidechainKeyCommand
     SidechainPrivateKeyToPublicKey
       {spktpkPrivateKey :: SECP.SecKey}
 
--- | 'MerkleTreeCommand' is for commands related to creating / querying merkle
--- trees.
-data MerkleTreeCommand
-  = -- | CLI arguments for creating a merkle tree from merkle entries
-    MerkleTreeEntriesCommand
-      {mtecEntries :: [MerkleTreeEntry]}
-  | -- | CLI arguments for getting the root hash from a merkle tree
-    RootHashCommand
-      {rhcMerkleTree :: MerkleTree}
-  | -- | CLI arguments for getting a merkle proof from a merkle tree
-    MerkleProofCommand
-      { mpcMerkleTree :: MerkleTree
-      , mpcMerkleTreeEntry :: MerkleTreeEntry
-      }
-  | -- | CLI arguments for getting a combined merkle proof from a merkle tree
-    CombinedMerkleProofCommand
-      { cmpMerkleTree :: MerkleTree
-      , cmpMerkleTreeEntry :: MerkleTreeEntry
-      }
-
 --  | 'GenCliCommand' is for commands which generate CLI commands for the
 --  purescript interface.
 data GenCliCommand
@@ -174,30 +130,6 @@ data GenCliCommand
       { drSpoPubKey :: VerKeyDSIGN Ed25519DSIGN
       -- ^ SPO public key
       }
-  | -- | CLI arguments for updating the committee
-    UpdateCommitteeHashCommand
-      { uchcCurrentCommitteePrivKeys :: [SECP.SecKey]
-      -- ^ the current committee's (as stored on chain) private keys
-      , uchcNewCommitteePubKeys :: [EcdsaSecp256k1PubKey]
-      -- ^ new committee public keys
-      -- | @since v4.0.0
-      , uchcSidechainEpoch :: Integer
-      -- ^ Sidechain epoch of the committee handover (needed to
-      -- create the message we wish to sign
-      , uchcPreviousMerkleRoot :: Maybe LedgerBytes
-      -- ^ previous merkle root that was just stored on chain.
-      -- This is needed to create the message we wish to sign
-      , uchcScriptHash :: ScriptHash
-      }
-  | -- | CLI arguments for saving a new merkle root
-    SaveRootCommand
-      { srcMerkleRoot :: LedgerBytes
-      -- ^ 32 byte merkle root hash
-      , srcCurrentCommitteePrivKeys :: [SECP.SecKey]
-      -- ^ current committee's (as stored on chain) private keys
-      , srcPreviousMerkleRoot :: Maybe LedgerBytes
-      -- ^ the previous merkle root (as needed to create the CLI command)
-      }
   | -- | CLI arguments for saving a new merkle root
     InitSidechainCommand
       { iscInitCommitteePubKeys :: [EcdsaSecp256k1PubKey]
@@ -206,30 +138,6 @@ data GenCliCommand
       , iscSidechainEpoch :: Integer
       -- ^ inital sidechain epoch
       }
-
--- | A newtype wrapper around 'MerkleTreeEntry'  to admit json parsing parsing
--- as specified in the spec. Note that we use this newtype wrapper because
--- 'MerkleTreeEntry's fields use the prefix "mte" to ensure that record names
--- are unique so the automagically derived 'parseJSON' will assume the "mte"
--- prefixed records are what we want -- but we don't want that and just want
--- the record name
-newtype MerkleTreeEntryJson = MerkleTreeEntryJson MerkleTreeEntry
-
-instance FromJSON MerkleTreeEntryJson where
-  parseJSON = Aeson.withObject "MerkleTreeEntry" $ \v ->
-    fmap MerkleTreeEntryJson
-      $ MerkleTreeEntry
-      <$> v
-      Aeson..: "index"
-      <*> v
-      Aeson..: "amount"
-      <*> fmap
-        (LedgerBytes . bech32RecipientBytes)
-        (v Aeson..: "recipient" :: Aeson.Types.Parser Bech32Recipient)
-      -- parse the bech32 type, then grab the byte output
-      <*> fmap
-        (fmap (LedgerBytes . BuiltinByteString . encodeUtf8))
-        (v Aeson..:? "previousMerkleRoot")
 
 -- * CLI parser
 
@@ -261,13 +169,6 @@ argParser =
           [ initSidechainCommand
           , registerCommand
           , deregisterCommand
-          , updateCommitteeHashCommand
-          , saveRootCommand
-          , -- generating merkle tree stuff
-            merkleTreeCommand
-          , merkleProofCommand
-          , rootHashCommand
-          , combinedMerkleProofCommand
           , -- generating sidechain keys
             freshSidechainPrivateKeyCommand
           , sidechainPrivateKeyToPublicKeyCommand
@@ -276,17 +177,6 @@ argParser =
 
     pure $ Args <$> ioCmd
     <**> helper
-
--- * Helper parsers for parsing values of CLI flags...
-
--- | 'parseMerkleTreeEntry' parses a merkle tree entry given as json
-parseMerkleTreeEntry :: OptParse.ReadM MerkleTreeEntry
-parseMerkleTreeEntry =
-  eitherReader
-    ( fmap (Coerce.coerce :: MerkleTreeEntryJson -> MerkleTreeEntry)
-        . Aeson.eitherDecodeStrict
-        . Char8.pack
-    )
 
 -- | 'parseTxOutRef' parses the CLI flag value
 -- > HEXSTR#UINT
@@ -380,44 +270,6 @@ parseGovernanceAuthority =
         . Char8.pack
     )
 
--- | parses the previous merkle root as a hex encoded string
-parsePreviousMerkleRoot :: OptParse.ReadM LedgerBytes
-parsePreviousMerkleRoot =
-  eitherReader
-    ( fmap (LedgerBytes . Builtins.toBuiltin)
-        . mapLeft ("Invalid previous merkle root hex: " <>)
-        . Base16.decode
-        . Char8.pack
-    )
-
--- | 'parseMerkleTree' parses a hex encoded, cbored, builtindata representation
--- of a merkle tree given as a CLI argument.
-parseMerkleTree :: OptParse.ReadM MerkleTree
-parseMerkleTree = eitherReader $ \str -> do
-  binary <-
-    mapLeft ("Invalid merkle tree hex: " <>)
-      . Base16.decode
-      . Char8.pack
-      $ str
-  builtindata :: Builtins.BuiltinData <-
-    mapLeft show
-      $ fmap BuiltinData
-      $ Serialise.deserialiseOrFail
-      $ ByteString.Lazy.fromStrict binary
-  maybe (Left "'fromBuiltinData' for merkle tree failed") Right
-    $ fromBuiltinData builtindata
-
--- | 'parseRootHash' parses a hex encoded, cbored, builtindata representation
--- of a root hash of a merkle tree given as a CLI argument.
-parseRootHash :: OptParse.ReadM LedgerBytes
-parseRootHash =
-  eitherReader
-    ( fmap (LedgerBytes . Builtins.toBuiltin)
-        . mapLeft ("Invalid merkle root hash: " <>)
-        . Base16.decode
-        . Char8.pack
-    )
-
 -- | 'parseSpoPubKey' parses the CLI flag value which is an SPO public key
 -- encoded as hex cbor format.
 --
@@ -461,91 +313,6 @@ decodeHash rawParser =
     either (const mzero) (pure . Builtins.toBuiltin) (tryDecode parsed)
 
 -- * CLI flag parsers.
-
--- | CLI parser for parsing input for the committee's private keys. Note that
--- in the case that we read the committee from a file, we need to do some IO
-currentCommitteePrivateKeysParser :: OptParse.Parser (IO [SECP.SecKey])
-currentCommitteePrivateKeysParser =
-  fmap pure {- need to introduce the IO monad-} manyCurrentCommittePrivateKeys
-    OptParse.<|> currentCommitteeFile
-  where
-    manyCurrentCommittePrivateKeys =
-      many
-        $ option parseSidechainPrivKey
-        $ mconcat
-          [ long "current-committee-private-key"
-          , metavar "PRIVATE_KEY"
-          , help
-              "Secp256k1 private key of a current committee member (hex encoded)"
-          ]
-
-    currentCommitteeFile = do
-      let helptxt =
-            "Filepath of JSON generated committee from `fresh-sidechain-committee`"
-      committeeFilepath <-
-        option OptParse.str
-          $ mconcat
-            [ long "current-committee"
-            , metavar "FILEPATH"
-            , help helptxt
-            ]
-      pure
-        $ Aeson.decodeFileStrict' committeeFilepath
-        >>= \case
-          Just (SidechainCommittee members) -> pure $ fmap scmPrivateKey members
-          Nothing ->
-            ioError
-              $ userError
-              $ "Invalid JSON committee file at: "
-              <> committeeFilepath
-
--- | CLI parser for parsing the new committee's public keys
-newCommitteePublicKeysParser :: OptParse.Parser (IO [EcdsaSecp256k1PubKey])
-newCommitteePublicKeysParser =
-  fmap pure {- need to introduce io monad -} manyCommitteePublicKeys
-    OptParse.<|> newCommitteeFile
-  where
-    manyCommitteePublicKeys =
-      many
-        $ option parseSidechainPubKey
-        $ mconcat
-          [ long "new-committee-pub-key"
-          , metavar "PUBLIC_KEY"
-          , help
-              "Secp256k1 public key of a current committee member (hex DER encoded [33 bytes])"
-          ]
-
-    newCommitteeFile = do
-      let helptxt =
-            "Filepath of JSON generated committee from `fresh-sidechain-committee`"
-      committeeFilepath <-
-        option OptParse.str
-          $ mconcat
-            [ long "new-committee"
-            , metavar "FILEPATH"
-            , help helptxt
-            ]
-
-      pure
-        $ Aeson.decodeFileStrict' committeeFilepath
-        >>= \case
-          Just (SidechainCommittee members) -> pure $ fmap scmPublicKey members
-          Nothing ->
-            ioError
-              $ userError
-              $ "Invalid JSON committee file at: "
-              <> committeeFilepath
-
--- | Parser for parsing a hex encoded CBOR encoded
--- 'Plutus.V2.Ledger.Api.Address'
-parseScriptHash :: OptParse.ReadM ScriptHash
-parseScriptHash = eitherReader $ \(str :: HString.String) -> do
-  decoded <-
-    Bifunctor.first ("Invalid hex: " <>)
-      . Base16.decode
-      . Char8.pack
-      $ str
-  return $ ScriptHash $ toBuiltin decoded
 
 -- | 'initCommitteePublicKeysParser' is essentially identical to
 -- 'newCommitteePublicKeysParser' except the help strings / command line flag
@@ -639,19 +406,11 @@ signingKeyFileParser =
 genCliCommandHelperParser :: OptParse.Parser (GenCliCommand -> Command)
 genCliCommandHelperParser = do
   scParams <- sidechainParamsParser
-  atmsKind <-
-    option (maybeReader (OffChain.parseATMSKind . ByteString.Char8.pack))
-      $ mconcat
-        [ long "atms-kind"
-        , metavar "ATMS_KIND"
-        , help "ATMS kind of the sidechain"
-        ]
   signingKeyFile <- signingKeyFileParser
   pure $ \cmd ->
     GenCliCommand
       { gccSidechainParams = scParams
       , gccSigningKeyFile = signingKeyFile
-      , gccATMSKind = atmsKind
       , gccCliCommand = cmd
       }
 
@@ -742,180 +501,6 @@ initSidechainCommand =
       pure $ do
         iscInitCommitteePubKeys <- ioIscInitCommitteePubKeys
         pure $ scParamsAndSigningKeyFunction $ InitSidechainCommand {..}
-    <**> helper
-
--- | 'committeeHashCommand' parses the cli arguments for gathering the
--- parameters for 'UpdateCommitteeHashCommand'
-updateCommitteeHashCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
-updateCommitteeHashCommand =
-  command "committee-hash"
-    $ flip
-      info
-      (progDesc "Generates signatures the committee hash endpoint")
-    $ do
-      scParamsAndSigningKeyFunction <- genCliCommandHelperParser
-
-      ioUchcCurrentCommitteePrivKeys <- currentCommitteePrivateKeysParser
-
-      ioUchcNewCommitteePubKeys <- newCommitteePublicKeysParser
-
-      uchcSidechainEpoch <-
-        option auto
-          $ mconcat
-            [ long "sidechain-epoch"
-            , metavar "INTEGER"
-            , help "Sidechain epoch of the committee update"
-            ]
-      uchcPreviousMerkleRoot <-
-        optional
-          $ option parsePreviousMerkleRoot
-          $ mconcat
-            [ long "previous-merkle-root"
-            , metavar "PREVIOUS_MERKLE_ROOT"
-            , help "Hex encoded previous merkle root (if it exists)"
-            ]
-      uchcScriptHash <-
-        option parseScriptHash
-          $ mconcat
-            [ long "--new-committee-validator-script-hash"
-            , metavar "VALIDATOR_HASH"
-            , help "Hex encoded validator hash"
-            ]
-      pure $ do
-        uchcCurrentCommitteePrivKeys <- ioUchcCurrentCommitteePrivKeys
-        uchcNewCommitteePubKeys <- ioUchcNewCommitteePubKeys
-        pure $ scParamsAndSigningKeyFunction $ UpdateCommitteeHashCommand {..}
-    <**> helper
-
--- | 'saveRootCommand' parses the cli arguments to grab the required parameters
--- for generating a CLI command for saving a merkle root.
-saveRootCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
-saveRootCommand =
-  command "save-root"
-    $ flip
-      info
-      (progDesc "Create the CLI command for saving a merkle root")
-    $ do
-      scParamsAndSigningKeyFunction <- genCliCommandHelperParser
-
-      -- duplicated code from 'rootHashCommand'
-      srcMerkleRoot <-
-        option parseRootHash
-          $ mconcat
-            [ long "merkle-root"
-            , metavar "MERKLE_ROOT"
-            , help "Expects the root hash (32 bytes) as an argument"
-            ]
-      -- duplicated code from updateCommitteeHashCommand
-      ioSrcCurrentCommitteePrivKeys <- currentCommitteePrivateKeysParser
-
-      -- duplicated code rootHashCommand
-      srcPreviousMerkleRoot <-
-        optional
-          $ option parsePreviousMerkleRoot
-          $ mconcat
-            [ long "previous-merkle-root"
-            , metavar "PREVIOUS_MERKLE_ROOT"
-            , help "Hex encoded previous merkle root (if it exists)"
-            ]
-
-      pure $ do
-        srcCurrentCommitteePrivKeys <- ioSrcCurrentCommitteePrivKeys
-        pure $ scParamsAndSigningKeyFunction $ SaveRootCommand {..}
-    <**> helper
-
--- | 'committeeHashCommand' parses the cli arguments for creating merkle trees.
-merkleTreeCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
-merkleTreeCommand =
-  command "merkle-tree"
-    $ flip
-      info
-      (progDesc "Creates a hex encoded BuiltinData representation of a merkle tree")
-    $ do
-      mtecEntries <-
-        some
-          $ option parseMerkleTreeEntry
-          $ mconcat
-            [ long "merkle-tree-entry"
-            , metavar "JSON_MERKLE_TREE_ENTRY"
-            , help "Merkle tree entry in json form with schema {index :: Integer, amount :: Integer, recipient :: BuiltinByteString, previousMerkleRoot :: Maybe BuiltinByteString}"
-            ]
-      pure $ pure $ MerkleTreeCommand $ MerkleTreeEntriesCommand {..}
-    <**> helper
-
--- | 'rootHashCommand' parses the cli arguments to grab the root hash from a
--- merkle tree
-rootHashCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
-rootHashCommand =
-  command "root-hash"
-    $ flip
-      info
-      (progDesc "Gets the hex encoded merkle root hash of a given merkle tree")
-    $ do
-      rhcMerkleTree <-
-        option parseMerkleTree
-          $ mconcat
-            [ long "merkle-tree"
-            , metavar "MERKLE_TREE"
-            , help "Expects hex(cbor(toBuiltinData(MerkleTree))) as an argument"
-            ]
-      pure $ pure $ MerkleTreeCommand $ RootHashCommand {..}
-    <**> helper
-
--- | 'combinedMerkleProofCommand' parses the cli arguments to grab the 'CombinedMerkleProof' from a merkle
--- tree entry, and a merkle tree
-combinedMerkleProofCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
-combinedMerkleProofCommand =
-  command "combined-merkle-proof"
-    $ flip
-      info
-      (progDesc "Creates a hex encoded BuiltinData representation of a combined merkle proof")
-    $ do
-      -- duplicated code from 'rootHashCommand'
-      cmpMerkleTree <-
-        option parseMerkleTree
-          $ mconcat
-            [ long "merkle-tree"
-            , metavar "MERKLE_TREE"
-            , help "Expects hex(cbor(toBuiltinData(MerkleTree))) as an argument"
-            ]
-      -- duplicated code from 'merkleTreeCommand'
-      cmpMerkleTreeEntry <-
-        option parseMerkleTreeEntry
-          $ mconcat
-            [ long "merkle-tree-entry"
-            , metavar "JSON_MERKLE_TREE_ENTRY"
-            , help "Merkle tree entry in json form with schema {index :: Integer, amount :: Integer, recipient :: BuiltinByteString, previousMerkleRoot :: Maybe BuiltinByteString}"
-            ]
-      pure $ pure $ MerkleTreeCommand $ CombinedMerkleProofCommand {..}
-    <**> helper
-
--- | 'merkleProofCommand' parses the cli arguments to grab the merkle proof
--- from a merkle tree and merkle tree entry
-merkleProofCommand :: OptParse.Mod OptParse.CommandFields (IO Command)
-merkleProofCommand =
-  command "merkle-proof"
-    $ flip
-      info
-      (progDesc "Creates a hex encoded BuiltinData representation of a merkle proof")
-    $ do
-      -- duplicated code from 'rootHashCommand'
-      mpcMerkleTree <-
-        option parseMerkleTree
-          $ mconcat
-            [ long "merkle-tree"
-            , metavar "MERKLE_TREE"
-            , help "Expects hex(cbor(toBuiltinData(MerkleTree))) as an argument"
-            ]
-      -- duplicated code from 'merkleTreeCommand'
-      mpcMerkleTreeEntry <-
-        option parseMerkleTreeEntry
-          $ mconcat
-            [ long "merkle-tree-entry"
-            , metavar "JSON_MERKLE_TREE_ENTRY"
-            , help "Merkle tree entry in json form with schema {index :: Integer, amount :: Integer, recipient :: BuiltinByteString, previousMerkleRoot :: Maybe BuiltinByteString}"
-            ]
-      pure $ pure $ MerkleTreeCommand $ MerkleProofCommand {..}
     <**> helper
 
 -- | 'freshSidechainPrivateKeyCommand' parses the cli arguments to generate a

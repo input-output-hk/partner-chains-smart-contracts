@@ -223,7 +223,6 @@ Available commands:
                            Mint candidate permission tokens
   deregister               Deregister a committee member
   committee-hash           Update the committee hash
-  save-root                Saving a new merkle root
   committee-handover       An alias for saving the merkle root, followed by
                            updating the committee hash
   save-checkpoint          Saving a new checkpoint
@@ -487,18 +486,6 @@ nix run .#sidechain-main-cli -- committee-hash \
 Note that `--new-committee-validator-cbor-encoded-address` can be found
 from the JSON key `cborEncodedAddresses` from the output of the `addresses`
 subcommand.
-
-#### 3.2.9. Save merkle root
-
-```
-nix run .#sidechain-main-cli -- save-root \
-  --merkle-root abababab \
-  --committee-pub-key-and-signature aabbcc01:aaaaaa \
-  --committee-pub-key-and-signature aabbcc02 \
-  --committee-pub-key-and-signature aabbcc03:bbbbbb \
-  --committee-pub-key-and-signature aabbcc04:cccccc \
-  --previous-merkle-root abcdef
-```
 
 #### 3.2.10 Committee handover
 

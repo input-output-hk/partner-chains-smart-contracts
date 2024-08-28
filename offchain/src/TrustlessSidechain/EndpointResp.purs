@@ -34,15 +34,7 @@ import Data.Codec.Argonaut.Compat as CAC
 import Data.List (List)
 import Data.Map (Map)
 import Foreign.Object as Object
-import TrustlessSidechain.FUELMintingPolicy.V1
-  ( CombinedMerkleProof
-  )
 import TrustlessSidechain.GetSidechainAddresses (SidechainAddresses)
-import TrustlessSidechain.MerkleTree
-  ( MerkleTree
-  , RootHash
-  , unRootHash
-  )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Asset (currencySymbolToHex)
 import TrustlessSidechain.Utils.Codecs
@@ -66,42 +58,23 @@ import TrustlessSidechain.Versioning.Types as Types
 
 -- | Response data to be presented after contract endpoint execution
 data EndpointResp
-  = ClaimActRespV1 { transactionId ∷ ByteArray }
-  | BurnActRespV1 { transactionId ∷ ByteArray }
-  | ClaimActRespV2 { transactionId ∷ ByteArray }
-  | BurnActRespV2 { transactionId ∷ ByteArray }
-  | CommitteeCandidateRegResp { transactionId ∷ ByteArray }
+  = CommitteeCandidateRegResp { transactionId ∷ ByteArray }
   | CandidatePermissionTokenResp
       { transactionId ∷ ByteArray
       , candidatePermissionCurrencySymbol ∷ ScriptHash
       }
   | CommitteeCandidateDeregResp { transactionId ∷ ByteArray }
   | GetAddrsResp { sidechainAddresses ∷ SidechainAddresses }
-  | CommitteeHashResp { transactionId ∷ ByteArray }
-  | SaveRootResp { transactionId ∷ ByteArray }
-  | CommitteeHandoverResp
-      { saveRootTransactionId ∷ ByteArray
-      , committeeHashTransactionId ∷ ByteArray
-      }
   | InitTokensMintResp
       { transactionId ∷ Maybe ByteArray
       , sidechainParams ∷ SidechainParams
       , sidechainAddresses ∷ SidechainAddresses
       }
-  | InitFuelResp
-      { scriptsInitTxIds ∷ Array ByteArray
-      , tokensInitTxId ∷ Maybe ByteArray
-      }
   | InitReserveManagementResp
       { scriptsInitTxIds ∷ Array ByteArray
       }
-  | InitCheckpointResp
-      { scriptsInitTxIds ∷ Array ByteArray
-      , tokensInitTxId ∷ Maybe ByteArray
-      }
   | InitCandidatePermissionTokenResp
       { initTransactionId ∷ Maybe ByteArray }
-  | SaveCheckpointResp { transactionId ∷ ByteArray }
   | InsertVersionResp { versioningTransactionIds ∷ Array ByteArray }
   | UpdateVersionResp { versioningTransactionIds ∷ Array ByteArray }
   | InvalidateVersionResp { versioningTransactionIds ∷ Array ByteArray }
@@ -123,24 +96,8 @@ data EndpointResp
       , signature ∷ SchnorrSecp256k1Signature
       , signedMessage ∷ ByteArray
       }
-  | CborUpdateCommitteeMessageResp
-      { plutusData ∷ PlutusData
-      }
   | CborBlockProducerRegistrationMessageResp
       { plutusData ∷ PlutusData
-      }
-  | CborMerkleRootInsertionMessageResp
-      { plutusData ∷ PlutusData
-      }
-  | CborMerkleTreeEntryResp
-      { plutusData ∷ PlutusData
-      }
-  | CborMerkleTreeResp
-      { merkleRootHash ∷ RootHash
-      , merkleTree ∷ MerkleTree
-      }
-  | CborCombinedMerkleProofResp
-      { combinedMerkleProof ∷ CombinedMerkleProof
       }
   | CborPlainAggregatePublicKeysResp
       { aggregatedPublicKeys ∷ PlutusData
@@ -150,8 +107,6 @@ data EndpointResp
   | UpdateDParameterResp
       { transactionId ∷ ByteArray }
   | UpdatePermissionedCandidatesResp
-      { transactionId ∷ ByteArray }
-  | BurnNFTsResp
       { transactionId ∷ ByteArray }
   | InitTokenStatusResp
       { initTokenStatusData ∷ Map AssetName BigNum }
@@ -188,26 +143,6 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
 
   enc ∷ EndpointResp → Json
   enc = case _ of
-    ClaimActRespV1 { transactionId } →
-      J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "ClaimActV1"
-        , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
-        ]
-    BurnActRespV1 { transactionId } →
-      J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "BurnActV1"
-        , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
-        ]
-    ClaimActRespV2 { transactionId } →
-      J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "ClaimActV2"
-        , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
-        ]
-    BurnActRespV2 { transactionId } →
-      J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "BurnActV2"
-        , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
-        ]
     CommitteeCandidateRegResp { transactionId } →
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "CommitteeCandidateReg"
@@ -250,24 +185,6 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
                 )
             )
         ]
-    CommitteeHashResp { transactionId } →
-      J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "CommitteeHash"
-        , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
-        ]
-    SaveRootResp { transactionId } →
-      J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "SaveRoot"
-        , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
-        ]
-    CommitteeHandoverResp { saveRootTransactionId, committeeHashTransactionId } →
-      J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "CommitteeHandover"
-        , "saveRootTransactionId" /\ J.fromString
-            (byteArrayToHex saveRootTransactionId)
-        , "committeeHashTransactionId" /\ J.fromString
-            (byteArrayToHex committeeHashTransactionId)
-        ]
     InitTokensMintResp
       { transactionId
       , sidechainParams
@@ -301,34 +218,6 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
               )
           ]
 
-    InitCheckpointResp
-      { scriptsInitTxIds
-      , tokensInitTxId
-      } →
-      J.fromObject $
-        Object.fromFoldable
-          [ "endpoint" /\ J.fromString "InitCheckpoint"
-          , "scriptsInitTxIds" /\ J.fromArray
-              (map (J.fromString <<< byteArrayToHex) scriptsInitTxIds)
-          , "tokensInitTxId" /\ CA.encode
-              (CAC.maybe CA.string)
-              (map byteArrayToHex tokensInitTxId)
-          ]
-
-    InitFuelResp
-      { scriptsInitTxIds
-      , tokensInitTxId
-      } →
-      J.fromObject $
-        Object.fromFoldable
-          [ "endpoint" /\ J.fromString "InitFuel"
-          , "scriptsInitTxIds" /\ J.fromArray
-              (map (J.fromString <<< byteArrayToHex) scriptsInitTxIds)
-          , "tokensInitTxId" /\ CA.encode
-              (CAC.maybe CA.string)
-              (map byteArrayToHex tokensInitTxId)
-          ]
-
     InitReserveManagementResp
       { scriptsInitTxIds
       } →
@@ -347,11 +236,6 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
               (CAC.maybe CA.string) -- Nothing encoded to null
               (map (byteArrayToHex) initTransactionId)
           ]
-    SaveCheckpointResp { transactionId } →
-      J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "SaveCheckpoint"
-        , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
-        ]
     InsertVersionResp { versioningTransactionIds } →
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "InitVersion"
@@ -404,48 +288,11 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
             (Utils.SchnorrSecp256k1.serializeSignature signature)
         , "rawHexSignedMessage" /\ J.fromString (byteArrayToHex signedMessage)
         ]
-    CborUpdateCommitteeMessageResp { plutusData } →
-      J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "CborUpdateCommitteeMessage"
-        , "cborHexUpdateCommitteeMessage" /\ J.fromString
-            (serialisePlutusDataToHex plutusData)
-        ]
-    CborMerkleRootInsertionMessageResp { plutusData } →
-      J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "CborMerkleRootInsertionMessage"
-        , "cborHexMerkleRootInsertionMessage" /\ J.fromString
-            (serialisePlutusDataToHex plutusData)
-        ]
     CborBlockProducerRegistrationMessageResp { plutusData } →
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "CborBlockProducerRegistrationMessage"
         , "cborHexBlockProducerRegistrationMessage" /\ J.fromString
             (serialisePlutusDataToHex plutusData)
-        ]
-    CborMerkleTreeEntryResp { plutusData } →
-      J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "CborMerkleTreeEntry"
-        , "cborHexMerkleTreeEntry" /\ J.fromString
-            (serialisePlutusDataToHex plutusData)
-        ]
-    CborMerkleTreeResp
-      { merkleRootHash
-      , merkleTree
-      } →
-      J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "CborMerkleTree"
-        , "rawHexMerkleRoot" /\ J.fromString
-            (byteArrayToHex (unRootHash merkleRootHash))
-        , "cborHexMerkleTree" /\ J.fromString
-            (serialisePlutusDataToHex merkleTree)
-        ]
-    CborCombinedMerkleProofResp
-      { combinedMerkleProof
-      } →
-      J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "CborCombinedMerkleProof"
-        , "cborHexCombinedMerkleProof" /\ J.fromString
-            (serialisePlutusDataToHex combinedMerkleProof)
         ]
     CborPlainAggregatePublicKeysResp
       { aggregatedPublicKeys
@@ -473,13 +320,6 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
       { transactionId } →
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "UpdatePermissionedCandidates"
-        , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
-        ]
-
-    BurnNFTsResp
-      { transactionId } →
-      J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "BurnNFTs"
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
         ]
 
