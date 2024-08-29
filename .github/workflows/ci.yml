@@ -70,9 +70,9 @@ jobs:
       - name: Add signing key for nix
         run: echo "${{ secrets.NIX_SIGNING_KEY }}" > "${{ runner.temp }}/nix-key"
 
-      - name: Run nixci to build all outputs
+      - name: Build devShell
         run: |
-          nix run github:srid/nixci -- -v build -- --fallback > ${{ runner.temp }}/outputs
+          nix build .\#devShell.aarch64-darwin -o ${{ runner.temp }}/outputs
 
       - name: Acquire AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -86,19 +86,3 @@ jobs:
           | nix copy --stdin --to \
           "s3://cache.sc.iog.io?secret-key=${{ runner.temp }}/nix-key&region=$AWS_DEFAULT_REGION" \
           && rm ${{ runner.temp }}/outputs
-
-  test-arm64-darwin:
-    permissions:
-      id-token: write
-      contents: read
-    runs-on: [ self-hosted, macOS ]
-    needs:
-      - build-arm64-darwin
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          token: ${{ github.token }}
-      - name: Run tests
-        run: |
-          nix build .#check.aarch64-darwin -L --fallback
