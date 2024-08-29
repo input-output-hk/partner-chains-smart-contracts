@@ -30,69 +30,13 @@ import TrustlessSidechain.Versioning as Versioning
 tests ∷ WrappedTests
 tests = testnetGroup "Minting the init tokens" $ do
   -- InitTokensMint endpoint
-  initTokensMintScenario1
   initTokensMintIdempotent
 
--- | Setup the same as `testScenario1`, but in which `initTokensMint`
--- | is called rather than `initSidechain`. It should succeed, and
--- | it checks the tokens are indeed minted by calling `getInitTokenStatus`.
-initTokensMintScenario1 ∷ TestnetTest
-initTokensMintScenario1 =
-  Mote.Monad.test "`initTokensMint` returns expected token names and quantities"
-    $ Test.TestnetTest.mkTestnetConfigTest
-        [ BigNum.fromInt 50_000_000
-        , BigNum.fromInt 50_000_000
-        , BigNum.fromInt 50_000_000
-        , BigNum.fromInt 50_000_000
-        ]
-    $ \alice →
-        withUnliftApp (Wallet.withKeyWallet alice) do
-          Effect.logInfo' "InitSidechain 'initTokensMintScenario1'"
-
-          genesisUtxo ← Test.Utils.getOwnTransactionInput
-
-          initGovernanceAuthority ←
-            Governance.mkGovernanceAuthority
-              <$> getOwnPaymentPubKeyHash
-
-          let
-            version = 1
-            sidechainParams = SidechainParams.SidechainParams
-              { chainId: BigInt.fromInt 9
-              , genesisUtxo: genesisUtxo
-              , thresholdNumerator: BigInt.fromInt 2
-              , thresholdDenominator: BigInt.fromInt 3
-              , governanceAuthority: initGovernanceAuthority
-              }
-
-          -- Command being tested
-          void $ InitMint.initTokensMint sidechainParams version
-
-          -- For computing the number of versionOracle init tokens
-          { versionedPolicies, versionedValidators } ←
-            Versioning.getExpectedVersionedPoliciesAndValidators
-              sidechainParams
-              version
-
-          let
-            expected = expectedInitTokens 0 versionedPolicies versionedValidators
-              [ CandidatePermissionToken.candidatePermissionInitTokenName
-              ]
-
-          -- Get the tokens just created
-          { initTokenStatusData: res } ← Init.getInitTokenStatus
-            sidechainParams
-
-          Effect.fromMaybeThrow (GenericInternalError "Unreachable")
-            $ map Just
-            $ liftAff
-            $ assert (failMsg expected res)
-                (unorderedEq expected res)
-
--- | Same as `initTokensMintScenario1`, except this
--- | attempts to mint the tokens twice. The tokens should
--- | still be as expected and the return transactionId should
--- | be `Nothing`.
+-- | This test calls `initTokensMint` twice to check its idempotency.
+-- | It should succeed on both calls, with the following expectations:
+-- | 1. The tokens are minted correctly (verified by calling `getInitTokenStatus`).
+-- | 2. On the second call, the return transactionId should be `Nothing`.
+-- | 3. The minted tokens should match the expected values after both calls.
 initTokensMintIdempotent ∷ TestnetTest
 initTokensMintIdempotent =
   Mote.Monad.test "`initTokensMint` gives expected results when called twice"

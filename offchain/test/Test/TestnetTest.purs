@@ -18,10 +18,14 @@ module Test.TestnetTest
 
 import Contract.Prelude
 
-import Contract.Test.Testnet (class UtxoDistribution, runTestnetContract)
+import Contract.Config (ContractTimeParams)
+import Contract.Monad (Contract, ContractEnv, runContractInEnv)
+import Contract.Test.Testnet (class UtxoDistribution)
 import Ctl.Internal.Spawn as PortCheck
+import Ctl.Internal.Testnet.Contract (withTestnetContractEnv)
 import Ctl.Internal.Testnet.Types (TestnetConfig)
 import Data.Const (Const)
+import Data.Time.Duration (Milliseconds(..))
 import Effect.Aff (delay)
 import Effect.Console as Console
 import Mote.Monad (Mote)
@@ -93,6 +97,18 @@ whileMMax n p m | n > 0 = do
   else pure unit
 whileMMax _ _ _ = pure unit
 
+runTestnetContract ∷
+  ∀ (distr ∷ Type) (wallets ∷ Type) (a ∷ Type).
+  (ContractEnv → ContractEnv) →
+  UtxoDistribution distr wallets ⇒
+  TestnetConfig →
+  distr →
+  (wallets → Contract a) →
+  Aff a
+runTestnetContract updateEnv cfg distr cont =
+  withTestnetContractEnv cfg distr \env wallets →
+    runContractInEnv (updateEnv env) (cont wallets)
+
 -- | `mkTestnetConfigTest` provides a mechanism to create a `TestnetConfigTest`
 -- It sets up Env as empty value, that has to be later udpated with `Run.Reader.local`
 mkTestnetConfigTest ∷
@@ -109,8 +125,22 @@ mkTestnetConfigTest ∷
       Unit
   ) →
   TestnetConfigTest
-mkTestnetConfigTest d t = TestnetConfigTest \c → runTestnetContract c d
+mkTestnetConfigTest d t = TestnetConfigTest \c → runTestnetContract
+  updateContractEnv
+  c
+  d
   (unliftApp emptyEnv <<< t)
+  where
+
+  updateContractEnv ∷ ContractEnv → ContractEnv
+  updateContractEnv cenv = cenv
+    { timeParams = updateTimeParams cenv.timeParams }
+
+  updateTimeParams ∷ ContractTimeParams → ContractTimeParams
+  updateTimeParams tp = tp
+    { awaitTxConfirmed = tp.awaitTxConfirmed
+        { delay = Milliseconds 25.0 }
+    }
 
 -- | `runTestnetConfigTest` provides a mechanism to turn a `TestnetConfigTest` into a `Test`
 runTestnetConfigTest ∷
