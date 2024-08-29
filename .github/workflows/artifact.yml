@@ -72,9 +72,9 @@ jobs:
       - name: Set filename variables
         id: set-filenames
         run: |
-          echo "SIDECHAIN_MAIN_CLI_LINUX=sidechain-main-cli-${{ github.event.inputs.partner-chains-smart-contracts-tag }}-x86_64-linux" >> $GITHUB_ENV
-          echo "SIDECHAIN_MAIN_CLI_X86_64_APPLE_DARWIN=sidechain-main-cli-${{ github.event.inputs.partner-chains-smart-contracts-tag }}-x86_64-apple-darwin" >> $GITHUB_ENV
-          echo "SIDECHAIN_MAIN_CLI_AARCH64_APPLE_DARWIN=sidechain-main-cli-${{ github.event.inputs.partner-chains-smart-contracts-tag }}-aarch64-apple-darwin" >> $GITHUB_ENV
+          echo "PC_CONTRACTS_CLI_LINUX=pc-contracts-cli-${{ github.event.inputs.partner-chains-smart-contracts-tag }}-x86_64-linux" >> $GITHUB_ENV
+          echo "PC_CONTRACTS_CLI_X86_64_APPLE_DARWIN=pc-contracts-cli-${{ github.event.inputs.partner-chains-smart-contracts-tag }}-x86_64-apple-darwin" >> $GITHUB_ENV
+          echo "PC_CONTRACTS_CLI_AARCH64_APPLE_DARWIN=pc-contracts-cli-${{ github.event.inputs.partner-chains-smart-contracts-tag }}-aarch64-apple-darwin" >> $GITHUB_ENV
           
       - name: Download x86_64-linux artifact
         uses: actions/download-artifact@v4
@@ -114,29 +114,23 @@ jobs:
           unzip ./x86_64-linux/release.zip -d ./x86_64-linux/unzipped
           unzip ./macos-x86_64/release.zip -d ./macos-x86_64/unzipped
           unzip ./macos-arm64/release.zip -d ./macos-arm64/unzipped
-          
-      - name: Rename sidechain-cli to sidechain-main-cli
-        run: |
-          mv ./x86_64-linux/unzipped/sidechain-cli ./x86_64-linux/unzipped/sidechain-main-cli
-          mv ./macos-x86_64/unzipped/sidechain-cli ./macos-x86_64/unzipped/sidechain-main-cli
-          mv ./macos-arm64/unzipped/sidechain-cli ./macos-arm64/unzipped/sidechain-main-cli
   
-      - name: Upload Renamed x86_64-linux Artifact
+      - name: Upload x86_64-linux Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.SIDECHAIN_MAIN_CLI_LINUX }}
+          name: ${{ env.PC_CONTRACTS_CLI_LINUX }}
           path: ./x86_64-linux/unzipped/
 
-      - name: Upload Renamed macos-x86_64 Artifact
+      - name: Upload macos-x86_64 Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.SIDECHAIN_MAIN_CLI_X86_64_APPLE_DARWIN }}
+          name: ${{ env.PC_CONTRACTS_CLI_X86_64_APPLE_DARWIN }}
           path: ./macos-x86_64/unzipped/
 
-      - name: Upload Renamed macos-arm64 Artifact
+      - name: Upload macos-arm64 Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.SIDECHAIN_MAIN_CLI_AARCH64_APPLE_DARWIN }}
+          name: ${{ env.PC_CONTRACTS_CLI_AARCH64_APPLE_DARWIN }}
           path: ./macos-arm64/unzipped/
     
   release:
@@ -147,36 +141,36 @@ jobs:
       - name: Set filename variables
         id: set-filenames
         run: |
-          echo "SIDECHAIN_MAIN_CLI_LINUX=sidechain-main-cli-${{ github.event.inputs.partner-chains-smart-contracts-tag }}-x86_64-linux" >> $GITHUB_ENV
-          echo "SIDECHAIN_MAIN_CLI_X86_64_APPLE_DARWIN=sidechain-main-cli-${{ github.event.inputs.partner-chains-smart-contracts-tag }}-x86_64-apple-darwin" >> $GITHUB_ENV
-          echo "SIDECHAIN_MAIN_CLI_AARCH64_APPLE_DARWIN=sidechain-main-cli-${{ github.event.inputs.partner-chains-smart-contracts-tag }}-aarch64-apple-darwin" >> $GITHUB_ENV
+          echo "PC_CONTRACTS_CLI_LINUX=pc-contracts-cli-${{ github.event.inputs.partner-chains-smart-contracts-tag }}-x86_64-linux" >> $GITHUB_ENV
+          echo "PC_CONTRACTS_CLI_X86_64_APPLE_DARWIN=pc-contracts-cli-${{ github.event.inputs.partner-chains-smart-contracts-tag }}-x86_64-apple-darwin" >> $GITHUB_ENV
+          echo "PC_CONTRACTS_CLI_AARCH64_APPLE_DARWIN=pc-contracts-cli-${{ github.event.inputs.partner-chains-smart-contracts-tag }}-aarch64-apple-darwin" >> $GITHUB_ENV
   
       - name: Download renamed x86_64-linux artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.SIDECHAIN_MAIN_CLI_LINUX }}
+          name: ${{ env.PC_CONTRACTS_CLI_LINUX }}
           path: ./linux
 
       - name: Download renamed macos-x86_64 artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.SIDECHAIN_MAIN_CLI_X86_64_APPLE_DARWIN }}
+          name: ${{ env.PC_CONTRACTS_CLI_X86_64_APPLE_DARWIN }}
           path: ./macos-x86_64
 
       - name: Download renamed macos-arm64 artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ env.SIDECHAIN_MAIN_CLI_AARCH64_APPLE_DARWIN }}
+          name: ${{ env.PC_CONTRACTS_CLI_AARCH64_APPLE_DARWIN }}
           path: ./macos-arm64
   
       - name: Zip the artifact directories
         run: |
           cd linux
-          zip -r "../${{ env.SIDECHAIN_MAIN_CLI_LINUX }}.zip" ./*
+          zip -r "../${{ env.PC_CONTRACTS_CLI_LINUX }}.zip" ./*
           cd ../macos-x86_64
-          zip -r "../${{ env.SIDECHAIN_MAIN_CLI_X86_64_APPLE_DARWIN }}.zip" ./*
+          zip -r "../${{ env.PC_CONTRACTS_CLI_X86_64_APPLE_DARWIN }}.zip" ./*
           cd ../macos-arm64
-          zip -r "../${{ env.SIDECHAIN_MAIN_CLI_AARCH64_APPLE_DARWIN }}.zip" ./*
+          zip -r "../${{ env.PC_CONTRACTS_CLI_AARCH64_APPLE_DARWIN }}.zip" ./*
           cd ..
   
       - name: Check if release already exists
@@ -214,9 +208,9 @@ jobs:
             release_id="${{ steps.check_release.outputs.release_id }}"
           fi
   
-          for artifact in "${{ env.SIDECHAIN_MAIN_CLI_LINUX }}.zip" \
-                          "${{ env.SIDECHAIN_MAIN_CLI_X86_64_APPLE_DARWIN }}.zip" \
-                          "${{ env.SIDECHAIN_MAIN_CLI_AARCH64_APPLE_DARWIN }}.zip"; do
+          for artifact in "${{ env.PC_CONTRACTS_CLI_LINUX }}.zip" \
+                          "${{ env.PC_CONTRACTS_CLI_X86_64_APPLE_DARWIN }}.zip" \
+                          "${{ env.PC_CONTRACTS_CLI_AARCH64_APPLE_DARWIN }}.zip"; do
             curl -s -X POST \
               -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
               -H "Content-Type: application/octet-stream" \
