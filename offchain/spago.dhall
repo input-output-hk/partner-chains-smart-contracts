@@ -41,6 +41,7 @@
   , "quickcheck"
   , "random"
   , "run"
+  , "simple-json"
   , "strings"
   , "tailrec"
   , "test-unit"

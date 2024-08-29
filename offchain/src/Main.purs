@@ -10,7 +10,7 @@ import Effect.Exception (error)
 import JS.BigInt as BigInt
 import Options.Applicative (execParser)
 import Run (EFFECT, Run)
-import TrustlessSidechain.CLIVersion (versionString)
+import TrustlessSidechain.CLIVersion (getVersionString)
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.ConfigFile as ConfigFile
@@ -165,7 +165,7 @@ main = do
       endpointResp ← runUtilsEndpoint opts.utilsOptions
       printEndpointResp endpointResp
 
-    CLIVersion → log versionString
+    CLIVersion → launchAff_ $ log =<< getVersionString
 
 -- | Reads configuration file from `./config.json`, then
 -- | parses CLI arguments. CLI arguments override the config files.

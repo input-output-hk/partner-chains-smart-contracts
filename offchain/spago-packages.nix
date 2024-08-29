@@ -1493,6 +1493,18 @@ let
       installPhase = "ln -s $src $out";
     };
 
+    "simple-json" = pkgs.stdenv.mkDerivation {
+      name = "simple-json";
+      version = "v9.0.0";
+      src = pkgs.fetchgit {
+        url = "https://github.com/justinwoo/purescript-simple-json.git";
+        rev = "b85e112131240ff95b5c26e9abb8e2fa6db3c656";
+        sha256 = "1k78zm7cq4yf65a1yrw7vqnflrnvm45b3jsxxk5vwcrzdlfrbxad";
+      };
+      phases = "installPhase";
+      installPhase = "ln -s $src $out";
+    };
+
     "spec" = pkgs.stdenv.mkDerivation {
       name = "spec";
       version = "v7.2.0";
