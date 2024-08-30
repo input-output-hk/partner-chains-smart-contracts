@@ -22,7 +22,7 @@ in
     pkgs.nixci
     pkgs.haskellPackages.hoogle
     pkgs.watchexec
-    inputs.nixpkgs.legacyPackages.spago
+    #inputs.nixpkgs.legacyPackages.spago
     pkgs.purescript
   ];
   env = {

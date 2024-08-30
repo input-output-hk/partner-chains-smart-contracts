@@ -59,8 +59,14 @@ in
           pscid
           purs
           purs-tidy
-          # no aarch64-darwin from purescript-overlay's spago
-          inputs.nixpkgs.legacyPackages.spago
+
+          # no aarch64-darwin for spago 0.21 (stable) from purescript-overlay's spago
+          (if pkgs.stdenv.isDarwin
+          then
+            inputs.purescript-overlay.packages.x86_64-darwin.spago-0_21_0
+          else
+            spago
+          )
 
           inputs.self.packages.spago2nix
 
