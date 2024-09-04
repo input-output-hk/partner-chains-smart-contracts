@@ -40,7 +40,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   * Effect system over the `Contract` monad from the CTL library, plus a mechanism to intercept and
     re-interpret errors from the `Contract` monad.
     https://github.com/input-output-hk/trustless-sidechain/pull/723
-  * Added CLI versioning and commit hash to sidechain-main-cli with the
+  * Added CLI versioning and commit hash to pc-contracts-cli with the
     subcommand `cli-version`.
   * Added CLI endpoint `init-tokens-mint` to mint all init tokens by
     spending the genesis UTxO.
@@ -441,7 +441,7 @@ utils encode cbor-plain-aggregate-public-keys`
   [348](https://github.com/mlabs-haskell/trustless-sidechain/pull/348),
   [349](https://github.com/mlabs-haskell/trustless-sidechain/pull/349),
   [353](https://github.com/mlabs-haskell/trustless-sidechain/pull/353))
-* Renamed CLI tool executable to `sidechain-main-cli`
+* Renamed CLI tool executable to `pc-contracts-cli`
   ([344](https://github.com/mlabs-haskell/trustless-sidechain/pull/344))
 * CTL in now v4.0.2 (adding Kupo and removing ctl-server from runtime dependencies)
   ([346](https://github.com/mlabs-haskell/trustless-sidechain/pull/346))

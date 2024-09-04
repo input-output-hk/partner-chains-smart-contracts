@@ -114,11 +114,11 @@ import TrustlessSidechain.Options.Types
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Logging (environment, fileLogger)
 
--- | Argument option parser for sidechain-main-cli
+-- | Argument option parser for pc-contracts-cli
 options ∷ Maybe Config → ParserInfo Options
 options maybeConfig = info (helper <*> optSpec maybeConfig)
   ( fullDesc <> header
-      "sidechain-main-cli - CLI application to execute TrustlessSidechain Cardano endpoints"
+      "pc-contracts-cli - CLI application to execute TrustlessSidechain Cardano endpoints"
   )
 
 -- | CLI parser of all commands

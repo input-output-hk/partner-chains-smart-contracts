@@ -1,4 +1,4 @@
-name: 'Trustless Sidechain CI'
+name: 'Partner Chains Smart Contracts CI'
 on:
   pull_request:
   push:

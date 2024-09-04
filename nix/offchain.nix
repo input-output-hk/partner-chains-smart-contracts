@@ -41,7 +41,7 @@ let
   # Purescript project output
   compiled = stdenv.mkDerivation {
     inherit src;
-    name = "sidechain-main-cli";
+    name = "pc-contracts-cli";
 
     dontPatchShebangs = true;
 
@@ -98,7 +98,7 @@ let
   # Contains node_modules and cli only
   bundled = stdenv.mkDerivation {
     inherit src;
-    name = "sidechain-main-cli-bundled";
+    name = "pc-contracts-cli-bundled";
     unpackPhase = ''
       cp -r $src/* .
       chmod u+rw ./package.json package-lock.json
@@ -114,7 +114,7 @@ let
     '';
     installPhase =
       let
-        cliScript = pkgs.writeScript "sidechain-main-cli" ''
+        cliScript = pkgs.writeScript "pc-contracts-cli" ''
           #!/usr/bin/env bash
 
           SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
@@ -132,9 +132,9 @@ let
       ''
         mkdir -p $out
         contents=$(cat dist/index.js)
-        cp ${cliScript} $out/sidechain-main-cli
+        cp ${cliScript} $out/pc-contracts-cli
 
-        substituteInPlace $out/sidechain-main-cli \
+        substituteInPlace $out/pc-contracts-cli \
           --replace 'TEMPSCRIPT' "$contents"
 
         npm prune --offline --cache node_modules --omit=dev --ignore-scripts
