@@ -12,10 +12,10 @@ in
   (onchain.flake)
   {
     apps = rec {
-      default = sidechain-main-cli;
-      sidechain-main-cli = {
+      default = pc-contracts-cli;
+      pc-contracts-cli = {
         type = "app";
-        program = "${inputs.self.packages.sidechain-main-cli}/bin/sidechain-main-cli";
+        program = "${inputs.self.packages.pc-contracts-cli}/bin/pc-contracts-cli";
       };
     };
     devShells = rec {

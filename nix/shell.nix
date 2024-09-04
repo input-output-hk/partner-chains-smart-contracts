@@ -11,8 +11,8 @@ let
   cardano-testnet = inputs.self.packages.cardano-testnet;
 in
 {
-  name = "trustless-sidechain";
-  welcomeMessage = "Welcome to the Trustless Sidechain shell";
+  name = "partner-chains-smart-contracts";
+  welcomeMessage = "Partner Chains Smart Contracts shell";
   packages = [
     cardano-cli
     cardano-node
@@ -22,7 +22,6 @@ in
     pkgs.nixci
     pkgs.haskellPackages.hoogle
     pkgs.watchexec
-    #inputs.nixpkgs.legacyPackages.spago
     pkgs.purescript
   ];
   env = {

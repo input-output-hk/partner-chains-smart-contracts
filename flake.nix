@@ -1,5 +1,5 @@
 {
-  description = "trustless-sidechain";
+  description = "partner-chains-smart-contracts";
 
   inputs = {
     iogx = {

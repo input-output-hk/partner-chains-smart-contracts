@@ -90,7 +90,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
                         ]
                     )
                     iscInitCommitteePubKeys
-             in ["nix run .#sidechain-main-cli -- init"]
+             in ["nix run .#pc-contracts-cli -- init"]
                   : sidechainParamFlags
                     <> committeeFlags
                     <> [["--sidechain-epoch", bytesFromShow iscSidechainEpoch]]
@@ -101,7 +101,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
                     , sidechainPubKey = getEcdsaSecp256k1PubKey $ OffChain.toSidechainPubKey rcSidechainPrivKey
                     , inputUtxo = rcRegistrationUtxo
                     }
-             in ["nix run .#sidechain-main-cli -- register"]
+             in ["nix run .#pc-contracts-cli -- register"]
                   : sidechainParamFlags
                     <> [ ["--spo-public-key", bytesFromShow $ OffChain.toSpoPubKey rcSpoPrivKey]
                        , ["--sidechain-public-key", bytesFromShow $ OffChain.toSidechainPubKey rcSidechainPrivKey]
@@ -110,7 +110,7 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
                        , ["--registration-utxo", OffChain.encodeTxOutRef rcRegistrationUtxo]
                        ]
           DeregistrationCommand {..} ->
-            ["nix run .#sidechain-main-cli -- deregister"]
+            ["nix run .#pc-contracts-cli -- deregister"]
               : sidechainParamFlags
                 <> [ ["--spo-public-key", bytesFromShow $ OffChain.vKeyToSpoPubKey drSpoPubKey]
                    ]

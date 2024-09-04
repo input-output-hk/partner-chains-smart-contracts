@@ -22,16 +22,6 @@ runtime dependencies:
 - ogmios
 - kupo
 
-More about these can be found [here](https://github.com/Plutonomicon/cardano-transaction-lib/blob/develop/doc/runtime.md).
-
-Or by using a nix derivation, that brings required runtime dependencies into
-scope:
-https://github.com/szg251/cardano-dev-shell
-
-**TODO:** Do we consider the above a valid method of running the runtime
-dependencies?  If so, shouldn't we somehow pull this into the project (if
-license permits?) instead of relying on someone's private repo?
-
 ### 2.1. Configuring hosted runtime dependencies
 
 In case you are running the runtime dependencies (ogmios and kupo) on a hosted
@@ -50,7 +40,7 @@ The arguments for ogmios and kupo are using the following scheme:
 So in case you want to use a remote ogmios service on `https://1.2.3.4:5678`,
 you want to use the following arguments:
 ```
-nix run .#sidechain-main-cli -- [...] --ogmios-host 1.2.3.4 --ogmios-port 5678 --ogmios-secure
+nix run .#pc-contracts-cli -- [...] --ogmios-host 1.2.3.4 --ogmios-port 5678 --ogmios-secure
 ```
 where `[...]` represents a command and command-specific flags and options.
 
@@ -67,7 +57,7 @@ When using `nix`, commands and options passed to the CLI must be preceeded by
 execute:
 
 ```
-nix run .#sidechain-main-cli -- --help
+nix run .#pc-contracts-cli -- --help
 ```
 
 **TODO**: instructions below on bundling and running JavaScript do not work and
@@ -75,14 +65,14 @@ need to be updated/rewritten.
 
 **Bundle to a JavaScript file and run using node:**
 ```shell
-nix build .#ctl-bundle-cli
+nix build .#pc-contracts-release-bundle
 ```
 
-This will produce a package `trustless-sidechain-cli-<version>.tar` with the
-compiled `main.js` script that can be run using Node and all necessary
+This will produce an archive `release.zip` with the
+compiled `.index.mjs` with a wrapped bash script that can be run using Node and all necessary
 dependencies in `node_modules` directory.
 ```
-node main.js --help
+./pc-contracts-cli --help
 ```
 
 ### 3.1. Using a configuration file
@@ -124,7 +114,7 @@ file `$CWD/config.json` in the following format:
 
 This allows to shorten a CLI call from:
 ```
-nix run .#sidechain-main-cli -- deregister \
+nix run .#pc-contracts-cli -- deregister \
   --sidechain-id 123 \
   --genesis-committee-hash-utxo 3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1 \
   --threshold-numerator 2 \
@@ -145,7 +135,7 @@ nix run .#sidechain-main-cli -- deregister \
 to:
 
 ```
-nix run .#sidechain-main-cli -- deregister \
+nix run .#pc-contracts-cli -- deregister \
   --spo-public-key aabbcc
 ```
 
@@ -222,7 +212,7 @@ sidechain:
 
 To initialise the sidechain, we run the following command:
 ```
-nix run .#sidechain-main-cli -- init \
+nix run .#pc-contracts-cli -- init \
   --committee-pub-key aabbcc \
   --committee-pub-key ccbbaa \
   --sidechain-epoch 0 \
@@ -234,7 +224,7 @@ distinguished token, pass the optional `--candidate-permission-token-amount`
 parameter followed by an integer to denote how many permission tokens should be
 minted:
 ```
-nix run .#sidechain-main-cli -- init \
+nix run .#pc-contracts-cli -- init \
   --committee-pub-key aabbcc \
   --committee-pub-key ccbbaa \
   --sidechain-epoch 0 \
@@ -265,7 +255,7 @@ Mints:
 * `"Version oracle InitToken"` (multiple tokens)
 
 ```
-nix run .#sidechain-main-cli -- init-tokens-mint --version 1
+nix run .#pc-contracts-cli -- init-tokens-mint --version 1
 ```
 
 ##### Initialise Candidate Permission Token
@@ -274,7 +264,7 @@ Initialise the Candidate Permission Token mechanism.
 Burns `"Candidate permission token init"`.
 
 ```
-nix run .#sidechain-main-cli -- init-candidate-permission-token \
+nix run .#pc-contracts-cli -- init-candidate-permission-token \
   --version 1
   --candidate-permission-token-amount 42
 ```
@@ -282,7 +272,7 @@ nix run .#sidechain-main-cli -- init-candidate-permission-token \
 #### 3.2.2. List currently versioned scripts
 
 ```
-nix run .#sidechain-main-cli -- list-versioned-scripts \
+nix run .#pc-contracts-cli -- list-versioned-scripts \
   --version 1
 ```
 
@@ -300,7 +290,7 @@ addresses for different parameters. To get the script addresses for a given
 sidechain, you can use the following command:
 
 ```
-nix run .#sidechain-main-cli -- addresses \
+nix run .#pc-contracts-cli -- addresses \
   --version 1
 ```
 
@@ -319,7 +309,7 @@ cabal run trustless-sidechain-gen-signatures -- register \
 
 And use it's output for the registration:
 ```
-nix run .#sidechain-main-cli -- register \
+nix run .#pc-contracts-cli -- register \
   --spo-public-key 67663ee94098ceca0dacbf7f947946bfdc4de1848d76da5249b1c3a18a41a57a \
   --sidechain-public-key 02599181389043ba0b83e53d3d665c2dfaa187453a24a4538723766f8f0509c55d \
   --spo-signature cf5fc5b10dff794ac0f5908c38d28a1d8e8430f17c2036cf14f4b28c990b6794f754ca809d69ecd52e4c4d542f90c43b017ff7f23cf46efc4d8f6b07a3895403 \
@@ -330,7 +320,7 @@ nix run .#sidechain-main-cli -- register \
 Optionally, assuming that we are using a permissioned candidates system, one
 can include the candidate permission token when registering as follows.
 ```
-nix run .#sidechain-main-cli -- register \
+nix run .#pc-contracts-cli -- register \
   --spo-public-key e734ea6c2b6257de72355e472aa05a4c487e6b463c029ed306df2f01b5636b58 \
   --sidechain-public-key 0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d \
   --spo-signature de9a8ac3db51bab648a97b56bdbe6757d189633dac91b129156607cf6f3db51217ec1b3c327ab781c6e2de3c4338e3a989449e119daed60a3530aaf268cd3709 \
@@ -342,21 +332,21 @@ nix run .#sidechain-main-cli -- register \
 #### 3.2.5. Deregister committee candidate
 
 ```
-nix run .#sidechain-main-cli -- deregister \
+nix run .#pc-contracts-cli -- deregister \
   --spo-public-key aabbcc
 ```
 
 #### 3.2.6 Candidiate permission token
 
 ```
-nix run .#sidechain-main-cli -- candidate-permission-token \
+nix run .#pc-contracts-cli -- candidate-permission-token \
   --candidate-permission-token-amount 10
 ```
 
 #### 3.2.7 Create a new token reserve
 
 ```
-nix run .#sidechain-main-cli -- reserve-create \
+nix run .#pc-contracts-cli -- reserve-create \
    --total-accrued-function-script-hash SCRIPT-HASH \
    --reserve-posixtime-t0 POSIXTIME \
    --reserve-asset-script-hash ASSET-SCRIPT-HASH \
@@ -375,7 +365,7 @@ awarded for a reserve release.
 #### 3.2.8 Empty and remove an existing reserve
 
 ```
-nix run .#sidechain-main-cli -- reserve-handover
+nix run .#pc-contracts-cli -- reserve-handover
 ```
 
 Perform the reserve handover.
@@ -383,7 +373,7 @@ Perform the reserve handover.
 #### 3.2.9 Deposit assets to existing reserve
 
 ```
-nix run .#sidechain-main-cli -- reserve-deposit \
+nix run .#pc-contracts-cli -- reserve-deposit \
   --deposit-reserve-asset ASSET-SCRIPT-HASH \
   --reserve-asset-name RESERVE_ASSET_NAME \
   --reserve-initial-deposit-amount RESERVE-DEPOSIT-AMOUNT
@@ -397,7 +387,7 @@ reserve asset.
 
 
 ```
-nix run .#sidechain-main-cli -- reserve-release-funds \
+nix run .#pc-contracts-cli -- reserve-release-funds \
   --total-accrued-till-now INT \
   --reserve-transaction-input RESERVE-TRANSACTION-INPUT
 ```
@@ -407,13 +397,13 @@ nix run .#sidechain-main-cli -- reserve-release-funds \
 This command is only for testing purposes and shouldn't be used.
 
 ```
-nix run .#sidechain-main-cli --insert-version-2
+nix run .#pc-contracts-cli --insert-version-2
 ```
 
 #### 3.2.12 Update existing protocol version
 
 ```
-nix run .#sidechain-main-cli -- update-version \
+nix run .#pc-contracts-cli -- update-version \
   --old-version 1 \
   --new-version 2
 ```
@@ -421,14 +411,14 @@ nix run .#sidechain-main-cli -- update-version \
 #### 3.2.13 Invalidate protocol version
 
 ```
-nix run .#sidechain-main-cli -- invalidate-version \
+nix run .#pc-contracts-cli -- invalidate-version \
   --version 1
 ```
 
 #### 3.2.14 Insert a D parameter value
 
 ```
-nix run .#sidechain-main-cli -- insert-d-parameter \
+nix run .#pc-contracts-cli -- insert-d-parameter \
   --d-parameter-permissioned-candidates-count N \
   --d-parameter-registered-candidates-count M
 ```
@@ -440,7 +430,7 @@ safeguard against inserting multiple D parameter values.
 #### 3.2.15 Update a D parameter value
 
 ```
-nix run .#sidechain-main-cli -- update-d-parameter \
+nix run .#pc-contracts-cli -- update-d-parameter \
   --d-parameter-permissioned-candidates-count N \
   --d-parameter-registered-candidates-count M
 ```
@@ -452,7 +442,7 @@ new value.
 #### 3.2.16 Insert a list of permissioned candidates
 
 ```
-nix run .#sidechain-main-cli -- update-permissioned-candidates \
+nix run .#pc-contracts-cli -- update-permissioned-candidates \
   --add-candidate "SIDECHAIN_KEY_1:AURA_KEY_1:GRANDPA_KEY_1" \
   --add-candidate "SIDECHAIN_KEY_2:AURA_KEY_2:GRANDPA_KEY_2" \
   --add-candidate "SIDECHAIN_KEY_3:AURA_KEY_3:GRANDPA_KEY_3"
@@ -468,7 +458,7 @@ safeguard against calling `insert-permissioned-candidates` multiple times.
 #### 3.2.17 Update a list of permissioned candidates
 
 ```
-nix run .#sidechain-main-cli -- update-permissioned-candidates \
+nix run .#pc-contracts-cli -- update-permissioned-candidates \
   --add-candidate "SIDECHAIN_KEY_1:AURA_KEY_1:GRANDPA_KEY_1" \
   --add-candidate "SIDECHAIN_KEY_2:AURA_KEY_2:GRANDPA_KEY_2" \
   --remove-candidate "SIDECHAIN_KEY_3:AURA_KEY_3:GRANDPA_KEY_3"
@@ -481,7 +471,7 @@ followed by a string of four keys separated from each other by a single colon.
 #### 3.2.18 Remove all permissioned candidates
 
 ```
-nix run .#sidechain-main-cli -- update-permissioned-candidates \
+nix run .#pc-contracts-cli -- update-permissioned-candidates \
   --remove-all-candidates
 ```
 
@@ -507,7 +497,7 @@ produces CBOR encoded message of a desired type.
 ##### 3.2.19.1 Generate an ECDSA SECP256k1 public / private key pair
 
 ```
-nix run .#sidechain-main-cli -- utils key-gen ecdsa-secp256k1
+nix run .#pc-contracts-cli -- utils key-gen ecdsa-secp256k1
 ```
 
 Sample output:
@@ -522,7 +512,7 @@ Sample output:
 ##### 3.2.19.2 Generate an Schnorr SECP256k1 public / private key pair
 
 ```
-nix run .#sidechain-main-cli -- utils key-gen schnorr-secp256k1
+nix run .#pc-contracts-cli -- utils key-gen schnorr-secp256k1
 ```
 
 Sample output:
@@ -545,7 +535,7 @@ Available options:
     Do not hash the message with blake2b256 before signing
 
 ```
-nix run .#sidechain-main-cli -- utils sign ecdsa-secp256k1 \
+nix run .#pc-contracts-cli -- utils sign ecdsa-secp256k1 \
   --private-key "d2a77accb66f065001dc225fb0b0e570aac266241ab9358e823cb909ad62e07f" \
   --message "0xab40"
 ```
@@ -563,7 +553,7 @@ Sample output:
 
 Arguments and the output format are the same as in 3.2.19.3.
 ```
-nix run .#sidechain-main-cli -- utils sign schnorr-secp256k1 \
+nix run .#pc-contracts-cli -- utils sign schnorr-secp256k1 \
   --private-key "d2a77accb66f065001dc225fb0b0e570aac266241ab9358e823cb909ad62e07f" \
   --message "0xab40"
 ```
@@ -589,7 +579,7 @@ Available options:
     Input UTxO which must be spent by the transaction
 
 ```
-nix run .#sidechain-main-cli -- utils encode cbor-block-producer-registration-message \
+nix run .#pc-contracts-cli -- utils encode cbor-block-producer-registration-message \
   --sidechain-public-key 02599181389043ba0b83e53d3d665c2dfaa187453a24a4538723766f8f0509c55d \
   --input-utxo ab24c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#5
 ```

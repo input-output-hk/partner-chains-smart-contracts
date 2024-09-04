@@ -1,4 +1,4 @@
-{ name = "sidechain-main-cli"
+{ name = "pc-contracts-cli"
 , dependencies =
   [ "aeson"
   , "aff"
