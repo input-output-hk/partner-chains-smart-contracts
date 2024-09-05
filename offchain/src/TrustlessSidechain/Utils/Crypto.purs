@@ -2,21 +2,14 @@ module TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1Message(EcdsaSecp256k1Message)
   , ecdsaSecp256k1Message
   , byteArrayToEcdsaSecp256k1MessageUnsafe
-  , ecdsaSecp256k1MessageToAssetName
   , EcdsaSecp256k1PrivateKey
   , byteArrayToEcdsaSecp256k1PubKeyUnsafe
   , EcdsaSecp256k1PubKey(EcdsaSecp256k1PubKey)
   , EcdsaSecp256k1Signature(EcdsaSecp256k1Signature)
   , toPubKeyUnsafe
-  , generatePrivKey
   , generateRandomPrivateKey
-  , multiSign
   , sign
-  , verifyEcdsaSecp256k1Signature
   , ecdsaSecp256k1PubKey
-  , normalizeCommitteePubKeysAndSignatures
-  , unzipCommitteePubKeysAndSignatures
-  , verifyMultiSignature
   , getEcdsaSecp256k1PubKeyByteArray
   , getEcdsaSecp256k1PrivateKeyByteArray
   , getEcdsaSecp256k1SignatureByteArray
@@ -25,8 +18,6 @@ module TrustlessSidechain.Utils.Crypto
   , getEcdsaSecp256k1MessageByteArray
   , byteArrayToEcdsaSecp256k1SignatureUnsafe
   , ecdsaSecp256k1Signature
-  , countEnoughSignatures
-  , takeExactlyEnoughSignatures
   , serialiseEcdsaSecp256k1PubKey
   , serialiseEcdsaSecp256k1PrivateKey
   , serialiseEcdsaSecp256k1SignatureToDer
@@ -36,19 +27,9 @@ module TrustlessSidechain.Utils.Crypto
 
 import Contract.Prelude
 
-import Cardano.Types.AssetName (mkAssetName)
 import Contract.PlutusData (class FromData, class ToData, fromData)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Prim.ByteArray as ByteArray
-import Contract.Value (AssetName)
-import Data.Array as Array
-import Data.EuclideanRing (div)
-import Data.Function (on)
-import Data.Maybe as Maybe
-import Data.Ord as Ord
-import JS.BigInt (BigInt)
-import JS.BigInt as BigInt
-import Partial.Unsafe as Unsafe
 
 -- | Invariant: length of the pubkey must be 33 bytes.
 -- | Format: Compressed and serialized as per ECDSA signatures for SECP256k1.
@@ -174,15 +155,6 @@ ecdsaSecp256k1Message byteArray
 byteArrayToEcdsaSecp256k1MessageUnsafe ∷ ByteArray → EcdsaSecp256k1Message
 byteArrayToEcdsaSecp256k1MessageUnsafe = EcdsaSecp256k1Message
 
--- | `ecdsaSecp256k1MessageToAssetName` converts a sidechain message to a token name
-ecdsaSecp256k1MessageToAssetName ∷ EcdsaSecp256k1Message → AssetName
-ecdsaSecp256k1MessageToAssetName (EcdsaSecp256k1Message byteArray) =
-  -- should be safe as they have the same length requirements
-  -- i.e., token names should be less than or equal to 32 bytes long
-  -- See:
-  -- https://github.com/Plutonomicon/cardano-transaction-lib/blob/fde2e42b2e57ea978b3517913a1917ebf8836ab6/src/Internal/Types/AssetName.purs#L104-L109
-  Unsafe.unsafePartial $ Maybe.fromJust $ mkAssetName byteArray
-
 -- | Get the underlying `ByteArray` from an `EcdsaSecp256k1Message`.
 getEcdsaSecp256k1MessageByteArray ∷ EcdsaSecp256k1Message → ByteArray
 getEcdsaSecp256k1MessageByteArray (EcdsaSecp256k1Message byteArray) = byteArray
@@ -238,167 +210,9 @@ foreign import sign ∷
 
 foreign import signatureExport ∷ EcdsaSecp256k1Signature → ByteArray
 
-foreign import verifyEcdsaSecp256k1Signature ∷
-  EcdsaSecp256k1PubKey →
-  EcdsaSecp256k1Message →
-  EcdsaSecp256k1Signature →
-  Boolean
-
 -- | Serialises a signature to DER format as hex encoded bytes
 serialiseEcdsaSecp256k1SignatureToDer ∷ EcdsaSecp256k1Signature → String
 serialiseEcdsaSecp256k1SignatureToDer = ByteArray.byteArrayToHex <<<
   signatureExport
-
-generatePrivKey ∷ Effect EcdsaSecp256k1PrivateKey
-generatePrivKey =
-  generateRandomPrivateKey
-
-multiSign ∷
-  Array EcdsaSecp256k1PrivateKey →
-  EcdsaSecp256k1Message →
-  Array EcdsaSecp256k1Signature
-multiSign xkeys msg = map (sign msg) xkeys
-
--- | `normalizeCommitteePubKeysAndSignatures` takes a list of public keys and their
--- | associated signatures and sorts by the natural lexicographical ordering of the
--- | `EcdsaSecp256k1PubKey`s
--- |
--- | Previously, the onchain multisign method required that the public keys are
--- | sorted (to verify uniqueness of public keys), but this requirement was
--- | relaxed and hence sorting is technically no longer necessary....
--- |
--- | But, as per the specification, the committee hash will be created from
--- | lexicographically sorted public keys, so sorting the public keys will
--- | ensure that it matches the same onchain committee format.
-normalizeCommitteePubKeysAndSignatures ∷
-  ∀ a b.
-  Ord a ⇒
-  Array (a /\ Maybe b) →
-  Array (a /\ Maybe b)
-normalizeCommitteePubKeysAndSignatures = Array.sortBy (Ord.compare `on` fst)
-
--- | `unzipCommitteePubKeysAndSignatures` unzips public keys and associated
--- | signatures, and removes all the `Nothing` signatures.
--- |
--- | Preconditions to be compatible with the onchain Haskell multisign method:
--- |    - The input array should be sorted lexicographically by
--- |    `EcdsaSecp256k1PubKey` by `normalizeCommitteePubKeysAndSignatures`
-unzipCommitteePubKeysAndSignatures ∷
-  ∀ a b.
-  Array (a /\ Maybe b) →
-  Tuple (Array a) (Array b)
-unzipCommitteePubKeysAndSignatures = map Array.catMaybes <<< Array.unzip
-
--- | `countEnoughSignatures` counts the minimum number of signatures needed for
--- | the onchain code to verify successfully.
-countEnoughSignatures ∷
-  ∀ a.
-  -- numerator
-  BigInt →
-  -- denominator (ensure this is non-zero)
-  BigInt →
-  Array a →
-  BigInt
-countEnoughSignatures numerator denominator arr =
-  let
-    len = BigInt.fromInt $ Array.length arr
-  in
-    one + ((numerator * len) / denominator)
-
--- | `takeExactlyEnoughSignatures` takes exactly enough signatures (if it
--- | or less than if it cannot) for committee certificate verification as a
--- | minor optimization so that we only provide the onchain code with the
--- | minimum amount of
--- | signatures needed.
-takeExactlyEnoughSignatures ∷
-  ∀ a b.
-  -- numerator
-  BigInt →
-  -- denominator (ensure this is non-zero)
-  BigInt →
-  Array a /\ Array b →
-  Array a /\ Array b
-takeExactlyEnoughSignatures numerator denominator (pks /\ sigs) =
-  pks /\
-    Array.take
-      -- It should be big enough to fit in a plain old int as this
-      -- corresponds to the array length (size of int is log of array
-      -- length)
-      -- TODO
-      ( Unsafe.unsafePartial $ Maybe.fromJust $ BigInt.toInt
-          (countEnoughSignatures numerator denominator pks)
-      )
-      sigs
-
--- | `verifyMultiSignature thresholdNumerator thresholdDenominator pubKeys msg signatures`
--- | returns true iff
--- |
--- |      - `pubKeys` is sorted lexicographically and are distinct
--- |
--- |      - `signatures` are the corresponding signatures `pubKeys` of `msg`
--- |      as a subsequence of `pubKeys` (i.e., ordered the same way as `pubKeys`).
--- |
--- |      - strictly more than `thresholdNumerator/thresholdDenominator`
--- |      `pubKeys` have signed `msg`
--- |
--- | Note: this loosely replicates the behavior of the corresponding on chain
--- | function, but should be significantly more efficient (since we use the
--- | assumption that the signatures are essentially a subsequence of the public
--- | keys); and is generalized to allow arbitrary thresholds to be given.
-verifyMultiSignature ∷
-  ∀ pubKey msg signature.
-  Ord pubKey ⇒
-  (pubKey → msg → signature → Boolean) →
-  BigInt →
-  BigInt →
-  Array pubKey →
-  msg →
-  Array signature →
-  Boolean
-verifyMultiSignature
-  verifySig
-  thresholdNumerator
-  thresholdDenominator
-  pubKeys
-  msg
-  signatures =
-  let
-    go ∷ BigInt → Array pubKey → Array signature → Boolean
-    go signed pubs sigs =
-      let
-        ok = signed >
-          ( div
-              (thresholdNumerator * BigInt.fromInt (Array.length pubKeys))
-              thresholdDenominator
-          )
-      in
-        case Array.uncons pubs of
-          Nothing → ok
-          Just { head: pub, tail: pubs' } →
-            case Array.uncons sigs of
-              Nothing → ok
-              Just { head: sig, tail: sigs' } →
-                if verifySig pub msg sig then
-                  -- the public key and signature match, so
-                  -- we move them both forward..
-                  go (signed + one) pubs' sigs'
-
-                else
-                  -- otherwise, they don't match so since
-                  -- `sigs` is essentially a subsequence of
-                  -- `pubs`, we move only `pubs` forward
-                  -- since a later key should match with
-                  -- `sig`.
-                  go signed pubs' sigs
-  in
-    isSorted pubKeys && go zero pubKeys signatures
-
-{- | Verifies that the non empty array is sorted -}
-isSorted ∷ ∀ (a ∷ Type). Ord a ⇒ Array a → Boolean
-isSorted xss = case Array.tail xss of
-  Just xs → and (Array.zipWith (<=) xss xs)
-  Nothing → false
-
-foreign import blake2b256 ∷ String → String
 
 foreign import blake2b256Hash ∷ ByteArray → ByteArray

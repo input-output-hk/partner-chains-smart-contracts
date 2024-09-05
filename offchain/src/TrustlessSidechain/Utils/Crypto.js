@@ -2,10 +2,6 @@ import secp from "secp256k1";
 import crypto from "crypto";
 import blake2b from "blakejs";
 
-export const verifyEcdsaSecp256k1Signature =
-  (ecdsa_pub_key) => (data) => (ecdsa_der_sig) =>
-    secp.ecdsaVerify(ecdsa_der_sig, data, ecdsa_pub_key);
-
 export const sign = (data) => (ecdsa_priv_key) =>
   secp.ecdsaSign(data, ecdsa_priv_key).signature;
 
@@ -56,10 +52,6 @@ export const signatureExport = (signature) => {
 //  https://github.com/bitcoin-core/secp256k1/blob/e3f84777eba58ea010e61e02b0d3a65787bc4fd7/include/secp256k1.h#L662-L673
 export const secKeyVerify = (secretKey) =>
   secp.privateKeyVerify(secretKey);
-
-export const blake2b256 = (data) => {
-  return blake2b.blake2bHex(data, null, 32);
-}
 
 export const blake2b256Hash = (data) => {
   return blake2b.blake2b(data, null, 32);
