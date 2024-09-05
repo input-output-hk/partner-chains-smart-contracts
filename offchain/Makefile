@@ -1,6 +1,6 @@
 SHELL := bash
 .ONESHELL:
-.PHONY: build test update-scripts version clean \
+.PHONY: build test update-scripts clean \
         check-format format \
         spago2nix \
         esbuild-bundle create-bundle-entrypoint delete-bundle-entrypoint
@@ -23,11 +23,6 @@ haskell-scripts := $(shell find $(onchain-dir)/src -type f -name "*.hs") \
 # Output files with serialized scripts
 raw-scripts-purs := src/TrustlessSidechain/RawScripts.purs
 
-### Version
-
-version-template := src/TrustlessSidechain/.CLIVersion.purs.template
-version-module := src/TrustlessSidechain/CLIVersion.purs
-
 ### Bundler setup
 
 # The main Purescript module
@@ -43,16 +38,11 @@ serve-port := 4008
 
 ### Build targets
 
-build: ${raw-scripts-purs} ${version-module}
+build: ${raw-scripts-purs}
 	@spago build --purs-args ${purs-args}
 
-test: ${raw-scripts-purs} ${version-module}
+test: ${raw-scripts-purs}
 	@spago test ${spago-args} -m ${ps-test-entrypoint}
-
-version: ${version-module}
-
-${version-module}: package.json ${version-template}
-	./set_version.sh
 
 update-scripts: ${raw-scripts-purs}
 
@@ -91,7 +81,6 @@ format:
 	@dhall lint ${dhall-sources}
 
 clean:
-	@ rm ${version-module} || true
 	@ rm -r .psc-ide-port || true
 	@ rm -rf .psci_modules || true
 	@ rm -rf .spago || true
