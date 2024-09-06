@@ -16,7 +16,6 @@ let
       ../offchain/package-lock.json
       ../offchain/entry.js
       ../offchain/esbuild.js
-      ../offchain/set_version.sh
       ../offchain/src
       ../offchain/test
       ../offchain/config.example.json
@@ -65,20 +64,6 @@ let
       chmod -R +w src
       install-spago-style
     '';
-    # Add a patchPhase for patching in the CLI version from a script
-    patchPhase =
-      let
-        rev =
-          if builtins.hasAttr "rev" inputs.self
-          then inputs.self.rev
-          else inputs.self.dirtyRev;
-      in
-      ''
-        substituteInPlace set_version.sh \
-          --replace 'jq' '${pkgs.jq}/bin/jq'
-        sed -i 's/gitHash=".*"/gitHash="${rev}"/' set_version.sh
-        ${pkgs.bash}/bin/bash set_version.sh
-      '';
     buildPhase = ''
       psa --censor-lib \
           --stash \

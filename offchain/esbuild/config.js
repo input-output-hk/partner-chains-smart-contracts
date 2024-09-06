@@ -1,5 +1,7 @@
 import { wasmLoader } from "esbuild-plugin-wasm";
 import { polyfillNode } from "esbuild-plugin-polyfill-node";
+import { replace } from "esbuild-plugin-replace";
+import pkg from "../package.json" with { type: "json" };
 
 const isBrowser = !!process.env.BROWSER_RUNTIME;
 
@@ -10,7 +12,10 @@ export const buildOptions = ({ entryPoint, outfile }) => {
     plugins: [
       wasmLoader({
         mode: "deferred"
-      })
+      }),
+      replace( {
+        '__semVer': pkg.version,
+      }),
     ],
     bundle: true,
     platform: isBrowser ? "browser" : "node",
