@@ -34,6 +34,7 @@ module TrustlessSidechain.Options.Parsers
   , sidechainSignature
   , tokenAmount
   , depositAmount
+  , stakePubKeyHash
   , transactionInput
   , uint
   , validatorHashParser
@@ -47,13 +48,17 @@ import Cardano.FromData (fromData)
 import Cardano.Plutus.Types.Address (fromCardano)
 import Cardano.Plutus.Types.Credential (Credential(ScriptCredential))
 import Cardano.Serialization.Lib (toBytes)
-import Cardano.Types.Address (Address, fromBech32, toCsl)
+import Cardano.Types.Address (fromBech32, toCsl)
 import Cardano.Types.AssetName as AssetName
 import Cardano.Types.BigNum (BigNum, fromBigInt)
 import Cardano.Types.NetworkId (NetworkId(MainnetId, TestnetId))
 import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash(PaymentPubKeyHash))
 import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Types.TransactionInput (TransactionInput(TransactionInput))
+import Contract.Address
+  ( Address
+  , StakePubKeyHash(StakePubKeyHash)
+  )
 import Contract.CborBytes (CborBytes, cborBytesFromByteArray, hexToCborBytes)
 import Contract.PlutusData (class FromData)
 import Contract.Value (AssetName, CurrencySymbol, TokenName)
@@ -207,6 +212,14 @@ pubKeyHash = maybeReader
   $ hexToByteArray
   >=> (wrap >>> decodeCbor)
   >=> PaymentPubKeyHash
+  >>> pure
+
+-- | Parses a StakePubKeyHash from hexadecimal representation.
+stakePubKeyHash ∷ ReadM StakePubKeyHash
+stakePubKeyHash = maybeReader
+  $ hexToByteArray
+  >=> (wrap >>> decodeCbor)
+  >=> StakePubKeyHash
   >>> pure
 
 -- | Parses a GovernanceAuthority from hexadecimal representation.

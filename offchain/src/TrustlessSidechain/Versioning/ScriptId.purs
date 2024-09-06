@@ -52,6 +52,7 @@ data ScriptId
   | AlwaysPassingValidator
   | AlwaysPassingPolicy
   | OnlyMintMintingPolicy
+  | DelegatorRegistrationValidator
 
 derive instance Eq ScriptId
 derive instance Ord ScriptId
@@ -98,6 +99,8 @@ instance FromData ScriptId where
     Just AlwaysPassingPolicy
   fromData (Integer i) | i == BigInt.fromInt 36 =
     Just OnlyMintMintingPolicy
+  fromData (Integer i) | i == BigInt.fromInt 37 =
+    Just DelegatorRegistrationValidator
   fromData _ = Nothing
 
 instance ToData ScriptId where
@@ -120,3 +123,4 @@ instance ToData ScriptId where
   toData AlwaysPassingValidator = Integer (BigInt.fromInt 34)
   toData AlwaysPassingPolicy = Integer (BigInt.fromInt 35)
   toData OnlyMintMintingPolicy = Integer (BigInt.fromInt 36)
+  toData DelegatorRegistrationValidator = Integer (BigInt.fromInt 37)

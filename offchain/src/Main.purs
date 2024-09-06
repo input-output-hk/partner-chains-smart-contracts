@@ -15,6 +15,7 @@ import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.ConfigFile as ConfigFile
 import TrustlessSidechain.DParameter as DParameter
+import TrustlessSidechain.DelegatorRegistration as DelegatorRegistration
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Run (runAppLive)
 import TrustlessSidechain.Effects.Util as Effect
@@ -39,6 +40,7 @@ import TrustlessSidechain.EndpointResp
       , UpdateDParameterResp
       , UpdatePermissionedCandidatesResp
       , InitTokenStatusResp
+      , DelegatorRegistrationResp
       , ListVersionedScriptsResp
       , ReserveResp
       )
@@ -88,6 +90,7 @@ import TrustlessSidechain.Options.Types
       , UpdateDParameter
       , UpdatePermissionedCandidates
       , InitTokenStatus
+      , DelegatorRegistration
       , ListVersionedScripts
       , CreateReserve
       , UpdateReserveSettings
@@ -334,6 +337,14 @@ runTxEndpoint sidechainEndpointParams endpoint =
           >>> UpdatePermissionedCandidatesResp
 
       InitTokenStatus → map InitTokenStatusResp (getInitTokenStatus scParams)
+
+      DelegatorRegistration
+        { stakePubKeyHash, partnerChainWallet } →
+        DelegatorRegistration.delegatorRegistration scParams stakePubKeyHash
+          partnerChainWallet
+          <#> txHashToByteArray
+          >>> { transactionId: _ }
+          >>> DelegatorRegistrationResp
 
       ListVersionedScripts
         { version } →

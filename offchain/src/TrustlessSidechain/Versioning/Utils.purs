@@ -460,20 +460,18 @@ getVersionedScriptRefUtxo sp versionOracle = do
       ) = fromData datum' ∷ Maybe VersionOracleDatum
     getVersionFromOutput _ = Nothing
 
-  txInput /\ txOutput ←
-    Run.note
-      ( NotFoundUtxo
-          $ "Could not find unspent output with correct script ref locked at "
-          <> "version oracle validator address. Looking for: "
-          <> show versionOracle
-          <> ". Available are: "
-          <> show
-            ( map getVersionFromOutput $ Map.toUnfoldable versionOracleUtxos ∷
-                Array _
-            )
-      )
-      $ find correctOutput (Map.toUnfoldable versionOracleUtxos ∷ Array _)
-  pure (txInput /\ txOutput)
+  Run.note
+    ( NotFoundUtxo
+        $ "Could not find unspent output with correct script ref locked at "
+        <> "version oracle validator address. Looking for: "
+        <> show versionOracle
+        <> ". Available are: "
+        <> show
+          ( map getVersionFromOutput $ Map.toUnfoldable versionOracleUtxos ∷
+              Array _
+          )
+    )
+    $ find correctOutput (Map.toUnfoldable versionOracleUtxos ∷ Array _)
 
 getVersionedCurrencySymbol ∷
   ∀ r.

@@ -7,6 +7,7 @@
 module TrustlessSidechain.Types (
   BlockProducerRegistration (..),
   BlockProducerRegistrationMsg (..),
+  DelegatorWalletEntry (..),
   DParameterValidatorDatum (..),
   EcdsaSecp256k1PubKey (..),
   GovernanceAuthority (GovernanceAuthority),
@@ -652,3 +653,12 @@ instance UnsafeFromData IlliquidCirculationSupplyRedeemer where
           0 -> DepositMoreToSupply
           1 -> WithdrawFromSupply
           _ -> error ()
+
+data DelegatorWalletEntry = DelegatorWalletEntry
+  { stakePubKeyHash :: PubKeyHash
+  , partnerChainWallet :: LedgerBytes
+  }
+  deriving stock (TSPrelude.Show, TSPrelude.Eq)
+
+PlutusTx.makeLift ''DelegatorWalletEntry
+makeIsDataIndexed ''DelegatorWalletEntry [('DelegatorWalletEntry, 0)]

@@ -24,6 +24,7 @@ import Run.Except (EXCEPT)
 import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.DParameter.Utils as DParameter
+import TrustlessSidechain.DelegatorRegistration.Utils as DelegatorRegistration
 import TrustlessSidechain.Effects.Env (Env, READER)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
@@ -48,6 +49,7 @@ import TrustlessSidechain.Versioning.Types
       , PermissionedCandidatesValidator
       , DParameterValidator
       , InitTokenPolicy
+      , DelegatorRegistrationValidator
       )
   )
 import TrustlessSidechain.Versioning.Utils
@@ -168,6 +170,10 @@ getSidechainAddresses
   { dParameterValidator } ←
     DParameter.getDParameterValidatorAndAddress sidechainParams
 
+  { delegatorRegistrationValidator } ←
+    DelegatorRegistration.getDelegatorRegistrationValidatorAndAddress
+      sidechainParams
+
   let
     mintingPolicies ∷ Array (Tuple ScriptId String)
     mintingPolicies =
@@ -188,6 +194,7 @@ getSidechainAddresses
       , VersionOracleValidator /\ versionOracleValidator
       , PermissionedCandidatesValidator /\ permissionedCandidatesValidator
       , DParameterValidator /\ dParameterValidator
+      , DelegatorRegistrationValidator /\ delegatorRegistrationValidator
       ] <> List.toUnfoldable versionedValidators
 
   addresses ← traverse (traverse getAddr) validators

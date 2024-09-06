@@ -8,6 +8,7 @@ import Test.CommitteeCandidateValidator as CommitteeCandidateValidator
 import Test.ConfigFile as ConfigFile
 import Test.DParameter as DParameter
 import Test.Data as Data
+import Test.DelegatorRegistration as DelegatorRegistration
 import Test.IlliquidCirculationSupply as IlliquidCirculationSupply
 import Test.InitSidechain.CandidatePermissionToken as InitCandidatePermissionToken
 import Test.InitSidechain.TokensMint as InitMint
@@ -40,6 +41,7 @@ main = do
         group "Testnet integration tests" do
           IlliquidCirculationSupply.tests
           Reserve.tests
+          DelegatorRegistration.tests
           InitCandidatePermissionToken.tests
           InitMint.tests
           CommitteeCandidateValidator.tests
