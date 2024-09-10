@@ -20,7 +20,6 @@ in [the ctl docs](https://github.com/Plutonomicon/cardano-transaction-lib/tree/d
 * `make test` for running tests
 * `make main.js` for compiling purescript main and running it as a standalone program
 <!-- TODO: deprecate webpack? change make dev to call spago repl and make build to call spago build -->
-* `make version` will create CLIVersion.purs that's properly versioned from package.json
 * `make dev` will start webpack dev server at localhost:4008
 * `make build` will output webpack-bundled example module to dist
 * Note `BROWSER_RUNTIME` env variable should be set to 1 to build project properly for browser (for
