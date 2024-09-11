@@ -47,6 +47,12 @@ where `[...]` represents a command and command-specific flags and options.
 See [3.1. Using a configuration file](#3.1.-using-a-configuration-file) on how
 to use a configuration file instead of command-line options.
 
+### 2.2 Running runtime dependencies using Nix (Experimental)
+
+```
+nix develop .#nodeDeps
+```
+
 ## 3. Running the CLI
 
 You can run the CLI tool either through Nix or by directly running the compiled

@@ -74,14 +74,34 @@ in
           inputs.self.packages.ogmios
 
         ];
-        shellHook = ''
-          PROJ_ROOT=$(git rev-parse --show-toplevel)
-          if [ ! -e "$PROJ_ROOT/offchain/src/TrustlessSidechain/CLIVersion.purs" ]; then
-            pushd $PROJ_ROOT/offchain
-            make version
-            popd
-          fi
-        '';
+      };
+      nodeDeps = pkgs.mkShell {
+        inputsFrom = [ ps hs ];
+        packages = with pkgs; [
+          tmux
+        ];
+        nativeBuildInputs = [
+          # These packages are all required for running checks present
+          # in the makefiles
+          pkgs.hlint
+          pkgs.nixpkgs-fmt
+          pkgs.haskellPackages.cabal-fmt
+          pkgs.haskellPackages.fourmolu
+          pkgs.nodePackages.purs-tidy
+          pkgs.nodePackages.eslint
+        ];
+        shellHook =
+          let tmuxConf = pkgs.writeText "tmux.conf" "set-option -g default-shell ${pkgs.fish}/bin/fish"; in
+          ''
+            mkdir -p cardano-preview-workdir/kupo/
+            tmux -f ${tmuxConf} new-session \; \
+                send-keys './start-deps.sh cardano-node' C-m \; \
+                split-window -v \; \
+                send-keys './start-deps.sh kupo' C-m \; \
+                split-window -v \; \
+                send-keys './start-deps.sh ogmios' C-m \; \
+                select-layout even-vertical \;
+          '';
       };
     };
     packages = repoRoot.nix.packages.default;
