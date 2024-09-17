@@ -21,6 +21,9 @@ in
     devShells = rec {
       default = pkgs.mkShell {
         inputsFrom = [ ps hs ];
+        packages = with pkgs; [
+          moreutils
+        ];
         nativeBuildInputs = [
           # These packages are all required for running checks present
           # in the makefiles
