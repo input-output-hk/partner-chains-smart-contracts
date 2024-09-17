@@ -31,9 +31,6 @@ in
           pkgs.nodePackages.purs-tidy
           pkgs.nodePackages.eslint
         ];
-        shellHook = ''
-          ${ps.shellHook}
-        '';
       };
       profiled = onchain.variants.profiled.devShell;
       hs = inputs.self.devShell;
@@ -74,14 +71,6 @@ in
           inputs.self.packages.ogmios
 
         ];
-        shellHook = ''
-          PROJ_ROOT=$(git rev-parse --show-toplevel)
-          if [ ! -e "$PROJ_ROOT/offchain/src/TrustlessSidechain/CLIVersion.purs" ]; then
-            pushd $PROJ_ROOT/offchain
-            make version
-            popd
-          fi
-        '';
       };
     };
     packages = repoRoot.nix.packages.default;

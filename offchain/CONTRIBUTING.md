@@ -11,31 +11,15 @@ call to `make`. The workflow for updating/adding dependencies is outlined below 
 in [the ctl docs](https://github.com/Plutonomicon/cardano-transaction-lib/tree/develop/doc).
 
 # General Rules of Thumb
-* To run things in a CLI or in the browser, make sure you invoke `nix run .#ctl-runtime-preview` first.
 * The Makefile is the central source of truth for how to deal with the environment.
 * Never invoke `npm install` without `--package-lock-only`.
 
 # Build/Test/Run
 * `make format` for formatting
 * `make test` for running tests
-* `make main.js` for compiling purescript main and running it as a standalone program
-<!-- TODO: deprecate webpack? change make dev to call spago repl and make build to call spago build -->
-* `make version` will create CLIVersion.purs that's properly versioned from package.json
-* `make dev` will start webpack dev server at localhost:4008
-* `make build` will output webpack-bundled example module to dist
+* `make build` will output bundled example module to dist
 * Note `BROWSER_RUNTIME` env variable should be set to 1 to build project properly for browser (for
 node environments leave unset or set 0)
-
-# Running ctl contracts on the browser
-
-Run `make dev`
-
-This requires a nami wallet (or ger depending on ContractConfig) , which both require chromium-based
-browsers.
-* Need an active wallet, running on testnet (toggle a setting in nami)
-* Set collateral, which nami reserves apart from other wallet utxos
-* Make sure you have enough funds in your wallet
-<!-- END TODO -->
 
 # Adding PS/JS dependencies
 
