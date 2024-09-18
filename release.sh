@@ -5,9 +5,19 @@ semver_pattern="^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-((0|[1-9]\d*|\d*[a-zA
 packagejson=offchain/package.json
 changelog=CHANGELOG.md
 current_version=$(cat $packagejson | jq -r ".version")
+cabalfile="onchain/*.cabal"
+hsfiles=$(find onchain/src -type f -name "*.hs")
 
 if [[ ($# -eq 0) || $1 == "--help" || $1 == "-h" ]]; then
     echo "Usage: $0 [next-major|next-minor|next-patch|<semver>]"
+    exit 1
+fi
+
+# check if there are any modified files (based on https://stackoverflow.com/a/3879077)
+git update-index --refresh &> /dev/null
+git diff-index --quiet HEAD --
+if [[ ($? -eq 1) ]]; then
+    echo "Release script can only run on a clean repo. Please stash your changes."
     exit 1
 fi
 
@@ -38,3 +48,10 @@ echo "Making release changes for new release $next_version (last version: $curre
 
 cat $packagejson | jq ".version=\"$next_version\"" | sponge $packagejson
 sed -i "s/# Unreleased/# Unreleased\n\n# v$next_version/" $changelog
+sed -i -r "s/^version:(\s*)\S+$/version:\1$next_version/" "$cabalfile"
+# shellcheck disable=SC2086
+sed -i -r "s/@since (U|u)nreleased/@since v$next_version/" $hsfiles
+
+git checkout -b "release-v$next_version"
+git add .
+git commit -m "chore: bump version to v$next_version"
