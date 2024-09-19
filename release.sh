@@ -8,6 +8,12 @@ current_version=$(cat $packagejson | jq -r ".version")
 cabalfile="onchain/*.cabal"
 hsfiles=$(find onchain/src -type f -name "*.hs")
 
+if [[ -z $IN_NIX_SHELL ]]; then
+	echo "The release script must be run from inside a nix shell"
+	echo "    run 'nix develop' first"
+    exit 1
+fi
+
 if [[ ($# -eq 0) || $1 == "--help" || $1 == "-h" ]]; then
     echo "Usage: $0 [next-major|next-minor|next-patch|<semver>]"
     exit 1
@@ -19,6 +25,16 @@ git diff-index --quiet HEAD --
 if [[ ($? -eq 1) ]]; then
     echo "Release script can only run on a clean repo. Please stash your changes."
     exit 1
+fi
+
+if [[ $(git rev-parse --abbrev-ref HEAD) != "master" ]]; then
+    echo "WARNING: you are trying to cut a release from a branch other than master!"
+    read -r -n1 -p "Do you wish to continue? [y/n]" yesno
+    printf "\n"
+    if [[ "$yesno" =~ ^[^Yy]$ ]]; then
+        echo "Aborting..."
+        exit 1
+    fi
 fi
 
 case $1 in
