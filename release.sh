@@ -58,7 +58,14 @@ case $1 in
     ;;
 esac
 
+# if we didn't set next_version above we exit
 if [ -z "${next_version+x}" ]; then exit 1; fi
+
+# we check if release tag already exists
+if git show-ref --tags "v$next_version" --quiet; then
+    echo "ERROR: tag already exists for version!"
+    exit 1
+fi
 
 echo "Making release changes for new release $next_version (last version: $current_version)"
 
