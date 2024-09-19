@@ -5,7 +5,8 @@ semver_pattern="^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-((0|[1-9]\d*|\d*[a-zA
 packagejson=offchain/package.json
 changelog=CHANGELOG.md
 current_version=$(cat $packagejson | jq -r ".version")
-cabalfile="onchain/*.cabal"
+# shellcheck disable=SC2125
+cabalfile=onchain/*.cabal
 hsfiles=$(find onchain/src -type f -name "*.hs")
 
 if [[ -z $IN_NIX_SHELL ]]; then
@@ -71,7 +72,8 @@ echo "Making release changes for new release $next_version (last version: $curre
 
 cat $packagejson | jq ".version=\"$next_version\"" | sponge $packagejson
 sed -i "s/# Unreleased/# Unreleased\n\n# v$next_version/" $changelog
-sed -i -r "s/^version:(\s*)\S+$/version:\1$next_version/" "$cabalfile"
+# shellcheck disable=SC2086
+sed -i -r "s/^version:(\s*)\S+$/version:\1$next_version/" $cabalfile
 # shellcheck disable=SC2086
 sed -i -r "s/@since (U|u)nreleased/@since v$next_version/" $hsfiles
 
