@@ -46,21 +46,21 @@ import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (getOwnWalletAddress)
 import Type.Row (type (+))
 
-mockSpoPubKey ∷ ByteArray
+mockSpoPubKey :: ByteArray
 mockSpoPubKey = hexToByteArrayUnsafe
   "40802011e4fa2af0ec57dbf341cac38b344fe0867bfc67d38988dd1006d3eb9e"
 
 -- | `tests` wraps up all the committee candidate validator tests conveniently
-tests ∷ WrappedTests
+tests :: WrappedTests
 tests = testnetGroup "Committe candidate registration/deregistration" $ do
   testScenarioSuccess1
   testScenarioFailure1
 
 -- | `runRegister` runs the register endpoint without any candidate permission
 -- | information.
-runRegister ∷
-  ∀ r.
-  SidechainParams →
+runRegister ::
+  forall r.
+  SidechainParams ->
   Run
     ( READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT
         + EFFECT
@@ -71,9 +71,9 @@ runRegister = runRegisterWithCandidatePermissionInfo false
 
 -- | `runRegister` runs the register endpoint without any candidate permission
 -- | information.
-runRegisterWithFixedKeys ∷
-  ∀ r.
-  SidechainParams →
+runRegisterWithFixedKeys ::
+  forall r.
+  SidechainParams ->
   Run
     ( READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT +
         r
@@ -82,10 +82,10 @@ runRegisterWithFixedKeys ∷
 runRegisterWithFixedKeys =
   runRegisterWithCandidatePermissionInfoWithFixedKeys false
 
-runRegisterWithCandidatePermissionInfoWithFixedKeys ∷
-  ∀ r.
-  Boolean →
-  SidechainParams →
+runRegisterWithCandidatePermissionInfoWithFixedKeys ::
+  forall r.
+  Boolean ->
+  SidechainParams ->
   Run
     ( READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT +
         r
@@ -93,9 +93,9 @@ runRegisterWithCandidatePermissionInfoWithFixedKeys ∷
     TransactionHash
 runRegisterWithCandidatePermissionInfoWithFixedKeys usePermissionToken scParams =
   do
-    ownAddr ← getOwnWalletAddress
-    ownUtxos ← liftContract $ utxosAt ownAddr
-    registrationUtxo ←
+    ownAddr <- getOwnWalletAddress
+    ownUtxos <- liftContract $ utxosAt ownAddr
+    registrationUtxo <-
       Run.note (GenericInternalError "No UTxOs found at key wallet")
         $ Set.findMin
         $ Map.keys ownUtxos
@@ -114,10 +114,10 @@ runRegisterWithCandidatePermissionInfoWithFixedKeys usePermissionToken scParams 
           "02a4ee86ede04284ca75be10e08536d8772e66a80f654c3880659fb4143f716fc6"
       }
 
-runRegisterWithCandidatePermissionInfo ∷
-  ∀ r.
-  Boolean →
-  SidechainParams →
+runRegisterWithCandidatePermissionInfo ::
+  forall r.
+  Boolean ->
+  SidechainParams ->
   Run
     ( READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT
         + EFFECT
@@ -128,9 +128,9 @@ runRegisterWithCandidatePermissionInfo usePermissionToken scParams = do
   let
     generateKey = byteArrayFromIntArrayUnsafe <$>
       (sequence $ Array.replicate 32 (randomInt 0 255))
-  ownAddr ← getOwnWalletAddress
-  ownUtxos ← liftContract $ utxosAt ownAddr
-  registrationUtxo ←
+  ownAddr <- getOwnWalletAddress
+  ownUtxos <- liftContract $ utxosAt ownAddr
+  registrationUtxo <-
     Run.note (GenericInternalError "No UTxOs found at key wallet")
       $ Set.findMin
       $ Map.keys ownUtxos
@@ -138,8 +138,8 @@ runRegisterWithCandidatePermissionInfo usePermissionToken scParams = do
   -- we generate only aura and grandpa keys. This will be enough to mark this
   -- candidate as a new one, and at the same time it doesn't require us to
   -- generate correct sidechainSig
-  auraKey ← Run.liftEffect generateKey
-  grandpaKey ← Run.liftEffect generateKey
+  auraKey <- Run.liftEffect generateKey
+  grandpaKey <- Run.liftEffect generateKey
 
   register $ RegisterParams
     { sidechainParams: scParams
@@ -154,16 +154,16 @@ runRegisterWithCandidatePermissionInfo usePermissionToken scParams = do
     , grandpaKey
     }
 
-runDeregister ∷
-  ∀ r.
-  SidechainParams →
+runDeregister ::
+  forall r.
+  SidechainParams ->
   Run (READER Env + EXCEPT OffchainError + WALLET + TRANSACTION + LOG + r) Unit
 runDeregister scParams =
   void $ deregister $ DeregisterParams
     { sidechainParams: scParams, spoPubKey: Just mockSpoPubKey }
 
 -- Register multipe times then Deregister
-testScenarioSuccess1 ∷ TestnetTest
+testScenarioSuccess1 :: TestnetTest
 testScenarioSuccess1 =
   Mote.Monad.test "10 registrations followed by 1 deregister"
     $ Test.TestnetTest.mkTestnetConfigTest
@@ -172,13 +172,13 @@ testScenarioSuccess1 =
         , BigNum.fromInt 5_000_000
         , BigNum.fromInt 5_000_000
         ]
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+    $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) do
         sequence_ $ replicate 10 $ runRegister dummySidechainParams
         runDeregister dummySidechainParams
 
 -- alice registers, bob deregisters. not allowed & should fail
 -- also, alice tries to register again with the same set of keys. not allowed & should fail
-testScenarioFailure1 ∷ TestnetTest
+testScenarioFailure1 :: TestnetTest
 testScenarioFailure1 =
   Mote.Monad.test
     "Register followed by a deregister from a distinct wallet (should fail)"
@@ -186,7 +186,7 @@ testScenarioFailure1 =
         ( [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ] /\
             [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ]
         )
-    $ \(alice /\ bob) →
+    $ \(alice /\ bob) ->
         do
           withUnliftApp (Wallet.withKeyWallet alice) $ do
             void $ runRegister dummySidechainParams

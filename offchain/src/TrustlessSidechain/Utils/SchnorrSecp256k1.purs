@@ -37,13 +37,13 @@ derive instance Generic SchnorrSecp256k1PrivateKey _
 
 derive instance Newtype SchnorrSecp256k1PrivateKey _
 
-derive newtype instance toDataSchnorrSecp256k1PrivateKey ∷
+derive newtype instance toDataSchnorrSecp256k1PrivateKey ::
   ToData SchnorrSecp256k1PrivateKey
 
-derive newtype instance ordSchnorrSecp256k1PrivateKey ∷
+derive newtype instance ordSchnorrSecp256k1PrivateKey ::
   Ord SchnorrSecp256k1PrivateKey
 
-derive newtype instance eqSchnorrSecp256k1PrivateKey ∷
+derive newtype instance eqSchnorrSecp256k1PrivateKey ::
   Eq SchnorrSecp256k1PrivateKey
 
 -- | Newtype wrapper around a `ByteArray`
@@ -53,19 +53,19 @@ derive instance Generic SchnorrSecp256k1PublicKey _
 
 derive instance Newtype SchnorrSecp256k1PublicKey _
 
-derive newtype instance showSchnorrSecp256k1PublicKey ∷
+derive newtype instance showSchnorrSecp256k1PublicKey ::
   Show SchnorrSecp256k1PublicKey
 
-derive newtype instance toDataSchnorrSecp256k1PublicKey ∷
+derive newtype instance toDataSchnorrSecp256k1PublicKey ::
   ToData SchnorrSecp256k1PublicKey
 
-derive newtype instance fromDataSchnorrSecp256k1PublicKey ∷
+derive newtype instance fromDataSchnorrSecp256k1PublicKey ::
   FromData SchnorrSecp256k1PublicKey
 
-derive newtype instance ordSchnorrSecp256k1PublicKey ∷
+derive newtype instance ordSchnorrSecp256k1PublicKey ::
   Ord SchnorrSecp256k1PublicKey
 
-derive newtype instance eqSchnorrSecp256k1PublicKey ∷
+derive newtype instance eqSchnorrSecp256k1PublicKey ::
   Eq SchnorrSecp256k1PublicKey
 
 -- | Newtype wrapper around a `ByteArray`
@@ -75,19 +75,19 @@ derive instance Generic SchnorrSecp256k1Signature _
 
 derive instance Newtype SchnorrSecp256k1Signature _
 
-derive newtype instance showSchnorrSecp256k1Signature ∷
+derive newtype instance showSchnorrSecp256k1Signature ::
   Show SchnorrSecp256k1Signature
 
-derive newtype instance toDataSchnorrSecp256k1Signature ∷
+derive newtype instance toDataSchnorrSecp256k1Signature ::
   ToData SchnorrSecp256k1Signature
 
-derive newtype instance fromDataSchnorrSecp256k1Signature ∷
+derive newtype instance fromDataSchnorrSecp256k1Signature ::
   FromData SchnorrSecp256k1Signature
 
-derive newtype instance ordSchnorrSecp256k1Signature ∷
+derive newtype instance ordSchnorrSecp256k1Signature ::
   Ord SchnorrSecp256k1Signature
 
-derive newtype instance eqSchnorrSecp256k1Signature ∷
+derive newtype instance eqSchnorrSecp256k1Signature ::
   Eq SchnorrSecp256k1Signature
 
 -- | `parsePublicKey` converts an array of bytes into a schnorr public key
@@ -108,7 +108,7 @@ derive newtype instance eqSchnorrSecp256k1Signature ∷
 -- TODO: perhaps we can just do some node bindings to the underlying C library?
 -- Probably the best solution instead of doing all this hacking around javascript
 -- reimplementations
-parsePublicKey ∷ ByteArray → Maybe SchnorrSecp256k1PublicKey
+parsePublicKey :: ByteArray -> Maybe SchnorrSecp256k1PublicKey
 parsePublicKey byteArray
   | ByteArray.byteLength byteArray == 32 = Just $ SchnorrSecp256k1PublicKey
       byteArray
@@ -116,7 +116,7 @@ parsePublicKey byteArray
 
 -- | `parsePrivateKey` parses the raw hex bytes
 --  (for internal use)
-parsePrivateKey ∷ ByteArray → Maybe SchnorrSecp256k1PrivateKey
+parsePrivateKey :: ByteArray -> Maybe SchnorrSecp256k1PrivateKey
 parsePrivateKey byteArray
   | ByteArray.byteLength byteArray == 32 = Just $ SchnorrSecp256k1PrivateKey
       byteArray
@@ -136,7 +136,7 @@ parsePrivateKey byteArray
 -- [example](https://github.com/bitcoin-core/secp256k1/blob/master/examples/schnorr.c)
 -- which also decides that it would be a good idea to print out the hex of
 -- the serialization.
-serializePublicKey ∷ SchnorrSecp256k1PublicKey → String
+serializePublicKey :: SchnorrSecp256k1PublicKey -> String
 serializePublicKey (SchnorrSecp256k1PublicKey publicKey) =
   ByteArray.byteArrayToHex
     publicKey
@@ -146,14 +146,14 @@ serializePublicKey (SchnorrSecp256k1PublicKey publicKey) =
 -- [example](https://github.com/bitcoin-core/secp256k1/blob/master/examples/schnorr.c)
 -- which also decides that it would be a good idea to print out the hex of
 -- the serialization.
-serializeSignature ∷ SchnorrSecp256k1Signature → String
+serializeSignature :: SchnorrSecp256k1Signature -> String
 serializeSignature (SchnorrSecp256k1Signature publicKey) =
   ByteArray.byteArrayToHex
     publicKey
 
 -- | `serializePrivateKey` shows the raw bytes hex encoded.
 -- (for internal use)
-serializePrivateKey ∷ SchnorrSecp256k1PrivateKey → String
+serializePrivateKey :: SchnorrSecp256k1PrivateKey -> String
 serializePrivateKey (SchnorrSecp256k1PrivateKey privateKey) =
   ByteArray.byteArrayToHex privateKey
 
@@ -174,39 +174,39 @@ serializePrivateKey (SchnorrSecp256k1PrivateKey privateKey) =
 -- TODO: again, perhaps we can just do some node bindings to the underlying C library?
 -- Probably the best solution instead of doing all this hacking around javascript
 -- reimplementations
-parseSignature ∷ ByteArray → Maybe SchnorrSecp256k1Signature
+parseSignature :: ByteArray -> Maybe SchnorrSecp256k1Signature
 parseSignature byteArray
   | ByteArray.byteLength byteArray == 64 = Just $ SchnorrSecp256k1Signature
       byteArray
   | otherwise = Nothing
 
 -- | Generates a random schnorr private key
-generateRandomPrivateKey ∷ Effect SchnorrSecp256k1PrivateKey
+generateRandomPrivateKey :: Effect SchnorrSecp256k1PrivateKey
 generateRandomPrivateKey = map SchnorrSecp256k1PrivateKey js_randomPrivateKey
 
 -- | Converts a schnorr private key into its corresponding public key
-toPubKey ∷ SchnorrSecp256k1PrivateKey → SchnorrSecp256k1PublicKey
+toPubKey :: SchnorrSecp256k1PrivateKey -> SchnorrSecp256k1PublicKey
 toPubKey (SchnorrSecp256k1PrivateKey ba) = SchnorrSecp256k1PublicKey
   (js_getPublicKey ba)
 
 -- | Signs a message
-sign ∷ ByteArray → SchnorrSecp256k1PrivateKey → SchnorrSecp256k1Signature
+sign :: ByteArray -> SchnorrSecp256k1PrivateKey -> SchnorrSecp256k1Signature
 sign message (SchnorrSecp256k1PrivateKey privateKey) = SchnorrSecp256k1Signature
   (js_sign message privateKey)
 
 -- | Verifies a signature with a public key
-verify ∷
-  SchnorrSecp256k1Signature → ByteArray → SchnorrSecp256k1PublicKey → Boolean
+verify ::
+  SchnorrSecp256k1Signature -> ByteArray -> SchnorrSecp256k1PublicKey -> Boolean
 verify
   (SchnorrSecp256k1Signature signature)
   message
   (SchnorrSecp256k1PublicKey publicKey) =
   js_verify signature message publicKey
 
-foreign import js_randomPrivateKey ∷ Effect ByteArray
+foreign import js_randomPrivateKey :: Effect ByteArray
 
-foreign import js_getPublicKey ∷ ByteArray → ByteArray
+foreign import js_getPublicKey :: ByteArray -> ByteArray
 
-foreign import js_sign ∷ ByteArray → ByteArray → ByteArray
+foreign import js_sign :: ByteArray -> ByteArray -> ByteArray
 
-foreign import js_verify ∷ ByteArray → ByteArray → ByteArray → Boolean
+foreign import js_verify :: ByteArray -> ByteArray -> ByteArray -> Boolean

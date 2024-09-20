@@ -15,34 +15,34 @@ import TrustlessSidechain.Types (CurrencyInfo)
 
 -- | Build lookups and constraints to mint one token of a given name for a
 -- | provided currency.
-mintOneToken ∷
-  AssetName →
-  RedeemerDatum →
-  CurrencyInfo →
-  { lookups ∷ ScriptLookups
-  , constraints ∷ TxConstraints
+mintOneToken ::
+  AssetName ->
+  RedeemerDatum ->
+  CurrencyInfo ->
+  { lookups :: ScriptLookups
+  , constraints :: TxConstraints
   }
 mintOneToken = oneTokenHelper Int.one
 
 -- | Build lookups and constraints to burn one token of a given name for a
 -- | provided currency.
-burnOneToken ∷
-  AssetName →
-  RedeemerDatum →
-  CurrencyInfo →
-  { lookups ∷ ScriptLookups
-  , constraints ∷ TxConstraints
+burnOneToken ::
+  AssetName ->
+  RedeemerDatum ->
+  CurrencyInfo ->
+  { lookups :: ScriptLookups
+  , constraints :: TxConstraints
   }
 burnOneToken = oneTokenHelper (Int.negate Int.one)
 
 -- | Worker for `mintOneToken` and `burnOneToken`.
-oneTokenHelper ∷
-  Int.Int →
-  AssetName →
-  RedeemerDatum →
-  CurrencyInfo →
-  { lookups ∷ ScriptLookups
-  , constraints ∷ TxConstraints
+oneTokenHelper ::
+  Int.Int ->
+  AssetName ->
+  RedeemerDatum ->
+  CurrencyInfo ->
+  { lookups :: ScriptLookups
+  , constraints :: TxConstraints
   }
 oneTokenHelper amount tn redeemer { currencySymbol, mintingPolicy } =
   { lookups: Lookups.plutusMintingPolicy mintingPolicy

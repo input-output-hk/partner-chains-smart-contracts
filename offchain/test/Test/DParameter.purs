@@ -20,12 +20,12 @@ import TrustlessSidechain.Utils.Transaction
 
 -- | `tests` aggregate all the DParameterPolicy tests in one convenient
 -- | function
-tests ∷ WrappedTests
+tests :: WrappedTests
 tests = testnetGroup "Minting, and burning a DParameter Token" $
   do
     testScenario
 
-testScenario ∷ TestnetTest
+testScenario :: TestnetTest
 testScenario =
   Mote.Monad.test "Minting and updating a DParameter Token"
     $ Test.TestnetTest.mkTestnetConfigTest
@@ -34,10 +34,10 @@ testScenario =
         , BigNum.fromInt 150_000_000
         , BigNum.fromInt 150_000_000
         ]
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+    $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) do
 
-        pkh ← getOwnPaymentPubKeyHash
-        genesisUtxo ← getOwnTransactionInput
+        pkh <- getOwnPaymentPubKeyHash
+        genesisUtxo <- getOwnTransactionInput
         let
           sidechainParams =
             SidechainParams

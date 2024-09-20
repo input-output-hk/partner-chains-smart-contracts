@@ -31,8 +31,8 @@ import TrustlessSidechain.Utils.Data
   )
 
 newtype ImmutableReserveSettings = ImmutableReserveSettings
-  { t0 ∷ POSIXTime
-  , tokenKind ∷ Asset
+  { t0 :: POSIXTime
+  , tokenKind :: Asset
   }
 
 derive instance Generic ImmutableReserveSettings _
@@ -53,21 +53,21 @@ instance ToData ImmutableReserveSettings where
 
 instance FromData ImmutableReserveSettings where
   fromData (List [ t0', Constr _ [ cs', tn' ] ]) = do
-    csB ← fromData cs'
-    tnB ← fromData tn'
-    t0 ← fromData t0'
+    csB <- fromData cs'
+    tnB <- fromData tn'
+    t0 <- fromData t0'
     let emptyByteString = ByteArray.hexToByteArrayUnsafe ""
     if (csB /\ tnB) == (emptyByteString /\ emptyByteString) then Just $
       ImmutableReserveSettings { t0, tokenKind: AdaAsset }
     else do
-      cs ← fromData cs'
-      tn ← fromData tn'
+      cs <- fromData cs'
+      tn <- fromData tn'
       Just $ ImmutableReserveSettings { t0, tokenKind: Asset cs tn }
   fromData _ = Nothing
 
 newtype MutableReserveSettings = MutableReserveSettings
-  { vFunctionTotalAccrued ∷ ScriptHash
-  , incentiveAmount ∷ BigInt.BigInt
+  { vFunctionTotalAccrued :: ScriptHash
+  , incentiveAmount :: BigInt.BigInt
   }
 
 derive newtype instance Eq MutableReserveSettings
@@ -85,12 +85,12 @@ instance ToData MutableReserveSettings where
 
 instance FromData MutableReserveSettings where
   fromData = productFromData2
-    ( \x y →
+    ( \x y ->
         MutableReserveSettings { vFunctionTotalAccrued: x, incentiveAmount: y }
     )
 
 newtype ReserveStats = ReserveStats
-  { tokenTotalAmountTransferred ∷ BigInt.BigInt
+  { tokenTotalAmountTransferred :: BigInt.BigInt
   }
 
 derive newtype instance Eq ReserveStats
@@ -108,13 +108,13 @@ instance ToData ReserveStats where
 
 instance FromData ReserveStats where
   fromData dat = do
-    tokenTotalAmountTransferred ← fromData dat
+    tokenTotalAmountTransferred <- fromData dat
     pure $ ReserveStats { tokenTotalAmountTransferred }
 
 newtype ReserveDatum = ReserveDatum
-  { immutableSettings ∷ ImmutableReserveSettings
-  , mutableSettings ∷ MutableReserveSettings
-  , stats ∷ ReserveStats
+  { immutableSettings :: ImmutableReserveSettings
+  , mutableSettings :: MutableReserveSettings
+  , stats :: ReserveStats
   }
 
 derive instance Generic ReserveDatum _
@@ -128,18 +128,18 @@ instance ToData ReserveDatum where
 
 instance FromData ReserveDatum where
   fromData = productFromData3
-    ( \x y z →
+    ( \x y z ->
         ReserveDatum { immutableSettings: x, mutableSettings: y, stats: z }
     )
 
 data ReserveRedeemer
   = DepositToReserve
-      { governanceVersion ∷ BigInt.BigInt }
+      { governanceVersion :: BigInt.BigInt }
   | TransferToIlliquidCirculationSupply
   | UpdateReserve
-      { governanceVersion ∷ BigInt.BigInt }
+      { governanceVersion :: BigInt.BigInt }
   | Handover
-      { governanceVersion ∷ BigInt.BigInt }
+      { governanceVersion :: BigInt.BigInt }
 
 derive instance Eq ReserveRedeemer
 
@@ -160,21 +160,21 @@ instance ToData ReserveRedeemer where
 
 instance FromData ReserveRedeemer where
   fromData = case _ of
-    Constr tag [ arg ] | tag == BigNum.fromInt 0 → do
-      governanceVersion ← fromData arg
+    Constr tag [ arg ] | tag == BigNum.fromInt 0 -> do
+      governanceVersion <- fromData arg
       pure $ DepositToReserve { governanceVersion }
-    Constr tag [] | tag == BigNum.fromInt 1 → pure
+    Constr tag [] | tag == BigNum.fromInt 1 -> pure
       TransferToIlliquidCirculationSupply
-    Constr tag [ arg ] | tag == BigNum.fromInt 2 → do
-      governanceVersion ← fromData arg
+    Constr tag [ arg ] | tag == BigNum.fromInt 2 -> do
+      governanceVersion <- fromData arg
       pure $ UpdateReserve { governanceVersion }
-    Constr tag [ arg ] | tag == BigNum.fromInt 3 → do
-      governanceVersion ← fromData arg
+    Constr tag [ arg ] | tag == BigNum.fromInt 3 -> do
+      governanceVersion <- fromData arg
       pure $ Handover { governanceVersion }
-    _ → Nothing
+    _ -> Nothing
 
 newtype ReserveAuthPolicyRedeemer = ReserveAuthPolicyRedeemer
-  { governanceVersion ∷ BigInt.BigInt
+  { governanceVersion :: BigInt.BigInt
   }
 
 derive newtype instance Eq ReserveAuthPolicyRedeemer
@@ -192,7 +192,7 @@ instance ToData ReserveAuthPolicyRedeemer where
 
 instance FromData ReserveAuthPolicyRedeemer where
   fromData dat = do
-    governanceVersion ← fromData dat
+    governanceVersion <- fromData dat
     pure $ ReserveAuthPolicyRedeemer { governanceVersion }
 
 data IlliquidCirculationSupplyRedeemer
@@ -212,6 +212,6 @@ instance ToData IlliquidCirculationSupplyRedeemer where
 
 instance FromData IlliquidCirculationSupplyRedeemer where
   fromData = case _ of
-    Integer tag | tag == BigInt.fromInt 0 → pure DepositMoreToSupply
-    Integer tag | tag == BigInt.fromInt 1 → pure WithdrawFromSupply
-    _ → Nothing
+    Integer tag | tag == BigInt.fromInt 0 -> pure DepositMoreToSupply
+    Integer tag | tag == BigInt.fromInt 1 -> pure WithdrawFromSupply
+    _ -> Nothing

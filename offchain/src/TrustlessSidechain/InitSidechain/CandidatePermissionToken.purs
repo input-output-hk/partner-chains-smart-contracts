@@ -22,10 +22,10 @@ import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import Type.Row (type (+))
 
-initCandidatePermissionToken ∷
-  ∀ r.
-  SidechainParams →
-  Maybe BigInt →
+initCandidatePermissionToken ::
+  forall r.
+  SidechainParams ->
+  Maybe BigInt ->
   Run (APP + r) (Maybe TransactionHash)
 initCandidatePermissionToken
   sidechainParams
@@ -38,7 +38,7 @@ initCandidatePermissionToken
   -- for any extra checks.
   logInfo' "Attempting to mint candidate permission tokens from the init token"
   init
-    ( \op → balanceSignAndSubmit op
+    ( \op -> balanceSignAndSubmit op
         <=< initCandidatePermissionTokenLookupsAndConstraints
           initCandidatePermissionTokenMintInfo
     )
@@ -53,20 +53,20 @@ initCandidatePermissionToken
 -- |
 -- |      - Mints the candidiate permission tokens if
 -- |     `initCandidatePermissionTokenMintInfo` is `Just` (otherwise returns empty)
-initCandidatePermissionTokenLookupsAndConstraints ∷
-  ∀ r.
-  Maybe BigInt →
-  SidechainParams →
+initCandidatePermissionTokenLookupsAndConstraints ::
+  forall r.
+  Maybe BigInt ->
+  SidechainParams ->
   Run (EXCEPT OffchainError + r)
-    { lookups ∷ ScriptLookups
-    , constraints ∷ TxConstraints
+    { lookups :: ScriptLookups
+    , constraints :: TxConstraints
     }
 initCandidatePermissionTokenLookupsAndConstraints
   initCandidatePermissionTokenMintInfo
   sidechainParams =
   case initCandidatePermissionTokenMintInfo of
-    Nothing → pure mempty
-    Just amount → do
+    Nothing -> pure mempty
+    Just amount -> do
       CandidatePermissionToken.candidatePermissionTokenLookupsAndConstraints
         sidechainParams
         amount

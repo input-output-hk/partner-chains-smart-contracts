@@ -22,12 +22,12 @@ import TrustlessSidechain.Utils.Transaction
 
 -- | `tests` aggregate all the PermissionedCandidatesPolicy tests in one convenient
 -- | function
-tests ∷ WrappedTests
+tests :: WrappedTests
 tests = testnetGroup "Minting, and burning a PermissionedCandidates Token" $
   do
     testScenario
 
-testScenario ∷ TestnetTest
+testScenario :: TestnetTest
 testScenario =
   Mote.Monad.test "Minting, updating and removing a PermissionedCandidates Token"
     $ Test.TestnetTest.mkTestnetConfigTest
@@ -36,10 +36,10 @@ testScenario =
         , BigNum.fromInt 150_000_000
         , BigNum.fromInt 150_000_000
         ]
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+    $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) do
 
-        pkh ← getOwnPaymentPubKeyHash
-        genesisUtxo ← getOwnTransactionInput
+        pkh <- getOwnPaymentPubKeyHash
+        genesisUtxo <- getOwnTransactionInput
         let
           sidechainParams =
             SidechainParams
@@ -131,5 +131,5 @@ testScenario =
                     "Test: remove permissioned candidates"
             )
 
-        _ ← initTokensMint sidechainParams 1
+        _ <- initTokensMint sidechainParams 1
         pure unit

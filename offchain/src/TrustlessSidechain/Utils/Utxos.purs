@@ -38,47 +38,47 @@ import Type.Row (type (+))
 -- | `p` (if such utxo exists).
 -- |
 -- | Note: this does a linear scan over all utxos at the given address `addr`
-findUtxoByValueAt ∷
-  ∀ r.
-  Address →
-  (Value → Boolean) →
+findUtxoByValueAt ::
+  forall r.
+  Address ->
+  (Value -> Boolean) ->
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    (Maybe { index ∷ TransactionInput, value ∷ TransactionOutput })
+    (Maybe { index :: TransactionInput, value :: TransactionOutput })
 findUtxoByValueAt addr p = do
-  scriptUtxos ← Effect.utxosAt addr
+  scriptUtxos <- Effect.utxosAt addr
   let
     go _txIn txOut = p (unwrap txOut).amount
   pure $ FoldableWithIndex.findWithIndex go scriptUtxos
 
-getOwnUTxOsTotalValue ∷
-  ∀ r. Run (EXCEPT OffchainError + WALLET + TRANSACTION + r) Value
+getOwnUTxOsTotalValue ::
+  forall r. Run (EXCEPT OffchainError + WALLET + TRANSACTION + r) Value
 getOwnUTxOsTotalValue = do
-  ownUtxos ← getOwnUTxOs
+  ownUtxos <- getOwnUTxOs
   Run.note (GenericInternalError "Couldn't add up own utxo values.")
     $ Value.sum
     $ Array.fromFoldable
     $ map
         ( \( TransactionOutput { amount }
-           ) → amount
+           ) -> amount
         )
     $ Map.values ownUtxos
 
-getOwnUTxOs ∷
-  ∀ r. Run (EXCEPT OffchainError + WALLET + TRANSACTION + r) UtxoMap
+getOwnUTxOs ::
+  forall r. Run (EXCEPT OffchainError + WALLET + TRANSACTION + r) UtxoMap
 getOwnUTxOs = do
-  ownAddr ← getOwnWalletAddress
+  ownAddr <- getOwnWalletAddress
   Effect.utxosAt ownAddr
 
 -- | Retrieve plutusScript from TransactionInput
-plutusScriptFromTxIn ∷
-  ∀ r.
-  TransactionInput →
+plutusScriptFromTxIn ::
+  forall r.
+  TransactionInput ->
   Run (APP r) (Maybe PlutusScript)
 plutusScriptFromTxIn txIn = do
-  m ← Effect.getUtxo txIn
+  m <- Effect.getUtxo txIn
   case m of
-    Just (TransactionOutput { scriptRef: Just (PlutusScriptRef plutusScript) }) →
+    Just (TransactionOutput { scriptRef: Just (PlutusScriptRef plutusScript) }) ->
       pure $ Just plutusScript
-    _ →
+    _ ->
       logWarn' "Failed to retrieve PlutusScript from TransactionInput" *>
         pure Nothing

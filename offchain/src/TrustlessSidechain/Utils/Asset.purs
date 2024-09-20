@@ -22,26 +22,26 @@ import Data.ByteArray (byteArrayFromAscii)
 import Data.Maybe (fromJust)
 import Partial.Unsafe (unsafePartial)
 
-emptyAssetName ∷ AssetName
+emptyAssetName :: AssetName
 emptyAssetName =
   (unsafePartial $ fromJust $ mkAssetName $ hexToByteArrayUnsafe "")
 
-mkAssetName' ∷ String → Maybe AssetName
+mkAssetName' :: String -> Maybe AssetName
 mkAssetName' name = do
-  byteName ← byteArrayFromAscii name
+  byteName <- byteArrayFromAscii name
   mkAssetName byteName
 
-unsafeMkAssetName ∷ String → AssetName
+unsafeMkAssetName :: String -> AssetName
 unsafeMkAssetName name = unsafePartial $ fromJust $ mkAssetName' name
 
-getScriptHash ∷ AssetClass → ScriptHash
+getScriptHash :: AssetClass -> ScriptHash
 getScriptHash (AssetClass sc _) = sc
 
 -- | Convert a currency symbol to a hex string
-currencySymbolToHex ∷ CurrencySymbol → String
+currencySymbolToHex :: CurrencySymbol -> String
 currencySymbolToHex cs = byteArrayToHex $ unwrap $ encodeCbor cs
 
-singletonFromAsset ∷ Asset → BigNum → Value
+singletonFromAsset :: Asset -> BigNum -> Value
 singletonFromAsset AdaAsset amount = Value.mkValue (wrap amount)
   MultiAsset.empty
 singletonFromAsset (Asset cs tn) amount = Value.singleton cs tn amount

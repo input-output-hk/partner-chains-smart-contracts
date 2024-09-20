@@ -27,8 +27,8 @@ import TrustlessSidechain.Versioning.ScriptId (ScriptId(..)) as ScriptId
 -- | Datum attached to 'VersionOraclePolicy' tokens stored on the
 -- | 'VersionOracleValidator' script.
 newtype VersionOracleDatum = VersionOracleDatum
-  { versionOracle ∷ VersionOracle -- ^ unique identifier of the versioned script
-  , versionCurrencySymbol ∷ CurrencySymbol -- ^ currency symbol of the version oracle policy
+  { versionOracle :: VersionOracle -- ^ unique identifier of the versioned script
+  , versionCurrencySymbol :: CurrencySymbol -- ^ currency symbol of the version oracle policy
   }
 
 derive instance Eq VersionOracleDatum
@@ -38,7 +38,7 @@ instance Show VersionOracleDatum where
 
 instance FromData VersionOracleDatum where
   fromData = productFromData2
-    ( \o c → VersionOracleDatum
+    ( \o c -> VersionOracleDatum
         { versionOracle: o
         , versionCurrencySymbol: c
         }
@@ -50,8 +50,8 @@ instance ToData VersionOracleDatum where
 
 -- VersionOracle uniquiely identifies a versioned script.
 newtype VersionOracle = VersionOracle
-  { version ∷ BigNum -- ^ version of the protocol
-  , scriptId ∷ ScriptId.ScriptId -- ^ unique identifier of the validator
+  { version :: BigNum -- ^ version of the protocol
+  , scriptId :: ScriptId.ScriptId -- ^ unique identifier of the validator
   }
 
 derive instance Eq VersionOracle
@@ -60,7 +60,7 @@ instance Show VersionOracle where
   show = genericShow
 
 instance FromData VersionOracle where
-  fromData = productFromData2 (\v s → VersionOracle { version: v, scriptId: s })
+  fromData = productFromData2 (\v s -> VersionOracle { version: v, scriptId: s })
 
 instance ToData VersionOracle where
   toData (VersionOracle { version, scriptId }) = productToData2 version scriptId
@@ -104,7 +104,7 @@ instance ToData VersionOraclePolicyRedeemer where
 -- | VersionOraclePolicy tokens.  Required to identify version tokens that can
 -- | be trusted.
 newtype VersionOracleConfig = VersionOracleConfig
-  { versionOracleCurrencySymbol ∷ CurrencySymbol -- ^ VersionOraclePolicy
+  { versionOracleCurrencySymbol :: CurrencySymbol -- ^ VersionOraclePolicy
   }
 
 derive instance Eq VersionOracleConfig
@@ -116,7 +116,7 @@ derive instance Newtype VersionOracleConfig _
 
 instance FromData VersionOracleConfig where
   fromData x = do
-    versionOracleCurrencySymbol ← fromData x
+    versionOracleCurrencySymbol <- fromData x
     pure $ VersionOracleConfig { versionOracleCurrencySymbol }
 
 instance ToData VersionOracleConfig where

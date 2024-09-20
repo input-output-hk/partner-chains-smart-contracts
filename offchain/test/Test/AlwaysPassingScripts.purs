@@ -14,24 +14,24 @@ import TrustlessSidechain.RawScripts as RawScripts
 import TrustlessSidechain.Utils.Scripts as Utils.Scripts
 import Type.Row (type (+))
 
-alwaysPassingValidator ∷
-  ∀ r.
-  BigInt →
+alwaysPassingValidator ::
+  forall r.
+  BigInt ->
   Run (EXCEPT OffchainError + r) PlutusScript
 alwaysPassingValidator seed =
   case RawScripts.rawAlwaysPassingValidator of
-    (_ /\ alwaysPassingValidator') →
+    (_ /\ alwaysPassingValidator') ->
       Utils.Scripts.mkValidatorWithParams'
         alwaysPassingValidator'
         ([ toData seed ])
 
-alwaysPassingPolicy ∷
-  ∀ r.
-  BigInt →
+alwaysPassingPolicy ::
+  forall r.
+  BigInt ->
   Run (EXCEPT OffchainError + r) PlutusScript
 alwaysPassingPolicy seed =
   case RawScripts.rawAlwaysPassingPolicy of
-    (_ /\ alwaysPassingPolicy') →
+    (_ /\ alwaysPassingPolicy') ->
       Utils.Scripts.mkMintingPolicyWithParams'
         alwaysPassingPolicy'
         ([ toData seed ])

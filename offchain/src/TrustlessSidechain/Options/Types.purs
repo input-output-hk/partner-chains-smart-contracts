@@ -37,7 +37,7 @@ import TrustlessSidechain.Utils.SchnorrSecp256k1 (SchnorrSecp256k1PrivateKey)
 -- | related to the sidechain.
 -- | This is essentially `SidechainParams` with a little bit more information.
 newtype SidechainEndpointParams = SidechainEndpointParams
-  { sidechainParams ∷ SidechainParams
+  { sidechainParams :: SidechainParams
   }
 
 derive instance Newtype SidechainEndpointParams _
@@ -49,9 +49,9 @@ data Options
     -- | transaction to the blockchain.
     -- | In particular, these endpoints need to be in the `Contract` monad
     TxOptions
-      { sidechainEndpointParams ∷ SidechainEndpointParams
-      , endpoint ∷ TxEndpoint
-      , contractParams ∷ ContractParams
+      { sidechainEndpointParams :: SidechainEndpointParams
+      , endpoint :: TxEndpoint
+      , contractParams :: ContractParams
       }
   |
     -- | `UtilsOptions` are the options for endpoints for functionality
@@ -60,7 +60,7 @@ data Options
     -- | In particular, these endpoints do _not_ need to be in the `Contract`
     -- | monad
     UtilsOptions
-      { utilsOptions ∷ UtilsEndpoint
+      { utilsOptions :: UtilsEndpoint
       }
   | CLIVersion
 
@@ -68,26 +68,26 @@ data Options
 -- Any parameter can be set `null` requiring a CLI argument instead
 type Config =
   { -- | Sidechain parameters (defining the sidechain which we will interact with)
-    sidechainParameters ∷
+    sidechainParameters ::
       Maybe
-        { chainId ∷ Maybe Int
-        , genesisUtxo ∷ Maybe TransactionInput
-        , threshold ∷
+        { chainId :: Maybe Int
+        , genesisUtxo :: Maybe TransactionInput
+        , threshold ::
             Maybe
-              { numerator ∷ Int
-              , denominator ∷ Int
+              { numerator :: Int
+              , denominator :: Int
               }
         -- governanceAuthority should really be a PubKeyHash but there's no
         -- (easy) way of pulling a dummy PubKeyHash value out of thin air in
         -- TrustlessSidechain.ConfigFile.optExample
-        , governanceAuthority ∷ Maybe ByteArray
+        , governanceAuthority :: Maybe ByteArray
         }
   , -- | Filepath of the payment signing key of the wallet owner
-    paymentSigningKeyFile ∷ Maybe FilePath
+    paymentSigningKeyFile :: Maybe FilePath
   , -- | Filepath of the stake signing key of the wallet owner
-    stakeSigningKeyFile ∷ Maybe FilePath
+    stakeSigningKeyFile :: Maybe FilePath
   , -- | Network configuration of the runtime dependencies (kupo, ogmios)
-    runtimeConfig ∷ Maybe RuntimeConfig
+    runtimeConfig :: Maybe RuntimeConfig
   }
 
 -- | Data for CLI endpoints which provide supporting utilities for the
@@ -95,85 +95,85 @@ type Config =
 data UtilsEndpoint
   = EcdsaSecp256k1KeyGenAct
   | EcdsaSecp256k1SignAct
-      { message ∷ ByteArray
-      , privateKey ∷ EcdsaSecp256k1PrivateKey
-      , noHashMessage ∷ Boolean
+      { message :: ByteArray
+      , privateKey :: EcdsaSecp256k1PrivateKey
+      , noHashMessage :: Boolean
       -- whether to hash the message or not before signing.
       -- true ===> do NOT hash the message
       -- false ===> hash the message
       }
   | SchnorrSecp256k1KeyGenAct
   | SchnorrSecp256k1SignAct
-      { message ∷ ByteArray
-      , privateKey ∷ SchnorrSecp256k1PrivateKey
-      , noHashMessage ∷ Boolean
+      { message :: ByteArray
+      , privateKey :: SchnorrSecp256k1PrivateKey
+      , noHashMessage :: Boolean
       -- whether to hash the message or not before signing.
       -- true ===> do NOT hash the message
       -- false ===> hash the message
       }
 
   | CborBlockProducerRegistrationMessageAct
-      { blockProducerRegistrationMsg ∷ BlockProducerRegistrationMsg
+      { blockProducerRegistrationMsg :: BlockProducerRegistrationMsg
       }
 
 -- | Data for CLI endpoints which submit a transaction to the blockchain.
 data TxEndpoint
   = CommitteeCandidateReg
-      { stakeOwnership ∷ StakeOwnership
-      , sidechainPubKey ∷ ByteArray
-      , sidechainSig ∷ ByteArray
-      , inputUtxo ∷ TransactionInput
-      , usePermissionToken ∷ Boolean
-      , auraKey ∷ ByteArray
-      , grandpaKey ∷ ByteArray
+      { stakeOwnership :: StakeOwnership
+      , sidechainPubKey :: ByteArray
+      , sidechainSig :: ByteArray
+      , inputUtxo :: TransactionInput
+      , usePermissionToken :: Boolean
+      , auraKey :: ByteArray
+      , grandpaKey :: ByteArray
       }
   | CandidiatePermissionTokenAct
-      { candidatePermissionTokenAmount ∷ BigInt }
-  | CommitteeCandidateDereg { spoPubKey ∷ Maybe PubKey }
+      { candidatePermissionTokenAmount :: BigInt }
+  | CommitteeCandidateDereg { spoPubKey :: Maybe PubKey }
   | GetAddrs
       SidechainAddressesExtra
   | InitTokensMint
-      { version ∷ Int }
+      { version :: Int }
   | InitReserveManagement
-      { version ∷ Int
+      { version :: Int
       }
   | InitCandidatePermissionToken
-      { initCandidatePermissionTokenMintInfo ∷ Maybe BigInt
+      { initCandidatePermissionTokenMintInfo :: Maybe BigInt
       }
 
   -- See Note [Supporting version insertion beyond version 2]
   | InsertVersion2
   | UpdateVersion
-      { oldVersion ∷ Int
-      , newVersion ∷ Int
+      { oldVersion :: Int
+      , newVersion :: Int
       }
   | InvalidateVersion
-      { version ∷ Int
+      { version :: Int
       }
   | ListVersionedScripts
-      { version ∷ Int
+      { version :: Int
       }
   | InsertDParameter
-      { permissionedCandidatesCount ∷ BigInt
-      , registeredCandidatesCount ∷ BigInt
+      { permissionedCandidatesCount :: BigInt
+      , registeredCandidatesCount :: BigInt
       }
   | UpdateDParameter
-      { permissionedCandidatesCount ∷ BigInt
-      , registeredCandidatesCount ∷ BigInt
+      { permissionedCandidatesCount :: BigInt
+      , registeredCandidatesCount :: BigInt
       }
   | UpdatePermissionedCandidates
-      { permissionedCandidatesToAdd ∷
+      { permissionedCandidatesToAdd ::
           List
-            { sidechainKey ∷ ByteArray
-            , auraKey ∷ ByteArray
-            , grandpaKey ∷ ByteArray
+            { sidechainKey :: ByteArray
+            , auraKey :: ByteArray
+            , grandpaKey :: ByteArray
             }
-      , permissionedCandidatesToRemove ∷
+      , permissionedCandidatesToRemove ::
           Maybe
             ( List
-                { sidechainKey ∷ ByteArray
-                , auraKey ∷ ByteArray
-                , grandpaKey ∷ ByteArray
+                { sidechainKey :: ByteArray
+                , auraKey :: ByteArray
+                , grandpaKey :: ByteArray
                 }
             )
       }
@@ -183,25 +183,25 @@ data TxEndpoint
 
   -- | CLI entpoints for reserve initialization for an asset class
   | CreateReserve
-      { mutableReserveSettings ∷ MutableReserveSettings
-      , immutableReserveSettings ∷ ImmutableReserveSettings
-      , depositAmount ∷ BigNum
+      { mutableReserveSettings :: MutableReserveSettings
+      , immutableReserveSettings :: ImmutableReserveSettings
+      , depositAmount :: BigNum
       }
 
   -- | update of a reserve
   | UpdateReserveSettings
-      { mutableReserveSettings ∷ MutableReserveSettings }
+      { mutableReserveSettings :: MutableReserveSettings }
 
   -- | deposit to a reserve
   | DepositReserve
-      { asset ∷ Asset
-      , depositAmount ∷ BigNum
+      { asset :: Asset
+      , depositAmount :: BigNum
       }
 
   -- | transfer from a reserve to illiquid circulation supply
   | ReleaseReserveFunds
-      { totalAccruedTillNow ∷ Int
-      , transactionInput ∷ TransactionInput
+      { totalAccruedTillNow :: Int
+      , transactionInput :: TransactionInput
       }
 
   -- | handover of a reserve
@@ -209,14 +209,14 @@ data TxEndpoint
 
 -- | `InputArgOrFile` represents that we may either allow an option as input
 -- | via a CLI argument or a filepath of a JSON file
-data InputArgOrFile (a ∷ Type)
+data InputArgOrFile (a :: Type)
   = InputFromArg a
   | InputFromFile FilePath
 
 -- | Network configuration of the runtime dependencies
 -- Any parameter can be set `null` falling back to its default value
 type RuntimeConfig =
-  { ogmios ∷ Maybe ServerConfig
-  , kupo ∷ Maybe ServerConfig
-  , network ∷ Maybe NetworkId
+  { ogmios :: Maybe ServerConfig
+  , kupo :: Maybe ServerConfig
+  , network :: Maybe NetworkId
   }

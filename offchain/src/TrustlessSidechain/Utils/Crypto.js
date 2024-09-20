@@ -55,4 +55,4 @@ export const secKeyVerify = (secretKey) =>
 
 export const blake2b256Hash = (data) => {
   return blake2b.blake2b(data, null, 32);
-}
+};

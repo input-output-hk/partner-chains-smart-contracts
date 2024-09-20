@@ -78,7 +78,7 @@ import TrustlessSidechain.Governance.MultiSig
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import Type.Row (type (+))
 
-toTxIn ∷ String → Int → TransactionInput
+toTxIn :: String -> Int -> TransactionInput
 toTxIn txId txIdx =
   TransactionInput
     { transactionId: TransactionHash $ unsafePartial $ fromJust $ CSL.fromBytes $
@@ -88,10 +88,10 @@ toTxIn txId txIdx =
 
 -- | `getUniqueUtxoAt addr` gets the first utxo at the given address, and throws an
 -- | error if there is NOT exactly one utxo at this address.
-getUniqueUtxoAt ∷
-  Address → Contract (Tuple TransactionInput TransactionOutput)
+getUniqueUtxoAt ::
+  Address -> Contract (Tuple TransactionInput TransactionOutput)
 getUniqueUtxoAt addr = do
-  utxoMap ← utxosAt addr
+  utxoMap <- utxosAt addr
   let
     err = Monad.throwContractError
       $ "Expected exactly one script address but got:"
@@ -99,16 +99,16 @@ getUniqueUtxoAt addr = do
 
   case Map.findMin utxoMap of
     Just { key, value }
-      | length utxoMap == 1 → pure $ key /\ value
-      | otherwise → err
-    Nothing → err
+      | length utxoMap == 1 -> pure $ key /\ value
+      | otherwise -> err
+    Nothing -> err
 
 -- | Coerces a `PaymentPubKeyHash` to a `ByteArray`. This is useful when making
 -- | the recipient for the `MerkleTreeEntry`.
 -- | TODO: the "useful" part is a bit outdated -- recipients in
 -- | `MerkleTreeEntry` should actually be bech32 encoded addresses intead of
 -- | just the raw pubkey hash
-paymentPubKeyHashToByteArray ∷ PaymentPubKeyHash → ByteArray
+paymentPubKeyHashToByteArray :: PaymentPubKeyHash -> ByteArray
 paymentPubKeyHashToByteArray =
   unwrap <<< encodeCbor <<< unwrap
 
@@ -117,23 +117,24 @@ paymentPubKeyHashToByteArray =
 -- | This throws an error if such a utxo does not exist.
 -- | This is useful for e.g. initializing the sidechain because we need to mint
 -- | an NFT for the initial committee
-getOwnTransactionInput ∷
-  ∀ r. Run (EXCEPT OffchainError + CONTRACT + r) TransactionInput
+getOwnTransactionInput ::
+  forall r. Run (EXCEPT OffchainError + CONTRACT + r) TransactionInput
 getOwnTransactionInput = do
-  ownUtxos ← fromMaybeThrow (GenericInternalError "Failed to query wallet utxos")
+  ownUtxos <- fromMaybeThrow
+    (GenericInternalError "Failed to query wallet utxos")
     (liftContract getWalletUtxos)
 
   case
     List.sortBy
       ( compare `on`
           ( snd >>>
-              (\(TransactionOutput { amount }) → Value.valueToCoin amount)
+              (\(TransactionOutput { amount }) -> Value.valueToCoin amount)
           )
       )
       (Map.toUnfoldable ownUtxos)
     of
-    (Tuple k _) : _ → pure k
-    _ → throw (GenericInternalError "No utxo found in wallet")
+    (Tuple k _) : _ -> pure k
+    _ -> throw (GenericInternalError "No utxo found in wallet")
 
 -- | `fails contract` executes `contract`, and
 -- |
@@ -146,13 +147,13 @@ getOwnTransactionInput = do
 -- | ```
 -- | Test.Utils.fails myTest
 -- | ```
-fails ∷ Contract Unit → Contract Unit
+fails :: Contract Unit -> Contract Unit
 fails contract = do
-  result ← MonadError.try contract
+  result <- MonadError.try contract
   case result of
-    Right _ → Monad.throwContractError $ Exception.error
+    Right _ -> Monad.throwContractError $ Exception.error
       "Contract should have failed but it didn't."
-    Left e →
+    Left e ->
       Log.logInfo' ("Expected failure (and got failure): " <> Exception.message e)
 
 -- fails ∷
@@ -167,20 +168,20 @@ fails contract = do
 --         ("Expected failure (and got failure): " <> show e)
 
 -- | Unsafely converts a String to a BigInt
-unsafeBigIntFromString ∷ String → BigInt
+unsafeBigIntFromString :: String -> BigInt
 unsafeBigIntFromString str = Unsafe.unsafePartial Maybe.fromJust
   (BigInt.fromString str)
 
 -- | `interpretConstVoidTest` interprets a standard collection of `Mote (Const Void) Test Unit`
 -- | and converts this to a `TestSuite`. Following this function with `Test.Unit.Main.runTest`
 -- | will run the tests.
-interpretConstVoidTest ∷ Mote (Const Void) Test Unit → TestSuite
+interpretConstVoidTest :: Mote (Const Void) Test Unit -> TestSuite
 interpretConstVoidTest = go <<< Mote.Monad.plan
   where
   go = Mote.Plan.foldPlan
-    (\{ label, value } → Test.Unit.test label value)
-    (\label → Test.Unit.testSkip label (pure unit))
-    (\{ label, value } → Test.Unit.suite label (go value))
+    (\{ label, value } -> Test.Unit.test label value)
+    (\label -> Test.Unit.testSkip label (pure unit))
+    (\{ label, value } -> Test.Unit.suite label (go value))
     sequence_
 
 -- TODO: getTxByHash is removed, find a way to implent this
@@ -207,49 +208,50 @@ data WithTestRunner
 type WrappedTests = Mote (Const Void) WithTestRunner Unit
 
 -- | Interpreting wrapped tests with their respective interpreters
-interpretWrappedTest ∷ WrappedTests → TestSuite
+interpretWrappedTest :: WrappedTests -> TestSuite
 interpretWrappedTest = go <<< Mote.Monad.plan
   where
   go =
     Mote.Plan.foldPlan
-      ( \{ label, value } → Test.Unit.suite label $
+      ( \{ label, value } -> Test.Unit.suite label $
           case value of
-            WithTestnetRunner testCase → interpretTestnetTest testCase
-            PureRunner testCase → interpretConstVoidTest testCase
+            WithTestnetRunner testCase -> interpretTestnetTest testCase
+            PureRunner testCase -> interpretConstVoidTest testCase
 
       )
-      (\label → Test.Unit.testSkip label (pure unit))
-      (\{ label, value } → Test.Unit.suite label (go value))
+      (\label -> Test.Unit.testSkip label (pure unit))
+      (\{ label, value } -> Test.Unit.suite label (go value))
       sequence_
 
 -- | A test group function to conveniently wrap multiple Mote tests using `WithTestRunner`
 -- | Tests in this group will be executed in Cardano Testnet
-testnetGroup ∷ String → Mote (Const Void) TestnetConfigTest Unit → WrappedTests
+testnetGroup ::
+  String -> Mote (Const Void) TestnetConfigTest Unit -> WrappedTests
 testnetGroup label tests =
   Mote.Monad.test label $ WithTestnetRunner tests
 
 -- | A test group function to conveniently wrap multiple Mote tests using `WithTestRunner`
 -- | Tests in this group will be executed purely
-pureGroup ∷ String → Mote (Const Void) Test Unit → WrappedTests
+pureGroup :: String -> Mote (Const Void) Test Unit -> WrappedTests
 pureGroup label tests =
   Mote.Monad.test label $ PureRunner tests
 
 -- | `assertIHaveOutputWithAsset` asserts that of all `getWalletUtxos`, there
 -- | exists a UTxO with at least one of the given asset.
-assertIHaveOutputWithAsset ∷
-  ∀ r.
-  Asset →
+assertIHaveOutputWithAsset ::
+  forall r.
+  Asset ->
   Run (EXCEPT OffchainError + CONTRACT + r) Unit
 assertIHaveOutputWithAsset asset = do
-  ownUtxos ← map (Map.values) $ Effect.fromMaybeThrow
+  ownUtxos <- map (Map.values) $ Effect.fromMaybeThrow
     (GenericInternalError "Failed to query wallet utxos")
     (liftContract getWalletUtxos)
   let
     iHaveCurrencySymbolAndTokenName =
       let
         go input = case List.uncons input of
-          Nothing → false
-          Just { head: TransactionOutput { amount }, tail } →
+          Nothing -> false
+          Just { head: TransactionOutput { amount }, tail } ->
             if Value.valueOf asset amount > BigNum.zero then true
             else go tail
       in
@@ -264,15 +266,15 @@ assertIHaveOutputWithAsset asset = do
 
 -- | Verifies that a certain script output contains at least one of the given
 -- | asset.
-assertHasOutputWithAsset ∷
-  ∀ r.
-  TransactionHash →
-  Address →
-  CurrencySymbol →
-  TokenName →
+assertHasOutputWithAsset ::
+  forall r.
+  TransactionHash ->
+  Address ->
+  CurrencySymbol ->
+  TokenName ->
   Run (EXCEPT OffchainError + CONTRACT + r) Unit
 assertHasOutputWithAsset txId addr cs tn = do
-  utxos ∷ Array (TransactionInput /\ TransactionOutput) ←
+  utxos :: Array (TransactionInput /\ TransactionOutput) <-
     liftContract $ Map.toUnfoldable <$> utxosAt addr
 
   unless (any hasAsset utxos) $ throw
@@ -288,7 +290,7 @@ assertHasOutputWithAsset txId addr cs tn = do
     )
 
   where
-  hasAsset ∷ (TransactionInput /\ TransactionOutput) → Boolean
+  hasAsset :: (TransactionInput /\ TransactionOutput) -> Boolean
   hasAsset
     ( TransactionInput { transactionId } /\ TransactionOutput { amount }
     ) =
@@ -297,7 +299,7 @@ assertHasOutputWithAsset txId addr cs tn = do
 
 -- | `dummySidechainParams` is some default sidechain parameters which may be
 -- | helpful when creating tests.
-dummySidechainParams ∷ SidechainParams
+dummySidechainParams :: SidechainParams
 dummySidechainParams = SidechainParams
   { chainId: BigInt.fromInt 69
   , genesisUtxo: toTxIn
@@ -310,12 +312,12 @@ dummySidechainParams = SidechainParams
         "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
   }
 
-fromMaybeTestError ∷
-  ∀ r a.
-  String →
+fromMaybeTestError ::
+  forall r a.
+  String ->
   Run
     (EXCEPT OffchainError + CONTRACT + r)
-    (Maybe a) →
+    (Maybe a) ->
   Run
     (EXCEPT OffchainError + CONTRACT + r)
     a
@@ -324,10 +326,10 @@ fromMaybeTestError msg = flip bind $ maybe
   )
   pure
 
-withSingleMultiSig ∷
-  ∀ r a.
-  Ed25519KeyHash →
-  Run (READER Env + r) a →
+withSingleMultiSig ::
+  forall r a.
+  Ed25519KeyHash ->
+  Run (READER Env + r) a ->
   Run (READER Env + r) a
 withSingleMultiSig wallet = local $ const
   { governance: Just $ MultiSig $ MultiSigGovParams

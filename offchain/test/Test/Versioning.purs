@@ -47,7 +47,7 @@ import TrustlessSidechain.Versioning.Utils
 import Type.Row (type (+))
 
 -- | `tests` aggregate all the Versioning tests in one convenient function
-tests ∷ WrappedTests
+tests :: WrappedTests
 tests = testnetGroup "Minting and burning versioning tokens" $ do
   testInsertAndInvalidateSuccessScenario
   testInsertSameScriptTwiceSuccessScenario
@@ -55,7 +55,7 @@ tests = testnetGroup "Minting and burning versioning tokens" $ do
   testRemovingTwiceSameScriptFailScenario
 
 -- | We insert a new version of a script, and invalidate the old one.
-testInsertAndInvalidateSuccessScenario ∷ TestnetTest
+testInsertAndInvalidateSuccessScenario :: TestnetTest
 testInsertAndInvalidateSuccessScenario =
   Mote.Monad.test "Inserting new version, then invalidate the old one"
     $ Test.TestnetTest.mkTestnetConfigTest
@@ -66,10 +66,10 @@ testInsertAndInvalidateSuccessScenario =
         , BigNum.fromInt 40_000_000
         , BigNum.fromInt 40_000_000
         ]
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) $ do
-        pkh ← getOwnPaymentPubKeyHash
+    $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) $ do
+        pkh <- getOwnPaymentPubKeyHash
         withSingleMultiSig (unwrap pkh) $ do
-          genesisUtxo ← getOwnTransactionInput
+          genesisUtxo <- getOwnTransactionInput
           let
             sidechainParams =
               SidechainParams
@@ -91,7 +91,7 @@ testInsertAndInvalidateSuccessScenario =
           -- void $ initNativeTokenMgmt sidechainParams 1
           -- This policy was already inserted by 'initSidechain'.
 
-          committeeCandidateValidator ←
+          committeeCandidateValidator <-
             getCommitteeCandidateValidator sidechainParams
 
           void
@@ -131,7 +131,7 @@ testInsertAndInvalidateSuccessScenario =
 
 -- | We insert the same script (same ScriptId and same version) twice. That
 -- should work.
-testInsertSameScriptTwiceSuccessScenario ∷ TestnetTest
+testInsertSameScriptTwiceSuccessScenario :: TestnetTest
 testInsertSameScriptTwiceSuccessScenario =
   Mote.Monad.test "Insert same script with the same version twice"
     $ Test.TestnetTest.mkTestnetConfigTest
@@ -142,10 +142,10 @@ testInsertSameScriptTwiceSuccessScenario =
         , BigNum.fromInt 40_000_000
         , BigNum.fromInt 40_000_000
         ]
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-        pkh ← getOwnPaymentPubKeyHash
+    $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) do
+        pkh <- getOwnPaymentPubKeyHash
         withSingleMultiSig (unwrap pkh) $ do
-          genesisUtxo ← getOwnTransactionInput
+          genesisUtxo <- getOwnTransactionInput
           let
             sidechainParams =
               SidechainParams
@@ -162,7 +162,7 @@ testInsertSameScriptTwiceSuccessScenario =
           void $ initTokensMint sidechainParams 1
           void $ Versioning.initializeVersion sidechainParams 1
 
-          committeeCandidateValidator ←
+          committeeCandidateValidator <-
             getCommitteeCandidateValidator sidechainParams
 
           void
@@ -185,7 +185,7 @@ testInsertSameScriptTwiceSuccessScenario =
           assertNumberOfActualVersionedScripts sidechainParams 2 0 0
 
 -- | We insert an script that is not part of the initial versioned scripts.
-testInsertUnversionedScriptSuccessScenario ∷ TestnetTest
+testInsertUnversionedScriptSuccessScenario :: TestnetTest
 testInsertUnversionedScriptSuccessScenario =
   Mote.Monad.test "Insert an unversioned script"
     $ Test.TestnetTest.mkTestnetConfigTest
@@ -196,10 +196,10 @@ testInsertUnversionedScriptSuccessScenario =
         , BigNum.fromInt 40_000_000
         , BigNum.fromInt 40_000_000
         ]
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-        pkh ← getOwnPaymentPubKeyHash
+    $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) do
+        pkh <- getOwnPaymentPubKeyHash
         withSingleMultiSig (unwrap pkh) $ do
-          genesisUtxo ← getOwnTransactionInput
+          genesisUtxo <- getOwnTransactionInput
           let
             sidechainParams =
               SidechainParams
@@ -216,7 +216,7 @@ testInsertUnversionedScriptSuccessScenario =
           void $ initTokensMint sidechainParams 1
           void $ Versioning.initializeVersion sidechainParams 1
 
-          { dParameterMintingPolicy } ←
+          { dParameterMintingPolicy } <-
             getDParameterMintingPolicyAndCurrencySymbol sidechainParams
           assertNumberOfActualVersionedScripts sidechainParams 1 2 3
           assertNumberOfActualVersionedScripts sidechainParams 2 0 0
@@ -234,7 +234,7 @@ testInsertUnversionedScriptSuccessScenario =
 
 -- | After inserting a versioned script, invalidating it twice should fail in the second
 -- | invalidation call.
-testRemovingTwiceSameScriptFailScenario ∷ TestnetTest
+testRemovingTwiceSameScriptFailScenario :: TestnetTest
 testRemovingTwiceSameScriptFailScenario =
   Mote.Monad.test "Removing the same script twice should fail"
     $ Test.TestnetTest.mkTestnetConfigTest
@@ -245,10 +245,10 @@ testRemovingTwiceSameScriptFailScenario =
         , BigNum.fromInt 40_000_000
         , BigNum.fromInt 40_000_000
         ]
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-        pkh ← getOwnPaymentPubKeyHash
+    $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) do
+        pkh <- getOwnPaymentPubKeyHash
         withSingleMultiSig (unwrap pkh) $ do
-          genesisUtxo ← getOwnTransactionInput
+          genesisUtxo <- getOwnTransactionInput
           let
             sidechainParams =
               SidechainParams
@@ -280,15 +280,15 @@ testRemovingTwiceSameScriptFailScenario =
           )
             # withUnliftApp fails
 
-assertNumberOfActualVersionedScripts ∷
-  ∀ r.
-  SidechainParams →
+assertNumberOfActualVersionedScripts ::
+  forall r.
+  SidechainParams ->
   -- | Version number
-  Int →
+  Int ->
   -- | Number of expected versionned minting policy scripts
-  Int →
+  Int ->
   -- | Number of expected versionned validator scripts
-  Int →
+  Int ->
   Run
     (EXCEPT OffchainError + TRANSACTION + WALLET + READER Env + AFF + EFFECT + r)
     Unit
@@ -299,7 +299,7 @@ assertNumberOfActualVersionedScripts
   numExpectedVersionedValidators = do
   Versioning.getActualVersionedPoliciesAndValidators sidechainParams
     version >>=
-    \{ versionedPolicies, versionedValidators } → do
+    \{ versionedPolicies, versionedValidators } -> do
       liftAff
         $ assert
             ( "`Expected to return `"

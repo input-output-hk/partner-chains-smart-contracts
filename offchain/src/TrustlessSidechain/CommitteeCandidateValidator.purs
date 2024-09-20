@@ -64,24 +64,24 @@ import TrustlessSidechain.Versioning.ScriptId
 import Type.Row (type (+))
 
 newtype RegisterParams = RegisterParams
-  { sidechainParams ∷ SidechainParams
-  , stakeOwnership ∷ StakeOwnership
-  , sidechainPubKey ∷ ByteArray
-  , sidechainSig ∷ ByteArray
-  , inputUtxo ∷ TransactionInput
-  , usePermissionToken ∷ Boolean
-  , auraKey ∷ ByteArray
-  , grandpaKey ∷ ByteArray
+  { sidechainParams :: SidechainParams
+  , stakeOwnership :: StakeOwnership
+  , sidechainPubKey :: ByteArray
+  , sidechainSig :: ByteArray
+  , inputUtxo :: TransactionInput
+  , usePermissionToken :: Boolean
+  , auraKey :: ByteArray
+  , grandpaKey :: ByteArray
   }
 
 newtype DeregisterParams = DeregisterParams
-  { sidechainParams ∷ SidechainParams
-  , spoPubKey ∷ Maybe PubKey
+  { sidechainParams :: SidechainParams
+  , spoPubKey :: Maybe PubKey
   }
 
-getCommitteeCandidateValidator ∷
-  ∀ r.
-  SidechainParams →
+getCommitteeCandidateValidator ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + r) PlutusScript.PlutusScript
 getCommitteeCandidateValidator sp = do
   mkValidatorWithParams CommitteeCandidateValidator [ toData sp ]
@@ -108,24 +108,24 @@ instance ToData StakeOwnership where
 instance FromData StakeOwnership where
   fromData plutusData = case plutusData of
     Constr n args
-      | n == BigNum.fromInt 0 → case args of
-          [ x1, x2 ] → do
-            x1' ← fromData x1
-            x2' ← fromData x2
+      | n == BigNum.fromInt 0 -> case args of
+          [ x1, x2 ] -> do
+            x1' <- fromData x1
+            x2' <- fromData x2
             pure $ AdaBasedStaking x1' x2'
-          _ → Nothing
+          _ -> Nothing
 
-      | n == BigNum.fromInt 1 → pure TokenBasedStaking
-    _ → Nothing
+      | n == BigNum.fromInt 1 -> pure TokenBasedStaking
+    _ -> Nothing
 
 newtype BlockProducerRegistration = BlockProducerRegistration
-  { stakeOwnership ∷ StakeOwnership -- Verification keys required by the stake ownership model
-  , sidechainPubKey ∷ ByteArray -- public key in the sidechain's desired format
-  , sidechainSignature ∷ ByteArray -- Signature of the sidechain candidate
-  , inputUtxo ∷ TransactionInput -- A UTxO that must be spent by the transaction
-  , ownPkh ∷ PaymentPubKeyHash -- Owner public key hash
-  , auraKey ∷ ByteArray -- sidechain authority discovery key
-  , grandpaKey ∷ ByteArray -- sidechain grandpa key
+  { stakeOwnership :: StakeOwnership -- Verification keys required by the stake ownership model
+  , sidechainPubKey :: ByteArray -- public key in the sidechain's desired format
+  , sidechainSignature :: ByteArray -- Signature of the sidechain candidate
+  , inputUtxo :: TransactionInput -- A UTxO that must be spent by the transaction
+  , ownPkh :: PaymentPubKeyHash -- Owner public key hash
+  , auraKey :: ByteArray -- sidechain authority discovery key
+  , grandpaKey :: ByteArray -- sidechain grandpa key
   }
 
 derive instance Generic BlockProducerRegistration _
@@ -161,15 +161,15 @@ instance ToData BlockProducerRegistration where
 
 instance FromData BlockProducerRegistration where
   fromData plutusData = case plutusData of
-    Constr n [ x1, x2, x3, x4, x5, x6, x7 ] → do
+    Constr n [ x1, x2, x3, x4, x5, x6, x7 ] -> do
       guard (n == BigNum.fromInt 0)
-      x1' ← fromData x1
-      x2' ← fromData x2
-      x3' ← fromData x3
-      x4' ← fromData x4
-      x5' ← fromData x5
-      x6' ← fromData x6
-      x7' ← fromData x7
+      x1' <- fromData x1
+      x2' <- fromData x2
+      x3' <- fromData x3
+      x4' <- fromData x4
+      x5' <- fromData x5
+      x6' <- fromData x6
+      x7' <- fromData x7
       pure
         ( BlockProducerRegistration
             { stakeOwnership: x1'
@@ -181,12 +181,12 @@ instance FromData BlockProducerRegistration where
             , grandpaKey: x7'
             }
         )
-    _ → Nothing
+    _ -> Nothing
 
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
-  { bprmSidechainParams ∷ SidechainParams
-  , bprmSidechainPubKey ∷ ByteArray
-  , bprmInputUtxo ∷ TransactionInput -- A UTxO that must be spent by the transaction
+  { bprmSidechainParams :: SidechainParams
+  , bprmSidechainPubKey :: ByteArray
+  , bprmInputUtxo :: TransactionInput -- A UTxO that must be spent by the transaction
   }
 
 derive instance Eq BlockProducerRegistrationMsg
@@ -211,21 +211,21 @@ instance ToData BlockProducerRegistrationMsg where
 
 instance FromData BlockProducerRegistrationMsg where
   fromData = case _ of
-    Constr ix [ sp, spk, iu ] → do
+    Constr ix [ sp, spk, iu ] -> do
       guard (BigNum.fromInt 0 == ix)
-      bprmSidechainParams ← fromData sp
-      bprmSidechainPubKey ← fromData spk
-      bprmInputUtxo ← fromData iu
+      bprmSidechainParams <- fromData sp
+      bprmSidechainPubKey <- fromData spk
+      bprmInputUtxo <- fromData iu
       pure $ BlockProducerRegistrationMsg
         { bprmSidechainParams
         , bprmSidechainPubKey
         , bprmInputUtxo
         }
-    _ → Nothing
+    _ -> Nothing
 
-register ∷
-  ∀ r.
-  RegisterParams →
+register ::
+  forall r.
+  RegisterParams ->
   Run (APP + r) TransactionHash
 register
   ( RegisterParams
@@ -239,17 +239,17 @@ register
       , grandpaKey
       }
   ) = do
-  ownPkh ← getOwnPaymentPubKeyHash
-  ownAddr ← getOwnWalletAddress
+  ownPkh <- getOwnPaymentPubKeyHash
+  ownAddr <- getOwnWalletAddress
 
-  validator ← getCommitteeCandidateValidator sidechainParams
+  validator <- getCommitteeCandidateValidator sidechainParams
   let valHash = PlutusScript.hash validator
-  valAddr ← toAddress valHash
+  valAddr <- toAddress valHash
 
-  ownUtxos ← Effect.utxosAt ownAddr
-  valUtxos ← Effect.utxosAt valAddr
+  ownUtxos <- Effect.utxosAt ownAddr
+  valUtxos <- Effect.utxosAt valAddr
 
-  { ownRegistrationUtxos, ownRegistrationDatums } ← findOwnRegistrations ownPkh
+  { ownRegistrationUtxos, ownRegistrationDatums } <- findOwnRegistrations ownPkh
     (getSPOPubKey stakeOwnership)
     valUtxos
 
@@ -281,7 +281,7 @@ register
 
   { currencySymbol: candidateCurrencySymbol
   , mintingPolicy: candidateMintingPolicy
-  } ← CandidatePermissionToken.candidatePermissionCurrencyInfo sidechainParams
+  } <- CandidatePermissionToken.candidatePermissionCurrencyInfo sidechainParams
 
   let
     mVal = Value.lovelaceValueOf (BigNum.fromInt 1)
@@ -291,12 +291,12 @@ register
           (BigNum.fromInt 1)
         else Value.empty
 
-  val ← case mVal of
-    Just x → pure x
-    Nothing → throw (GenericInternalError "Invalid value")
+  val <- case mVal of
+    Just x -> pure x
+    Nothing -> throw (GenericInternalError "Invalid value")
 
   let
-    lookups ∷ Lookups.ScriptLookups
+    lookups :: Lookups.ScriptLookups
     lookups = Lookups.unspentOutputs ownUtxos
       <> Lookups.validator validator
       <> Lookups.unspentOutputs valUtxos
@@ -305,7 +305,7 @@ register
           candidateMintingPolicy
         else mempty
 
-    constraints ∷ Constraints.TxConstraints
+    constraints :: Constraints.TxConstraints
     constraints =
       -- Sending new registration to validator address
       Constraints.mustSpendPubKeyOutput inputUtxo
@@ -322,31 +322,31 @@ register
 
   balanceSignAndSubmit "Register Committee Candidate" { lookups, constraints }
 
-deregister ∷
-  ∀ r.
-  DeregisterParams →
+deregister ::
+  forall r.
+  DeregisterParams ->
   Run (APP + r) TransactionHash
 deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
-  ownPkh ← getOwnPaymentPubKeyHash
-  ownAddr ← getOwnWalletAddress
-  validator ← getCommitteeCandidateValidator sidechainParams
-  valAddr ← toAddress (PlutusScript.hash validator)
-  ownUtxos ← Effect.utxosAt ownAddr
-  valUtxos ← Effect.utxosAt valAddr
+  ownPkh <- getOwnPaymentPubKeyHash
+  ownAddr <- getOwnWalletAddress
+  validator <- getCommitteeCandidateValidator sidechainParams
+  valAddr <- toAddress (PlutusScript.hash validator)
+  ownUtxos <- Effect.utxosAt ownAddr
+  valUtxos <- Effect.utxosAt valAddr
 
-  { ownRegistrationUtxos } ← findOwnRegistrations ownPkh spoPubKey valUtxos
+  { ownRegistrationUtxos } <- findOwnRegistrations ownPkh spoPubKey valUtxos
 
   when (null ownRegistrationUtxos)
     $ throw
         (NotFoundInputUtxo "Couldn't find registration UTxO")
 
   let
-    lookups ∷ Lookups.ScriptLookups
+    lookups :: Lookups.ScriptLookups
     lookups = Lookups.validator validator
       <> Lookups.unspentOutputs ownUtxos
       <> Lookups.unspentOutputs valUtxos
 
-    constraints ∷ Constraints.TxConstraints
+    constraints :: Constraints.TxConstraints
     constraints = Constraints.mustBeSignedBy ownPkh
       <> mconcat
         ( flip Constraints.mustSpendScriptOutput (RedeemerDatum unit) <$>
@@ -357,22 +357,22 @@ deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
 
 -- | Based on the wallet public key hash and the SPO public key, it finds the
 -- | the registration UTxOs of the committee member/candidate
-findOwnRegistrations ∷
-  ∀ r.
-  PaymentPubKeyHash →
-  Maybe PubKey →
-  UtxoMap →
+findOwnRegistrations ::
+  forall r.
+  PaymentPubKeyHash ->
+  Maybe PubKey ->
+  UtxoMap ->
   Run r
-    { ownRegistrationUtxos ∷ Array TransactionInput
-    , ownRegistrationDatums ∷ Array BlockProducerRegistration
+    { ownRegistrationUtxos :: Array TransactionInput
+    , ownRegistrationDatums :: Array BlockProducerRegistration
     }
 findOwnRegistrations ownPkh spoPubKey validatorUtxos = do
-  mayTxInsAndBlockProducerRegistrations ← Map.toUnfoldable validatorUtxos #
+  mayTxInsAndBlockProducerRegistrations <- Map.toUnfoldable validatorUtxos #
     traverse
-      \(input /\ TransactionOutput out) →
+      \(input /\ TransactionOutput out) ->
         pure do
-          d ← outputDatumDatum =<< out.datum
-          BlockProducerRegistration r ← fromData d
+          d <- outputDatumDatum =<< out.datum
+          BlockProducerRegistration r <- fromData d
           guard
             ( (getSPOPubKey r.stakeOwnership == spoPubKey) &&
                 (r.ownPkh == ownPkh)
@@ -387,6 +387,6 @@ findOwnRegistrations ownPkh spoPubKey validatorUtxos = do
   pure $ { ownRegistrationUtxos, ownRegistrationDatums }
 
 -- | Return SPO public key if StakeOwnership is ada based staking. Otherwise, it returns Nothing.
-getSPOPubKey ∷ StakeOwnership → Maybe PubKey
+getSPOPubKey :: StakeOwnership -> Maybe PubKey
 getSPOPubKey (AdaBasedStaking pk _) = Just pk
 getSPOPubKey _ = Nothing

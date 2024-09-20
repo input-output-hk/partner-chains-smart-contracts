@@ -95,40 +95,41 @@ import Type.Row (type (+))
 
 -- | Token name for version tokens.  Must match definition in on-chain
 -- | module.
-versionOracleTokenName ∷ AssetName
+versionOracleTokenName :: AssetName
 versionOracleTokenName = unsafeMkAssetName "Version oracle"
 
 -- | Token name for version init tokens.
-versionOracleInitTokenName ∷ AssetName
+versionOracleInitTokenName :: AssetName
 versionOracleInitTokenName = unsafeMkAssetName "Version oracle InitToken"
 
 -- | Build lookups and constraints to burn version oracle initialization token.
-burnOneVersionInitToken ∷
-  ∀ r.
-  SidechainParams →
+burnOneVersionInitToken ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + r)
-    { lookups ∷ ScriptLookups
-    , constraints ∷ TxConstraints
+    { lookups :: ScriptLookups
+    , constraints :: TxConstraints
     }
 burnOneVersionInitToken sp =
   burnOneInitToken sp versionOracleInitTokenName
 
 -- | Deserialize VersionOraclePolicy minting policy script, applying it to all
 -- | required parameters.
-versionOraclePolicy ∷
-  ∀ r.
-  SidechainParams →
+versionOraclePolicy ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + WALLET + r) PlutusScript
 versionOraclePolicy sp = do
-  { currencySymbol } ← initTokenCurrencyInfo sp
+  { currencySymbol } <- initTokenCurrencyInfo sp
   let
     itac = InitTokenAssetClass
       { initTokenCurrencySymbol: currencySymbol
       , initTokenName: versionOracleInitTokenName
       }
-  validatorAddress ← (toAddress <<< PlutusScript.hash) =<< versionOracleValidator
-    sp
-  validatorAddressData ← toData
+  validatorAddress <- (toAddress <<< PlutusScript.hash) =<<
+    versionOracleValidator
+      sp
+  validatorAddressData <- toData
     <$>
       ( Run.note
           (InvalidAddress "Couldn't map address to PlutusData." validatorAddress)
@@ -143,33 +144,33 @@ versionOraclePolicy sp = do
 
 -- | Deserialize VersionOracleValidator validator script, applying it to all
 -- | required parameters.
-versionOracleValidator ∷
-  ∀ r.
-  SidechainParams →
+versionOracleValidator ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + r) PlutusScript
 versionOracleValidator sp =
   mkValidatorWithParams VersionOracleValidator [ toData sp ]
 
-getVersionOraclePolicy ∷
-  ∀ r.
-  SidechainParams →
+getVersionOraclePolicy ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + WALLET + r)
-    { versionOracleMintingPolicy ∷ PlutusScript
-    , versionOracleCurrencySymbol ∷ ScriptHash
+    { versionOracleMintingPolicy :: PlutusScript
+    , versionOracleCurrencySymbol :: ScriptHash
     }
 getVersionOraclePolicy gscp = do
-  versionOracleMintingPolicy ← versionOraclePolicy gscp
+  versionOracleMintingPolicy <- versionOraclePolicy gscp
   let versionOracleCurrencySymbol = PlutusScript.hash versionOracleMintingPolicy
   pure { versionOracleMintingPolicy, versionOracleCurrencySymbol }
 
 -- | Return configuration of the versioning system, i.e. VersionOracleValidator
 -- | script address and VersionOraclePolicy currency symbol.
-getVersionOracleConfig ∷
-  ∀ r.
-  SidechainParams →
+getVersionOracleConfig ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + WALLET + r) VersionOracleConfig
 getVersionOracleConfig sp = do
-  { versionOracleCurrencySymbol } ← getVersionOraclePolicy sp
+  { versionOracleCurrencySymbol } <- getVersionOraclePolicy sp
   pure $ VersionOracleConfig { versionOracleCurrencySymbol }
 
 -- | Take a versionable script (either a validator or a minting policy) with its
@@ -177,24 +178,24 @@ getVersionOracleConfig sp = do
 -- | for minting a new version token that stores this script as a Plutus
 -- | reference script.  Additionally, equip minted token with a VersionOracle
 -- | datum.  Requires burning one init token.
-initializeVersionLookupsAndConstraints ∷
-  ∀ r.
-  SidechainParams →
-  Int → -- ^ Script version
-  Tuple ScriptId PlutusScript → -- ^ Script ID and the script itself
+initializeVersionLookupsAndConstraints ::
+  forall r.
+  SidechainParams ->
+  Int -> -- ^ Script version
+  Tuple ScriptId PlutusScript -> -- ^ Script ID and the script itself
   Run (APP + r)
-    { lookups ∷ ScriptLookups
-    , constraints ∷ TxConstraints
+    { lookups :: ScriptLookups
+    , constraints :: TxConstraints
     }
 initializeVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
   do
-    burnVersionInitToken ← burnOneVersionInitToken sp
+    burnVersionInitToken <- burnOneVersionInitToken sp
 
     -- Preparing versioning scripts and tokens
     -----------------------------------
-    { versionOracleMintingPolicy, versionOracleCurrencySymbol } ←
+    { versionOracleMintingPolicy, versionOracleCurrencySymbol } <-
       getVersionOraclePolicy sp
-    vValidator ← versionOracleValidator sp
+    vValidator <- versionOracleValidator sp
 
     -- Prepare datum and other boilerplate
     -----------------------------------
@@ -210,12 +211,12 @@ initializeVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
         versionOracleTokenName
         (BigNum.fromInt 1)
 
-    scriptReftxInput /\ scriptReftxOutput ← ScriptCache.getScriptRefUtxo
+    scriptReftxInput /\ scriptReftxOutput <- ScriptCache.getScriptRefUtxo
       sp
       (PlutusScriptRef versionOracleMintingPolicy)
 
     let
-      initializeVersioningTokensConstraints ∷ TxConstraints
+      initializeVersioningTokensConstraints :: TxConstraints
       initializeVersioningTokensConstraints =
         Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
           (PlutusScript.hash versionOracleMintingPolicy)
@@ -228,11 +229,11 @@ initializeVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
               { input: scriptReftxInput, output: scriptReftxOutput }
           )
 
-      lookups ∷ ScriptLookups
+      lookups :: ScriptLookups
       lookups = Lookups.plutusMintingPolicy versionOracleMintingPolicy
         <> Lookups.validator vValidator
 
-      constraints ∷ TxConstraints
+      constraints :: TxConstraints
       constraints =
         -- Pay versioning token to the versioning script with datum
         -- and reference script attached.
@@ -251,22 +252,22 @@ initializeVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
 -- | for minting a new version token that stores this script as a Plutus
 -- | reference script.  Additionally, equip minted token with a VersionOracle
 -- | datum.  Requires governance approval
-insertVersionLookupsAndConstraints ∷
-  ∀ r.
-  SidechainParams →
-  Int → -- ^ Script version
-  Tuple ScriptId PlutusScript → -- ^ Script ID and the script itself
+insertVersionLookupsAndConstraints ::
+  forall r.
+  SidechainParams ->
+  Int -> -- ^ Script version
+  Tuple ScriptId PlutusScript -> -- ^ Script ID and the script itself
   Run (APP + r)
-    { lookups ∷ ScriptLookups
-    , constraints ∷ TxConstraints
+    { lookups :: ScriptLookups
+    , constraints :: TxConstraints
     }
 insertVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
   do
     -- Preparing versioning scripts and tokens
     -----------------------------------
-    { versionOracleMintingPolicy, versionOracleCurrencySymbol } ←
+    { versionOracleMintingPolicy, versionOracleCurrencySymbol } <-
       getVersionOraclePolicy sp
-    vValidator ← versionOracleValidator sp
+    vValidator <- versionOracleValidator sp
 
     -- Prepare datum and other boilerplate
     -----------------------------------
@@ -289,12 +290,12 @@ insertVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
       } = Governance.governanceAuthorityLookupsAndConstraints
         governanceAuthority
 
-    scriptReftxInput /\ scriptReftxOutput ← ScriptCache.getScriptRefUtxo
+    scriptReftxInput /\ scriptReftxOutput <- ScriptCache.getScriptRefUtxo
       sp
       (PlutusScriptRef versionOracleMintingPolicy)
 
     let
-      mintVersioningTokensConstraints ∷ TxConstraints
+      mintVersioningTokensConstraints :: TxConstraints
       mintVersioningTokensConstraints =
         Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
           (PlutusScript.hash versionOracleMintingPolicy)
@@ -307,12 +308,12 @@ insertVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
               { input: scriptReftxInput, output: scriptReftxOutput }
           )
 
-      lookups ∷ ScriptLookups
+      lookups :: ScriptLookups
       lookups = Lookups.plutusMintingPolicy versionOracleMintingPolicy
         <> Lookups.validator vValidator
         <> governanceAuthorityLookups
 
-      constraints ∷ TxConstraints
+      constraints :: TxConstraints
       constraints =
         -- Pay versioning token to the versioning script with datum
         -- and reference script attached.
@@ -330,31 +331,31 @@ insertVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
 -- | Take a script ID and version, and construct transaction lookups and
 -- | constraints for removing that version of a script from the versioning
 -- | system.
-invalidateVersionLookupsAndConstraints ∷
-  ∀ r.
-  SidechainParams →
-  Int → -- ^ Script version
-  ScriptId → -- ^ Script ID
+invalidateVersionLookupsAndConstraints ::
+  forall r.
+  SidechainParams ->
+  Int -> -- ^ Script version
+  ScriptId -> -- ^ Script ID
   Run
     ( EXCEPT OffchainError
         + WALLET
         + TRANSACTION
         + r
     )
-    { lookups ∷ ScriptLookups
-    , constraints ∷ TxConstraints
+    { lookups :: ScriptLookups
+    , constraints :: TxConstraints
     }
 invalidateVersionLookupsAndConstraints sp ver scriptId = do
   -- Prepare versioning scripts and tokens
   -----------------------------------
-  { versionOracleMintingPolicy, versionOracleCurrencySymbol } ←
+  { versionOracleMintingPolicy, versionOracleCurrencySymbol } <-
     getVersionOraclePolicy sp
-  vValidator ← versionOracleValidator sp
+  vValidator <- versionOracleValidator sp
 
   -- Get UTxOs located at the version oracle validator script address
   -----------------------------------
-  versionOracleValidatorAddr ← toAddress (PlutusScript.hash vValidator)
-  scriptUtxos ← Effect.utxosAt versionOracleValidatorAddr
+  versionOracleValidatorAddr <- toAddress (PlutusScript.hash vValidator)
+  scriptUtxos <- Effect.utxosAt versionOracleValidatorAddr
 
   -- Prepare datum and other boilerplate
   -----------------------------------
@@ -372,24 +373,24 @@ invalidateVersionLookupsAndConstraints sp ver scriptId = do
   -- version oracle token equipped with VersionOracle datum that matches script
   -- ID and version to be removed.
   -----------------------------------
-  (txInput /\ txOutput) ←
+  (txInput /\ txOutput) <-
     Run.note (NotFoundUtxo "cannot find versioned utxo")
       ( Array.find
           ( \( _ /\ TransactionOutput
                  { amount
                  , datum
                  }
-             ) →
+             ) ->
               ( Value.valueOf
                   (Asset versionOracleCurrencySymbol versionOracleTokenName)
                   amount
               ) == BigNum.fromInt 1
                 && case datum of
-                  Just (OutputDatum datum') → case fromData datum' of
-                    Just (VersionOracleDatum { versionOracle: v0 }) → v0 ==
+                  Just (OutputDatum datum') -> case fromData datum' of
+                    Just (VersionOracleDatum { versionOracle: v0 }) -> v0 ==
                       versionOracle
-                    _ → false
-                  _ → false
+                    _ -> false
+                  _ -> false
           )
           $ Map.toUnfoldable scriptUtxos
       )
@@ -399,13 +400,13 @@ invalidateVersionLookupsAndConstraints sp ver scriptId = do
     } = Governance.governanceAuthorityLookupsAndConstraints governanceAuthority
 
   let
-    lookups ∷ ScriptLookups
+    lookups :: ScriptLookups
     lookups = Lookups.plutusMintingPolicy versionOracleMintingPolicy
       <> Lookups.validator vValidator
       <> Lookups.unspentOutputs (Map.singleton txInput txOutput)
       <> governanceAuthorityLookups
 
-    constraints ∷ TxConstraints
+    constraints :: TxConstraints
     constraints =
       -- Burn a single versioning token.
       Constraints.mustMintValueWithRedeemer
@@ -421,19 +422,19 @@ invalidateVersionLookupsAndConstraints sp ver scriptId = do
   pure { lookups, constraints }
 
 -- | Find UTxO that stores a versioned reference script
-getVersionedScriptRefUtxo ∷
-  ∀ r.
-  SidechainParams →
-  VersionOracle →
+getVersionedScriptRefUtxo ::
+  forall r.
+  SidechainParams ->
+  VersionOracle ->
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     (TransactionInput /\ TransactionOutput)
 getVersionedScriptRefUtxo sp versionOracle = do
-  { versionOracleCurrencySymbol } ← getVersionOraclePolicy sp
-  versionOracleValidatorHash ←
+  { versionOracleCurrencySymbol } <- getVersionOraclePolicy sp
+  versionOracleValidatorHash <-
     PlutusScript.hash <$> versionOracleValidator sp
-  valAddr ← toAddress versionOracleValidatorHash
+  valAddr <- toAddress versionOracleValidatorHash
 
-  versionOracleUtxos ← Effect.utxosAt valAddr
+  versionOracleUtxos <- Effect.utxosAt valAddr
 
   let
     correctOutput
@@ -451,16 +452,16 @@ getVersionedScriptRefUtxo sp versionOracle = do
                 , versionCurrencySymbol: vC
                 }
             )
-          → vO == versionOracle && vC == versionOracleCurrencySymbol
-          _ → false
+          -> vO == versionOracle && vC == versionOracleCurrencySymbol
+          _ -> false
     correctOutput _ = false
 
     getVersionFromOutput
       ( _ /\ TransactionOutput { datum: Just (OutputDatum datum') }
-      ) = fromData datum' ∷ Maybe VersionOracleDatum
+      ) = fromData datum' :: Maybe VersionOracleDatum
     getVersionFromOutput _ = Nothing
 
-  txInput /\ txOutput ←
+  txInput /\ txOutput <-
     Run.note
       ( NotFoundUtxo
           $ "Could not find unspent output with correct script ref locked at "
@@ -468,53 +469,53 @@ getVersionedScriptRefUtxo sp versionOracle = do
           <> show versionOracle
           <> ". Available are: "
           <> show
-            ( map getVersionFromOutput $ Map.toUnfoldable versionOracleUtxos ∷
+            ( map getVersionFromOutput $ Map.toUnfoldable versionOracleUtxos ::
                 Array _
             )
       )
-      $ find correctOutput (Map.toUnfoldable versionOracleUtxos ∷ Array _)
+      $ find correctOutput (Map.toUnfoldable versionOracleUtxos :: Array _)
   pure (txInput /\ txOutput)
 
-getVersionedCurrencySymbol ∷
-  ∀ r.
-  SidechainParams →
-  VersionOracle →
+getVersionedCurrencySymbol ::
+  forall r.
+  SidechainParams ->
+  VersionOracle ->
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r) ScriptHash
 getVersionedCurrencySymbol sp versionOracle = do
-  _ /\ TransactionOutput { scriptRef } ← getVersionedScriptRefUtxo sp
+  _ /\ TransactionOutput { scriptRef } <- getVersionedScriptRefUtxo sp
     versionOracle
 
   case scriptRef of
-    Nothing → throw $ NotFoundReferenceScript $
+    Nothing -> throw $ NotFoundReferenceScript $
       ( "Script for given version oracle was not found: " <> show
           versionOracle
       )
-    Just (PlutusScriptRef plutusScript) →
+    Just (PlutusScriptRef plutusScript) ->
       pure $ PlutusScript.hash plutusScript
-    _ → throw $ NotFoundReferenceScript $
+    _ -> throw $ NotFoundReferenceScript $
       ( "Script for given version oracle was not found: "
           <> show
             versionOracle
           <> ". Script reference is not a PlutusScriptRef."
       )
 
-getVersionedValidatorAddress ∷
-  ∀ r.
-  SidechainParams →
-  VersionOracle →
+getVersionedValidatorAddress ::
+  forall r.
+  SidechainParams ->
+  VersionOracle ->
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r) Address
 getVersionedValidatorAddress sp versionOracle = do
-  _ /\ TransactionOutput { scriptRef } ← getVersionedScriptRefUtxo sp
+  _ /\ TransactionOutput { scriptRef } <- getVersionedScriptRefUtxo sp
     versionOracle
 
   case scriptRef of
-    Nothing → throw $ NotFoundReferenceScript $
+    Nothing -> throw $ NotFoundReferenceScript $
       ( "Script for given version oracle was not found: " <> show
           versionOracle
       )
-    Just (PlutusScriptRef plutusScript) →
+    Just (PlutusScriptRef plutusScript) ->
       toAddress $ PlutusScript.hash plutusScript
-    _ → throw $ NotFoundReferenceScript $
+    _ -> throw $ NotFoundReferenceScript $
       ( "Script for given version oracle was not found: "
           <> show
             versionOracle

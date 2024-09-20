@@ -39,8 +39,8 @@ instance FromData InitTokenRedeemer where
   fromData _ = Nothing
 
 newtype InitTokenAssetClass = InitTokenAssetClass
-  { initTokenCurrencySymbol ∷ CurrencySymbol
-  , initTokenName ∷ TokenName
+  { initTokenCurrencySymbol :: CurrencySymbol
+  , initTokenName :: TokenName
   }
 
 derive instance Generic InitTokenAssetClass _
@@ -59,5 +59,5 @@ instance ToData InitTokenAssetClass where
 
 instance FromData InitTokenAssetClass where
   fromData = productFromData2
-    \initTokenCurrencySymbol initTokenName →
+    \initTokenCurrencySymbol initTokenName ->
       InitTokenAssetClass { initTokenCurrencySymbol, initTokenName }

@@ -19,15 +19,15 @@ import TrustlessSidechain.ConfigFile (readConfigJson)
 
 type ConfigFileTest = Mote (Const Void) Test Unit
 
-tests ∷ WrappedTests
+tests :: WrappedTests
 tests = pureGroup "Merkle tree integration tests" do
   test1
 
-test1 ∷ ConfigFileTest
+test1 :: ConfigFileTest
 test1 =
   test "Parse example config file"
     $ do
-        actual ← liftEffect $ readConfigJson "./config.example.json"
+        actual <- liftEffect $ readConfigJson "./config.example.json"
         let
           expected =
             Just

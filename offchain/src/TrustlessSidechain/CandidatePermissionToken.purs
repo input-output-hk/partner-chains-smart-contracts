@@ -55,22 +55,22 @@ import Type.Row (type (+))
 --------------------------------
 -- | A name for the candidate permission initialization token.  Must be unique
 -- | among initialization tokens.
-candidatePermissionInitTokenName ∷ AssetName
+candidatePermissionInitTokenName :: AssetName
 candidatePermissionInitTokenName = unsafeMkAssetName
   "CandidatePermission InitToken"
 
 -- | A name for the candidate permission token.
-candidatePermissionTokenName ∷ AssetName
+candidatePermissionTokenName :: AssetName
 candidatePermissionTokenName = emptyAssetName
 
 -- | `candidatePermissionCurrencyInfo` grabs both the minting policy /
 -- | currency symbol for the candidate permission minting policy.
-candidatePermissionCurrencyInfo ∷
-  ∀ r.
-  SidechainParams →
+candidatePermissionCurrencyInfo ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + r) CurrencyInfo
 candidatePermissionCurrencyInfo sp = do
-  { currencySymbol } ← initTokenCurrencyInfo sp
+  { currencySymbol } <- initTokenCurrencyInfo sp
   let
     itac = InitTokenAssetClass
       { initTokenCurrencySymbol: currencySymbol
@@ -80,24 +80,24 @@ candidatePermissionCurrencyInfo sp = do
 
 -- | Build lookups and constraints to mint candidate permission initialization
 -- | token.
-mintOneCandidatePermissionInitToken ∷
-  ∀ r.
-  SidechainParams →
+mintOneCandidatePermissionInitToken ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + r)
-    { lookups ∷ ScriptLookups
-    , constraints ∷ TxConstraints
+    { lookups :: ScriptLookups
+    , constraints :: TxConstraints
     }
 mintOneCandidatePermissionInitToken sp =
   mintOneInitToken sp candidatePermissionInitTokenName
 
 -- | Build lookups and constraints to burn candidate permission initialization
 -- | token.
-burnOneCandidatePermissionInitToken ∷
-  ∀ r.
-  SidechainParams →
+burnOneCandidatePermissionInitToken ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + r)
-    { lookups ∷ ScriptLookups
-    , constraints ∷ TxConstraints
+    { lookups :: ScriptLookups
+    , constraints :: TxConstraints
     }
 burnOneCandidatePermissionInitToken sp =
   burnOneInitToken sp candidatePermissionInitTokenName
@@ -108,20 +108,20 @@ burnOneCandidatePermissionInitToken sp =
 
 -- | `candidatePermissionTokenLookupsAndConstraints` creates the required
 -- | lookups and constraints to build the transaction to mint the tokens.
-candidatePermissionTokenLookupsAndConstraints ∷
-  ∀ r.
-  SidechainParams →
-  BigInt →
+candidatePermissionTokenLookupsAndConstraints ::
+  forall r.
+  SidechainParams ->
+  BigInt ->
   Run (EXCEPT OffchainError + r)
-    { lookups ∷ ScriptLookups
-    , constraints ∷ TxConstraints
+    { lookups :: ScriptLookups
+    , constraints :: TxConstraints
     }
 candidatePermissionTokenLookupsAndConstraints sidechainParams amount = do
-  { mintingPolicy, currencySymbol } ←
+  { mintingPolicy, currencySymbol } <-
     candidatePermissionCurrencyInfo sidechainParams
 
   -- Build lookups and constraints to burn candidate permission init token
-  burnInitToken ← burnOneCandidatePermissionInitToken sidechainParams
+  burnInitToken <- burnOneCandidatePermissionInitToken sidechainParams
 
   let
     mintValue = Mint.singleton
@@ -129,11 +129,11 @@ candidatePermissionTokenLookupsAndConstraints sidechainParams amount = do
       candidatePermissionTokenName
       (unsafePartial $ fromJust $ Int.fromBigInt amount)
 
-    lookups ∷ ScriptLookups
+    lookups :: ScriptLookups
     lookups =
       Lookups.plutusMintingPolicy mintingPolicy
 
-    constraints ∷ TxConstraints
+    constraints :: TxConstraints
     constraints =
       TxConstraints.mustMintValueWithRedeemer
         (RedeemerDatum unit)
@@ -142,19 +142,20 @@ candidatePermissionTokenLookupsAndConstraints sidechainParams amount = do
 
 -- | `runCandidatePermissionToken` is the endpoint for minting candidate
 -- | permission tokens.
-runCandidatePermissionToken ∷
-  ∀ r.
-  SidechainParams →
-  BigInt →
+runCandidatePermissionToken ::
+  forall r.
+  SidechainParams ->
+  BigInt ->
   Run (EXCEPT OffchainError + TRANSACTION + LOG + r)
-    { transactionId ∷ TransactionHash
-    , candidatePermissionCurrencySymbol ∷ ScriptHash
+    { transactionId :: TransactionHash
+    , candidatePermissionCurrencySymbol :: ScriptHash
     }
 runCandidatePermissionToken sidechainParams amount = do
-  { currencySymbol: candidatePermissionCurrencySymbol } ←
+  { currencySymbol: candidatePermissionCurrencySymbol } <-
     candidatePermissionCurrencyInfo sidechainParams
 
-  txId ← candidatePermissionTokenLookupsAndConstraints sidechainParams amount >>=
-    balanceSignAndSubmit "Mint CandidatePermissionToken"
+  txId <- candidatePermissionTokenLookupsAndConstraints sidechainParams amount
+    >>=
+      balanceSignAndSubmit "Mint CandidatePermissionToken"
 
   pure { transactionId: txId, candidatePermissionCurrencySymbol }

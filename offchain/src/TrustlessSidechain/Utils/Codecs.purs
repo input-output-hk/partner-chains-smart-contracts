@@ -56,7 +56,7 @@ import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 -- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/
 
 -- | JSON codec converting between a bytestring and its hexadecimal representation
-byteArrayCodec ∷ CA.JsonCodec ByteArray
+byteArrayCodec :: CA.JsonCodec ByteArray
 byteArrayCodec = CA.prismaticCodec "ByteArray"
   hexToByteArray
   byteArrayToHex
@@ -64,24 +64,24 @@ byteArrayCodec = CA.prismaticCodec "ByteArray"
 
 -- | JSON codec converiting between a Plutus transaction input and the conventional
 -- | CLI format (TX_ID#TX_IDX)
-transactionInputCodec ∷ CA.JsonCodec TransactionInput
+transactionInputCodec :: CA.JsonCodec TransactionInput
 transactionInputCodec =
   CA.prismaticCodec "TransactionInput" toF fromF CA.string
   where
-  toF ∷ String → Maybe TransactionInput
+  toF :: String -> Maybe TransactionInput
   toF txIn =
     case split (Pattern "#") txIn of
-      [ txId, txIdx ] → ado
-        index ← UInt.fromString txIdx
-        transactionId ← (decodeCbor <<< wrap) =<< hexToByteArray txId
+      [ txId, txIdx ] -> ado
+        index <- UInt.fromString txIdx
+        transactionId <- (decodeCbor <<< wrap) =<< hexToByteArray txId
         in
           TransactionInput
             { transactionId
             , index
             }
-      _ → Nothing
+      _ -> Nothing
 
-  fromF ∷ TransactionInput → String
+  fromF :: TransactionInput -> String
   fromF (TransactionInput txIn) = txHashStr <> "#" <> indexStr
     where
     indexStr = UInt.toString txIn.index
@@ -90,7 +90,7 @@ transactionInputCodec =
 -- | `thresholdCodec` is the codec for the threshold in `Options.Types.Config`.
 -- | Note that this codec has no relation to the `thresholdNumerator` and
 -- | `thresholdDenominator` fields in `SidechainParams`.
-thresholdCodec ∷ CA.JsonCodec { numerator ∷ Int, denominator ∷ Int }
+thresholdCodec :: CA.JsonCodec { numerator :: Int, denominator :: Int }
 thresholdCodec = CA.object "threshold" $
   CAR.record
     { numerator: CA.int
@@ -98,14 +98,14 @@ thresholdCodec = CA.object "threshold" $
     }
 
 -- | JSON codec for PubKeyHash.
-governanceAuthorityCodec ∷ CA.JsonCodec GovernanceAuthority
+governanceAuthorityCodec :: CA.JsonCodec GovernanceAuthority
 governanceAuthorityCodec = CA.prismaticCodec "GovernanceAuthority"
   (Just <<< mkGovernanceAuthority)
   unwrap
   pubKeyHashCodec
 
 -- | See Note [BigInt values and JSON]
-scParamsCodec ∷ CA.JsonCodec SidechainParams
+scParamsCodec :: CA.JsonCodec SidechainParams
 scParamsCodec =
   wrapIso SidechainParams $
     ( CAR.object "sidechainParameters"
@@ -125,14 +125,14 @@ scParamsCodec =
         }
     )
 
-pubKeyHashCodec ∷ CA.JsonCodec PaymentPubKeyHash
+pubKeyHashCodec :: CA.JsonCodec PaymentPubKeyHash
 pubKeyHashCodec = CA.prismaticCodec "PaymentPubKeyHash"
   (Just <<< wrap)
   unwrap
   ed25519KeyHashCodec
 
 -- | JSON codec for ed25519KeyHash.
-ed25519KeyHashCodec ∷ CA.JsonCodec Ed25519KeyHash
+ed25519KeyHashCodec :: CA.JsonCodec Ed25519KeyHash
 ed25519KeyHashCodec = CA.prismaticCodec "Ed25519KeyHash"
   (CborBytes >>> decodeCbor)
   (unwrap <<< encodeCbor)
@@ -145,11 +145,11 @@ ed25519KeyHashCodec = CA.prismaticCodec "Ed25519KeyHash"
 -- | range of Int.
 -- | AssetName is encoded as the defined in the EncodeAeson instance
 -- | provided in cardano-transaction-lib.
-encodeInitTokenStatusData ∷ Map AssetName BigNum → Json
+encodeInitTokenStatusData :: Map AssetName BigNum -> Json
 encodeInitTokenStatusData = J.fromObject <<< Object.fromFoldable <<< toKvs
   where
   toKvs m = Array.zipWith
-    ( \k v → (Aeson.stringifyAeson $ Aeson.encodeAeson k) /\
+    ( \k v -> (Aeson.stringifyAeson $ Aeson.encodeAeson k) /\
         CA.encode bigNumCodec v
     )
     (Array.fromFoldable $ Map.keys m)
@@ -157,7 +157,7 @@ encodeInitTokenStatusData = J.fromObject <<< Object.fromFoldable <<< toKvs
 
 -- | JSON codec for `BigInt`.
 -- | See Note [BigInt values and JSON]
-bigIntCodec ∷ CA.JsonCodec BigInt
+bigIntCodec :: CA.JsonCodec BigInt
 bigIntCodec = CA.prismaticCodec "BigInt"
   (Just <<< BigInt.fromInt)
   unsafeToInt
@@ -165,11 +165,11 @@ bigIntCodec = CA.prismaticCodec "BigInt"
 
 -- | JSON codec for `BigInt`.
 -- | See Note [BigInt values and JSON]
-bigNumCodec ∷ CA.JsonCodec BigNum
+bigNumCodec :: CA.JsonCodec BigNum
 bigNumCodec = CA.prismaticCodec "BigInt"
   (Just <<< BigNum.fromInt)
   (BigNum.toInt >>> unsafePartial fromJust)
   CA.int
 
-unsafeToInt ∷ BigInt → Int
+unsafeToInt :: BigInt -> Int
 unsafeToInt x = unsafePartial $ fromJust $ BigInt.toInt x

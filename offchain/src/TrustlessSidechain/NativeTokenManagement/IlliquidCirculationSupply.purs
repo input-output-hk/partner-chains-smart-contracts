@@ -53,26 +53,26 @@ import TrustlessSidechain.Versioning.Types
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
 
-illiquidCirculationSupplyValidator ∷
-  ∀ r.
-  VersionOracleConfig →
+illiquidCirculationSupplyValidator ::
+  forall r.
+  VersionOracleConfig ->
   Run (EXCEPT OffchainError + r) PlutusScript
 illiquidCirculationSupplyValidator voc =
   mkValidatorWithParams IlliquidCirculationSupplyValidator [ toData voc ]
 
-icsWithdrawalTokenName ∷ AssetName
+icsWithdrawalTokenName :: AssetName
 icsWithdrawalTokenName = emptyAssetName
 
-illiquidCirculationSupplyLookupsAndConstraints ∷
-  ∀ r.
-  SidechainParams →
+illiquidCirculationSupplyLookupsAndConstraints ::
+  forall r.
+  SidechainParams ->
   Run
     (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
-    { icsLookups ∷ Lookups.ScriptLookups
-    , icsConstraints ∷ TxConstraints.TxConstraints
+    { icsLookups :: Lookups.ScriptLookups
+    , icsConstraints :: TxConstraints.TxConstraints
     }
 illiquidCirculationSupplyLookupsAndConstraints sp = do
-  (icsRefTxInput /\ icsRefTxOutput) ←
+  (icsRefTxInput /\ icsRefTxOutput) <-
     Versioning.getVersionedScriptRefUtxo sp
       ( VersionOracle
           { version: BigNum.fromInt 1
@@ -87,18 +87,18 @@ illiquidCirculationSupplyLookupsAndConstraints sp = do
         icsRefTxInput
     }
 
-depositMoreToSupply ∷
-  ∀ r.
-  SidechainParams →
-  Value →
-  (TransactionInput /\ TransactionOutput) →
+depositMoreToSupply ::
+  forall r.
+  SidechainParams ->
+  Value ->
+  (TransactionInput /\ TransactionOutput) ->
   Run
     (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
     Unit
 depositMoreToSupply sp depositedValue utxo = do
 
-  versionOracleConfig ← Versioning.getVersionOracleConfig sp
-  illiquidCirculationSupplyValidator' ← illiquidCirculationSupplyValidator
+  versionOracleConfig <- Versioning.getVersionOracleConfig sp
+  illiquidCirculationSupplyValidator' <- illiquidCirculationSupplyValidator
     versionOracleConfig
 
   let
@@ -106,13 +106,13 @@ depositMoreToSupply sp depositedValue utxo = do
 
     value = unwrap >>> _.amount $ snd utxo
 
-  newValue ←
+  newValue <-
     fromMaybeThrow
       (GenericInternalError "Couldn't add values.")
       $ pure (value `Value.add` depositedValue)
 
   let
-    lookups ∷ Lookups.ScriptLookups
+    lookups :: Lookups.ScriptLookups
     lookups =
       Lookups.unspentOutputs (uncurry Map.singleton utxo)
         <> Lookups.validator illiquidCirculationSupplyValidator'
@@ -130,26 +130,26 @@ depositMoreToSupply sp depositedValue utxo = do
     "Illiquid circulation supply DepositMoreToSupply transaction"
     { constraints, lookups }
 
-withdrawFromSupply ∷
-  ∀ r.
-  SidechainParams →
-  ScriptHash →
-  Value →
-  (TransactionInput /\ TransactionOutput) →
+withdrawFromSupply ::
+  forall r.
+  SidechainParams ->
+  ScriptHash ->
+  Value ->
+  (TransactionInput /\ TransactionOutput) ->
   Run
     (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
     Unit
 withdrawFromSupply sp mintingPolicyHash withdrawnValue utxo = do
-  versionOracleConfig ← Versioning.getVersionOracleConfig sp
+  versionOracleConfig <- Versioning.getVersionOracleConfig sp
 
   { icsLookups
   , icsConstraints
-  } ← illiquidCirculationSupplyLookupsAndConstraints sp
+  } <- illiquidCirculationSupplyLookupsAndConstraints sp
 
-  illiquidCirculationSupplyValidator' ← illiquidCirculationSupplyValidator
+  illiquidCirculationSupplyValidator' <- illiquidCirculationSupplyValidator
     versionOracleConfig
 
-  (withdrawalPolicyInput /\ withdrawalPolicyOutput) ←
+  (withdrawalPolicyInput /\ withdrawalPolicyOutput) <-
     Versioning.getVersionedScriptRefUtxo
       sp
       ( VersionOracle
@@ -163,13 +163,13 @@ withdrawFromSupply sp mintingPolicyHash withdrawnValue utxo = do
 
     value = unwrap >>> _.amount $ snd utxo
 
-  newValue ←
+  newValue <-
     fromMaybeThrow
       (GenericInternalError "Couldn't subtract values.")
       $ pure (value `Value.minus` withdrawnValue)
 
   let
-    lookups ∷ Lookups.ScriptLookups
+    lookups :: Lookups.ScriptLookups
     lookups =
       Lookups.unspentOutputs (uncurry Map.singleton utxo)
         <> Lookups.validator illiquidCirculationSupplyValidator'

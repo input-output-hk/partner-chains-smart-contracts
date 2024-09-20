@@ -36,12 +36,12 @@ However, for now, we'll keep it simple and just have the parser specified in the
 
 {- | Given a function that takes a context-adding string and returns an error parser and a context
 this function maps a JavaScript error to an OffchainError.-}
-parseFromError ∷
-  (String → Parser String OffchainError) →
+parseFromError ::
+  (String -> Parser String OffchainError) ->
   -- ^ A function that takes a context-adding string and returns an error parser
-  Maybe ErrorContext →
+  Maybe ErrorContext ->
   -- ^ Context in which the error occurred
-  Error →
+  Error ->
   -- ^ A JavaScript error
   OffchainError
 parseFromError p mCtx e =
@@ -49,18 +49,18 @@ parseFromError p mCtx e =
     ctx = ppErrorContext mCtx
   in
     case runParser (message e) (p ctx) of
-      Left _ → UnknownContractError $ ctx <> (message e)
-      Right err → err
+      Left _ -> UnknownContractError $ ctx <> (message e)
+      Right err -> err
 
-parseDefaultError ∷ String → Parser String OffchainError
+parseDefaultError :: String -> Parser String OffchainError
 parseDefaultError = parseMissingCtlRuntime
 
 {- | Parses a `connection refused` error and returns a helpful error message, with a prompt to fix
 the most likely cause of the issue.-}
-parseMissingCtlRuntime ∷ String → Parser String OffchainError
+parseMissingCtlRuntime :: String -> Parser String OffchainError
 parseMissingCtlRuntime ctx = do
-  _ ← token $ string "connect ECONNREFUSED"
-  ip ← token ipParser
+  _ <- token $ string "connect ECONNREFUSED"
+  ip <- token ipParser
   pure $ InterpretedContractError
     $ ctx
     <> "Connection refused. Failed to connect to IP: "
@@ -68,24 +68,24 @@ parseMissingCtlRuntime ctx = do
     <> ". Is the CTL runtime running?"
 
 {- | Parses an IP address from a string.-}
-ipParser ∷ Parser String String
+ipParser :: Parser String String
 ipParser = do
-  octet1 ← octet
-  _ ← char '.'
-  octet2 ← octet
-  _ ← char '.'
-  octet3 ← octet
-  _ ← char '.'
-  octet4 ← octet
+  octet1 <- octet
+  _ <- char '.'
+  octet2 <- octet
+  _ <- char '.'
+  octet3 <- octet
+  _ <- char '.'
+  octet4 <- octet
   pure $ show octet1 <> "." <> show octet2 <> "." <> show octet3 <> "." <> show
     octet4
   where
-  octet ∷ Parser String Int
+  octet :: Parser String Int
   octet = do
-    digits ← many1 digit
+    digits <- many1 digit
     case fromString <<< fromCharArray <<< toUnfoldable $ digits of
-      Just num →
+      Just num ->
         if num >= 0 && num <= 255 then pure num
         else fail $ "Octet: " <> show num <>
           " out of range when attempting to parse IP address."
-      _ → fail "Empty octet when attempting to parse IP address."
+      _ -> fail "Empty octet when attempting to parse IP address."

@@ -34,36 +34,40 @@ import TrustlessSidechain.Versioning.Types (ScriptId)
 import TrustlessSidechain.Versioning.Utils as Utils
 import Type.Row (type (+))
 
-insertScriptsIdempotent ∷
-  ∀ r.
-  ( SidechainParams →
-    Int → -- Version number
+insertScriptsIdempotent ::
+  forall r.
+  ( SidechainParams ->
+    Int -> -- Version number
     Run (APP + r)
-      { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
-      , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
+      { versionedPolicies :: List (Tuple ScriptId PlutusScript)
+      , versionedValidators :: List (Tuple ScriptId PlutusScript)
       }
-  ) →
-  SidechainParams →
-  Int →
+  ) ->
+  SidechainParams ->
+  Int ->
   Run (APP + r)
     (Array TransactionHash)
 insertScriptsIdempotent f sidechainParams version = do
-  scripts ← f sidechainParams version
+  scripts <- f sidechainParams version
 
-  toInsert ∷
-    { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
-    , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
-    } ← getScriptsToInsert sidechainParams scripts version
+  toInsert ::
+    { versionedPolicies :: List (Tuple ScriptId PlutusScript)
+    , versionedValidators :: List (Tuple ScriptId PlutusScript)
+    } <- getScriptsToInsert sidechainParams scripts version
 
-  validatorsTxIds ←
-    (traverse ∷ ∀ m a b. Applicative m ⇒ (a → m b) → Array a → m (Array b))
+  validatorsTxIds <-
+    ( traverse ::
+        forall m a b. Applicative m => (a -> m b) -> Array a -> m (Array b)
+    )
       ( Utils.initializeVersionLookupsAndConstraints sidechainParams version >=>
           Utils.Transaction.balanceSignAndSubmit
             "Initialize versioned validators"
       )
       $ List.toUnfoldable (toInsert.versionedValidators)
-  policiesTxIds ←
-    (traverse ∷ ∀ m a b. Applicative m ⇒ (a → m b) → Array a → m (Array b))
+  policiesTxIds <-
+    ( traverse ::
+        forall m a b. Applicative m => (a -> m b) -> Array a -> m (Array b)
+    )
       ( Utils.initializeVersionLookupsAndConstraints sidechainParams version >=>
           Utils.Transaction.balanceSignAndSubmit "Initialize versioned policies"
       )
@@ -71,29 +75,29 @@ insertScriptsIdempotent f sidechainParams version = do
 
   pure $ policiesTxIds <> validatorsTxIds
 
-getScriptsToInsert ∷
-  ∀ r.
-  SidechainParams →
-  { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
-  , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
-  } →
-  Int →
+getScriptsToInsert ::
+  forall r.
+  SidechainParams ->
+  { versionedPolicies :: List (Tuple Types.ScriptId PlutusScript)
+  , versionedValidators :: List (Tuple Types.ScriptId PlutusScript)
+  } ->
+  Int ->
   Run (APP + r)
-    { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
-    , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
+    { versionedPolicies :: List (Tuple Types.ScriptId PlutusScript)
+    , versionedValidators :: List (Tuple Types.ScriptId PlutusScript)
     }
 getScriptsToInsert
   sidechainParams
   toFilterScripts
   version = do
 
-  comparisonScripts ←
+  comparisonScripts <-
     getActualVersionedPoliciesAndValidators
       sidechainParams
       version
 
   let
-    filterScripts ∷ ∀ a. Eq a ⇒ List a → List a → List a
+    filterScripts :: forall a. Eq a => List a -> List a -> List a
     filterScripts sublist list = filter (not <<< flip elem list) sublist
 
   pure
@@ -105,27 +109,27 @@ getScriptsToInsert
 
 -- | Perform a token initialization action, if the corresponding
 -- | init token exists. If it doesn't, return Nothing.
-init ∷
-  ∀ r.
-  (String → SidechainParams → Run (APP + r) TransactionHash) →
-  String →
-  AssetName →
-  SidechainParams →
+init ::
+  forall r.
+  (String -> SidechainParams -> Run (APP + r) TransactionHash) ->
+  String ->
+  AssetName ->
+  SidechainParams ->
   Run (APP + r) (Maybe TransactionHash)
 init f op nm sp = do
-  tokenExists ← map (Map.member nm <<< _.initTokenStatusData)
+  tokenExists <- map (Map.member nm <<< _.initTokenStatusData)
     (getInitTokenStatus sp)
   if tokenExists then Just <$> f op sp else pure Nothing
 
 -- | Get the init token data for the own wallet. Used in InitTokenStatus
 -- | endpoint.
-getInitTokenStatus ∷
-  ∀ r.
-  SidechainParams →
+getInitTokenStatus ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    { initTokenStatusData ∷ Map AssetName BigNum }
+    { initTokenStatusData :: Map AssetName BigNum }
 getInitTokenStatus scParams = do
-  { currencySymbol } ← initTokenCurrencyInfo scParams
+  { currencySymbol } <- initTokenCurrencyInfo scParams
 
   -- NOTE: If Value later exposes a way to filter by currency (or to `map` or
   -- `lookup`), save a little computation by doing that before combining in
@@ -134,10 +138,10 @@ getInitTokenStatus scParams = do
 
 -- | Get the init token data for the given `CurrencySymbol` from a given
 -- | `Value`. Used in the InitTokenStatus endpoint.
-initTokenStatus ∷
-  ScriptHash →
-  Value →
-  { initTokenStatusData ∷ Map AssetName BigNum }
+initTokenStatus ::
+  ScriptHash ->
+  Value ->
+  { initTokenStatusData :: Map AssetName BigNum }
 initTokenStatus sym =
   Value.getMultiAsset
     >>> unwrap

@@ -18,18 +18,18 @@ import Test.QuickCheck
 import Test.QuickCheck.Gen (Gen)
 
 -- | Helper to verify that 'toData >>> fromData' is 'Just' for the given type.
-toDataLaws ∷
-  ∀ (a ∷ Type).
-  ToData a ⇒
-  FromData a ⇒
-  Eq a ⇒
-  Show a ⇒
-  Int →
-  Gen a →
+toDataLaws ::
+  forall (a :: Type).
+  ToData a =>
+  FromData a =>
+  Eq a =>
+  Show a =>
+  Int ->
+  Gen a ->
   Effect Unit
 toDataLaws tests gen = quickCheckGen' tests $ do
-  x ← gen
+  x <- gen
   let y = fromData $ toData x
   pure $ case y of
-    Nothing → withHelp false "Could not deserialize"
-    Just y' → assertEquals x y'
+    Nothing -> withHelp false "Could not deserialize"
+    Just y' -> assertEquals x y'

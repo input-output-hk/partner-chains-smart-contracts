@@ -64,8 +64,8 @@ import Type.Row (type (+))
 -- | A newtype for the unbalanced transaction after creating one with datums
 -- | and redeemers not attached.
 newtype UnbalancedTx = UnbalancedTx
-  { transaction ∷ Transaction -- the unbalanced tx created
-  , usedUtxos ∷ Map TransactionInput TransactionOutput
+  { transaction :: Transaction -- the unbalanced tx created
+  , usedUtxos :: Map TransactionInput TransactionOutput
   }
 
 derive instance Generic UnbalancedTx _
@@ -78,8 +78,8 @@ instance Show UnbalancedTx where
 -- | Redeemer that hasn't yet been indexed, that tracks its purpose info
 -- | that is enough to find its index given a `RedeemersContext`.
 newtype UnindexedRedeemer = UnindexedRedeemer
-  { datum ∷ PlutusData
-  , purpose ∷ RedeemerPurpose
+  { datum :: PlutusData
+  , purpose :: RedeemerPurpose
   }
 
 derive instance Generic UnindexedRedeemer _
@@ -105,52 +105,52 @@ derive instance Eq RedeemerPurpose
 
 instance EncodeAeson RedeemerPurpose where
   encodeAeson = case _ of
-    ForSpend txo → encodeAeson { tag: "ForSpend", value: encodeAeson txo }
-    ForMint mps → encodeAeson { tag: "ForMint", value: encodeAeson mps }
-    ForReward addr → encodeAeson { tag: "ForReward", value: encodeAeson addr }
-    ForCert cert → encodeAeson { tag: "ForCert", value: encodeAeson cert }
+    ForSpend txo -> encodeAeson { tag: "ForSpend", value: encodeAeson txo }
+    ForMint mps -> encodeAeson { tag: "ForMint", value: encodeAeson mps }
+    ForReward addr -> encodeAeson { tag: "ForReward", value: encodeAeson addr }
+    ForCert cert -> encodeAeson { tag: "ForCert", value: encodeAeson cert }
 
 instance Show RedeemerPurpose where
   show = genericShow
 
 data TransactionF a
-  = UtxosAt Address (UtxoMap → a)
-  | GetUtxo TransactionInput (Maybe TransactionOutput → a)
+  = UtxosAt Address (UtxoMap -> a)
+  | GetUtxo TransactionInput (Maybe TransactionOutput -> a)
   | MkUnbalancedTx ScriptLookups TxConstraints
-      (UnbalancedTx → a)
+      (UnbalancedTx -> a)
   | BalanceTxWithConstraints UnbalancedTx BalanceTxConstraintsBuilder
-      (Transaction → a)
+      (Transaction -> a)
   | SignTransaction Transaction
-      (Transaction → a)
-  | Submit Transaction (TransactionHash → a)
+      (Transaction -> a)
+  | Submit Transaction (TransactionHash -> a)
   | AwaitTxConfirmed TransactionHash a
 
-derive instance functorTransactionF ∷ Functor TransactionF
+derive instance functorTransactionF :: Functor TransactionF
 
-type TRANSACTION r = (transaction ∷ TransactionF | r)
+type TRANSACTION r = (transaction :: TransactionF | r)
 
-_transaction ∷ Proxy "transaction"
+_transaction :: Proxy "transaction"
 _transaction = Proxy
 
-handleTransactionWith ∷
-  ∀ r. (TransactionF ~> Run r) → Run (TRANSACTION + r) ~> Run r
+handleTransactionWith ::
+  forall r. (TransactionF ~> Run r) -> Run (TRANSACTION + r) ~> Run r
 handleTransactionWith f = interpret (on _transaction f send)
 
-utxosAt ∷
-  ∀ r. Address → Run (TRANSACTION + r) UtxoMap
+utxosAt ::
+  forall r. Address -> Run (TRANSACTION + r) UtxoMap
 utxosAt address = Run.lift _transaction
   (UtxosAt address identity)
 
-getUtxo ∷
-  ∀ r.
-  TransactionInput →
+getUtxo ::
+  forall r.
+  TransactionInput ->
   Run (TRANSACTION + r) (Maybe TransactionOutput)
 getUtxo oref = Run.lift _transaction (GetUtxo oref identity)
 
-mkUnbalancedTx ∷
-  ∀ r.
-  ScriptLookups →
-  (TxConstraints) →
+mkUnbalancedTx ::
+  forall r.
+  ScriptLookups ->
+  (TxConstraints) ->
   Run (EXCEPT MkUnbalancedTxError + TRANSACTION + r)
     UnbalancedTx
 mkUnbalancedTx lookups constraints = Run.lift
@@ -159,83 +159,83 @@ mkUnbalancedTx lookups constraints = Run.lift
       identity
   )
 
-balanceTxWithConstraints ∷
-  ∀ r.
-  UnbalancedTx →
-  BalanceTxConstraintsBuilder →
+balanceTxWithConstraints ::
+  forall r.
+  UnbalancedTx ->
+  BalanceTxConstraintsBuilder ->
   Run (EXCEPT BalanceTxError.BalanceTxError + TRANSACTION + r)
     Transaction
 balanceTxWithConstraints unbalancedTx constraints = Run.lift
   _transaction
   (BalanceTxWithConstraints unbalancedTx constraints identity)
 
-signTransaction ∷
-  ∀ r.
-  Transaction →
+signTransaction ::
+  forall r.
+  Transaction ->
   Run (TRANSACTION + r) Transaction
 signTransaction tx = Run.lift _transaction (SignTransaction tx identity)
 
-submit ∷
-  ∀ r.
-  Transaction →
+submit ::
+  forall r.
+  Transaction ->
   Run (TRANSACTION + r) TransactionHash
 submit tx = Run.lift _transaction (Submit tx identity)
 
-awaitTxConfirmed ∷
-  ∀ r.
-  TransactionHash →
+awaitTxConfirmed ::
+  forall r.
+  TransactionHash ->
   Run (TRANSACTION + r) Unit
 awaitTxConfirmed tx = Run.lift _transaction (AwaitTxConfirmed tx unit)
 
-balanceTx ∷
-  ∀ r.
-  UnbalancedTx →
+balanceTx ::
+  forall r.
+  UnbalancedTx ->
   Run (EXCEPT BalanceTxError.BalanceTxError + TRANSACTION + r)
     Transaction
 balanceTx = flip balanceTxWithConstraints mempty
 
-balanceTxWithConstraintsTx ∷
-  UnbalancedTx →
-  BalanceTxConstraintsBuilder →
+balanceTxWithConstraintsTx ::
+  UnbalancedTx ->
+  BalanceTxConstraintsBuilder ->
   Contract Transaction
 balanceTxWithConstraintsTx unbalancedTx constraintsBuilder =
   Transaction.balanceTxWithConstraints (unwrap unbalancedTx).transaction
     (unwrap unbalancedTx).usedUtxos
     constraintsBuilder >>=
     case _ of
-      Left err → throwError $ error $ explainBalanceTxError err
-      Right res → pure res
+      Left err -> throwError $ error $ explainBalanceTxError err
+      Right res -> pure res
 
-handleTransactionLive ∷
-  ∀ r. TransactionF ~> Run (EXCEPT OffchainError + CONTRACT + r)
+handleTransactionLive ::
+  forall r. TransactionF ~> Run (EXCEPT OffchainError + CONTRACT + r)
 handleTransactionLive =
   case _ of
-    UtxosAt addr f → f <$> withTry
+    UtxosAt addr f -> f <$> withTry
       (fromError "utxosAt: ")
       (Transaction.utxosAt addr)
-    GetUtxo oref f → f <$> withTry (fromError "getUtxo: ")
+    GetUtxo oref f -> f <$> withTry (fromError "getUtxo: ")
       (Transaction.getUtxo oref)
-    MkUnbalancedTx lookups constraints f →
+    MkUnbalancedTx lookups constraints f ->
       f <$> withTry
         (fromError "mkUnabalancedTx: ")
         (toUnbalancedTx <$> UnbalancedTx.mkUnbalancedTx lookups constraints)
-    BalanceTxWithConstraints unbalancedTx constraints f →
+    BalanceTxWithConstraints unbalancedTx constraints f ->
       f <$> withTry
         (fromError "balancedTxWithConstraints: ")
         ( balanceTxWithConstraintsTx unbalancedTx constraints
         )
-    SignTransaction tx f → f <$> withTry (fromError "signTransaction: ")
+    SignTransaction tx f -> f <$> withTry (fromError "signTransaction: ")
       (Transaction.signTransaction tx)
-    Submit tx f → f <$> withTry (fromError "submit: ") (Transaction.submit tx)
-    AwaitTxConfirmed tx x → (const x) <$> withTry
+    Submit tx f -> f <$> withTry (fromError "submit: ") (Transaction.submit tx)
+    AwaitTxConfirmed tx x -> (const x) <$> withTry
       (fromError "awaitTxConfirmed: ")
       (Transaction.awaitTxConfirmed tx)
   where
-  fromError ∷ String → Error → OffchainError
+  fromError :: String -> Error -> OffchainError
   fromError ctx = parseFromError parseDefaultError
     (Just (ErrorContext Transaction ctx))
 
-  toUnbalancedTx ∷ (Transaction /\ UtxoMap) → UnbalancedTx
+  toUnbalancedTx :: (Transaction /\ UtxoMap) -> UnbalancedTx
   toUnbalancedTx (tx /\ utxoMap) = UnbalancedTx
     { transaction: tx
     , usedUtxos: utxoMap

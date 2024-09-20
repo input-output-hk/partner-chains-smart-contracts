@@ -54,35 +54,35 @@ instance Show EcdsaSecp256k1PubKey where
       <> ")"
 
 -- | Hex serializes the raw bytes
-serialiseEcdsaSecp256k1PubKey ∷ EcdsaSecp256k1PubKey → String
+serialiseEcdsaSecp256k1PubKey :: EcdsaSecp256k1PubKey -> String
 serialiseEcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey pubKey) =
   ByteArray.byteArrayToHex pubKey
 
 -- | Hex serializes the raw bytes
-serialiseEcdsaSecp256k1PrivateKey ∷ EcdsaSecp256k1PrivateKey → String
+serialiseEcdsaSecp256k1PrivateKey :: EcdsaSecp256k1PrivateKey -> String
 serialiseEcdsaSecp256k1PrivateKey (EcdsaSecp256k1PrivateKey privKey) =
   ByteArray.byteArrayToHex privKey
 
 -- | Hex serializes the raw bytes
-serialiseEcdsaSecp256k1Signature ∷ EcdsaSecp256k1Signature → String
+serialiseEcdsaSecp256k1Signature :: EcdsaSecp256k1Signature -> String
 serialiseEcdsaSecp256k1Signature (EcdsaSecp256k1Signature privKey) =
   ByteArray.byteArrayToHex privKey
 
 -- | Smart constructor for `EcdsaSecp256k1PubKey` to ensure it is a valid
 -- | compressed (33 bytes) secp256k1 public key.
-ecdsaSecp256k1PubKey ∷ ByteArray → Maybe EcdsaSecp256k1PubKey
+ecdsaSecp256k1PubKey :: ByteArray -> Maybe EcdsaSecp256k1PubKey
 ecdsaSecp256k1PubKey bs
   | ByteArray.byteLength bs == 33
       && pubKeyVerify bs = Just $ EcdsaSecp256k1PubKey bs
   | otherwise = Nothing
 
 -- | Get the underlying `ByteArray` of the `EcdsaSecp256k1PubKey`.
-getEcdsaSecp256k1PubKeyByteArray ∷ EcdsaSecp256k1PubKey → ByteArray
+getEcdsaSecp256k1PubKeyByteArray :: EcdsaSecp256k1PubKey -> ByteArray
 getEcdsaSecp256k1PubKeyByteArray (EcdsaSecp256k1PubKey byteArray) = byteArray
 
 -- | Construct a `EcdsaSecp256k1PubKey` without verifying invariants. Use with
 -- | extreme care.
-byteArrayToEcdsaSecp256k1PubKeyUnsafe ∷ ByteArray → EcdsaSecp256k1PubKey
+byteArrayToEcdsaSecp256k1PubKeyUnsafe :: ByteArray -> EcdsaSecp256k1PubKey
 byteArrayToEcdsaSecp256k1PubKeyUnsafe = EcdsaSecp256k1PubKey
 
 -- | Invariant 1: length of the privkey must be 32 bytes
@@ -110,7 +110,7 @@ instance Show EcdsaSecp256k1PrivateKey where
 
 -- | Smart constructor for `EcdsaSecp256k1PrivateKey` which checks its
 -- | invariants.
-ecdsaSecp256k1PrivateKey ∷ ByteArray → Maybe EcdsaSecp256k1PrivateKey
+ecdsaSecp256k1PrivateKey :: ByteArray -> Maybe EcdsaSecp256k1PrivateKey
 ecdsaSecp256k1PrivateKey byteArray
   | ByteArray.byteLength byteArray == 32
       && secKeyVerify byteArray = Just $ EcdsaSecp256k1PrivateKey byteArray
@@ -118,11 +118,12 @@ ecdsaSecp256k1PrivateKey byteArray
 
 -- | Construct an `EcdsaSecp256k1PrivateKey` without checking its invariants.
 -- | Use with extreme care.
-byteArrayToEcdsaSecp256k1PrivateKeyUnsafe ∷ ByteArray → EcdsaSecp256k1PrivateKey
+byteArrayToEcdsaSecp256k1PrivateKeyUnsafe ::
+  ByteArray -> EcdsaSecp256k1PrivateKey
 byteArrayToEcdsaSecp256k1PrivateKeyUnsafe = EcdsaSecp256k1PrivateKey
 
 -- | Get the underlying `ByteArray` of an `EcdsaSecp256k1PrivateKey`.
-getEcdsaSecp256k1PrivateKeyByteArray ∷ EcdsaSecp256k1PrivateKey → ByteArray
+getEcdsaSecp256k1PrivateKeyByteArray :: EcdsaSecp256k1PrivateKey -> ByteArray
 getEcdsaSecp256k1PrivateKeyByteArray (EcdsaSecp256k1PrivateKey byteArray) =
   byteArray
 
@@ -145,18 +146,18 @@ instance Show EcdsaSecp256k1Message where
       <> ")"
 
 -- | Smart constructor for `EcdsaSecp256k1Message` which verifies its invariant.
-ecdsaSecp256k1Message ∷ ByteArray → Maybe EcdsaSecp256k1Message
+ecdsaSecp256k1Message :: ByteArray -> Maybe EcdsaSecp256k1Message
 ecdsaSecp256k1Message byteArray
   | ByteArray.byteLength byteArray == 32 = Just $ EcdsaSecp256k1Message byteArray
   | otherwise = Nothing
 
 -- | Construct an `EcdsaSecp256k1Message` without verifying its invariant. Use
 -- | with extreme care.
-byteArrayToEcdsaSecp256k1MessageUnsafe ∷ ByteArray → EcdsaSecp256k1Message
+byteArrayToEcdsaSecp256k1MessageUnsafe :: ByteArray -> EcdsaSecp256k1Message
 byteArrayToEcdsaSecp256k1MessageUnsafe = EcdsaSecp256k1Message
 
 -- | Get the underlying `ByteArray` from an `EcdsaSecp256k1Message`.
-getEcdsaSecp256k1MessageByteArray ∷ EcdsaSecp256k1Message → ByteArray
+getEcdsaSecp256k1MessageByteArray :: EcdsaSecp256k1Message -> ByteArray
 getEcdsaSecp256k1MessageByteArray (EcdsaSecp256k1Message byteArray) = byteArray
 
 -- | Invariant: length of the signature must be 64 bytes.
@@ -179,40 +180,41 @@ instance Show EcdsaSecp256k1Signature where
 
 -- | `ecdsaSecp256k1Signature` is a smart constructor for `EcdsaSecp256k1Signature` to
 -- | verify the invariants.
-ecdsaSecp256k1Signature ∷ ByteArray → Maybe EcdsaSecp256k1Signature
+ecdsaSecp256k1Signature :: ByteArray -> Maybe EcdsaSecp256k1Signature
 ecdsaSecp256k1Signature byteArray
   | ByteArray.byteLength byteArray == 64 = Just $ EcdsaSecp256k1Signature
       byteArray
   | otherwise = Nothing
 
 -- | Get the underlying `ByteArray` of a `EcdsaSecp256k1Signature`
-getEcdsaSecp256k1SignatureByteArray ∷ EcdsaSecp256k1Signature → ByteArray
+getEcdsaSecp256k1SignatureByteArray :: EcdsaSecp256k1Signature -> ByteArray
 getEcdsaSecp256k1SignatureByteArray (EcdsaSecp256k1Signature byteArray) =
   byteArray
 
 -- | Construct a `EcdsaSecp256k1Signature` without verifying invariants. Use
 -- | with extreme care.
-byteArrayToEcdsaSecp256k1SignatureUnsafe ∷ ByteArray → EcdsaSecp256k1Signature
+byteArrayToEcdsaSecp256k1SignatureUnsafe :: ByteArray -> EcdsaSecp256k1Signature
 byteArrayToEcdsaSecp256k1SignatureUnsafe = EcdsaSecp256k1Signature
 
 -- TODO: newtype checks the type aliases above
 
-foreign import generateRandomPrivateKey ∷ Effect EcdsaSecp256k1PrivateKey
+foreign import generateRandomPrivateKey :: Effect EcdsaSecp256k1PrivateKey
 
-foreign import toPubKeyUnsafe ∷ EcdsaSecp256k1PrivateKey → EcdsaSecp256k1PubKey
+foreign import toPubKeyUnsafe ::
+  EcdsaSecp256k1PrivateKey -> EcdsaSecp256k1PubKey
 
-foreign import pubKeyVerify ∷ ByteArray → Boolean
+foreign import pubKeyVerify :: ByteArray -> Boolean
 
-foreign import secKeyVerify ∷ ByteArray → Boolean
+foreign import secKeyVerify :: ByteArray -> Boolean
 
-foreign import sign ∷
-  EcdsaSecp256k1Message → EcdsaSecp256k1PrivateKey → EcdsaSecp256k1Signature
+foreign import sign ::
+  EcdsaSecp256k1Message -> EcdsaSecp256k1PrivateKey -> EcdsaSecp256k1Signature
 
-foreign import signatureExport ∷ EcdsaSecp256k1Signature → ByteArray
+foreign import signatureExport :: EcdsaSecp256k1Signature -> ByteArray
 
 -- | Serialises a signature to DER format as hex encoded bytes
-serialiseEcdsaSecp256k1SignatureToDer ∷ EcdsaSecp256k1Signature → String
+serialiseEcdsaSecp256k1SignatureToDer :: EcdsaSecp256k1Signature -> String
 serialiseEcdsaSecp256k1SignatureToDer = ByteArray.byteArrayToHex <<<
   signatureExport
 
-foreign import blake2b256Hash ∷ ByteArray → ByteArray
+foreign import blake2b256Hash :: ByteArray -> ByteArray

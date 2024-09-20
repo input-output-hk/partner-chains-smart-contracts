@@ -25,7 +25,7 @@ import TrustlessSidechain.SidechainParams as SidechainParams
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 
 -- | `tests` aggregates all the tests together in one convenient function
-tests ∷ WrappedTests
+tests :: WrappedTests
 tests = testnetGroup "Initialising the candidate permission token mechanism" $
   do
     -- InitCandidatePermissionToken endpoint
@@ -35,7 +35,7 @@ tests = testnetGroup "Initialising the candidate permission token mechanism" $
 -- | no failure
 -- | Test running `initCandidatePermissionToken` twice, having run
 -- | `initTokensMint`, expecting idempotency
-testInitCandidatePermissionTokenIdempotent ∷ TestnetTest
+testInitCandidatePermissionTokenIdempotent :: TestnetTest
 testInitCandidatePermissionTokenIdempotent =
   Mote.Monad.test
     "Calling `InitCandidatePermissionToken` twice, expecting idempotency"
@@ -45,13 +45,13 @@ testInitCandidatePermissionTokenIdempotent =
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         ]
-    $ \alice → do
+    $ \alice -> do
         withUnliftApp (Wallet.withKeyWallet alice)
           do
             liftContract $ Log.logInfo'
               "InitSidechain 'testInitCandidatePermissionTokenIdempotent'"
-            genesisUtxo ← Test.Utils.getOwnTransactionInput
-            initGovernanceAuthority ← Governance.mkGovernanceAuthority
+            genesisUtxo <- Test.Utils.getOwnTransactionInput
+            initGovernanceAuthority <- Governance.mkGovernanceAuthority
               <$> getOwnPaymentPubKeyHash
             let
               version = 1
@@ -74,7 +74,7 @@ testInitCandidatePermissionTokenIdempotent =
               initCandidatePermissionTokenMintInfo
 
             -- Then do it again
-            res ← InitCandidatePermission.initCandidatePermissionToken
+            res <- InitCandidatePermission.initCandidatePermissionToken
               sidechainParams
               initCandidatePermissionTokenMintInfo
 

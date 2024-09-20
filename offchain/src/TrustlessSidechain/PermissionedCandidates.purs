@@ -54,39 +54,39 @@ import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Asset (emptyAssetName)
 import Type.Row (type (+))
 
-permissionedCandidatesTokenName ∷ TokenName
+permissionedCandidatesTokenName :: TokenName
 permissionedCandidatesTokenName = emptyAssetName
 
-mkUpdatePermissionedCandidatesLookupsAndConstraints ∷
-  ∀ r.
-  SidechainParams →
-  { permissionedCandidatesToAdd ∷
+mkUpdatePermissionedCandidatesLookupsAndConstraints ::
+  forall r.
+  SidechainParams ->
+  { permissionedCandidatesToAdd ::
       Array
-        { sidechainKey ∷ ByteArray
-        , auraKey ∷ ByteArray
-        , grandpaKey ∷ ByteArray
+        { sidechainKey :: ByteArray
+        , auraKey :: ByteArray
+        , grandpaKey :: ByteArray
         }
-  , permissionedCandidatesToRemove ∷
+  , permissionedCandidatesToRemove ::
       Maybe
         ( Array
-            { sidechainKey ∷ ByteArray
-            , auraKey ∷ ByteArray
-            , grandpaKey ∷ ByteArray
+            { sidechainKey :: ByteArray
+            , auraKey :: ByteArray
+            , grandpaKey :: ByteArray
             }
         )
-  } →
+  } ->
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    { lookups ∷ ScriptLookups
-    , constraints ∷ TxConstraints
+    { lookups :: ScriptLookups
+    , constraints :: TxConstraints
     }
 mkUpdatePermissionedCandidatesLookupsAndConstraints
   sidechainParams
   { permissionedCandidatesToAdd, permissionedCandidatesToRemove } = do
-  { permissionedCandidatesCurrencySymbol, permissionedCandidatesMintingPolicy } ←
+  { permissionedCandidatesCurrencySymbol, permissionedCandidatesMintingPolicy } <-
     PermissionedCandidates.getPermissionedCandidatesMintingPolicyAndCurrencySymbol
       sidechainParams
 
-  { permissionedCandidatesValidatorAddress, permissionedCandidatesValidator } ←
+  { permissionedCandidatesValidatorAddress, permissionedCandidatesValidator } <-
     PermissionedCandidates.getPermissionedCandidatesValidatorAndAddress
       sidechainParams
 
@@ -95,14 +95,14 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
       permissionedCandidatesValidator
 
   -- find the permissioned candidates UTxO
-  maybePermissionedCandidatesUTxO ←
+  maybePermissionedCandidatesUTxO <-
     ( Array.find
-        ( \(_ /\ TransactionOutput { amount, datum: outputDatum }) →
+        ( \(_ /\ TransactionOutput { amount, datum: outputDatum }) ->
             fromMaybe false $ do
-              d ← case outputDatum of
-                Just (OutputDatum d) → pure d
-                _ → Nothing
-              _ ← (fromData d ∷ Maybe PermissionedCandidatesValidatorDatum)
+              d <- case outputDatum of
+                Just (OutputDatum d) -> pure d
+                _ -> Nothing
+              _ <- (fromData d :: Maybe PermissionedCandidatesValidatorDatum)
               pure
                 ( Value.valueOf
                     ( Asset
@@ -121,30 +121,30 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
       Governance.governanceAuthorityLookupsAndConstraints
         (unwrap sidechainParams).governanceAuthority
 
-  oldCandidates ← case maybePermissionedCandidatesUTxO of
-    Nothing → pure []
+  oldCandidates <- case maybePermissionedCandidatesUTxO of
+    Nothing -> pure []
     Just
       ( _ /\ TransactionOutput { datum: outputDatum }
-      ) →
+      ) ->
       Run.note
         ( InvalidData
             "could not decode PermissionedCandidatesValidatorDatum"
         )
         $ do
-            d ← case outputDatum of
-              Just (OutputDatum d) → pure d
-              _ → Nothing
-            PermissionedCandidatesValidatorDatum { candidates } ← fromData d
+            d <- case outputDatum of
+              Just (OutputDatum d) -> pure d
+              _ -> Nothing
+            PermissionedCandidatesValidatorDatum { candidates } <- fromData d
             pure candidates
 
   let
-    filteredCandidates ∷ Array PermissionedCandidateKeys
+    filteredCandidates :: Array PermissionedCandidateKeys
     filteredCandidates = case permissionedCandidatesToRemove of
-      Nothing → []
-      Just candidatesToRemove → oldCandidates \\
+      Nothing -> []
+      Just candidatesToRemove -> oldCandidates \\
         (map PermissionedCandidateKeys candidatesToRemove)
 
-    newCandidates ∷ Array PermissionedCandidateKeys
+    newCandidates :: Array PermissionedCandidateKeys
     newCandidates = nub
       ( filteredCandidates <>
           (map PermissionedCandidateKeys permissionedCandidatesToAdd)
@@ -157,45 +157,45 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
         )
 
   let
-    value ∷ Value
+    value :: Value
     value = Value.singleton
       permissionedCandidatesCurrencySymbol
       permissionedCandidatesTokenName
       (BigNum.fromInt 1)
 
-    permissionedCandidatesDatum ∷ PlutusData
+    permissionedCandidatesDatum :: PlutusData
     permissionedCandidatesDatum = toData $
       PermissionedCandidatesValidatorDatum
         { candidates: newCandidates }
 
-    oldUtxoLookups ∷ ScriptLookups
+    oldUtxoLookups :: ScriptLookups
     oldUtxoLookups = case maybePermissionedCandidatesUTxO of
-      Nothing → mempty
-      Just (txInput /\ txOutput) →
+      Nothing -> mempty
+      Just (txInput /\ txOutput) ->
         Lookups.unspentOutputs $ Map.singleton txInput txOutput
 
-    lookups ∷ ScriptLookups
+    lookups :: ScriptLookups
     lookups = Lookups.validator permissionedCandidatesValidator
       <> Lookups.plutusMintingPolicy permissionedCandidatesMintingPolicy
       <> oldUtxoLookups
       <> governanceLookups
 
-    spendScriptOutputConstraints ∷ TxConstraints
+    spendScriptOutputConstraints :: TxConstraints
     spendScriptOutputConstraints = case maybePermissionedCandidatesUTxO of
-      Nothing → mempty
-      Just (txInput /\ _) → Constraints.mustSpendScriptOutput
+      Nothing -> mempty
+      Just (txInput /\ _) -> Constraints.mustSpendScriptOutput
         txInput
         (RedeemerDatum $ toData UpdatePermissionedCandidates)
 
     mintTokenConstraint = case maybePermissionedCandidatesUTxO of
-      Just _ → mempty
-      Nothing → Constraints.mustMintCurrencyWithRedeemer
+      Just _ -> mempty
+      Nothing -> Constraints.mustMintCurrencyWithRedeemer
         permissionedCandidatesCurrencySymbol
         (RedeemerDatum $ toData PermissionedCandidatesMint)
         permissionedCandidatesTokenName
         (Int.fromInt 1)
 
-    constraints ∷ TxConstraints
+    constraints :: TxConstraints
     constraints =
       Constraints.mustPayToScript permissionedCandidatesValidatorHash
         permissionedCandidatesDatum

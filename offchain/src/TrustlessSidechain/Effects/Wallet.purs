@@ -37,49 +37,50 @@ import Type.Proxy (Proxy(Proxy))
 import Type.Row (type (+))
 
 data WalletF a
-  = GetNetworkId (NetworkId → a)
-  | GetWalletAddresses (Array Address → a)
-  | OwnPaymentPubKeyHashes (Array PaymentPubKeyHash → a)
-  | GetWalletUtxos (Maybe UtxoMap → a)
+  = GetNetworkId (NetworkId -> a)
+  | GetWalletAddresses (Array Address -> a)
+  | OwnPaymentPubKeyHashes (Array PaymentPubKeyHash -> a)
+  | GetWalletUtxos (Maybe UtxoMap -> a)
 
-derive instance functorWalletF ∷ Functor WalletF
+derive instance functorWalletF :: Functor WalletF
 
-type WALLET r = (wallet ∷ WalletF | r)
+type WALLET r = (wallet :: WalletF | r)
 
-_wallet ∷ Proxy "wallet"
+_wallet :: Proxy "wallet"
 _wallet = Proxy
 
-handleWalletWith ∷
-  ∀ r. (WalletF ~> Run r) → Run (WALLET + r) ~> Run r
+handleWalletWith ::
+  forall r. (WalletF ~> Run r) -> Run (WALLET + r) ~> Run r
 handleWalletWith f = interpret (on _wallet f send)
 
-getNetworkId ∷ ∀ r. Run (WALLET + r) NetworkId
+getNetworkId :: forall r. Run (WALLET + r) NetworkId
 getNetworkId = Run.lift _wallet (GetNetworkId identity)
 
-getWalletAddresses ∷ ∀ r. Run (WALLET + r) (Array Address)
+getWalletAddresses :: forall r. Run (WALLET + r) (Array Address)
 getWalletAddresses = Run.lift _wallet (GetWalletAddresses identity)
 
-ownPaymentPubKeyHashes ∷ ∀ r. Run (WALLET + r) (Array PaymentPubKeyHash)
+ownPaymentPubKeyHashes :: forall r. Run (WALLET + r) (Array PaymentPubKeyHash)
 ownPaymentPubKeyHashes = Run.lift _wallet (OwnPaymentPubKeyHashes identity)
 
-getWalletUtxos ∷ ∀ r. Run (WALLET + r) (Maybe UtxoMap)
+getWalletUtxos :: forall r. Run (WALLET + r) (Maybe UtxoMap)
 getWalletUtxos = Run.lift _wallet (GetWalletUtxos identity)
 
-handleWalletLive ∷ ∀ r. WalletF ~> Run (EXCEPT OffchainError + CONTRACT + r)
+handleWalletLive ::
+  forall r. WalletF ~> Run (EXCEPT OffchainError + CONTRACT + r)
 handleWalletLive = case _ of
-  GetNetworkId f → f <$> withTry
+  GetNetworkId f -> f <$> withTry
     (fromError "getNetworkId: ")
     Address.getNetworkId
-  GetWalletAddresses f → f <$> withTry
+  GetWalletAddresses f -> f <$> withTry
     (fromError "getWalletAddress: ")
     Wallet.getWalletAddresses
-  OwnPaymentPubKeyHashes f → f <$> withTry
+  OwnPaymentPubKeyHashes f -> f <$> withTry
     (fromError "ownPaymentPubKeyHashes: ")
     Wallet.ownPaymentPubKeyHashes
-  GetWalletUtxos f → f <$> withTry
+  GetWalletUtxos f -> f <$> withTry
     (fromError "getWalletUtxos: ")
     Wallet.getWalletUtxos
   where
-  fromError ∷ String → Error → OffchainError
+  fromError :: String -> Error -> OffchainError
   fromError ctx = parseFromError parseDefaultError
     (Just (ErrorContext Wallet ctx))

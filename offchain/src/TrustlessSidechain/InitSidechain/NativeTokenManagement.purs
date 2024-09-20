@@ -17,17 +17,17 @@ import TrustlessSidechain.Versioning
   )
 import Type.Row (type (+))
 
-initNativeTokenMgmt ∷
-  ∀ r.
-  SidechainParams →
-  Int →
+initNativeTokenMgmt ::
+  forall r.
+  SidechainParams ->
+  Int ->
   Run (APP + r)
-    { scriptsInitTxIds ∷ Array TransactionHash
+    { scriptsInitTxIds :: Array TransactionHash
     }
 initNativeTokenMgmt sidechainParams version = do
   -- Attempt to insert scripts into the versioning system
   logDebug' "Attempting to initialize Native Token Management versioning scripts"
-  scriptsInitTxIds ← insertScriptsIdempotent
+  scriptsInitTxIds <- insertScriptsIdempotent
     getNativeTokenManagementPoliciesAndValidators
     sidechainParams
     version

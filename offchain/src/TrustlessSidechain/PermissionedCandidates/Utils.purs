@@ -36,14 +36,14 @@ import Type.Row (type (+))
 
 -- | Get the OnlyMintMintingPolicy by applying `SidechainParams` to the dummy
 -- | minting policy.
-decodePermissionedCandidatesMintingPolicy ∷
-  ∀ r.
-  SidechainParams →
+decodePermissionedCandidatesMintingPolicy ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + WALLET + r) PlutusScript
 decodePermissionedCandidatesMintingPolicy sidechainParams = do
-  { permissionedCandidatesValidatorAddress } ←
+  { permissionedCandidatesValidatorAddress } <-
     getPermissionedCandidatesValidatorAndAddress sidechainParams
-  plutusAddress ←
+  plutusAddress <-
     Run.note
       ( InvalidAddress "Invalid permissioned candidates validator address."
           permissionedCandidatesValidatorAddress
@@ -52,40 +52,41 @@ decodePermissionedCandidatesMintingPolicy sidechainParams = do
   mkMintingPolicyWithParams PermissionedCandidatesPolicy
     [ toData sidechainParams, toData plutusAddress ]
 
-decodePermissionedCandidatesValidator ∷
-  ∀ r.
-  SidechainParams →
+decodePermissionedCandidatesValidator ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + r) PlutusScript
 decodePermissionedCandidatesValidator sidechainParams = do
   mkValidatorWithParams PermissionedCandidatesValidator
     [ toData sidechainParams ]
 
-getPermissionedCandidatesValidatorAndAddress ∷
-  ∀ r.
-  SidechainParams →
+getPermissionedCandidatesValidatorAndAddress ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + WALLET + r)
-    { permissionedCandidatesValidator ∷ PlutusScript
-    , permissionedCandidatesValidatorAddress ∷ Address
+    { permissionedCandidatesValidator :: PlutusScript
+    , permissionedCandidatesValidatorAddress :: Address
     }
 getPermissionedCandidatesValidatorAndAddress sidechainParams = do
-  permissionedCandidatesValidator ← decodePermissionedCandidatesValidator
+  permissionedCandidatesValidator <- decodePermissionedCandidatesValidator
     sidechainParams
-  permissionedCandidatesValidatorAddress ←
+  permissionedCandidatesValidatorAddress <-
     toAddress (PlutusScript.hash permissionedCandidatesValidator)
 
   pure
     { permissionedCandidatesValidator, permissionedCandidatesValidatorAddress }
 
-getPermissionedCandidatesMintingPolicyAndCurrencySymbol ∷
-  ∀ r.
-  SidechainParams →
+getPermissionedCandidatesMintingPolicyAndCurrencySymbol ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + WALLET + r)
-    { permissionedCandidatesMintingPolicy ∷ PlutusScript
-    , permissionedCandidatesCurrencySymbol ∷ ScriptHash
+    { permissionedCandidatesMintingPolicy :: PlutusScript
+    , permissionedCandidatesCurrencySymbol :: ScriptHash
     }
 getPermissionedCandidatesMintingPolicyAndCurrencySymbol sidechainParams = do
-  permissionedCandidatesMintingPolicy ← decodePermissionedCandidatesMintingPolicy
-    sidechainParams
+  permissionedCandidatesMintingPolicy <-
+    decodePermissionedCandidatesMintingPolicy
+      sidechainParams
   let
     permissionedCandidatesCurrencySymbol = PlutusScript.hash
       permissionedCandidatesMintingPolicy

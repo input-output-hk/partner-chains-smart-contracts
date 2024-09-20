@@ -33,7 +33,7 @@ import TrustlessSidechain.Options.Types
   )
 import Type.Row (type (+))
 
-optExample ∷ Config
+optExample :: Config
 optExample =
   { sidechainParameters: Just
       { chainId: Just 1
@@ -58,17 +58,17 @@ optExample =
   }
 
 --- | `getCommitteeSignatures` grabs the committee from CLI argument or a JSON file
-getCommittee ∷
-  ∀ r.
-  InputArgOrFile (NonEmptyList ByteArray) →
+getCommittee ::
+  forall r.
+  InputArgOrFile (NonEmptyList ByteArray) ->
   Run (EFFECT + r) (NonEmptyList ByteArray)
 getCommittee =
   liftEffect <<< getInputArgOrFile "committee" committeeCodec
 
 --- | `getCommitteeSignatures` grabs the committee signatures from CLI argument or a JSON file
-getCommitteeSignatures ∷
-  ∀ r.
-  InputArgOrFile (NonEmptyList (ByteArray /\ Maybe ByteArray)) →
+getCommitteeSignatures ::
+  forall r.
+  InputArgOrFile (NonEmptyList (ByteArray /\ Maybe ByteArray)) ->
   Run (EFFECT + r) (NonEmptyList (ByteArray /\ Maybe ByteArray))
 getCommitteeSignatures =
   liftEffect <<< getInputArgOrFile "committee signatures"
@@ -76,35 +76,35 @@ getCommitteeSignatures =
 
 -- | `getInputArgOrFile` grabs the input from the CLI argument or parses the
 -- | JSON file at the given path
-getInputArgOrFile ∷
-  ∀ (a ∷ Type). String → CA.JsonCodec a → InputArgOrFile a → Effect a
+getInputArgOrFile ::
+  forall (a :: Type). String -> CA.JsonCodec a -> InputArgOrFile a -> Effect a
 getInputArgOrFile name codec = case _ of
-  InputFromArg value → pure value
-  InputFromFile filePath → readJson name codec filePath
+  InputFromArg value -> pure value
+  InputFromFile filePath -> readJson name codec filePath
 
 -- | Read and decode config JSON if exists, return Nothing otherwise
-readConfigJson ∷ String → Effect (Maybe Config)
+readConfigJson :: String -> Effect (Maybe Config)
 readConfigJson filePath = do
-  hasConfig ← exists filePath
+  hasConfig <- exists filePath
   if hasConfig then do
     Just <$> readJson "config" configCodec filePath
   else
     pure Nothing
 
 -- | Read and decode a JSON file with a given codec
-readJson ∷ ∀ (a ∷ Type). String → CA.JsonCodec a → String → Effect a
+readJson :: forall (a :: Type). String -> CA.JsonCodec a -> String -> Effect a
 readJson name codec filePath = do
-  fileInput ← readTextFile ASCII filePath
+  fileInput <- readTextFile ASCII filePath
   case jsonParser fileInput of
-    Left errMsg → Exception.throw
+    Left errMsg -> Exception.throw
       $ "Failed JSON parsing for "
       <> name
       <> ": "
       <> errMsg
-    Right json → case CA.decode codec json of
-      Left err → Exception.throw
+    Right json -> case CA.decode codec json of
+      Left err -> Exception.throw
         $ "Failed decoding JSON "
         <> name
         <> ": "
         <> CA.printJsonDecodeError err
-      Right decoded → pure decoded
+      Right decoded -> pure decoded
