@@ -41,7 +41,7 @@ module TrustlessSidechain.Versioning (
 ) where
 
 import PlutusLedgerApi.V1.Address (scriptHashAddress)
-import PlutusLedgerApi.V1.Value (Value (getValue), valueOf)
+import PlutusLedgerApi.V1.Value (Value (getValue), currencySymbolValueOf, valueOf)
 import PlutusLedgerApi.V2 (
   Address,
   CurrencySymbol (CurrencySymbol),
@@ -58,7 +58,6 @@ import PlutusLedgerApi.V2 (
 import PlutusLedgerApi.V2.Contexts (txInfoReferenceInputs)
 import PlutusTx qualified
 import PlutusTx.AssocMap (lookup, toList)
-import TrustlessSidechain.Governance.Admin qualified as Governance
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
@@ -280,7 +279,7 @@ mkVersionOraclePolicy ::
   VersionOraclePolicyRedeemer ->
   Unsafe.ScriptContext ->
   Bool
-mkVersionOraclePolicy sp itac validatorAddress redeemer ctx =
+mkVersionOraclePolicy _sp itac validatorAddress redeemer ctx =
   case redeemer of
     InitializeVersionOracle versionOracle scriptHash ->
       traceIfFalse "ERROR-VERSION-POLICY-01" initTokenBurned
@@ -288,13 +287,18 @@ mkVersionOraclePolicy sp itac validatorAddress redeemer ctx =
         && traceIfFalse "ERROR-VERSION-POLICY-03" mintOneVersionToken
     MintVersionOracle newVersionOracle newScriptHash ->
       fromSingleton "ERROR-VERSION-POLICY-04" (verifyOut newVersionOracle newScriptHash)
-        && traceIfFalse "ERROR-VERSION-POLICY-05" signedByGovernanceAuthority
+        && traceIfFalse "ERROR-VERSION-POLICY-05" approvedByGovernance
         && traceIfFalse "ERROR-VERSION-POLICY-06" mintOneVersionToken
     BurnVersionOracle oldVersion ->
       fromSingleton "ERROR-VERSION-POLICY-07" (versionInputPresent oldVersion)
         && traceIfFalse "ERROR-VERSION-POLICY-08" versionOutputAbsent
-        && traceIfFalse "ERROR-VERSION-POLICY-09" signedByGovernanceAuthority
+        && traceIfFalse "ERROR-VERSION-POLICY-09" approvedByGovernance
   where
+    version = case redeemer of
+      InitializeVersionOracle VersionOracle {version = v} _ -> v
+      MintVersionOracle VersionOracle {version = v} _ -> v
+      BurnVersionOracle VersionOracle {version = v} -> v
+
     txInfo = Unsafe.scriptContextTxInfo ctx
 
     currSym =
@@ -302,15 +306,19 @@ mkVersionOraclePolicy sp itac validatorAddress redeemer ctx =
         $ Unsafe.decode
         <$> (Unsafe.getMinting . Unsafe.scriptContextPurpose $ ctx)
 
+    mintValue :: Value
+    mintValue = Unsafe.decode $ Unsafe.txInfoMint txInfo
+
     mintOneVersionToken :: Bool
     mintOneVersionToken =
-      valueOf (Unsafe.decode $ Unsafe.txInfoMint txInfo) currSym versionOracleTokenName == 1
+      valueOf mintValue currSym versionOracleTokenName == 1
+
     -- Did we burn exactly one init token?  Again, we prevent initializing
     -- multiple scripts in a single transaction
     initTokenBurned :: Bool
     initTokenBurned =
       oneTokenBurned
-        (Unsafe.decode $ Unsafe.txInfoMint txInfo)
+        mintValue
         (get @"initTokenCurrencySymbol" itac)
         (get @"initTokenName" itac)
 
@@ -332,10 +340,15 @@ mkVersionOraclePolicy sp itac validatorAddress redeemer ctx =
       valueOf value currSym versionOracleTokenName == 1
       ]
 
+    governanceCurrencySymbol =
+      getVersionedCurrencySymbolUnsafe
+        (VersionOracleConfig currSym)
+        (VersionOracle {version, scriptId = governancePolicyId})
+        ctx
+
     -- Check that transaction was approved by governance authority
-    signedByGovernanceAuthority :: Bool
-    signedByGovernanceAuthority =
-      txInfo `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
+    approvedByGovernance :: Bool
+    approvedByGovernance = currencySymbolValueOf mintValue governanceCurrencySymbol > 0
 
     -- Check that the script version to be invalidated is present in exactly
     -- one transaction input.
@@ -404,21 +417,36 @@ mkVersionOracleValidator ::
   Unsafe.ScriptContext ->
   Bool
 mkVersionOracleValidator
-  sp
+  _sp
   (VersionOracleDatum versionOracle currencySymbol)
   versionOracle'
   ctx =
-    traceIfFalse "ERROR-VERSION-ORACLE-01" signedByGovernanceAuthority
+    traceIfFalse "ERROR-VERSION-ORACLE-01" approvedByGovernance
       && traceIfFalse "ERROR-VERSION-ORACLE-02" versionOraclesMatch
       && traceIfFalse "ERROR-VERSION-ORACLE-03" versionOutputAbsent
       && traceIfFalse "ERROR-VERSION-ORACLE-04" isSpending
     where
+      currSym =
+        fromJust "ERROR-ORACLE-POLICY-10"
+          $ Unsafe.decode
+          <$> (Unsafe.getMinting . Unsafe.scriptContextPurpose $ ctx)
+
       isSpending = isJust $ Unsafe.getSpending $ Unsafe.scriptContextPurpose ctx
 
       txInfo = Unsafe.scriptContextTxInfo ctx
+
+      mintValue :: Value
+      mintValue = Unsafe.decode $ Unsafe.txInfoMint txInfo
+
+      governanceCurrencySymbol =
+        getVersionedCurrencySymbolUnsafe
+          (VersionOracleConfig currSym)
+          versionOracle' {scriptId = governancePolicyId}
+          ctx
+
       -- Check that transaction was approved by governance authority
-      signedByGovernanceAuthority =
-        txInfo `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
+      approvedByGovernance =
+        currencySymbolValueOf mintValue governanceCurrencySymbol > 0
 
       -- Check that version oracle in the datum matches the redeemer
       versionOraclesMatch = versionOracle == versionOracle'
