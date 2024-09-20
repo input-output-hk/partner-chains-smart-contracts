@@ -28,6 +28,7 @@
     "bip39": "^3.1.0",
     "blakejs": "1.2.1",
     "bufferutil": "4.0.5",
+    "globals": "^15.9.0",
     "isomorphic-ws": "^5.0.0",
     "puppeteer-core": "^15.3.2",
     "reconnecting-websocket": "4.4.0",

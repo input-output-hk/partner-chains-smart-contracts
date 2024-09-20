@@ -1,13 +1,13 @@
-import * as esbuild from "esbuild"
+import * as esbuild from "esbuild";
 
 esbuild.build({
-  entryPoints: [ './entry.js' ],
-  outfile: 'dist/index.js',
+  entryPoints: [ "./entry.js" ],
+  outfile: "dist/index.js",
   bundle: true,
-  platform: 'node',
-  format: 'esm',
+  platform: "node",
+  format: "esm",
   treeShaking: true,
-  logLevel: 'error',
+  logLevel: "error",
   minify: true,
-  packages: 'external',
-})
+  packages: "external",
+});
