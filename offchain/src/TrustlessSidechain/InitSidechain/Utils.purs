@@ -33,22 +33,22 @@ import Type.Row (type (+))
 
 -- | `initTokenCurrencyInfo` gets the minting policy and currency symbol
 -- | corresponding to `InitTokenPolicy`.
-initTokenCurrencyInfo ∷
-  ∀ r.
-  SidechainParams →
+initTokenCurrencyInfo ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + r) CurrencyInfo
 initTokenCurrencyInfo sp =
   getCurrencyInfo InitTokenPolicy [ toData sp ]
 
 -- | Build lookups and constraints to mint one initialisation token of a
 -- | specified name.
-mintOneInitToken ∷
-  ∀ r.
-  SidechainParams →
-  TokenName →
+mintOneInitToken ::
+  forall r.
+  SidechainParams ->
+  TokenName ->
   Run (EXCEPT OffchainError + r)
-    { lookups ∷ ScriptLookups
-    , constraints ∷ TxConstraints
+    { lookups :: ScriptLookups
+    , constraints :: TxConstraints
     }
 mintOneInitToken sp tn =
   mintOneToken tn (RedeemerDatum $ toData MintInitToken) <$>
@@ -56,13 +56,13 @@ mintOneInitToken sp tn =
 
 -- | Build lookups and constraints to burn one initialisation token of a
 -- | specified name.
-burnOneInitToken ∷
-  ∀ r.
-  SidechainParams →
-  TokenName →
+burnOneInitToken ::
+  forall r.
+  SidechainParams ->
+  TokenName ->
   Run (EXCEPT OffchainError + r)
-    { lookups ∷ ScriptLookups
-    , constraints ∷ TxConstraints
+    { lookups :: ScriptLookups
+    , constraints :: TxConstraints
     }
 burnOneInitToken sp tn =
   burnOneToken tn (RedeemerDatum $ toData BurnInitToken) <$>

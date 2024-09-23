@@ -39,31 +39,31 @@ import Type.Row (type (+))
 -- | If tokens are minted, this returns `Just` the minting transaction hash.
 -- | If the genesis UTxO already has been spent, this function returns `Nothing`
 -- | in the `transactionId` field and logs the fact at the info level.
-initTokensMint ∷
-  ∀ r.
-  SidechainParams →
-  Int →
+initTokensMint ::
+  forall r.
+  SidechainParams ->
+  Int ->
   Run (APP r)
-    { transactionId ∷ Maybe TransactionHash
-    , sidechainParams ∷ SidechainParams
-    , sidechainAddresses ∷ SidechainAddresses
+    { transactionId :: Maybe TransactionHash
+    , sidechainParams :: SidechainParams
+    , sidechainAddresses :: SidechainAddresses
     }
 initTokensMint sidechainParams version = do
   let txIn = (unwrap sidechainParams).genesisUtxo
 
   logDebug' $ "Querying genesisUtxo from TxIn: " <> show txIn
-  txOut ← Effect.getUtxo txIn
+  txOut <- Effect.getUtxo txIn
 
-  txId ← case txOut of
-    Nothing → do
+  txId <- case txOut of
+    Nothing -> do
       logInfo' "Genesis UTxO already spent or does not exist"
       pure Nothing
-    Just _ → do
+    Just _ -> do
       logInfo' "Minting sidechain initialization tokens"
       map (Just <<< _.transactionId) $ mintAllTokens sidechainParams
         version
 
-  sidechainAddresses ←
+  sidechainAddresses <-
     GetSidechainAddresses.getSidechainAddresses $
       SidechainAddressesEndpointParams
         { sidechainParams
@@ -81,17 +81,18 @@ initTokensMint sidechainParams version = do
     }
 
 -- | Internal function for minting all init tokens in `initTokensMint`
-mintAllTokens ∷
-  ∀ r.
-  SidechainParams →
-  Int →
-  Run (APP r) { transactionId ∷ TransactionHash }
+mintAllTokens ::
+  forall r.
+  SidechainParams ->
+  Int ->
+  Run (APP r) { transactionId :: TransactionHash }
 mintAllTokens sidechainParams version = do
-  { constraints, lookups } ← foldM (\acc f → (append acc) <$> f sidechainParams)
+  { constraints, lookups } <- foldM
+    (\acc f -> (append acc) <$> f sidechainParams)
     mempty
     [ CandidatePermissionToken.mintOneCandidatePermissionInitToken
     , initSpendGenesisUtxo
-    , \sps → Versioning.mintVersionInitTokens
+    , \sps -> Versioning.mintVersionInitTokens
         sps
         version
     ]
@@ -102,21 +103,21 @@ mintAllTokens sidechainParams version = do
 -- | Build lookups and constraints to spend the genesis UTxO.  This is
 -- | re-exported from the module for the purposes of testing, so that we can
 -- | mint init tokens in tests when needed.
-initSpendGenesisUtxo ∷
-  ∀ r.
-  SidechainParams →
+initSpendGenesisUtxo ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    { lookups ∷ ScriptLookups
-    , constraints ∷ TxConstraints
+    { lookups :: ScriptLookups
+    , constraints :: TxConstraints
     }
 initSpendGenesisUtxo sidechainParams = do
   let txIn = (unwrap sidechainParams).genesisUtxo
-  txOut ← Effect.fromMaybeThrow
+  txOut <- Effect.fromMaybeThrow
     ( NoGenesisUTxO
         "Provided genesis utxo does not exist or was already spent."
     )
     (Effect.getUtxo txIn)
-  ownAvailableInputs ← (Map.keys <<< fromMaybe Map.empty) <$>
+  ownAvailableInputs <- (Map.keys <<< fromMaybe Map.empty) <$>
     Effect.getWalletUtxos
   when (not $ elem txIn ownAvailableInputs) $ throw
     $ NoGenesisUTxO

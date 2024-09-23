@@ -17,24 +17,24 @@ import TrustlessSidechain.Versioning.Types as Types
 import Type.Row (type (+))
 
 -- | Validators and policies to store in the versioning system.
-getVersionedPoliciesAndValidators ∷
-  ∀ r.
-  SidechainParams →
+getVersionedPoliciesAndValidators ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + r)
-    { versionedPolicies ∷ (List (Tuple Types.ScriptId PlutusScript))
-    , versionedValidators ∷ (List (Tuple Types.ScriptId PlutusScript))
+    { versionedPolicies :: (List (Tuple Types.ScriptId PlutusScript))
+    , versionedValidators :: (List (Tuple Types.ScriptId PlutusScript))
     }
 getVersionedPoliciesAndValidators sp = do
-  committeeScripts ← getCommitteeSelectionPoliciesAndValidators sp
+  committeeScripts <- getCommitteeSelectionPoliciesAndValidators sp
 
   pure $ committeeScripts
 
-getCommitteeSelectionPoliciesAndValidators ∷
-  ∀ r.
-  SidechainParams →
+getCommitteeSelectionPoliciesAndValidators ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + r)
-    { versionedPolicies ∷ (List (Tuple Types.ScriptId PlutusScript))
-    , versionedValidators ∷ (List (Tuple Types.ScriptId PlutusScript))
+    { versionedPolicies :: (List (Tuple Types.ScriptId PlutusScript))
+    , versionedValidators :: (List (Tuple Types.ScriptId PlutusScript))
     }
 getCommitteeSelectionPoliciesAndValidators _ =
   let
@@ -43,12 +43,12 @@ getCommitteeSelectionPoliciesAndValidators _ =
   in
     pure $ { versionedPolicies, versionedValidators }
 
-getNativeTokenManagementPoliciesAndValidators ∷
-  ∀ r.
-  SidechainParams →
+getNativeTokenManagementPoliciesAndValidators ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + r)
-    { versionedPolicies ∷ (List (Tuple Types.ScriptId PlutusScript))
-    , versionedValidators ∷ (List (Tuple Types.ScriptId PlutusScript))
+    { versionedPolicies :: (List (Tuple Types.ScriptId PlutusScript))
+    , versionedValidators :: (List (Tuple Types.ScriptId PlutusScript))
     }
 getNativeTokenManagementPoliciesAndValidators _ =
   let

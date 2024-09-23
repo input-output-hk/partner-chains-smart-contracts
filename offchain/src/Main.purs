@@ -115,13 +115,13 @@ import TrustlessSidechain.Versioning as Versioning
 import Type.Row (type (+))
 
 -- | Main entrypoint for the CTL CLI
-main ∷ Effect Unit
+main :: Effect Unit
 main = do
   -- Grab the CLI options
   -----------------------
-  allOpts ← getOptions
+  allOpts <- getOptions
   case allOpts of
-    TxOptions opts → do
+    TxOptions opts -> do
       let scParams = (unwrap opts.sidechainEndpointParams).sidechainParams
 
       -- Do some validation on the CLI options
@@ -152,31 +152,34 @@ main = do
       -- Running the program
       -----------------------
       launchAff_ $ do
-        endpointResp ← runAppLive opts.contractParams { governance }
+        endpointResp <- runAppLive opts.contractParams { governance }
           $ runTxEndpoint
               opts.sidechainEndpointParams
               opts.endpoint
 
         case endpointResp of
-          Right resp → liftEffect $ printEndpointResp resp
-          Left e → log (show e)
+          Right resp -> liftEffect $ printEndpointResp resp
+          Left e -> log (show e)
 
-    UtilsOptions opts → do
-      endpointResp ← runUtilsEndpoint opts.utilsOptions
+    UtilsOptions opts -> do
+      endpointResp <- runUtilsEndpoint opts.utilsOptions
       printEndpointResp endpointResp
 
-    CLIVersion → log versionString
+    CLIVersion -> log versionString
 
 -- | Reads configuration file from `./config.json`, then
 -- | parses CLI arguments. CLI arguments override the config files.
-getOptions ∷ Effect Options
+getOptions :: Effect Options
 getOptions = do
-  config ← ConfigFile.readConfigJson "./config.json"
+  config <- ConfigFile.readConfigJson "./config.json"
   execParser (options config)
 
 -- | Executes an transaction endpoint and returns a response object
-runTxEndpoint ∷
-  ∀ r. SidechainEndpointParams → TxEndpoint → Run (APP + EFFECT + r) EndpointResp
+runTxEndpoint ::
+  forall r.
+  SidechainEndpointParams ->
+  TxEndpoint ->
+  Run (APP + EFFECT + r) EndpointResp
 runTxEndpoint sidechainEndpointParams endpoint =
   let
     scParams = (unwrap sidechainEndpointParams).sidechainParams
@@ -190,7 +193,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
         , usePermissionToken
         , auraKey
         , grandpaKey
-        } →
+        } ->
         let
           params = CommitteeCandidateValidator.RegisterParams
             { sidechainParams: scParams
@@ -208,15 +211,15 @@ runTxEndpoint sidechainEndpointParams endpoint =
             >>> { transactionId: _ }
             >>> CommitteeCandidateRegResp
 
-      CandidiatePermissionTokenAct { candidatePermissionTokenAmount: amount } →
+      CandidiatePermissionTokenAct { candidatePermissionTokenAmount: amount } ->
         CandidatePermissionToken.runCandidatePermissionToken scParams amount
-          <#> \{ transactionId, candidatePermissionCurrencySymbol } →
+          <#> \{ transactionId, candidatePermissionCurrencySymbol } ->
             CandidatePermissionTokenResp
               { transactionId: txHashToByteArray transactionId
               , candidatePermissionCurrencySymbol
               }
 
-      CommitteeCandidateDereg { spoPubKey } →
+      CommitteeCandidateDereg { spoPubKey } ->
         let
           params = CommitteeCandidateValidator.DeregisterParams
             { sidechainParams: scParams
@@ -227,8 +230,8 @@ runTxEndpoint sidechainEndpointParams endpoint =
             <#> txHashToByteArray
             >>> { transactionId: _ }
             >>> CommitteeCandidateDeregResp
-      GetAddrs extraInfo → do
-        sidechainAddresses ← GetSidechainAddresses.getSidechainAddresses
+      GetAddrs extraInfo -> do
+        sidechainAddresses <- GetSidechainAddresses.getSidechainAddresses
           $ SidechainAddressesEndpointParams
               { sidechainParams: scParams
               , usePermissionToken: extraInfo.usePermissionToken
@@ -237,12 +240,12 @@ runTxEndpoint sidechainEndpointParams endpoint =
         pure $ GetAddrsResp { sidechainAddresses }
 
       InitTokensMint
-        { version } →
+        { version } ->
         do
           { transactionId
           , sidechainParams
           , sidechainAddresses
-          } ←
+          } <-
             initTokensMint scParams version
 
           pure $ InitTokensMintResp
@@ -253,15 +256,15 @@ runTxEndpoint sidechainEndpointParams endpoint =
 
       InitCandidatePermissionToken
         { initCandidatePermissionTokenMintInfo
-        } → do
-        resp ← initCandidatePermissionToken scParams
+        } -> do
+        resp <- initCandidatePermissionToken scParams
           initCandidatePermissionTokenMintInfo
         pure $ InitCandidatePermissionTokenResp
           { initTransactionId: map txHashToByteArray resp
           }
 
-      InitReserveManagement { version } → do
-        resp ← initNativeTokenMgmt scParams version
+      InitReserveManagement { version } -> do
+        resp <- initNativeTokenMgmt scParams version
 
         pure $ InitReserveManagementResp
           { scriptsInitTxIds: map txHashToByteArray resp.scriptsInitTxIds
@@ -271,16 +274,16 @@ runTxEndpoint sidechainEndpointParams endpoint =
       -- (or perhaps come from a known range of versions?).  See Issue #9
       -- Version hardcoded to 2 here, since that is the only valid choice currently.
       -- See Note [Supporting version insertion beyond version 2]
-      InsertVersion2 → do
-        txIds ← Versioning.insertVersion scParams 2
+      InsertVersion2 -> do
+        txIds <- Versioning.insertVersion scParams 2
         let versioningTransactionIds = map txHashToByteArray txIds
         pure $ InsertVersionResp { versioningTransactionIds }
 
       UpdateVersion
         { oldVersion
         , newVersion
-        } → do
-        txIds ← Versioning.updateVersion scParams
+        } -> do
+        txIds <- Versioning.updateVersion scParams
           oldVersion
           newVersion
         let versioningTransactionIds = map txHashToByteArray txIds
@@ -288,15 +291,15 @@ runTxEndpoint sidechainEndpointParams endpoint =
 
       InvalidateVersion
         { version
-        } → do
-        txIds ← Versioning.invalidateVersion
+        } -> do
+        txIds <- Versioning.invalidateVersion
           scParams
           version
         let versioningTransactionIds = map txHashToByteArray txIds
         pure $ InvalidateVersionResp { versioningTransactionIds }
 
       InsertDParameter
-        { permissionedCandidatesCount, registeredCandidatesCount } →
+        { permissionedCandidatesCount, registeredCandidatesCount } ->
         DParameter.mkInsertDParameterLookupsAndConstraints scParams
           { permissionedCandidatesCount, registeredCandidatesCount }
           >>= balanceSignAndSubmitWithoutSpendingUtxo
@@ -307,7 +310,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
           >>> InsertDParameterResp
 
       UpdateDParameter
-        { permissionedCandidatesCount, registeredCandidatesCount } →
+        { permissionedCandidatesCount, registeredCandidatesCount } ->
         DParameter.mkUpdateDParameterLookupsAndConstraints scParams
           { permissionedCandidatesCount, registeredCandidatesCount }
           >>= balanceSignAndSubmitWithoutSpendingUtxo
@@ -318,7 +321,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
           >>> UpdateDParameterResp
 
       UpdatePermissionedCandidates
-        { permissionedCandidatesToAdd, permissionedCandidatesToRemove } →
+        { permissionedCandidatesToAdd, permissionedCandidatesToRemove } ->
         PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
           scParams
           { permissionedCandidatesToAdd: Array.fromFoldable
@@ -333,10 +336,10 @@ runTxEndpoint sidechainEndpointParams endpoint =
           >>> { transactionId: _ }
           >>> UpdatePermissionedCandidatesResp
 
-      InitTokenStatus → map InitTokenStatusResp (getInitTokenStatus scParams)
+      InitTokenStatus -> map InitTokenStatusResp (getInitTokenStatus scParams)
 
       ListVersionedScripts
-        { version } →
+        { version } ->
         map ListVersionedScriptsResp
           ( Versioning.getActualVersionedPoliciesAndValidators
               scParams
@@ -347,56 +350,56 @@ runTxEndpoint sidechainEndpointParams endpoint =
         { mutableReserveSettings
         , immutableReserveSettings
         , depositAmount
-        } → do
-        txHash ← initialiseReserveUtxo
+        } -> do
+        txHash <- initialiseReserveUtxo
           scParams
           immutableReserveSettings
           mutableReserveSettings
           depositAmount
         pure $ ReserveResp { transactionHash: txHashToByteArray txHash }
 
-      UpdateReserveSettings { mutableReserveSettings } → do
-        utxo ← findOneReserveUtxo scParams
-        txHash ← updateReserveUtxo scParams mutableReserveSettings utxo
+      UpdateReserveSettings { mutableReserveSettings } -> do
+        utxo <- findOneReserveUtxo scParams
+        txHash <- updateReserveUtxo scParams mutableReserveSettings utxo
         pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
 
-      DepositReserve { asset, depositAmount } → do
-        txHash ← depositToReserve scParams asset depositAmount
+      DepositReserve { asset, depositAmount } -> do
+        txHash <- depositToReserve scParams asset depositAmount
         pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
 
       ReleaseReserveFunds
         { totalAccruedTillNow
         , transactionInput
-        } → do
-        utxo ← findOneReserveUtxo scParams
-        plutusScript ← Effect.fromMaybeThrow
+        } -> do
+        utxo <- findOneReserveUtxo scParams
+        plutusScript <- Effect.fromMaybeThrow
           (NotFoundUtxo "No Reserved UTxO exists for the given asset")
           (plutusScriptFromTxIn transactionInput)
-        txHash ← transferToIlliquidCirculationSupply
+        txHash <- transferToIlliquidCirculationSupply
           scParams
           totalAccruedTillNow
           plutusScript
           utxo
         pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
 
-      HandoverReserve → do
-        utxo ← findOneReserveUtxo scParams
-        txHash ← handover scParams utxo
+      HandoverReserve -> do
+        utxo <- findOneReserveUtxo scParams
+        txHash <- handover scParams utxo
         pure $ ReserveResp { transactionHash: txHashToByteArray txHash }
 
 -- | Executes an endpoint for the `utils` subcommand. Note that this does _not_
 -- | need to be in the Contract monad.
-runUtilsEndpoint ∷ UtilsEndpoint → Effect EndpointResp
+runUtilsEndpoint :: UtilsEndpoint -> Effect EndpointResp
 runUtilsEndpoint = case _ of
-  EcdsaSecp256k1KeyGenAct → do
-    privateKey ← Utils.Crypto.generateRandomPrivateKey
+  EcdsaSecp256k1KeyGenAct -> do
+    privateKey <- Utils.Crypto.generateRandomPrivateKey
     let publicKey = Utils.Crypto.toPubKeyUnsafe privateKey
     pure $ EcdsaSecp256k1KeyGenResp
       { privateKey
       , publicKey
       }
-  SchnorrSecp256k1KeyGenAct → do
-    privateKey ← Utils.SchnorrSecp256k1.generateRandomPrivateKey
+  SchnorrSecp256k1KeyGenAct -> do
+    privateKey <- Utils.SchnorrSecp256k1.generateRandomPrivateKey
     let publicKey = Utils.SchnorrSecp256k1.toPubKey privateKey
     pure $ SchnorrSecp256k1KeyGenResp
       { privateKey
@@ -404,11 +407,11 @@ runUtilsEndpoint = case _ of
       }
 
   EcdsaSecp256k1SignAct
-    { message, privateKey, noHashMessage } → do
-    realMessage ←
+    { message, privateKey, noHashMessage } -> do
+    realMessage <-
       if noHashMessage then case Utils.Crypto.ecdsaSecp256k1Message message of
-        Just realMsg → pure realMsg
-        Nothing → throwError $ error $
+        Just realMsg -> pure realMsg
+        Nothing -> throwError $ error $
           "Message invalid (should be 32 bytes)"
       else pure
         $ Utils.Crypto.byteArrayToEcdsaSecp256k1MessageUnsafe
@@ -424,7 +427,7 @@ runUtilsEndpoint = case _ of
         }
 
   SchnorrSecp256k1SignAct
-    { message, privateKey, noHashMessage } → do
+    { message, privateKey, noHashMessage } -> do
     let
       realMessage =
         if noHashMessage then message
@@ -440,7 +443,7 @@ runUtilsEndpoint = case _ of
 
   CborBlockProducerRegistrationMessageAct
     { blockProducerRegistrationMsg
-    } →
+    } ->
     let
       plutusData =
         PlutusData.toData $
@@ -451,6 +454,6 @@ runUtilsEndpoint = case _ of
           { plutusData
           }
 
-printEndpointResp ∷ EndpointResp → Effect Unit
+printEndpointResp :: EndpointResp -> Effect Unit
 printEndpointResp =
   log <<< stringifyEndpointResp

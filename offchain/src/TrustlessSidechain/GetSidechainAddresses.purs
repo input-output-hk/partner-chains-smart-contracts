@@ -63,11 +63,11 @@ import Type.Row (type (+))
 -- | See `getSidechainAddresses` for more details.
 type SidechainAddresses =
   { -- bech32 addresses
-    addresses ∷ Array (Tuple ScriptId String)
+    addresses :: Array (Tuple ScriptId String)
   , -- currency symbols
-    mintingPolicies ∷ Array (Tuple ScriptId String)
+    mintingPolicies :: Array (Tuple ScriptId String)
   , -- Hex encoded validator hashes
-    validatorHashes ∷ Array (Tuple ScriptId String)
+    validatorHashes :: Array (Tuple ScriptId String)
   }
 
 -- | `SidechainAddressesExtra` provides extra information for creating more
@@ -75,18 +75,18 @@ type SidechainAddresses =
 -- | In particular, this allows us to optionally grab the minting policy of the
 -- | candidate permission token.
 type SidechainAddressesExtra =
-  { usePermissionToken ∷ Boolean
-  , version ∷ Int
+  { usePermissionToken :: Boolean
+  , version :: Int
   }
 
 -- | `SidechainAddressesEndpointParams` is the offchain endpoint parameter for
 -- | bundling the required data to grab all the sidechain addresses.
 newtype SidechainAddressesEndpointParams = SidechainAddressesEndpointParams
-  { sidechainParams ∷ SidechainParams
+  { sidechainParams :: SidechainParams
   , -- Used to optionally grab the minting policy of candidate permission
     -- token.
-    usePermissionToken ∷ Boolean
-  , version ∷ Int
+    usePermissionToken :: Boolean
+  , version :: Int
   }
 
 -- | `getSidechainAddresses` returns a `SidechainAddresses` corresponding to
@@ -94,9 +94,9 @@ newtype SidechainAddressesEndpointParams = SidechainAddressesEndpointParams
 -- | addresses and currency symbols. Moreover, it returns the currency symbol
 -- | of the candidate permission token provided the `permissionTokenUtxo` is
 -- | given.
-getSidechainAddresses ∷
-  ∀ r.
-  SidechainAddressesEndpointParams →
+getSidechainAddresses ::
+  forall r.
+  SidechainAddressesEndpointParams ->
   Run (EXCEPT OffchainError + WALLET + READER Env + r) SidechainAddresses
 getSidechainAddresses
   ( SidechainAddressesEndpointParams
@@ -108,9 +108,9 @@ getSidechainAddresses
 
   -- Minting policies
 
-  mCandidatePermissionPolicyId ←
+  mCandidatePermissionPolicyId <-
     if usePermissionToken then do
-      { mintingPolicy: candidatePermissionPolicy } ←
+      { mintingPolicy: candidatePermissionPolicy } <-
         CandidatePermissionToken.candidatePermissionCurrencyInfo sidechainParams
       let
         candidatePermissionPolicyId = currencySymbolToHex $
@@ -118,58 +118,58 @@ getSidechainAddresses
       pure $ Just candidatePermissionPolicyId
     else pure Nothing
 
-  { versionOracleCurrencySymbol } ← getVersionOraclePolicy sidechainParams
+  { versionOracleCurrencySymbol } <- getVersionOraclePolicy sidechainParams
   let
     versionOraclePolicyId = currencySymbolToHex
       versionOracleCurrencySymbol
 
-  { permissionedCandidatesCurrencySymbol } ←
+  { permissionedCandidatesCurrencySymbol } <-
     PermissionedCandidates.getPermissionedCandidatesMintingPolicyAndCurrencySymbol
       sidechainParams
   let
     permissionedCandidatesPolicyId =
       currencySymbolToHex permissionedCandidatesCurrencySymbol
 
-  { dParameterCurrencySymbol } ←
+  { dParameterCurrencySymbol } <-
     DParameter.getDParameterMintingPolicyAndCurrencySymbol
       sidechainParams
   let
     dParameterPolicyId = currencySymbolToHex
       dParameterCurrencySymbol
 
-  { currencySymbol: initTokenCurrencySymbol } ←
+  { currencySymbol: initTokenCurrencySymbol } <-
     InitSidechain.initTokenCurrencyInfo sidechainParams
   let
     initTokenPolicyId = currencySymbolToHex
       initTokenCurrencySymbol
 
   -- Validators
-  committeeCandidateValidator ←
+  committeeCandidateValidator <-
     CommitteeCandidateValidator.getCommitteeCandidateValidator sidechainParams
 
-  versionOracleValidator ←
+  versionOracleValidator <-
     versionOracleValidator sidechainParams
 
-  { versionedPolicies, versionedValidators } ←
+  { versionedPolicies, versionedValidators } <-
     Versioning.getExpectedVersionedPoliciesAndValidators
       sidechainParams
       version
   let
     versionedCurrencySymbols = Array.fromFoldable $ map
-      ( \(Tuple scriptId mps) →
+      ( \(Tuple scriptId mps) ->
           (Tuple scriptId (currencySymbolToHex $ PlutusScript.hash mps))
       )
       versionedPolicies
 
-  { permissionedCandidatesValidator } ←
+  { permissionedCandidatesValidator } <-
     PermissionedCandidates.getPermissionedCandidatesValidatorAndAddress
       sidechainParams
 
-  { dParameterValidator } ←
+  { dParameterValidator } <-
     DParameter.getDParameterValidatorAndAddress sidechainParams
 
   let
-    mintingPolicies ∷ Array (Tuple ScriptId String)
+    mintingPolicies :: Array (Tuple ScriptId String)
     mintingPolicies =
       [ VersionOraclePolicy /\ versionOraclePolicyId
       , PermissionedCandidatesPolicy /\ permissionedCandidatesPolicyId
@@ -190,7 +190,7 @@ getSidechainAddresses
       , DParameterValidator /\ dParameterValidator
       ] <> List.toUnfoldable versionedValidators
 
-  addresses ← traverse (traverse getAddr) validators
+  addresses <- traverse (traverse getAddr) validators
   let
     validatorHashes = map
       (map (byteArrayToHex <<< unwrap <<< encodeCbor <<< PlutusScript.hash))
@@ -203,7 +203,8 @@ getSidechainAddresses
     }
 
 -- | Print the bech32 serialised address of a given validator
-getAddr ∷ ∀ r. PlutusScript → Run (EXCEPT OffchainError + WALLET + r) String
+getAddr ::
+  forall r. PlutusScript -> Run (EXCEPT OffchainError + WALLET + r) String
 getAddr v = do
-  addr ← toAddress (PlutusScript.hash v)
+  addr <- toAddress (PlutusScript.hash v)
   pure $ toBech32 addr

@@ -27,7 +27,7 @@ import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Versioning as Versioning
 
 -- | `tests` aggregates all the tests together in one convenient function
-tests ∷ WrappedTests
+tests :: WrappedTests
 tests = testnetGroup "Minting the init tokens" $ do
   -- InitTokensMint endpoint
   initTokensMintIdempotent
@@ -37,7 +37,7 @@ tests = testnetGroup "Minting the init tokens" $ do
 -- | 1. The tokens are minted correctly (verified by calling `getInitTokenStatus`).
 -- | 2. On the second call, the return transactionId should be `Nothing`.
 -- | 3. The minted tokens should match the expected values after both calls.
-initTokensMintIdempotent ∷ TestnetTest
+initTokensMintIdempotent :: TestnetTest
 initTokensMintIdempotent =
   Mote.Monad.test "`initTokensMint` gives expected results when called twice"
     $ Test.TestnetTest.mkTestnetConfigTest
@@ -46,13 +46,13 @@ initTokensMintIdempotent =
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         ]
-    $ \alice →
+    $ \alice ->
         withUnliftApp (Wallet.withKeyWallet alice) do
           Effect.logInfo' "InitSidechain 'initTokensMintIdempotent'"
 
-          genesisUtxo ← Test.Utils.getOwnTransactionInput
+          genesisUtxo <- Test.Utils.getOwnTransactionInput
 
-          initGovernanceAuthority ←
+          initGovernanceAuthority <-
             Governance.mkGovernanceAuthority
               <$> getOwnPaymentPubKeyHash
 
@@ -71,11 +71,11 @@ initTokensMintIdempotent =
             version
 
           -- Then do it again.
-          { transactionId } ← InitMint.initTokensMint sidechainParams
+          { transactionId } <- InitMint.initTokensMint sidechainParams
             version
 
           -- For computing the number of versionOracle init tokens
-          { versionedPolicies, versionedValidators } ←
+          { versionedPolicies, versionedValidators } <-
             Versioning.getExpectedVersionedPoliciesAndValidators
               sidechainParams
               version
@@ -86,7 +86,7 @@ initTokensMintIdempotent =
               ]
 
           -- Get the tokens just created
-          { initTokenStatusData: res } ← Init.getInitTokenStatus
+          { initTokenStatusData: res } <- Init.getInitTokenStatus
             sidechainParams
 
           -- Resulting tokens are as expected

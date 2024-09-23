@@ -16,22 +16,22 @@ import JS.BigInt (BigInt)
 import TrustlessSidechain.Governance.Admin as Governance
 
 newtype SidechainParams = SidechainParams
-  { chainId ∷ BigInt
-  , genesisUtxo ∷ TransactionInput
+  { chainId :: BigInt
+  , genesisUtxo :: TransactionInput
   ,
     -- `thresholdNumerator` is the numerator of the ratio required for the
     -- committee to verify that committee has signed something (e.g. when
     -- updating the committee hash, or saving a new merkle root).
-    thresholdNumerator ∷ BigInt
+    thresholdNumerator :: BigInt
   ,
     -- `thresholdDenominator` is the denominator of the ratio required for the
     -- committee to verify that committee has signed something (e.g. when
     -- updating the committee hash, or saving a new merkle root).
-    thresholdDenominator ∷ BigInt
+    thresholdDenominator :: BigInt
   , -- Governance mechanism.  We temporarily rely on using a single master key
     -- that can authorize any action requiring permission from the governing
     -- committee.
-    governanceAuthority ∷ Governance.GovernanceAuthority
+    governanceAuthority :: Governance.GovernanceAuthority
   }
 
 derive instance Generic SidechainParams _
@@ -60,13 +60,13 @@ instance ToData SidechainParams where
 
 instance FromData SidechainParams where
   fromData = case _ of
-    Constr ix [ cid, gu, tn, td, ga ] → do
+    Constr ix [ cid, gu, tn, td, ga ] -> do
       guard (ix == BigNum.fromInt 0)
-      chainId ← fromData cid
-      genesisUtxo ← fromData gu
-      thresholdNumerator ← fromData tn
-      thresholdDenominator ← fromData td
-      governanceAuthority ← fromData ga
+      chainId <- fromData cid
+      genesisUtxo <- fromData gu
+      thresholdNumerator <- fromData tn
+      thresholdDenominator <- fromData td
+      governanceAuthority <- fromData ga
       pure $ SidechainParams
         { chainId
         , genesisUtxo
@@ -74,7 +74,7 @@ instance FromData SidechainParams where
         , thresholdDenominator
         , governanceAuthority
         }
-    _ → Nothing
+    _ -> Nothing
 
 instance Show SidechainParams where
   show = genericShow

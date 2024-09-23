@@ -51,27 +51,27 @@ type TestnetTest = Mote (Const Void) TestnetConfigTest Unit
 
 -- | `TestnetConfigTest` is a newtype wrapper for a method which has
 -- | the required configuration to create a `Test`
-newtype TestnetConfigTest = TestnetConfigTest (TestnetConfig → Test)
+newtype TestnetConfigTest = TestnetConfigTest (TestnetConfig -> Test)
 
 -- | `interpretTestnetTest` maps `TestnetTest` to `TestSuite` suitable for
 -- | running.
-interpretTestnetTest ∷ TestnetTest → TestSuite
+interpretTestnetTest :: TestnetTest -> TestSuite
 interpretTestnetTest = go <<< Mote.Monad.plan
   where
   go =
     Mote.Plan.foldPlan
-      ( \{ label, value } → do
+      ( \{ label, value } -> do
 
           Test.Unit.test label $ do
             liftAff $ delay $ wrap 3000.0
-            _ ← whileMMax 10
+            _ <- whileMMax 10
               ( do
                   -- Internal functionality
 
-                  isKupoAvailable ← liftAff $ PortCheck.isPortAvailable
+                  isKupoAvailable <- liftAff $ PortCheck.isPortAvailable
                     Test.Config.config.kupoConfig.port
 
-                  isOgmiosAvailable ← liftAff $ PortCheck.isPortAvailable
+                  isOgmiosAvailable <- liftAff $ PortCheck.isPortAvailable
                     Test.Config.config.ogmiosConfig.port
 
                   pure (not isKupoAvailable || not isOgmiosAvailable)
@@ -85,37 +85,37 @@ interpretTestnetTest = go <<< Mote.Monad.plan
               Test.Config.config
               value
       )
-      (\label → Test.Unit.testSkip label (pure unit))
-      (\{ label, value } → Test.Unit.suite label (go value))
+      (\label -> Test.Unit.testSkip label (pure unit))
+      (\{ label, value } -> Test.Unit.suite label (go value))
       sequence_
 
-whileMMax ∷ ∀ m a. Monad m ⇒ Int → m Boolean → m a → m Unit
+whileMMax :: forall m a. Monad m => Int -> m Boolean -> m a -> m Unit
 whileMMax 0 _ _ = pure unit
 whileMMax n p m | n > 0 = do
-  b ← p
+  b <- p
   if b then m *> whileMMax (n - 1) p m
   else pure unit
 whileMMax _ _ _ = pure unit
 
-runTestnetContract ∷
-  ∀ (distr ∷ Type) (wallets ∷ Type) (a ∷ Type).
-  (ContractEnv → ContractEnv) →
-  UtxoDistribution distr wallets ⇒
-  TestnetConfig →
-  distr →
-  (wallets → Contract a) →
+runTestnetContract ::
+  forall (distr :: Type) (wallets :: Type) (a :: Type).
+  (ContractEnv -> ContractEnv) ->
+  UtxoDistribution distr wallets =>
+  TestnetConfig ->
+  distr ->
+  (wallets -> Contract a) ->
   Aff a
 runTestnetContract updateEnv cfg distr cont =
-  withTestnetContractEnv cfg distr \env wallets →
+  withTestnetContractEnv cfg distr \env wallets ->
     runContractInEnv (updateEnv env) (cont wallets)
 
 -- | `mkTestnetConfigTest` provides a mechanism to create a `TestnetConfigTest`
 -- It sets up Env as empty value, that has to be later udpated with `Run.Reader.local`
-mkTestnetConfigTest ∷
-  ∀ (distr ∷ Type) (wallets ∷ Type).
-  UtxoDistribution distr wallets ⇒
-  distr →
-  ( wallets →
+mkTestnetConfigTest ::
+  forall (distr :: Type) (wallets :: Type).
+  UtxoDistribution distr wallets =>
+  distr ->
+  ( wallets ->
     Run
       ( EXCEPT OffchainError + WALLET + TRANSACTION + LOG + READER Env + AFF
           + EFFECT
@@ -123,28 +123,28 @@ mkTestnetConfigTest ∷
           + ()
       )
       Unit
-  ) →
+  ) ->
   TestnetConfigTest
-mkTestnetConfigTest d t = TestnetConfigTest \c → runTestnetContract
+mkTestnetConfigTest d t = TestnetConfigTest \c -> runTestnetContract
   updateContractEnv
   c
   d
   (unliftApp emptyEnv <<< t)
   where
 
-  updateContractEnv ∷ ContractEnv → ContractEnv
+  updateContractEnv :: ContractEnv -> ContractEnv
   updateContractEnv cenv = cenv
     { timeParams = updateTimeParams cenv.timeParams }
 
-  updateTimeParams ∷ ContractTimeParams → ContractTimeParams
+  updateTimeParams :: ContractTimeParams -> ContractTimeParams
   updateTimeParams tp = tp
     { awaitTxConfirmed = tp.awaitTxConfirmed
         { delay = Milliseconds 25.0 }
     }
 
 -- | `runTestnetConfigTest` provides a mechanism to turn a `TestnetConfigTest` into a `Test`
-runTestnetConfigTest ∷
-  TestnetConfig →
-  TestnetConfigTest →
+runTestnetConfigTest ::
+  TestnetConfig ->
+  TestnetConfigTest ->
   Test
 runTestnetConfigTest config (TestnetConfigTest run) = run config

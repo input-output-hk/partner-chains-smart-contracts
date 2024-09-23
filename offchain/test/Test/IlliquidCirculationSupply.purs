@@ -71,18 +71,18 @@ import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
 
 -- | `tests` aggregates all UpdateCommitteeHash the tests.
-tests ∷ WrappedTests
+tests :: WrappedTests
 tests = testnetGroup "IlliquidCirculationSupply" $ do
   testScenario
 
-dummyInitialiseSidechain ∷
-  ∀ r.
-  PaymentPubKeyHash →
+dummyInitialiseSidechain ::
+  forall r.
+  PaymentPubKeyHash ->
   Run
     (APP + EFFECT + CONTRACT + r)
     SidechainParams
 dummyInitialiseSidechain pkh = do
-  genesisUtxo ← Test.Utils.getOwnTransactionInput
+  genesisUtxo <- Test.Utils.getOwnTransactionInput
 
   let
     sidechainParams =
@@ -94,19 +94,19 @@ dummyInitialiseSidechain pkh = do
         , governanceAuthority: Governance.mkGovernanceAuthority pkh
         }
 
-  _ ← initTokensMint sidechainParams 1
-  _ ← initNativeTokenMgmt sidechainParams 1
+  _ <- initTokensMint sidechainParams 1
+  _ <- initNativeTokenMgmt sidechainParams 1
 
   pure sidechainParams
 
-mintNonAdaTokens ∷
-  ∀ r.
-  Int →
+mintNonAdaTokens ::
+  forall r.
+  Int ->
   Run
     (EXCEPT OffchainError + LOG + TRANSACTION + r)
     AssetClass
 mintNonAdaTokens numOfTokens = do
-  policy ← alwaysPassingPolicy $ BigInt.fromInt 100
+  policy <- alwaysPassingPolicy $ BigInt.fromInt 100
 
   let
     cs = PlutusScript.hash policy
@@ -123,7 +123,7 @@ mintNonAdaTokens numOfTokens = do
 
   pure $ AssetClass cs emptyAssetName
 
-initialDistribution ∷ Array BigNum
+initialDistribution :: Array BigNum
 initialDistribution =
   [ BigNum.fromInt 50_000_000
   , BigNum.fromInt 50_000_000
@@ -132,23 +132,23 @@ initialDistribution =
   , BigNum.fromInt 40_000_000
   ]
 
-initialiseICSUtxo ∷
-  ∀ r.
-  SidechainParams →
+initialiseICSUtxo ::
+  forall r.
+  SidechainParams ->
   Run
     (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
     Unit
 initialiseICSUtxo
   sidechainParams =
   do
-    versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
+    versionOracleConfig <- Versioning.getVersionOracleConfig sidechainParams
 
-    illiquidCirculationSupplyValidator' ← PlutusScript.hash <$>
+    illiquidCirculationSupplyValidator' <- PlutusScript.hash <$>
       illiquidCirculationSupplyValidator
         versionOracleConfig
 
     let
-      lookups ∷ Lookups.ScriptLookups
+      lookups :: Lookups.ScriptLookups
       lookups =
         mempty
 
@@ -163,22 +163,22 @@ initialiseICSUtxo
       "ICS initialization transaction"
       { constraints, lookups }
 
-mkIcsFakePolicy ∷
-  ∀ r.
+mkIcsFakePolicy ::
+  forall r.
   Run
     (EXCEPT OffchainError + r)
     PlutusScript
 mkIcsFakePolicy = alwaysPassingPolicy $ BigInt.fromInt 43
 
-insertFakeIcsWithdrawalPolicy ∷
-  ∀ r.
-  SidechainParams →
+insertFakeIcsWithdrawalPolicy ::
+  forall r.
+  SidechainParams ->
   Run
     (READER Env + EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
     ScriptHash
 insertFakeIcsWithdrawalPolicy sidechainParams =
   do
-    icsFakePolicy ← mkIcsFakePolicy
+    icsFakePolicy <- mkIcsFakePolicy
 
     void
       $
@@ -189,9 +189,9 @@ insertFakeIcsWithdrawalPolicy sidechainParams =
 
     pure $ PlutusScript.hash icsFakePolicy
 
-findIlliquidCirculationSupplyUtxos ∷
-  ∀ r.
-  SidechainParams →
+findIlliquidCirculationSupplyUtxos ::
+  forall r.
+  SidechainParams ->
   Run
     (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
     UtxoMap
@@ -205,9 +205,9 @@ findIlliquidCirculationSupplyUtxos sidechainParams =
     )
     >>= utxosAt
 
-findICSUtxo ∷
-  ∀ r.
-  SidechainParams →
+findICSUtxo ::
+  forall r.
+  SidechainParams ->
   Run
     (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
     (TransactionInput /\ TransactionOutput)
@@ -219,20 +219,20 @@ findICSUtxo
       ( Map.toUnfoldable <$> findIlliquidCirculationSupplyUtxos sidechainParams
       )
 
-testScenario ∷ TestnetTest
+testScenario :: TestnetTest
 testScenario =
   Mote.Monad.test
     "Withdraw from ICS"
     $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
-        pkh ← getOwnPaymentPubKeyHash
+    $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) do
+        pkh <- getOwnPaymentPubKeyHash
         Test.Utils.withSingleMultiSig (unwrap pkh) $ do
 
-          sidechainParams ← dummyInitialiseSidechain pkh
-          mintingPolicyHash ← insertFakeIcsWithdrawalPolicy sidechainParams
+          sidechainParams <- dummyInitialiseSidechain pkh
+          mintingPolicyHash <- insertFakeIcsWithdrawalPolicy sidechainParams
 
           initialiseICSUtxo sidechainParams
-          utxo1 ← findICSUtxo sidechainParams
+          utxo1 <- findICSUtxo sidechainParams
 
           let
             depositAmountOfNonAdaTokens = 51
@@ -240,7 +240,7 @@ testScenario =
             finalAmountOfNonAdaTokens = depositAmountOfNonAdaTokens -
               withdrawAmountOfNonAdaTokens
 
-          tokenKind ← mintNonAdaTokens depositAmountOfNonAdaTokens
+          tokenKind <- mintNonAdaTokens depositAmountOfNonAdaTokens
 
           let
             addedValue = singletonFromAsset (fromAssetClass tokenKind)
@@ -251,7 +251,7 @@ testScenario =
             addedValue
             utxo1
 
-          utxo2 ← findICSUtxo sidechainParams
+          utxo2 <- findICSUtxo sidechainParams
 
           let
             withdrawnValue = singletonFromAsset (fromAssetClass tokenKind)
@@ -263,7 +263,7 @@ testScenario =
             withdrawnValue
             utxo2
 
-          maybeUtxo ← Map.toUnfoldable
+          maybeUtxo <- Map.toUnfoldable
             <$> findIlliquidCirculationSupplyUtxos sidechainParams
 
           let

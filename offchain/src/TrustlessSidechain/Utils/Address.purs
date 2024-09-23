@@ -62,77 +62,78 @@ import TrustlessSidechain.Versioning.Types (ScriptId)
 import Type.Row (type (+))
 
 -- | Return a single own payment pub key hash without generating warnings.
-getOwnPaymentPubKeyHash ∷
-  ∀ r.
+getOwnPaymentPubKeyHash ::
+  forall r.
   Run (EXCEPT OffchainError + WALLET + r) PaymentPubKeyHash
 getOwnPaymentPubKeyHash = do
-  pubKeyHashes ← Effect.ownPaymentPubKeyHashes
+  pubKeyHashes <- Effect.ownPaymentPubKeyHashes
   Run.note NotFoundOwnPubKeyHash $ Array.head pubKeyHashes
 
 -- | Return a single own wallet address without generating warnings.
-getOwnWalletAddress ∷
-  ∀ r.
+getOwnWalletAddress ::
+  forall r.
   Run (EXCEPT OffchainError + WALLET + r) Address
 getOwnWalletAddress = do
-  addresses ← getWalletAddresses
+  addresses <- getWalletAddresses
   Run.note NotFoundOwnPubKeyHash $ Array.head addresses
 
 -- | Convert Address to ValidatorHash, raising an error if an address does not
 -- | represent a script.
-toScriptHash ∷ ∀ r. Address → Run (EXCEPT OffchainError + r) ScriptHash
+toScriptHash :: forall r. Address -> Run (EXCEPT OffchainError + r) ScriptHash
 toScriptHash addr = do
-  PaymentCredential c ←
+  PaymentCredential c <-
     note
       (InvalidAddress "Cannot convert Address to ScriptHash" addr)
       $ Address.getPaymentCredential addr
 
   case c of
-    ScriptHashCredential sh → pure sh
-    _ → Run.throw $ InvalidAddress "Address does not represent a script" addr
+    ScriptHashCredential sh -> pure sh
+    _ -> Run.throw $ InvalidAddress "Address does not represent a script" addr
 
 -- | Convert ValidatorHash to Address in the current network, raising an error
 -- | if the hash is not valid.
-toAddress ∷ ∀ r. ScriptHash → Run (EXCEPT OffchainError + WALLET + r) Address
+toAddress ::
+  forall r. ScriptHash -> Run (EXCEPT OffchainError + WALLET + r) Address
 toAddress sh = do
-  netId ← getNetworkId
+  netId <- getNetworkId
   pure $
     Address.mkPaymentAddress netId (wrap $ ScriptHashCredential sh) Nothing
 
 -- | `getCurrencyInfo` returns minting policy and currency symbol of a given
 -- | script.  Requires providing parameters of that script.
-getCurrencyInfo ∷
-  ∀ r.
-  ScriptId →
-  Array PlutusData →
+getCurrencyInfo ::
+  forall r.
+  ScriptId ->
+  Array PlutusData ->
   Run (EXCEPT OffchainError + r) CurrencyInfo
 getCurrencyInfo scriptId params = do
-  plutusScript ← mkMintingPolicyWithParams scriptId params
+  plutusScript <- mkMintingPolicyWithParams scriptId params
 
   pure $
     { mintingPolicy: plutusScript
     , currencySymbol: PlutusScript.hash plutusScript
     }
 
-getPlutusScriptHex ∷ Partial ⇒ PlutusScript → String
+getPlutusScriptHex :: Partial => PlutusScript -> String
 getPlutusScriptHex = ByteArray.byteArrayToHex <<< toBytes <<< PlutusScript.toCsl
 
-getScriptHashHex ∷ ScriptHash → String
+getScriptHashHex :: ScriptHash -> String
 getScriptHashHex = ByteArray.byteArrayToHex <<< toBytes <<< unwrap
 
-fromPaymentPubKeyHash ∷ NetworkId → PaymentPubKeyHash → Address
+fromPaymentPubKeyHash :: NetworkId -> PaymentPubKeyHash -> Address
 fromPaymentPubKeyHash networkId pkh = Address.mkPaymentAddress networkId
   (wrap $ PubKeyHashCredential $ unwrap pkh)
   Nothing
 
-addressFromBech32Bytes ∷ ByteArray → Maybe Address
+addressFromBech32Bytes :: ByteArray -> Maybe Address
 addressFromBech32Bytes = decodeCbor <<< wrap
 
 -- | Derive the public key hash from a public key address
-toPaymentPubKeyHash ∷ Address → Maybe PaymentPubKeyHash
+toPaymentPubKeyHash :: Address -> Maybe PaymentPubKeyHash
 toPaymentPubKeyHash addr = wrap <$>
   ((asPubKeyHash <<< unwrap) =<< Address.getPaymentCredential addr)
 
 -- | Derive the stake key hash from a public key address
-toStakePubKeyHash ∷ Address → Maybe StakePubKeyHash
+toStakePubKeyHash :: Address -> Maybe StakePubKeyHash
 toStakePubKeyHash addr = wrap <$>
   ((asPubKeyHash <<< unwrap) =<< Address.getStakeCredential addr)

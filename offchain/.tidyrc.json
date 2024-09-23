@@ -3,7 +3,7 @@
   "importWrap": "auto",
   "indent": 2,
   "typeArrowPlacement": "last",
-  "unicode": "always",
+  "unicode": "never",
   "width": 100,
   "ribbon": 0.8
 }

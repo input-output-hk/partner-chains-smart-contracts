@@ -16,19 +16,19 @@ import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
 type OptionsTest = Mote (Const Void) Test Unit
 
-tests ∷ WrappedTests
+tests :: WrappedTests
 tests = pureGroup "Options parsing tests" do
   testParsePubKeyAndSignature
 
 -- | `testParsePubKeyAndSignature` has a few unit tests for what we may parse
 -- | for parsing a pub key and a signature.
-testParsePubKeyAndSignature ∷ OptionsTest
+testParsePubKeyAndSignature :: OptionsTest
 testParsePubKeyAndSignature = Mote.Monad.group
   "Parsing public key and signature"
   do
     let
       go s = Options.Parsers.parsePubKeyAndSignature s
-        <#> \(pubKey /\ signature) → { pubKey, signature }
+        <#> \(pubKey /\ signature) -> { pubKey, signature }
 
       dummyHexPubKey =
         "02aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"

@@ -20,7 +20,7 @@ type Ed25519Signature = ByteArray
 
 -- | Commonly used currency information packed paired together
 type CurrencyInfo =
-  { mintingPolicy ∷ PlutusScript
-  , currencySymbol ∷ ScriptHash
+  { mintingPolicy :: PlutusScript
+  , currencySymbol :: ScriptHash
   }
 

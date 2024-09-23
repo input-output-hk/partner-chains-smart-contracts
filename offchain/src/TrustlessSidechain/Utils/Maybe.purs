@@ -6,6 +6,6 @@ module TrustlessSidechain.Utils.Maybe
 import Contract.Prelude
 
 -- | Convert `Just` to a singleton array, and `Nothing` to an empty array.
-maybeToArray ∷ ∀ a. Maybe a → Array a
+maybeToArray :: forall a. Maybe a -> Array a
 maybeToArray (Just a) = [ a ]
 maybeToArray Nothing = []

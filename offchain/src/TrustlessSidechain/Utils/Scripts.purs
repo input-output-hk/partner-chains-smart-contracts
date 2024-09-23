@@ -25,29 +25,29 @@ import Type.Row (type (+))
 
 -- | `mkValidatorWithParams scriptId params` returns the `Validator` of
 -- | `scriptId` with the script applied to `params`.
-mkValidatorWithParams ∷
-  ∀ r.
-  ScriptId →
-  Array PlutusData →
+mkValidatorWithParams ::
+  forall r.
+  ScriptId ->
+  Array PlutusData ->
   Run (EXCEPT OffchainError + r) PlutusScript
 mkValidatorWithParams scriptId params = do
-  hexScript ← note (InvalidScriptId scriptId)
+  hexScript <- note (InvalidScriptId scriptId)
     (Map.lookup scriptId rawScripts)
   mkValidatorWithParams' hexScript params
 
 -- | `mkValidatorWithParams' hexScript params` returns the `Validator` of
 -- | `hexScript` with the script applied to `params`.
-mkValidatorWithParams' ∷
-  ∀ r.
-  String →
-  Array PlutusData →
+mkValidatorWithParams' ::
+  forall r.
+  String ->
+  Array PlutusData ->
   Run (EXCEPT OffchainError + r) PlutusScript
 mkValidatorWithParams' hexScript params = do
   let
     script = decodeTextEnvelope hexScript >>= plutusScriptFromEnvelope
 
-  unapplied ← note (InvalidScript hexScript) script
-  applied ←
+  unapplied <- note (InvalidScript hexScript) script
+  applied <-
     rethrow $
       if Array.null params then pure unapplied
       else
@@ -56,28 +56,28 @@ mkValidatorWithParams' hexScript params = do
 
 -- | `mkMintingPolicyWithParams scriptId params` returns the `MintingPolicy` of
 -- | `scriptId` with the script applied to `params`.
-mkMintingPolicyWithParams ∷
-  ∀ r.
-  ScriptId →
-  Array PlutusData →
+mkMintingPolicyWithParams ::
+  forall r.
+  ScriptId ->
+  Array PlutusData ->
   Run (EXCEPT OffchainError + r) PlutusScript
 mkMintingPolicyWithParams scriptId params = do
-  hexScript ← note (InvalidScriptId scriptId)
+  hexScript <- note (InvalidScriptId scriptId)
     (Map.lookup scriptId rawScripts)
   mkMintingPolicyWithParams' hexScript params
 
 -- | `mkMintingPolicyWithParams' hexScript params` returns the `MintingPolicy`
 -- | of `hexScript` with the script applied to `params`.
-mkMintingPolicyWithParams' ∷
-  ∀ r.
-  String →
-  Array PlutusData →
+mkMintingPolicyWithParams' ::
+  forall r.
+  String ->
+  Array PlutusData ->
   Run (EXCEPT OffchainError + r) PlutusScript
 mkMintingPolicyWithParams' hexScript params = do
   let
     script = decodeTextEnvelope hexScript >>= plutusScriptFromEnvelope
-  unapplied ← note (InvalidScript hexScript) script
-  applied ← rethrow $
+  unapplied <- note (InvalidScript hexScript) script
+  applied <- rethrow $
     if Array.null params then pure unapplied
     else (InvalidScriptArgs) `lmap` Scripts.applyArgs unapplied params
   pure $ applied

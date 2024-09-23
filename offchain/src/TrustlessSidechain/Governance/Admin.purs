@@ -23,14 +23,14 @@ instance Show GovernanceAuthority where
 
 derive newtype instance Eq GovernanceAuthority
 
-mkGovernanceAuthority ∷ PaymentPubKeyHash → GovernanceAuthority
+mkGovernanceAuthority :: PaymentPubKeyHash -> GovernanceAuthority
 mkGovernanceAuthority = GovernanceAuthority
 
-governanceAuthorityLookupsAndConstraints ∷
-  GovernanceAuthority →
+governanceAuthorityLookupsAndConstraints ::
+  GovernanceAuthority ->
 
-  { lookups ∷ Lookups.ScriptLookups
-  , constraints ∷ Constraints.TxConstraints
+  { lookups :: Lookups.ScriptLookups
+  , constraints :: Constraints.TxConstraints
   }
 governanceAuthorityLookupsAndConstraints (GovernanceAuthority pkh) = do
   let

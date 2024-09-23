@@ -25,14 +25,14 @@ import Type.Row (type (+))
 
 -- | The logging environment, may be used to parametrize functions and override
 -- | their logging behaviour at runtime.
-type Environment = { isTTY ∷ Boolean, logLevel ∷ LogLevel }
+type Environment = { isTTY :: Boolean, logLevel :: LogLevel }
 
 -- | The default logging environment
-environment ∷ Environment
+environment :: Environment
 environment = { isTTY: stdoutIsTTY, logLevel: Info }
 
 -- | Store all log levels in a file
-fileLogger ∷ Message → Aff Unit
+fileLogger :: Message -> Aff Unit
 fileLogger m = do
   let filename = "./contractlog.json"
   appendTextFile UTF8 filename (jsonFormatter m <> "\n")
@@ -41,43 +41,43 @@ data LogEff a
   = LogMsg Message a
   | LogStr String a
 
-derive instance functorLogF ∷ Functor LogEff
+derive instance functorLogF :: Functor LogEff
 
-type LOG r = (log ∷ LogEff | r)
+type LOG r = (log :: LogEff | r)
 
-_log = Proxy ∷ Proxy "log"
+_log = Proxy :: Proxy "log"
 
-logMsg ∷ ∀ r. Message → Run (LOG + r) Unit
+logMsg :: forall r. Message -> Run (LOG + r) Unit
 logMsg msg = Run.lift _log (LogMsg msg unit)
 
-logStr ∷ ∀ r. String → Run (LOG + r) Unit
+logStr :: forall r. String -> Run (LOG + r) Unit
 logStr str = Run.lift _log (LogStr str unit)
 
-handleLogToFile ∷ ∀ r. String → LogEff ~> Run (AFF + r)
+handleLogToFile :: forall r. String -> LogEff ~> Run (AFF + r)
 handleLogToFile fileName = case _ of
-  LogMsg msg next → do
+  LogMsg msg next -> do
     Run.liftAff $ appendTextFile UTF8 fileName
       (jsonFormatter msg <> "\n")
     pure next
 
-  LogStr str next → do
+  LogStr str next -> do
     Run.liftAff $ appendTextFile UTF8 fileName
       (str <> "\n")
     pure next
 
-handleLogToConsole ∷ ∀ r. LogEff ~> Run (AFF + r)
+handleLogToConsole :: forall r. LogEff ~> Run (AFF + r)
 handleLogToConsole = case _ of
-  LogMsg msg next → do
+  LogMsg msg next -> do
     Run.liftAff $ Console.log (jsonFormatter msg <> "\n")
     pure next
 
-  LogStr str next → do
+  LogStr str next -> do
     Run.liftAff $ Console.log str
     pure next
 
-runLogToConsole ∷ ∀ r. Run (LOG + AFF + r) ~> Run (AFF + r)
+runLogToConsole :: forall r. Run (LOG + AFF + r) ~> Run (AFF + r)
 runLogToConsole = Run.interpret (Run.on _log handleLogToConsole Run.send)
 
-runLogToFile ∷ ∀ r. String → Run (LOG + AFF + r) ~> Run (AFF + r)
+runLogToFile :: forall r. String -> Run (LOG + AFF + r) ~> Run (AFF + r)
 runLogToFile fileName =
   Run.interpret (Run.on _log (handleLogToFile fileName) Run.send)

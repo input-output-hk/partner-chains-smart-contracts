@@ -33,14 +33,14 @@ import Type.Row (type (+))
 
 -- | Get the OnlyMintMintingPolicy by applying `SidechainParams` to the dummy
 -- | minting policy.
-decodeDParameterMintingPolicy ∷
-  ∀ r.
-  SidechainParams →
+decodeDParameterMintingPolicy ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + WALLET + r) PlutusScript
 decodeDParameterMintingPolicy sidechainParams = do
-  { dParameterValidatorAddress } ← getDParameterValidatorAndAddress
+  { dParameterValidatorAddress } <- getDParameterValidatorAndAddress
     sidechainParams
-  plutusAddressData ←
+  plutusAddressData <-
     note
       ( InvalidAddress "Couldn't map address to PlutusData"
           dParameterValidatorAddress
@@ -49,36 +49,36 @@ decodeDParameterMintingPolicy sidechainParams = do
   mkMintingPolicyWithParams DParameterPolicy $
     [ toData sidechainParams, toData plutusAddressData ]
 
-decodeDParameterValidator ∷
-  ∀ r.
-  SidechainParams →
+decodeDParameterValidator ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + r) PlutusScript
 decodeDParameterValidator sidechainParams = do
   mkValidatorWithParams DParameterValidator [ toData sidechainParams ]
 
-getDParameterValidatorAndAddress ∷
-  ∀ r.
-  SidechainParams →
+getDParameterValidatorAndAddress ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + WALLET + r)
-    { dParameterValidator ∷ PlutusScript
-    , dParameterValidatorAddress ∷ Address
+    { dParameterValidator :: PlutusScript
+    , dParameterValidatorAddress :: Address
     }
 getDParameterValidatorAndAddress sidechainParams = do
-  dParameterValidator ← decodeDParameterValidator
+  dParameterValidator <- decodeDParameterValidator
     sidechainParams
-  dParameterValidatorAddress ←
+  dParameterValidatorAddress <-
     toAddress (PlutusScript.hash dParameterValidator)
 
   pure { dParameterValidator, dParameterValidatorAddress }
 
-getDParameterMintingPolicyAndCurrencySymbol ∷
-  ∀ r.
-  SidechainParams →
+getDParameterMintingPolicyAndCurrencySymbol ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + WALLET + r)
-    { dParameterMintingPolicy ∷ PlutusScript
-    , dParameterCurrencySymbol ∷ ScriptHash
+    { dParameterMintingPolicy :: PlutusScript
+    , dParameterCurrencySymbol :: ScriptHash
     }
 getDParameterMintingPolicyAndCurrencySymbol sidechainParams = do
-  dParameterMintingPolicy ← decodeDParameterMintingPolicy sidechainParams
+  dParameterMintingPolicy <- decodeDParameterMintingPolicy sidechainParams
   let dParameterCurrencySymbol = PlutusScript.hash dParameterMintingPolicy
   pure { dParameterMintingPolicy, dParameterCurrencySymbol }

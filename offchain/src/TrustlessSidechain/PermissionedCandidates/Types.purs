@@ -49,9 +49,9 @@ instance FromData PermissionedCandidatesValidatorRedeemer where
   fromData _ = Nothing
 
 data PermissionedCandidateKeys = PermissionedCandidateKeys
-  { sidechainKey ∷ ByteArray
-  , auraKey ∷ ByteArray
-  , grandpaKey ∷ ByteArray
+  { sidechainKey :: ByteArray
+  , auraKey :: ByteArray
+  , grandpaKey :: ByteArray
   }
 
 derive instance Eq PermissionedCandidateKeys
@@ -72,12 +72,12 @@ instance ToData PermissionedCandidateKeys where
 instance FromData PermissionedCandidateKeys where
   fromData =
     productFromData3 $
-      \sidechainKey auraKey grandpaKey →
+      \sidechainKey auraKey grandpaKey ->
         PermissionedCandidateKeys
           { sidechainKey, auraKey, grandpaKey }
 
 data PermissionedCandidatesValidatorDatum = PermissionedCandidatesValidatorDatum
-  { candidates ∷ Array PermissionedCandidateKeys
+  { candidates :: Array PermissionedCandidateKeys
   }
 
 derive instance Eq PermissionedCandidatesValidatorDatum
@@ -93,7 +93,7 @@ instance ToData PermissionedCandidatesValidatorDatum where
 
 instance FromData PermissionedCandidatesValidatorDatum where
   fromData x = do
-    candidates ← fromData x
+    candidates <- fromData x
     pure $ PermissionedCandidatesValidatorDatum { candidates }
 
 data PermissionedCandidatesPolicyRedeemer

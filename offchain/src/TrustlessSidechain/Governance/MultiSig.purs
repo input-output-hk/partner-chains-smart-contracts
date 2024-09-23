@@ -45,9 +45,9 @@ import Type.Row (type (+))
 -- @since v6.1.0
 newtype MultiSigGovParams = MultiSigGovParams
   { -- | Members of the governance
-    governanceMembers ∷ Array Ed25519KeyHash
+    governanceMembers :: Array Ed25519KeyHash
   -- | Minimal required number of signatures
-  , requiredSignatures ∷ BigInt.BigInt
+  , requiredSignatures :: BigInt.BigInt
   }
 
 derive instance Generic MultiSigGovParams _
@@ -70,14 +70,14 @@ instance ToData MultiSigGovParams where
 
 instance FromData MultiSigGovParams where
   fromData = case _ of
-    List [ gm, rs ] → do
-      governanceMembers ← fromData gm
-      requiredSignatures ← fromData rs
+    List [ gm, rs ] -> do
+      governanceMembers <- fromData gm
+      requiredSignatures <- fromData rs
       pure $ MultiSigGovParams
         { governanceMembers
         , requiredSignatures
         }
-    _ → Nothing
+    _ -> Nothing
 
 instance Show MultiSigGovParams where
   show = genericShow
@@ -99,29 +99,29 @@ instance ToData MultiSigGovRedeemer where
 
 instance FromData MultiSigGovRedeemer where
   fromData = case _ of
-    Integer tag | tag == BigInt.fromInt 0 → pure MultiSignatureCheck
-    Integer tag | tag == BigInt.fromInt 1 → pure MultiSigTokenGC
-    _ → Nothing
+    Integer tag | tag == BigInt.fromInt 0 -> pure MultiSignatureCheck
+    Integer tag | tag == BigInt.fromInt 1 -> pure MultiSigTokenGC
+    _ -> Nothing
 
 instance Show MultiSigGovRedeemer where
   show = genericShow
 
 -- | A name for the multiSigGov initialization token.  Must be unique among
 -- | initialization tokens.
-multisigGovTokenName ∷ TokenName
+multisigGovTokenName :: TokenName
 multisigGovTokenName = emptyAssetName
 
-multisigGovPolicy ∷
-  ∀ r.
-  MultiSigGovParams →
+multisigGovPolicy ::
+  forall r.
+  MultiSigGovParams ->
   Run (EXCEPT OffchainError + r) PlutusScript
 multisigGovPolicy msgp =
   mkMintingPolicyWithParams MultiSigPolicy [ toData msgp ]
 
 -- | Get currency information for a multisignature governance policy.
-multisigGovCurrencyInfo ∷
-  ∀ r.
-  MultiSigGovParams →
+multisigGovCurrencyInfo ::
+  forall r.
+  MultiSigGovParams ->
   Run (EXCEPT OffchainError + r) CurrencyInfo
 multisigGovCurrencyInfo msgp = do
   getCurrencyInfo MultiSigPolicy [ toData msgp ]

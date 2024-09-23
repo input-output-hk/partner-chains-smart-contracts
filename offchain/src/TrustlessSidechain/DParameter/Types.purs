@@ -15,8 +15,8 @@ import TrustlessSidechain.Utils.Data
   )
 
 data DParameterValidatorDatum = DParameterValidatorDatum
-  { permissionedCandidatesCount ∷ BigInt
-  , registeredCandidatesCount ∷ BigInt
+  { permissionedCandidatesCount :: BigInt
+  , registeredCandidatesCount :: BigInt
   }
 
 derive instance Eq DParameterValidatorDatum
@@ -37,7 +37,7 @@ instance ToData DParameterValidatorDatum where
 
 instance FromData DParameterValidatorDatum where
   fromData =
-    productFromData2 $ \permissionedCandidatesCount registeredCandidatesCount →
+    productFromData2 $ \permissionedCandidatesCount registeredCandidatesCount ->
       DParameterValidatorDatum
         { permissionedCandidatesCount
         , registeredCandidatesCount

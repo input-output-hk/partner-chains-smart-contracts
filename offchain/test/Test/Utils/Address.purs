@@ -25,11 +25,11 @@ import Test.Utils (WrappedTests, pureGroup)
 
 type TestCase = Mote (Const Void) Test Unit
 
-tests ∷ WrappedTests
+tests :: WrappedTests
 tests = pureGroup "Merkle proof serialisation for #249" do
   test1
 
-test1 ∷ TestCase
+test1 :: TestCase
 test1 =
   Mote.Monad.test
     "Pub key hash address <-> binary roundtrip"
@@ -60,17 +60,17 @@ test1 =
           ]
 
         roundTrip addr = do
-          cardanoAddr ← toCardano networkId addr
+          cardanoAddr <- toCardano networkId addr
           Address.fromBech32 (Address.toBech32 cardanoAddr)
 
       in
         traverse_
-          ( \address →
+          ( \address ->
               roundTrip address `shouldEqual` toCardano networkId address
           )
           testAddresses
 
-hexToPubKeyHash ∷ String → PubKeyHash
+hexToPubKeyHash :: String -> PubKeyHash
 hexToPubKeyHash hex =
   PubKeyHash
     $ unsafePartial

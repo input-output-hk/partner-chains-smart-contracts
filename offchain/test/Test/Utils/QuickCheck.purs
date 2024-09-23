@@ -91,7 +91,7 @@ instance Show ArbitraryAssetName where
 
 instance Arbitrary ArbitraryAssetName where
   arbitrary = ArbitraryAssetName <$> do
-    len ← chooseInt 0 32
+    len <- chooseInt 0 32
     suchThatMap (vectorOf len genByteInt)
       (byteArrayFromIntArrayUnsafe >>> mkAssetName)
 
@@ -113,15 +113,15 @@ instance Show ArbitraryAsset where
 
 instance Arbitrary ArbitraryAsset where
   arbitrary = ArbitraryAsset <$> do
-    ArbitraryScriptHash sh ← arbitrary
-    ArbitraryAssetName an ← arbitrary
+    ArbitraryScriptHash sh <- arbitrary
+    ArbitraryAssetName an <- arbitrary
     pure $ Asset sh an
 
 instance Coarbitrary ArbitraryAsset where
   coarbitrary (ArbitraryAsset (Asset sh an)) =
     coarbitrary (ArbitraryScriptHash sh) >>>
       coarbitrary (ArbitraryAssetName an)
-  coarbitrary (ArbitraryAsset AdaAsset) = \x → x
+  coarbitrary (ArbitraryAsset AdaAsset) = \x -> x
 
 -- | Generator wrapper for 'Credential'
 newtype ArbitraryCredential = ArbitraryCredential Credential
@@ -140,14 +140,14 @@ instance Arbitrary ArbitraryCredential where
     NEA.cons' (PubKeyCredential <$> go)
       [ ScriptCredential <$> go2 ]
     where
-    go ∷ Gen PubKeyHash
+    go :: Gen PubKeyHash
     go = do
-      ArbitraryPubKeyHash pkh ← arbitrary
+      ArbitraryPubKeyHash pkh <- arbitrary
       pure pkh
 
-    go2 ∷ Gen ValidatorHash
+    go2 :: Gen ValidatorHash
     go2 = do
-      ArbitraryScriptHash sh ← arbitrary
+      ArbitraryScriptHash sh <- arbitrary
       pure $ wrap sh
 
 -- | Generator wrapper for 'Address'
@@ -164,11 +164,11 @@ instance Show ArbitraryAddress where
 
 instance Arbitrary ArbitraryAddress where
   arbitrary = ArbitraryAddress <$> do
-    ArbitraryPaymentPubKeyHash pkh ← arbitrary
-    scred ← arbitrary
+    ArbitraryPaymentPubKeyHash pkh <- arbitrary
+    scred <- arbitrary
     pure $ case scred of
-      Nothing → pubKeyHashAddress pkh Nothing
-      Just (ArbitraryCredential addressStakingCredential) →
+      Nothing -> pubKeyHashAddress pkh Nothing
+      Just (ArbitraryCredential addressStakingCredential) ->
         pubKeyHashAddress pkh (Just addressStakingCredential)
 
 -- | A 'fill in' for polymorphic types whose exact details we don't care about.
@@ -189,7 +189,7 @@ instance Show DA where
 
 instance Arbitrary DA where
   arbitrary = do
-    ArbitraryBigNum bi ← arbitrary
+    ArbitraryBigNum bi <- arbitrary
     pure $ DA bi
 
 instance Coarbitrary DA where
@@ -209,7 +209,7 @@ instance Show ArbitraryScriptHash where
 
 instance Arbitrary ArbitraryScriptHash where
   arbitrary = do
-    x ← BigNum.fromInt <$> arbitrary
+    x <- BigNum.fromInt <$> arbitrary
     pure $ ArbitraryScriptHash $ PlutusScript.hash (noncedAlwaysFail x)
 
 instance Coarbitrary ArbitraryScriptHash where
@@ -217,8 +217,8 @@ instance Coarbitrary ArbitraryScriptHash where
     (encodeCbor >>> unwrap >>> byteArrayToIntArray >>> coarbitrary) sh
 
 -- | A 'lifter' for 'Arbitrary' to values of kind 'Type -> Type'.
-class Arbitrary1 (f ∷ Type → Type) where
-  liftArbitrary ∷ ∀ (a ∷ Type). Gen a → Gen (f a)
+class Arbitrary1 (f :: Type -> Type) where
+  liftArbitrary :: forall (a :: Type). Gen a -> Gen (f a)
 
 instance Arbitrary1 Maybe where
   liftArbitrary gen =
@@ -297,7 +297,7 @@ derive instance Generic ArbitraryPaymentPubKeyHash _
 
 instance Arbitrary ArbitraryPaymentPubKeyHash where
   arbitrary = do
-    ArbitraryPubKeyHash pkh ← arbitrary
+    ArbitraryPubKeyHash pkh <- arbitrary
     pure (ArbitraryPaymentPubKeyHash (PaymentPubKeyHash pkh))
 
 instance Coarbitrary ArbitraryPaymentPubKeyHash where
@@ -306,19 +306,19 @@ instance Coarbitrary ArbitraryPaymentPubKeyHash where
 
 -- | Ensure that the generator only produces values for which the Kleisli arrow
 -- | 'hits'. If the Kleisli arrow never 'hits', this will loop forever.
-suchThatMap ∷
-  ∀ (a ∷ Type) (b ∷ Type).
-  Gen a →
-  (a → Maybe b) →
+suchThatMap ::
+  forall (a :: Type) (b :: Type).
+  Gen a ->
+  (a -> Maybe b) ->
   Gen b
 suchThatMap gen arrow = sized $ tailRecM go
   where
-  go ∷ Int → Gen (Step Int b)
+  go :: Int -> Gen (Step Int b)
   go size = do
-    x ← resize size gen
+    x <- resize size gen
     pure $ case arrow x of
-      Nothing → Loop (2 * size)
-      Just y → Done y
+      Nothing -> Loop (2 * size)
+      Just y -> Done y
 
 -- | Generator wrapper for BigNum
 newtype ArbitraryBigNum = ArbitraryBigNum BigNum
@@ -422,8 +422,8 @@ instance Show ArbitraryTransactionInput where
 
 instance Arbitrary ArbitraryTransactionInput where
   arbitrary = ArbitraryTransactionInput <$> do
-    ArbitraryTransactionHash transactionId ← arbitrary
-    ArbitraryUInt index ← arbitrary
+    ArbitraryTransactionHash transactionId <- arbitrary
+    ArbitraryUInt index <- arbitrary
     pure $ TransactionInput
       { transactionId
       , index
@@ -436,61 +436,61 @@ instance Coarbitrary ArbitraryTransactionInput where
 
 -- | Generator wrapper for number-like types that should never be negative (that
 -- | is, must be zero or larger).
-newtype NonNegative (a ∷ Type) = NonNegative a
+newtype NonNegative (a :: Type) = NonNegative a
 
 derive instance Functor NonNegative
 
-derive newtype instance (Eq a) ⇒ Eq (NonNegative a)
+derive newtype instance (Eq a) => Eq (NonNegative a)
 
-derive newtype instance (Ord a) ⇒ Ord (NonNegative a)
+derive newtype instance (Ord a) => Ord (NonNegative a)
 
 derive instance Generic (NonNegative a) _
 
-instance (Show a) ⇒ Show (NonNegative a) where
+instance (Show a) => Show (NonNegative a) where
   show = genericShow
 
-instance (Arbitrary a, Ord a, Ring a) ⇒ Arbitrary (NonNegative a) where
+instance (Arbitrary a, Ord a, Ring a) => Arbitrary (NonNegative a) where
   arbitrary = NonNegative <$> do
-    x ← arbitrary
+    x <- arbitrary
     pure $ abs x
 
-instance (Coarbitrary a) ⇒ Coarbitrary (NonNegative a) where
+instance (Coarbitrary a) => Coarbitrary (NonNegative a) where
   coarbitrary (NonNegative x) = coarbitrary x
 
 -- | Generator wrapper for number-like types that should always be positive
 -- | (that is, must be larger than zero).
-newtype Positive (a ∷ Type) = Positive a
+newtype Positive (a :: Type) = Positive a
 
 derive instance Functor Positive
 
-derive newtype instance (Eq a) ⇒ Eq (Positive a)
+derive newtype instance (Eq a) => Eq (Positive a)
 
-derive newtype instance (Ord a) ⇒ Ord (Positive a)
+derive newtype instance (Ord a) => Ord (Positive a)
 
 derive instance Generic (Positive a) _
 
-instance (Show a) ⇒ Show (Positive a) where
+instance (Show a) => Show (Positive a) where
   show = genericShow
 
-instance (Arbitrary a, Ord a, Semiring a) ⇒ Arbitrary (Positive a) where
+instance (Arbitrary a, Ord a, Semiring a) => Arbitrary (Positive a) where
   arbitrary = Positive <$> do
-    x ← suchThat arbitrary (_ > zero)
+    x <- suchThat arbitrary (_ > zero)
     pure x
 
-instance (Coarbitrary a) ⇒ Coarbitrary (Positive a) where
+instance (Coarbitrary a) => Coarbitrary (Positive a) where
   coarbitrary (Positive x) = coarbitrary x
 
 -- helpers
 
-genByteInt ∷ Gen Int
+genByteInt :: Gen Int
 genByteInt = chooseInt 0 255
 
-noncedAlwaysFail ∷
-  ∀ (a ∷ Type).
-  ToData a ⇒
-  a →
+noncedAlwaysFail ::
+  forall (a :: Type).
+  ToData a =>
+  a ->
   PlutusScript
 noncedAlwaysFail x = unsafePartial $ fromJust do
-  script ← hush
+  script <- hush
     (decodeAeson (encodeAeson [ "4701000022224981", "PlutusV2" ]))
   applyArgs script [ toData x ] # hush

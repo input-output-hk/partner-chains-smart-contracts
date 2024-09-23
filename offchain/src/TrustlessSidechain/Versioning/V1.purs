@@ -41,27 +41,27 @@ import TrustlessSidechain.Versioning.Types
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
 
-getVersionedPoliciesAndValidators ∷
-  ∀ r.
-  SidechainParams →
+getVersionedPoliciesAndValidators ::
+  forall r.
+  SidechainParams ->
   Run (READER Env + EXCEPT OffchainError + WALLET + r)
-    { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
-    , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
+    { versionedPolicies :: List (Tuple ScriptId PlutusScript)
+    , versionedValidators :: List (Tuple ScriptId PlutusScript)
     }
 getVersionedPoliciesAndValidators sidechainParams = do
-  committeeScripts ← getCommitteeSelectionPoliciesAndValidators sidechainParams
-  nativeTokenManagementScripts ← getNativeTokenManagementPoliciesAndValidators
+  committeeScripts <- getCommitteeSelectionPoliciesAndValidators sidechainParams
+  nativeTokenManagementScripts <- getNativeTokenManagementPoliciesAndValidators
     sidechainParams
 
   pure $ committeeScripts
     <> nativeTokenManagementScripts
 
-getCommitteeSelectionPoliciesAndValidators ∷
-  ∀ r.
-  SidechainParams →
+getCommitteeSelectionPoliciesAndValidators ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + WALLET + r)
-    { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
-    , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
+    { versionedPolicies :: List (Tuple ScriptId PlutusScript)
+    , versionedValidators :: List (Tuple ScriptId PlutusScript)
     }
 getCommitteeSelectionPoliciesAndValidators sp =
   do
@@ -76,7 +76,7 @@ getCommitteeSelectionPoliciesAndValidators sp =
 
     -- Getting validators to version
     -----------------------------------
-    committeeCandidateValidator ← getCommitteeCandidateValidator sp
+    committeeCandidateValidator <- getCommitteeCandidateValidator sp
 
     let
       versionedValidators = List.fromFoldable
@@ -85,25 +85,25 @@ getCommitteeSelectionPoliciesAndValidators sp =
 
     pure $ { versionedPolicies, versionedValidators }
 
-getNativeTokenManagementPoliciesAndValidators ∷
-  ∀ r.
-  SidechainParams →
+getNativeTokenManagementPoliciesAndValidators ::
+  forall r.
+  SidechainParams ->
   Run (READER Env + EXCEPT OffchainError + WALLET + r)
-    { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
-    , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
+    { versionedPolicies :: List (Tuple ScriptId PlutusScript)
+    , versionedValidators :: List (Tuple ScriptId PlutusScript)
     }
 getNativeTokenManagementPoliciesAndValidators sp = do
-  governance ← (_.governance) <$> ask
+  governance <- (_.governance) <$> ask
   case governance of
     -- The native token management system can only be used if the user specified
     -- parameters for the governance (currently only multisignature governance)
-    Just (MultiSig msgp) → do
-      versionOracleConfig ← Versioning.getVersionOracleConfig sp
-      reserveAuthPolicy' ← reserveAuthPolicy versionOracleConfig
-      reserveValidator' ← reserveValidator versionOracleConfig
-      illiquidCirculationSupplyValidator' ←
+    Just (MultiSig msgp) -> do
+      versionOracleConfig <- Versioning.getVersionOracleConfig sp
+      reserveAuthPolicy' <- reserveAuthPolicy versionOracleConfig
+      reserveValidator' <- reserveValidator versionOracleConfig
+      illiquidCirculationSupplyValidator' <-
         illiquidCirculationSupplyValidator versionOracleConfig
-      governancePolicy ← multisigGovPolicy msgp
+      governancePolicy <- multisigGovPolicy msgp
 
       let
         versionedPolicies = List.fromFoldable
@@ -117,4 +117,4 @@ getNativeTokenManagementPoliciesAndValidators sp = do
           ]
 
       pure $ { versionedPolicies, versionedValidators }
-    _ → pure { versionedPolicies: mempty, versionedValidators: mempty }
+    _ -> pure { versionedPolicies: mempty, versionedValidators: mempty }

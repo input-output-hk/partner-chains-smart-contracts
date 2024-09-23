@@ -32,7 +32,7 @@ import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import Type.Row (type (+))
 
 -- | `tests` wraps up all the tests conveniently
-tests ∷ WrappedTests
+tests :: WrappedTests
 tests =
   Test.Utils.testnetGroup
     "Candidate permission token register / deregister tests"
@@ -43,7 +43,7 @@ tests =
 -- | Mint a single permission token, then register and verify that the
 -- | permission token is at the committee validator address.... Then we
 -- | deregister and if we get the permission token back.
-testScenarioSuccess1 ∷ TestnetTest
+testScenarioSuccess1 :: TestnetTest
 testScenarioSuccess1 =
   Mote.Monad.test
     "Mint permission token, register (check if register validator has permission token), deregister (check if we get permission token back)"
@@ -52,10 +52,10 @@ testScenarioSuccess1 =
         , BigNum.fromInt 5_000_000
         , BigNum.fromInt 5_000_000
         ]
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+    $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) do
 
         -- Generate genesis UTxO
-        genesisUtxo ← Test.Utils.getOwnTransactionInput
+        genesisUtxo <- Test.Utils.getOwnTransactionInput
 
         let
           -- Put genesis UTxO into sidechain params
@@ -68,20 +68,20 @@ testScenarioSuccess1 =
         -- Mint candidate permission init token and use it to mint a single
         -- candidate permission token
         -----------------------------
-        _ ←
+        _ <-
           ( (<>) <$> initSpendGenesisUtxo sidechainParams <*>
               CandidatePermissionToken.mintOneCandidatePermissionInitToken
                 sidechainParams
           ) >>=
             balanceSignAndSubmit "Mint candidate permission init token"
 
-        _ ← CandidatePermissionToken.runCandidatePermissionToken
+        _ <- CandidatePermissionToken.runCandidatePermissionToken
           sidechainParams
           (BigInt.fromInt 1)
         -----------------------------
         -- Register candidate using a permission token
         -----------------------------
-        registerTxId ←
+        registerTxId <-
           Test.CommitteeCandidateValidator.runRegisterWithCandidatePermissionInfo
             true
             sidechainParams
@@ -89,12 +89,12 @@ testScenarioSuccess1 =
         -----------------------------
         -- Asserting that the committee validator actually has the token
         -----------------------------
-        candidatePermissionInfo ←
+        candidatePermissionInfo <-
           CandidatePermissionToken.candidatePermissionCurrencyInfo
             sidechainParams
 
-        committeeCandidiateValidatorAddr ← do
-          committeeCandidateValidator ←
+        committeeCandidiateValidatorAddr <- do
+          committeeCandidateValidator <-
             CommitteeCandidateValidator.getCommitteeCandidateValidator
               sidechainParams
           Utils.toAddress (PlutusScript.hash committeeCandidateValidator)
@@ -107,7 +107,7 @@ testScenarioSuccess1 =
         -----------------------------
         -- Running the deregister endpoint
         -----------------------------
-        _ ← Test.CommitteeCandidateValidator.runDeregister sidechainParams
+        _ <- Test.CommitteeCandidateValidator.runDeregister sidechainParams
 
         Test.Utils.assertIHaveOutputWithAsset $ Asset
           candidatePermissionInfo.currencySymbol
@@ -117,12 +117,12 @@ testScenarioSuccess1 =
 
 -- | `assertIHaveCandidatePermissionToken` asserts that we have a UTxO with at
 -- | least one of the candidate candidate permission token
-assertIHaveCandidatePermissionToken ∷
-  ∀ r.
-  SidechainParams →
+assertIHaveCandidatePermissionToken ::
+  forall r.
+  SidechainParams ->
   Run (EXCEPT OffchainError + CONTRACT + r) Unit
 assertIHaveCandidatePermissionToken sidechainParams = do
-  candidatePermissionInfo ←
+  candidatePermissionInfo <-
     CandidatePermissionToken.candidatePermissionCurrencyInfo
       sidechainParams
 
@@ -135,7 +135,7 @@ assertIHaveCandidatePermissionToken sidechainParams = do
 -- | Check if there are no permission tokens paid to the register validator,
 -- | then there are no tokens in the regsiter validator (this is essentialy
 -- | tautology)
-testScenarioFailure1 ∷ TestnetTest
+testScenarioFailure1 :: TestnetTest
 testScenarioFailure1 =
   Mote.Monad.test
     "Register, check if register output doesn't have permission token"
@@ -144,7 +144,7 @@ testScenarioFailure1 =
         , BigNum.fromInt 5_000_000
         , BigNum.fromInt 5_000_000
         ]
-    $ \alice → withUnliftApp (Wallet.withKeyWallet alice) do
+    $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) do
 
         let
           sidechainParams = Test.Utils.dummySidechainParams
@@ -152,7 +152,7 @@ testScenarioFailure1 =
         -----------------------------
         -- Running the endpoints..
         -----------------------------
-        txId ←
+        txId <-
           Test.CommitteeCandidateValidator.runRegisterWithCandidatePermissionInfo
             false
             sidechainParams
@@ -160,12 +160,12 @@ testScenarioFailure1 =
         -----------------------------
         -- Asserting that the committee validator actually has the token
         -----------------------------
-        candidatePermissionInfo ←
+        candidatePermissionInfo <-
           CandidatePermissionToken.candidatePermissionCurrencyInfo
             sidechainParams
 
-        committeeCandidiateValidatorAddr ← do
-          committeeCandidateValidator ←
+        committeeCandidiateValidatorAddr <- do
+          committeeCandidateValidator <-
             CommitteeCandidateValidator.getCommitteeCandidateValidator
               sidechainParams
           Utils.toAddress (PlutusScript.hash committeeCandidateValidator)

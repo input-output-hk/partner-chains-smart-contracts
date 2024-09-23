@@ -58,64 +58,64 @@ import TrustlessSidechain.Versioning.Types as Types
 
 -- | Response data to be presented after contract endpoint execution
 data EndpointResp
-  = CommitteeCandidateRegResp { transactionId ∷ ByteArray }
+  = CommitteeCandidateRegResp { transactionId :: ByteArray }
   | CandidatePermissionTokenResp
-      { transactionId ∷ ByteArray
-      , candidatePermissionCurrencySymbol ∷ ScriptHash
+      { transactionId :: ByteArray
+      , candidatePermissionCurrencySymbol :: ScriptHash
       }
-  | CommitteeCandidateDeregResp { transactionId ∷ ByteArray }
-  | GetAddrsResp { sidechainAddresses ∷ SidechainAddresses }
+  | CommitteeCandidateDeregResp { transactionId :: ByteArray }
+  | GetAddrsResp { sidechainAddresses :: SidechainAddresses }
   | InitTokensMintResp
-      { transactionId ∷ Maybe ByteArray
-      , sidechainParams ∷ SidechainParams
-      , sidechainAddresses ∷ SidechainAddresses
+      { transactionId :: Maybe ByteArray
+      , sidechainParams :: SidechainParams
+      , sidechainAddresses :: SidechainAddresses
       }
   | InitReserveManagementResp
-      { scriptsInitTxIds ∷ Array ByteArray
+      { scriptsInitTxIds :: Array ByteArray
       }
   | InitCandidatePermissionTokenResp
-      { initTransactionId ∷ Maybe ByteArray }
-  | InsertVersionResp { versioningTransactionIds ∷ Array ByteArray }
-  | UpdateVersionResp { versioningTransactionIds ∷ Array ByteArray }
-  | InvalidateVersionResp { versioningTransactionIds ∷ Array ByteArray }
+      { initTransactionId :: Maybe ByteArray }
+  | InsertVersionResp { versioningTransactionIds :: Array ByteArray }
+  | UpdateVersionResp { versioningTransactionIds :: Array ByteArray }
+  | InvalidateVersionResp { versioningTransactionIds :: Array ByteArray }
   | EcdsaSecp256k1KeyGenResp
-      { publicKey ∷ EcdsaSecp256k1PubKey
-      , privateKey ∷ EcdsaSecp256k1PrivateKey
+      { publicKey :: EcdsaSecp256k1PubKey
+      , privateKey :: EcdsaSecp256k1PrivateKey
       }
   | SchnorrSecp256k1KeyGenResp
-      { publicKey ∷ SchnorrSecp256k1PublicKey
-      , privateKey ∷ SchnorrSecp256k1PrivateKey
+      { publicKey :: SchnorrSecp256k1PublicKey
+      , privateKey :: SchnorrSecp256k1PrivateKey
       }
   | EcdsaSecp256k1SignResp
-      { publicKey ∷ EcdsaSecp256k1PubKey
-      , signature ∷ EcdsaSecp256k1Signature
-      , signedMessage ∷ ByteArray
+      { publicKey :: EcdsaSecp256k1PubKey
+      , signature :: EcdsaSecp256k1Signature
+      , signedMessage :: ByteArray
       }
   | SchnorrSecp256k1SignResp
-      { publicKey ∷ SchnorrSecp256k1PublicKey
-      , signature ∷ SchnorrSecp256k1Signature
-      , signedMessage ∷ ByteArray
+      { publicKey :: SchnorrSecp256k1PublicKey
+      , signature :: SchnorrSecp256k1Signature
+      , signedMessage :: ByteArray
       }
   | CborBlockProducerRegistrationMessageResp
-      { plutusData ∷ PlutusData
+      { plutusData :: PlutusData
       }
   | InsertDParameterResp
-      { transactionId ∷ ByteArray }
+      { transactionId :: ByteArray }
   | UpdateDParameterResp
-      { transactionId ∷ ByteArray }
+      { transactionId :: ByteArray }
   | UpdatePermissionedCandidatesResp
-      { transactionId ∷ ByteArray }
+      { transactionId :: ByteArray }
   | InitTokenStatusResp
-      { initTokenStatusData ∷ Map AssetName BigNum }
+      { initTokenStatusData :: Map AssetName BigNum }
   | ListVersionedScriptsResp
-      { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
-      , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
+      { versionedPolicies :: List (Tuple Types.ScriptId PlutusScript)
+      , versionedValidators :: List (Tuple Types.ScriptId PlutusScript)
       }
-  | ReserveResp { transactionHash ∷ ByteArray }
+  | ReserveResp { transactionHash :: ByteArray }
 
 -- | `serialisePlutusDataToHex` serialises plutus data to CBOR, and shows the
 -- | hex encoded CBOR.
-serialisePlutusDataToHex ∷ ∀ a. ToData a ⇒ a → String
+serialisePlutusDataToHex :: forall a. ToData a => a -> String
 serialisePlutusDataToHex = byteArrayToHex <<< cborBytesToByteArray
   <<< encodeCbor
   <<< toData
@@ -132,26 +132,26 @@ serialisePlutusDataToHex = byteArrayToHex <<< cborBytesToByteArray
 
 -- | Codec of the endpoint response data. Only includes an encoder, we don't need a decoder.
 -- | See Note [BigInt values and JSON]
-endpointRespCodec ∷ CA.JsonCodec EndpointResp
+endpointRespCodec :: CA.JsonCodec EndpointResp
 endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
   where
-  dec ∷ Json → Maybe EndpointResp
+  dec :: Json -> Maybe EndpointResp
   dec _ = Nothing
 
-  enc ∷ EndpointResp → Json
+  enc :: EndpointResp -> Json
   enc = case _ of
-    CommitteeCandidateRegResp { transactionId } →
+    CommitteeCandidateRegResp { transactionId } ->
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "CommitteeCandidateReg"
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
         ]
-    CommitteeCandidateDeregResp { transactionId } →
+    CommitteeCandidateDeregResp { transactionId } ->
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "CommitteeCandidateDereg"
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
         ]
     CandidatePermissionTokenResp
-      { transactionId, candidatePermissionCurrencySymbol } →
+      { transactionId, candidatePermissionCurrencySymbol } ->
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "CandidatePermissionToken"
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
@@ -160,24 +160,24 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
               ( currencySymbolToHex candidatePermissionCurrencySymbol
               )
         ]
-    GetAddrsResp { sidechainAddresses } →
+    GetAddrsResp { sidechainAddresses } ->
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "GetAddrs"
         , "addresses" /\ J.fromObject
             ( Object.fromFoldable
-                ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
+                ( map ((\(a /\ b) -> show a /\ b) >>> rmap J.fromString)
                     sidechainAddresses.addresses
                 )
             )
         , "validatorHashes" /\ J.fromObject
             ( Object.fromFoldable
-                ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
+                ( map ((\(a /\ b) -> show a /\ b) >>> rmap J.fromString)
                     sidechainAddresses.validatorHashes
                 )
             )
         , "mintingPolicies" /\ J.fromObject
             ( Object.fromFoldable
-                ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
+                ( map ((\(a /\ b) -> show a /\ b) >>> rmap J.fromString)
                     sidechainAddresses.mintingPolicies
                 )
             )
@@ -186,7 +186,7 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
       { transactionId
       , sidechainParams
       , sidechainAddresses
-      } →
+      } ->
       J.fromObject $
         Object.fromFoldable
           [ "endpoint" /\ J.fromString "InitTokensMint"
@@ -197,19 +197,19 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
           , "sidechainParams" /\ CA.encode scParamsCodec sidechainParams
           , "addresses" /\ J.fromObject
               ( Object.fromFoldable
-                  ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
+                  ( map ((\(a /\ b) -> show a /\ b) >>> rmap J.fromString)
                       sidechainAddresses.addresses
                   )
               )
           , "validatorHashes" /\ J.fromObject
               ( Object.fromFoldable
-                  ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
+                  ( map ((\(a /\ b) -> show a /\ b) >>> rmap J.fromString)
                       sidechainAddresses.validatorHashes
                   )
               )
           , "mintingPolicies" /\ J.fromObject
               ( Object.fromFoldable
-                  ( map ((\(a /\ b) → show a /\ b) >>> rmap J.fromString)
+                  ( map ((\(a /\ b) -> show a /\ b) >>> rmap J.fromString)
                       sidechainAddresses.mintingPolicies
                   )
               )
@@ -217,7 +217,7 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
 
     InitReserveManagementResp
       { scriptsInitTxIds
-      } →
+      } ->
       J.fromObject $
         Object.fromFoldable
           [ "endpoint" /\ J.fromString "InitReserveManagement"
@@ -225,7 +225,7 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
               (map (J.fromString <<< byteArrayToHex) scriptsInitTxIds)
           ]
 
-    InitCandidatePermissionTokenResp { initTransactionId } →
+    InitCandidatePermissionTokenResp { initTransactionId } ->
       J.fromObject $
         Object.fromFoldable
           [ "endpoint" /\ J.fromString "InitCandidatePermissionToken"
@@ -233,25 +233,25 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
               (CAC.maybe CA.string) -- Nothing encoded to null
               (map (byteArrayToHex) initTransactionId)
           ]
-    InsertVersionResp { versioningTransactionIds } →
+    InsertVersionResp { versioningTransactionIds } ->
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "InitVersion"
         , "versioningTransactionIds" /\ J.fromArray
             (map (J.fromString <<< byteArrayToHex) versioningTransactionIds)
         ]
-    UpdateVersionResp { versioningTransactionIds } →
+    UpdateVersionResp { versioningTransactionIds } ->
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "UpdateVersion"
         , "versioningTransactionIds" /\ J.fromArray
             (map (J.fromString <<< byteArrayToHex) versioningTransactionIds)
         ]
-    InvalidateVersionResp { versioningTransactionIds } →
+    InvalidateVersionResp { versioningTransactionIds } ->
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "InvalidateVersion"
         , "versioningTransactionIds" /\ J.fromArray
             (map (J.fromString <<< byteArrayToHex) versioningTransactionIds)
         ]
-    EcdsaSecp256k1KeyGenResp { publicKey, privateKey } →
+    EcdsaSecp256k1KeyGenResp { publicKey, privateKey } ->
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "EcdsaSecp256k1KeyGen"
         , "rawHexPublicKey" /\ J.fromString
@@ -259,7 +259,7 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         , "rawHexPrivateKey" /\ J.fromString
             (Utils.Crypto.serialiseEcdsaSecp256k1PrivateKey privateKey)
         ]
-    SchnorrSecp256k1KeyGenResp { publicKey, privateKey } →
+    SchnorrSecp256k1KeyGenResp { publicKey, privateKey } ->
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "SchnorrSecp256k1KeyGen"
         , "rawHexPublicKey" /\ J.fromString
@@ -267,7 +267,7 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         , "rawHexPrivateKey" /\ J.fromString
             (Utils.SchnorrSecp256k1.serializePrivateKey privateKey)
         ]
-    EcdsaSecp256k1SignResp { publicKey, signature, signedMessage } →
+    EcdsaSecp256k1SignResp { publicKey, signature, signedMessage } ->
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "EcdsaSecp256k1Sign"
         , "rawHexPublicKey" /\ J.fromString
@@ -276,7 +276,7 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
             (Utils.Crypto.serialiseEcdsaSecp256k1Signature signature)
         , "rawHexSignedMessage" /\ J.fromString (byteArrayToHex signedMessage)
         ]
-    SchnorrSecp256k1SignResp { publicKey, signature, signedMessage } →
+    SchnorrSecp256k1SignResp { publicKey, signature, signedMessage } ->
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "SchnorrSecp256k1Sign"
         , "rawHexPublicKey" /\ J.fromString
@@ -285,45 +285,45 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
             (Utils.SchnorrSecp256k1.serializeSignature signature)
         , "rawHexSignedMessage" /\ J.fromString (byteArrayToHex signedMessage)
         ]
-    CborBlockProducerRegistrationMessageResp { plutusData } →
+    CborBlockProducerRegistrationMessageResp { plutusData } ->
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "CborBlockProducerRegistrationMessage"
         , "cborHexBlockProducerRegistrationMessage" /\ J.fromString
             (serialisePlutusDataToHex plutusData)
         ]
     InsertDParameterResp
-      { transactionId } →
+      { transactionId } ->
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "InsertDParameter"
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
         ]
 
     UpdateDParameterResp
-      { transactionId } →
+      { transactionId } ->
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "UpdateDParameter"
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
         ]
 
     UpdatePermissionedCandidatesResp
-      { transactionId } →
+      { transactionId } ->
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "UpdatePermissionedCandidates"
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
         ]
 
     InitTokenStatusResp
-      { initTokenStatusData } →
+      { initTokenStatusData } ->
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "InitTokenStatus"
         , "initTokenStatusData" /\ encodeInitTokenStatusData initTokenStatusData
         ]
 
     ListVersionedScriptsResp
-      { versionedPolicies, versionedValidators } → do
+      { versionedPolicies, versionedValidators } -> do
       -- We encode in JSON the versioned script ids along with their hashes
       let
-        (versionedScriptIdsWithHashes ∷ List (Tuple ScriptId ScriptHash)) =
+        (versionedScriptIdsWithHashes :: List (Tuple ScriptId ScriptHash)) =
           (map (map PlutusScript.hash) versionedPolicies)
             <> (map (map PlutusScript.hash) versionedValidators)
       J.fromObject $ Object.fromFoldable
@@ -332,14 +332,14 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
             (encodeAeson $ map show $ versionedScriptIdsWithHashes)
         ]
 
-    ReserveResp { transactionHash } →
+    ReserveResp { transactionHash } ->
       J.fromObject $ Object.fromFoldable
         [ "transactionHash" /\ J.fromString (byteArrayToHex transactionHash) ]
 
 -- | Encode the endpoint response to a json object
-encodeEndpointResp ∷ EndpointResp → J.Json
+encodeEndpointResp :: EndpointResp -> J.Json
 encodeEndpointResp = CA.encode endpointRespCodec
 
 -- | Encode the endpoint response to a json encoded string
-stringifyEndpointResp ∷ EndpointResp → String
+stringifyEndpointResp :: EndpointResp -> String
 stringifyEndpointResp = encodeEndpointResp >>> J.stringify

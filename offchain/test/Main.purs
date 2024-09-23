@@ -27,7 +27,7 @@ import Test.Versioning as Versioning
 -- ```
 -- which according to the CTL team
 -- > You can ignore it, it's not a memory leak, it's just that we attach a lot of listeners to the exit event
-main ∷ Effect Unit
+main :: Effect Unit
 main = do
   Test.Unit.Main.runTest
     $ interpretWrappedTest do

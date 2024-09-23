@@ -33,46 +33,46 @@ data LogF a
   | LogWarn' String a
   | LogDebug' String a
 
-derive instance functorLogF ∷ Functor LogF
+derive instance functorLogF :: Functor LogF
 
-type LOG r = (log ∷ LogF | r)
+type LOG r = (log :: LogF | r)
 
-_log ∷ Proxy "log"
+_log :: Proxy "log"
 _log = Proxy
 
-handleLogWith ∷
-  ∀ r. (LogF ~> Run r) → Run (LOG + r) ~> Run r
+handleLogWith ::
+  forall r. (LogF ~> Run r) -> Run (LOG + r) ~> Run r
 handleLogWith f = interpret (on _log f send)
 
-logInfo' ∷
-  ∀ r. String → Run (LOG + r) Unit
+logInfo' ::
+  forall r. String -> Run (LOG + r) Unit
 logInfo' msg = Run.lift _log
   (LogInfo' msg unit)
 
-logWarn' ∷
-  ∀ r. String → Run (LOG + r) Unit
+logWarn' ::
+  forall r. String -> Run (LOG + r) Unit
 logWarn' msg = Run.lift _log
   (LogWarn' msg unit)
 
-logDebug' ∷
-  ∀ r. String → Run (LOG + r) Unit
+logDebug' ::
+  forall r. String -> Run (LOG + r) Unit
 logDebug' msg = Run.lift _log
   (LogDebug' msg unit)
 
-handleLogLive ∷
-  ∀ r. LogF ~> Run (EXCEPT OffchainError + CONTRACT + r)
+handleLogLive ::
+  forall r. LogF ~> Run (EXCEPT OffchainError + CONTRACT + r)
 handleLogLive =
   case _ of
-    LogInfo' msg x → const x <$> withTry
+    LogInfo' msg x -> const x <$> withTry
       (fromError "logInfo': ")
       (Contract.logInfo' msg)
-    LogWarn' msg x → const x <$> withTry
+    LogWarn' msg x -> const x <$> withTry
       (fromError "logWarn': ")
       (Contract.logWarn' msg)
-    LogDebug' msg x → const x <$> withTry
+    LogDebug' msg x -> const x <$> withTry
       (fromError "logDebug': ")
       (Contract.logDebug' msg)
   where
-  fromError ∷ String → Error → OffchainError
+  fromError :: String -> Error -> OffchainError
   fromError ctx =
     parseFromError parseDefaultError (Just (ErrorContext Log ctx))

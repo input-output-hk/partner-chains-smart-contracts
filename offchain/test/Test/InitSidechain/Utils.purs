@@ -22,12 +22,12 @@ import TrustlessSidechain.Versioning.Utils as Versioning
 -- | Map.Map, whose Eq instance is derived from the Array Eq instance
 -- | and therefore is sensitive to the order of insertion.
 -- | Note this is not *set* equality, since there is no deduplication.
-unorderedEq ∷
-  ∀ k v.
-  Ord k ⇒
-  Ord v ⇒
-  Map.Map k v →
-  Map.Map k v →
+unorderedEq ::
+  forall k v.
+  Ord k =>
+  Ord v =>
+  Map.Map k v ->
+  Map.Map k v ->
   Boolean
 unorderedEq m1 m2 =
   let
@@ -36,7 +36,7 @@ unorderedEq m1 m2 =
     kvs m1 == kvs m2
 
 -- | Testing utility for showing expected/actual
-failMsg ∷ ∀ a b. Show a ⇒ Show b ⇒ a → b → String
+failMsg :: forall a b. Show a => Show b => a -> b -> String
 failMsg exp act = "Expected: "
   <> show exp
   <> "\nBut got: "
@@ -46,11 +46,11 @@ failMsg exp act = "Expected: "
 -- | `initTokensMint`. It does not care about the particular version,
 -- | just the token name and quantity. Requires the number of version
 -- | oracle init tokens to be passed.
-expectedInitTokens ∷
-  Int → -- How many version init tokens should have been burned at this point?
-  List (Tuple Types.ScriptId PlutusScript) →
-  List (Tuple Types.ScriptId PlutusScript) →
-  Array AssetName →
+expectedInitTokens ::
+  Int -> -- How many version init tokens should have been burned at this point?
+  List (Tuple Types.ScriptId PlutusScript) ->
+  List (Tuple Types.ScriptId PlutusScript) ->
+  Array AssetName ->
   Map.Map AssetName BigNum
 expectedInitTokens tokensUsed versionedPolicies versionedValidators tokens =
   let
@@ -58,7 +58,7 @@ expectedInitTokens tokensUsed versionedPolicies versionedValidators tokens =
     nversion = List.length versionedPolicies
       + List.length versionedValidators
   in
-    foldr (\(k /\ v) → Map.insert k v) Map.empty
+    foldr (\(k /\ v) -> Map.insert k v) Map.empty
       $ Array.(:)
           ( Versioning.versionOracleInitTokenName /\
               (BigNum.fromInt (nversion - tokensUsed))

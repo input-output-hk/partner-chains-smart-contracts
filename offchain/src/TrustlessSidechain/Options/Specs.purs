@@ -115,14 +115,14 @@ import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Logging (environment, fileLogger)
 
 -- | Argument option parser for pc-contracts-cli
-options ∷ Maybe Config → ParserInfo Options
+options :: Maybe Config -> ParserInfo Options
 options maybeConfig = info (helper <*> optSpec maybeConfig)
   ( fullDesc <> header
       "pc-contracts-cli - CLI application to execute TrustlessSidechain Cardano endpoints"
   )
 
 -- | CLI parser of all commands
-optSpec ∷ Maybe Config → Parser Options
+optSpec :: Maybe Config -> Parser Options
 optSpec maybeConfig =
   hsubparser $ fold
     [ command "init-tokens-mint"
@@ -224,10 +224,10 @@ optSpec maybeConfig =
 
 -- | `utilsSpec` provides CLI options for utilities in the sidechain that do
 -- | not submit a tx to the blockchain
-utilsSpec ∷ Maybe Config → Parser Options
+utilsSpec :: Maybe Config -> Parser Options
 utilsSpec maybeConfig =
   let
-    keyGenSpecs ∷ Parser Options
+    keyGenSpecs :: Parser Options
     keyGenSpecs = hsubparser $ fold
       [ command "ecdsa-secp256k1"
           ( info ecdsaSecp256k1GenSpec
@@ -239,7 +239,7 @@ utilsSpec maybeConfig =
           )
       ]
 
-    signSpecs ∷ Parser Options
+    signSpecs :: Parser Options
     signSpecs = hsubparser $ fold
       [ command "ecdsa-secp256k1"
           ( info ecdsaSecp256k1SignSpec
@@ -251,7 +251,7 @@ utilsSpec maybeConfig =
           )
       ]
 
-    encodeSpecs ∷ Parser Options
+    encodeSpecs :: Parser Options
     encodeSpecs = hsubparser $ fold
       [ command "cbor-block-producer-registration-message"
           ( info (cborBlockProducerRegistrationMessageSpec maybeConfig)
@@ -279,22 +279,22 @@ utilsSpec maybeConfig =
 
 -- | Helper function, adding parsers of common fields (private key, staking key,
 -- | sidechain parameters and runtime configuration)
-withCommonOpts ∷ Maybe Config → Parser TxEndpoint → Parser Options
+withCommonOpts :: Maybe Config -> Parser TxEndpoint -> Parser Options
 withCommonOpts maybeConfig endpointParser = ado
-  pSkey ← pSkeySpec maybeConfig
-  stSkey ← stSKeySpec maybeConfig
-  sidechainEndpointParams ← sidechainEndpointParamsSpec maybeConfig
-  endpoint ← endpointParser
+  pSkey <- pSkeySpec maybeConfig
+  stSkey <- stSKeySpec maybeConfig
+  sidechainEndpointParams <- sidechainEndpointParamsSpec maybeConfig
+  endpoint <- endpointParser
 
-  ogmiosConfig ← serverConfigSpec "ogmios" $
+  ogmiosConfig <- serverConfigSpec "ogmios" $
     fromMaybe defaultOgmiosWsConfig
       (maybeConfig >>= _.runtimeConfig >>= _.ogmios)
 
-  kupoConfig ← serverConfigSpec "kupo" $
+  kupoConfig <- serverConfigSpec "kupo" $
     fromMaybe defaultKupoServerConfig
       (maybeConfig >>= _.runtimeConfig >>= _.kupo)
 
-  network ← option networkId $ fold
+  network <- option networkId $ fold
     [ long "network"
     , metavar "NETWORK"
     , help "Network ID of the sidechain"
@@ -304,8 +304,8 @@ withCommonOpts maybeConfig endpointParser = ado
 
   let
     config = case network of
-      MainnetId → mainnetConfig
-      _ → testnetConfig
+      MainnetId -> mainnetConfig
+      _ -> testnetConfig
 
   in
     TxOptions
@@ -315,7 +315,7 @@ withCommonOpts maybeConfig endpointParser = ado
           { logLevel = environment.logLevel
           , suppressLogs = not environment.isTTY
           , customLogger = Just
-              \_ m → fileLogger m *> logWithLevel environment.logLevel m
+              \_ m -> fileLogger m *> logWithLevel environment.logLevel m
           , walletSpec = Just $ UseKeys
               (PrivatePaymentKeyFile pSkey)
               (PrivateStakeKeyFile <$> stSkey)
@@ -324,11 +324,11 @@ withCommonOpts maybeConfig endpointParser = ado
       }
   where
   -- the default server config upstream is different than Kupo's defaults
-  defaultKupoServerConfig ∷
-    { host ∷ String
-    , path ∷ Maybe String
-    , port ∷ UInt
-    , secure ∷ Boolean
+  defaultKupoServerConfig ::
+    { host :: String
+    , path :: Maybe String
+    , port :: UInt
+    , secure :: Boolean
     }
   defaultKupoServerConfig =
     { port: UInt.fromInt 1442
@@ -338,7 +338,7 @@ withCommonOpts maybeConfig endpointParser = ado
     }
 
 -- | Payment signing key file CLI parser
-pSkeySpec ∷ Maybe Config → Parser String
+pSkeySpec :: Maybe Config -> Parser String
 pSkeySpec maybeConfig =
   option str $ fold
     [ short 'k'
@@ -350,7 +350,7 @@ pSkeySpec maybeConfig =
     ]
 
 -- | Stake signing key file CLI parser
-stSKeySpec ∷ Maybe Config → Parser (Maybe String)
+stSKeySpec :: Maybe Config -> Parser (Maybe String)
 stSKeySpec maybeConfig =
   optional $ option str $ fold
     [ short 'K'
@@ -364,40 +364,40 @@ stSKeySpec maybeConfig =
 -- | Generic server config CLI parser.
 -- | This can be used to parse the configuration of a CTL-runtime service.
 -- | A default configuration is used as fallback
-serverConfigSpec ∷ String → ServerConfig → Parser ServerConfig
+serverConfigSpec :: String -> ServerConfig -> Parser ServerConfig
 serverConfigSpec
   name
   { host: defHost, path: defPath, port: defPort, secure: defSecure } = ado
-  host ← option str $ fold
+  host <- option str $ fold
     [ long $ name <> "-host"
     , metavar "localhost"
     , help $ "Address host of " <> name
     , value defHost
     , showDefault
     ]
-  path ← optional $ option str $ fold
+  path <- optional $ option str $ fold
     [ long $ name <> "-path"
     , metavar "some/path"
     , help $ "Address path of " <> name
     , maybe mempty value defPath
     , showDefault
     ]
-  port ← option uint $ fold
+  port <- option uint $ fold
     [ long $ name <> "-port"
     , metavar "1234"
     , help $ "Port of " <> name
     , value defPort
     , showDefault
     ]
-  secure ← flag false true $ fold
+  secure <- flag false true $ fold
     [ long $ name <> "-secure"
     , help $ "Whether " <> name <> " is using an HTTPS connection"
     ]
   in { host, path, port, secure: secure || defSecure }
 
-sidechainParamsSpec ∷ Maybe Config → Parser SidechainParams
+sidechainParamsSpec :: Maybe Config -> Parser SidechainParams
 sidechainParamsSpec maybeConfig = ado
-  chainId ← option int $ fold
+  chainId <- option int $ fold
     [ short 'i'
     , long "sidechain-id"
     , metavar "1"
@@ -406,7 +406,7 @@ sidechainParamsSpec maybeConfig = ado
         (maybeConfig >>= _.sidechainParameters >>= _.chainId)
     ]
 
-  genesisUtxo ← option Parsers.transactionInput $ fold
+  genesisUtxo <- option Parsers.transactionInput $ fold
     [ short 'c'
     , long "genesis-committee-hash-utxo"
     , metavar "TX_ID#TX_IDX"
@@ -415,7 +415,7 @@ sidechainParamsSpec maybeConfig = ado
         (maybeConfig >>= _.sidechainParameters >>= _.genesisUtxo)
     ]
 
-  governanceAuthority ← option governanceAuthority $ fold
+  governanceAuthority <- option governanceAuthority $ fold
     [ short 'g'
     , long "governance-authority"
     , metavar "PUB_KEY_HASH"
@@ -430,10 +430,10 @@ sidechainParamsSpec maybeConfig = ado
         )
     ]
 
-  { thresholdNumerator, thresholdDenominator } ←
+  { thresholdNumerator, thresholdDenominator } <-
     let
       thresholdNumeratorDenominatorOption = ado
-        thresholdNumerator ← option numerator $ fold
+        thresholdNumerator <- option numerator $ fold
           [ long "threshold-numerator"
           , metavar "INT"
           , help "The numerator for the ratio of the threshold"
@@ -443,7 +443,7 @@ sidechainParamsSpec maybeConfig = ado
                       _.threshold
                   )
           ]
-        thresholdDenominator ← option denominator $ fold
+        thresholdDenominator <- option denominator $ fold
           [ long "threshold-denominator"
           , metavar "INT"
           , help "The denominator for the ratio of the threshold"
@@ -466,23 +466,23 @@ sidechainParamsSpec maybeConfig = ado
       }
 
 -- | SidechainParams CLI parser
-sidechainEndpointParamsSpec ∷ Maybe Config → Parser SidechainEndpointParams
+sidechainEndpointParamsSpec :: Maybe Config -> Parser SidechainEndpointParams
 sidechainEndpointParamsSpec maybeConfig = ado
-  sidechainParams ← sidechainParamsSpec maybeConfig
+  sidechainParams <- sidechainParamsSpec maybeConfig
   in
     SidechainEndpointParams
       { sidechainParams
       }
 
 -- | Parse required data for a stake ownership variant
-stakeOwnershipSpec ∷ Parser StakeOwnership
+stakeOwnershipSpec :: Parser StakeOwnership
 stakeOwnershipSpec = parseAdaBasedStaking <|> parseTokenBasedStaking
 
   where
   parseAdaBasedStaking = ado
     parseAdaBasedStakingFlag
-    pk ← parseSpoPubKey
-    sig ← option byteArray $ fold
+    pk <- parseSpoPubKey
+    sig <- option byteArray $ fold
       [ long "spo-signature"
       , metavar "SIGNATURE"
       , help "SPO signature"
@@ -492,14 +492,14 @@ stakeOwnershipSpec = parseAdaBasedStaking <|> parseTokenBasedStaking
     parseTokenBasedStakingFlag
     in TokenBasedStaking
 
-parseAdaBasedStakingFlag ∷ Parser Unit
+parseAdaBasedStakingFlag :: Parser Unit
 parseAdaBasedStakingFlag =
   flag' unit $ fold
     [ long "ada-based-staking"
     , help "Using Ada based staking model"
     ]
 
-parseTokenBasedStakingFlag ∷ Parser Unit
+parseTokenBasedStakingFlag :: Parser Unit
 parseTokenBasedStakingFlag =
   flag' unit $ fold
     [ long "native-token-based-staking"
@@ -507,22 +507,22 @@ parseTokenBasedStakingFlag =
     ]
 
 -- | Parse all parameters for the `register` endpoint
-regSpec ∷ Parser TxEndpoint
+regSpec :: Parser TxEndpoint
 regSpec = ado
-  { sidechainKey, auraKey, grandpaKey } ←
+  { sidechainKey, auraKey, grandpaKey } <-
     parseRegistrationSidechainKeys
-  sidechainSig ← option byteArray $ fold
+  sidechainSig <- option byteArray $ fold
     [ long "sidechain-signature"
     , metavar "SIGNATURE"
     , help "Sidechain signature"
     ]
-  inputUtxo ← option Parsers.transactionInput $ fold
+  inputUtxo <- option Parsers.transactionInput $ fold
     [ long "registration-utxo"
     , metavar "TX_ID#TX_IDX"
     , help "Input UTxO to be spend with the commitee candidate registration"
     ]
-  stakeOwnership ← stakeOwnershipSpec
-  usePermissionToken ← switch $ fold
+  stakeOwnership <- stakeOwnershipSpec
+  usePermissionToken <- switch $ fold
     -- `switch` is
     --  No flag given ==> false
     --  Flag given ==> true
@@ -542,21 +542,21 @@ regSpec = ado
       }
 
 -- | Parse all parameters for the `deregister` endpoint
-deregSpec ∷ Parser TxEndpoint
+deregSpec :: Parser TxEndpoint
 deregSpec = CommitteeCandidateDereg <<< { spoPubKey: _ } <$>
   (parseAdaBasedStaking <|> parseTokenBasedStaking)
 
   where
   parseAdaBasedStaking = ado
     parseAdaBasedStakingFlag
-    pk ← parseSpoPubKey
+    pk <- parseSpoPubKey
     in Just pk
   parseTokenBasedStaking = ado
     parseTokenBasedStakingFlag
     in Nothing
 
 -- | SPO public key CLI parser
-parseSpoPubKey ∷ Parser ByteArray
+parseSpoPubKey :: Parser ByteArray
 parseSpoPubKey = option byteArray $ fold
   [ long "spo-public-key"
   , metavar "PUBLIC_KEY"
@@ -565,7 +565,7 @@ parseSpoPubKey = option byteArray $ fold
 
 -- | `initCandidatePermissionTokenMintHelper` helps mint candidate permission
 -- | tokens from initializing the sidechain
-initCandidatePermissionTokenMintHelper ∷
+initCandidatePermissionTokenMintHelper ::
   Parser BigInt
 initCandidatePermissionTokenMintHelper =
   option bigInt $ fold
@@ -574,7 +574,7 @@ initCandidatePermissionTokenMintHelper =
     , help "Amount of the candidate permission token to be minted"
     ]
 
-parseVersion ∷ Parser Int
+parseVersion :: Parser Int
 parseVersion =
   option
     int
@@ -586,33 +586,33 @@ parseVersion =
     )
 
 -- | Parser for the `init-tokens-mint` endpoint.
-initTokensMintSpec ∷ Parser TxEndpoint
+initTokensMintSpec :: Parser TxEndpoint
 initTokensMintSpec = ado
-  version ← parseVersion
+  version <- parseVersion
   in
     InitTokensMint { version }
 
-initCandidatePermissionTokenSpec ∷ Parser TxEndpoint
+initCandidatePermissionTokenSpec :: Parser TxEndpoint
 initCandidatePermissionTokenSpec = ado
-  initCandidatePermissionTokenMintInfo ←
+  initCandidatePermissionTokenMintInfo <-
     optional initCandidatePermissionTokenMintHelper
   in
     InitCandidatePermissionToken
       { initCandidatePermissionTokenMintInfo
       }
 
-initReserveManagementSpec ∷ Parser TxEndpoint
+initReserveManagementSpec :: Parser TxEndpoint
 initReserveManagementSpec = ado
-  version ← parseVersion
+  version <- parseVersion
   in
     InitReserveManagement
       { version
       }
 
-insertVersionSpec ∷ Parser TxEndpoint
+insertVersionSpec :: Parser TxEndpoint
 insertVersionSpec = pure InsertVersion2
 
-parseOldVersion ∷ Parser Int
+parseOldVersion :: Parser Int
 parseOldVersion =
   option
     int
@@ -623,7 +623,7 @@ parseOldVersion =
         ]
     )
 
-parseNewVersion ∷ Parser Int
+parseNewVersion :: Parser Int
 parseNewVersion =
   option
     int
@@ -634,23 +634,23 @@ parseNewVersion =
         ]
     )
 
-updateVersionSpec ∷ Parser TxEndpoint
+updateVersionSpec :: Parser TxEndpoint
 updateVersionSpec = ado
-  newVersion ← parseNewVersion
-  oldVersion ← parseOldVersion
+  newVersion <- parseNewVersion
+  oldVersion <- parseOldVersion
   in UpdateVersion { newVersion, oldVersion }
 
-invalidateVersionSpec ∷ Parser TxEndpoint
+invalidateVersionSpec :: Parser TxEndpoint
 invalidateVersionSpec = ado
-  version ← parseVersion
+  version <- parseVersion
   in InvalidateVersion { version }
 
-listVersionedScriptsSpec ∷ Parser TxEndpoint
+listVersionedScriptsSpec :: Parser TxEndpoint
 listVersionedScriptsSpec = ado
-  version ← parseVersion
+  version <- parseVersion
   in ListVersionedScripts { version }
 
-parseDParameterPermissionedCandidatesCount ∷ Parser BigInt
+parseDParameterPermissionedCandidatesCount :: Parser BigInt
 parseDParameterPermissionedCandidatesCount =
   option
     Parsers.permissionedCandidatesCount
@@ -661,7 +661,7 @@ parseDParameterPermissionedCandidatesCount =
         ]
     )
 
-parseDParameterRegisteredCandidatesCount ∷ Parser BigInt
+parseDParameterRegisteredCandidatesCount :: Parser BigInt
 parseDParameterRegisteredCandidatesCount =
   option
     Parsers.registeredCandidatesCount
@@ -672,23 +672,23 @@ parseDParameterRegisteredCandidatesCount =
         ]
     )
 
-insertDParameterSpec ∷ Parser TxEndpoint
+insertDParameterSpec :: Parser TxEndpoint
 insertDParameterSpec = ado
-  permissionedCandidatesCount ← parseDParameterPermissionedCandidatesCount
-  registeredCandidatesCount ← parseDParameterRegisteredCandidatesCount
+  permissionedCandidatesCount <- parseDParameterPermissionedCandidatesCount
+  registeredCandidatesCount <- parseDParameterRegisteredCandidatesCount
   in InsertDParameter { permissionedCandidatesCount, registeredCandidatesCount }
 
-updateDParameterSpec ∷ Parser TxEndpoint
+updateDParameterSpec :: Parser TxEndpoint
 updateDParameterSpec = ado
-  permissionedCandidatesCount ← parseDParameterPermissionedCandidatesCount
-  registeredCandidatesCount ← parseDParameterRegisteredCandidatesCount
+  permissionedCandidatesCount <- parseDParameterPermissionedCandidatesCount
+  registeredCandidatesCount <- parseDParameterRegisteredCandidatesCount
   in UpdateDParameter { permissionedCandidatesCount, registeredCandidatesCount }
 
-parseRegistrationSidechainKeys ∷
+parseRegistrationSidechainKeys ::
   Parser
-    { sidechainKey ∷ ByteArray
-    , auraKey ∷ ByteArray
-    , grandpaKey ∷ ByteArray
+    { sidechainKey :: ByteArray
+    , auraKey :: ByteArray
+    , grandpaKey :: ByteArray
     }
 parseRegistrationSidechainKeys =
   option registrationSidechainKeys
@@ -699,12 +699,12 @@ parseRegistrationSidechainKeys =
         ]
     )
 
-parseAddPermissionedCandidates ∷
+parseAddPermissionedCandidates ::
   Parser
     ( List
-        { sidechainKey ∷ ByteArray
-        , auraKey ∷ ByteArray
-        , grandpaKey ∷ ByteArray
+        { sidechainKey :: ByteArray
+        , auraKey :: ByteArray
+        , grandpaKey :: ByteArray
         }
     )
 parseAddPermissionedCandidates =
@@ -721,13 +721,13 @@ parseAddPermissionedCandidates =
       )
   )
 
-parseRemovePermissionedCandidates ∷
+parseRemovePermissionedCandidates ::
   Parser
     ( Maybe
         ( List
-            { sidechainKey ∷ ByteArray
-            , auraKey ∷ ByteArray
-            , grandpaKey ∷ ByteArray
+            { sidechainKey :: ByteArray
+            , auraKey :: ByteArray
+            , grandpaKey :: ByteArray
             }
         )
     )
@@ -745,28 +745,28 @@ parseRemovePermissionedCandidates = Just <$>
       )
   )
 
-parseRemoveAllCandidates ∷ ∀ a. Parser (Maybe a)
+parseRemoveAllCandidates :: forall a. Parser (Maybe a)
 parseRemoveAllCandidates = flag' Nothing $ fold
   [ long "remove-all-candidates"
   , help "When used, all current permissioned candidates will be removed."
   ]
 
-updatePermissionedCandidatesSpec ∷ Parser TxEndpoint
+updatePermissionedCandidatesSpec :: Parser TxEndpoint
 updatePermissionedCandidatesSpec = ado
-  permissionedCandidatesToAdd ← parseAddPermissionedCandidates
-  permissionedCandidatesToRemove ←
+  permissionedCandidatesToAdd <- parseAddPermissionedCandidates
+  permissionedCandidatesToRemove <-
     (parseRemoveAllCandidates <|> parseRemovePermissionedCandidates)
   in
     UpdatePermissionedCandidates
       { permissionedCandidatesToAdd, permissionedCandidatesToRemove }
 
-initTokenStatusSpec ∷ Parser TxEndpoint
+initTokenStatusSpec :: Parser TxEndpoint
 initTokenStatusSpec = pure InitTokenStatus
 
 -- | Parse all parameters for the `candidiate-permission-token` endpoint
-candidatePermissionTokenSpec ∷ Parser TxEndpoint
+candidatePermissionTokenSpec :: Parser TxEndpoint
 candidatePermissionTokenSpec = ado
-  candidatePermissionTokenAmount ← option bigInt $ fold
+  candidatePermissionTokenAmount <- option bigInt $ fold
     [ long "candidate-permission-token-amount"
     , metavar "INT"
     , help "Amount of the candidate permission token to be minted"
@@ -775,9 +775,9 @@ candidatePermissionTokenSpec = ado
 
 -- | `getAddrSpec` provides a parser for getting the required information for
 -- | the `addresses` endpoint
-getAddrSpec ∷ Parser TxEndpoint
+getAddrSpec :: Parser TxEndpoint
 getAddrSpec = ado
-  usePermissionToken ← switch $ fold
+  usePermissionToken <- switch $ fold
     -- `switch` is
     --  No flag given ==> false
     --  Flag given ==> true
@@ -785,39 +785,39 @@ getAddrSpec = ado
     , help
         "Use candidate permission tokens during committee candidate registration"
     ]
-  version ← parseVersion
+  version <- parseVersion
   in
     GetAddrs
       { usePermissionToken
       , version
       }
 
-ecdsaSecp256k1GenSpec ∷ Parser Options
+ecdsaSecp256k1GenSpec :: Parser Options
 ecdsaSecp256k1GenSpec = pure $
   UtilsOptions
     { utilsOptions: EcdsaSecp256k1KeyGenAct
     }
 
-schnorrSecp256k1GenSpec ∷ Parser Options
+schnorrSecp256k1GenSpec :: Parser Options
 schnorrSecp256k1GenSpec = pure $
   UtilsOptions
     { utilsOptions: SchnorrSecp256k1KeyGenAct
     }
 
-ecdsaSecp256k1SignSpec ∷ Parser Options
+ecdsaSecp256k1SignSpec :: Parser Options
 ecdsaSecp256k1SignSpec = ado
-  privateKey ←
+  privateKey <-
     option ecdsaSecp256k1PrivateKey $ fold
       [ long "private-key"
       , metavar "SIDECHAIN_PRIVATE_KEY"
       , help "Hex encoded raw bytes of an ECDSA SECP256k1 private key"
       ]
-  message ← option byteArray $ fold
+  message <- option byteArray $ fold
     [ long "message"
     , metavar "MESSAGE"
     , help "Hex encoded raw bytes of a message to sign"
     ]
-  noHashMessage ← switch $ fold
+  noHashMessage <- switch $ fold
     -- `switch` is
     --  No flag given ==> false
     --  Flag given ==> true
@@ -834,20 +834,20 @@ ecdsaSecp256k1SignSpec = ado
             }
       }
 
-schnorrSecp256k1SignSpec ∷ Parser Options
+schnorrSecp256k1SignSpec :: Parser Options
 schnorrSecp256k1SignSpec = ado
-  privateKey ←
+  privateKey <-
     option schnorrSecp256k1PrivateKey $ fold
       [ long "private-key"
       , metavar "SIDECHAIN_PRIVATE_KEY"
       , help "Hex encoded raw bytes of an Schnorr SECP256k1 private key"
       ]
-  message ← option byteArray $ fold
+  message <- option byteArray $ fold
     [ long "message"
     , metavar "MESSAGE"
     , help "Hex encoded raw bytes of a message to sign"
     ]
-  noHashMessage ← switch $ fold
+  noHashMessage <- switch $ fold
     -- `switch` is
     --  No flag given ==> false
     --  Flag given ==> true
@@ -864,16 +864,16 @@ schnorrSecp256k1SignSpec = ado
             }
       }
 
-cborBlockProducerRegistrationMessageSpec ∷ Maybe Config → Parser Options
+cborBlockProducerRegistrationMessageSpec :: Maybe Config -> Parser Options
 cborBlockProducerRegistrationMessageSpec mConfig = ado
-  scParams ← sidechainParamsSpec mConfig
-  scPublicKey ←
+  scParams <- sidechainParamsSpec mConfig
+  scPublicKey <-
     option byteArray $ fold
       [ long "sidechain-public-key"
       , metavar "SIDECHAIN_PUB_KEY"
       , help "Sidechain public key"
       ]
-  inputUtxo ← option Parsers.transactionInput $ fold
+  inputUtxo <- option Parsers.transactionInput $ fold
     [ long "input-utxo"
     , metavar "TX_ID#TX_IDX"
     , help "Input UTxO which must be spent by the transaction"
@@ -891,7 +891,7 @@ cborBlockProducerRegistrationMessageSpec mConfig = ado
           }
       }
 
-parseDepositAmount ∷ Parser BigNum
+parseDepositAmount :: Parser BigNum
 parseDepositAmount = option Parsers.tokenAmount
   ( fold
       [ long "reserve-initial-deposit-amount"
@@ -900,7 +900,7 @@ parseDepositAmount = option Parsers.tokenAmount
       ]
   )
 
-parseIncentiveAmount ∷ Parser BigInt
+parseIncentiveAmount :: Parser BigInt
 parseIncentiveAmount =
   let
     fparser =
@@ -919,7 +919,7 @@ parseIncentiveAmount =
       )
 
 -- `parsePOSIXTime`
-parserT0 ∷ Parser POSIXTime
+parserT0 :: Parser POSIXTime
 parserT0 = option Parsers.posixTime
   ( fold
       [ long "reserve-posixtime-t0"
@@ -929,7 +929,7 @@ parserT0 = option Parsers.posixTime
       ]
   )
 
-parseAssetName ∷ Parser AssetName
+parseAssetName :: Parser AssetName
 parseAssetName =
   ( option
       Parsers.assetNameParser
@@ -942,19 +942,19 @@ parseAssetName =
       )
   )
 
-handOverReserveSpec ∷ Parser TxEndpoint
+handOverReserveSpec :: Parser TxEndpoint
 handOverReserveSpec = flag' HandoverReserve $ fold
   [ long "hand-over"
   , help "Hand Over Reserve Tokens"
   ]
 
-parseAdaAsset ∷ Parser Asset
+parseAdaAsset :: Parser Asset
 parseAdaAsset = flag' AdaAsset $ fold
   [ long "reserve-ada-asset"
   , help "Use Ada for reserve asset"
   ]
 
-parseAsset ∷ String → String → Parser Asset
+parseAsset :: String -> String -> Parser Asset
 parseAsset long' metavar' =
   ( Asset
       <$>
@@ -971,15 +971,15 @@ parseAsset long' metavar' =
     <|>
       parseAdaAsset
 
-parseImmutableReserveSettings ∷ Parser ImmutableReserveSettings
+parseImmutableReserveSettings :: Parser ImmutableReserveSettings
 parseImmutableReserveSettings = ado
-  t0 ← parserT0
-  tokenKind ← parseAsset "reserve-asset-script-hash" "ASSET-SCRIPT-HASH"
+  t0 <- parserT0
+  tokenKind <- parseAsset "reserve-asset-script-hash" "ASSET-SCRIPT-HASH"
   in ImmutableReserveSettings { t0, tokenKind }
 
-parseMutableReserveSettings ∷ Parser MutableReserveSettings
+parseMutableReserveSettings :: Parser MutableReserveSettings
 parseMutableReserveSettings = ado
-  vFunctionTotalAccrued ←
+  vFunctionTotalAccrued <-
     ( option validatorHashParser
         ( fold
             [ long "total-accrued-function-script-hash"
@@ -989,14 +989,14 @@ parseMutableReserveSettings = ado
         )
     )
 
-  incentiveAmount ← parseIncentiveAmount
+  incentiveAmount <- parseIncentiveAmount
   in MutableReserveSettings { vFunctionTotalAccrued, incentiveAmount }
 
-createReserveSpec ∷ Parser TxEndpoint
+createReserveSpec :: Parser TxEndpoint
 createReserveSpec = ado
-  mutableReserveSettings ← parseMutableReserveSettings
-  immutableReserveSettings ← parseImmutableReserveSettings
-  depositAmount ← parseDepositAmount
+  mutableReserveSettings <- parseMutableReserveSettings
+  immutableReserveSettings <- parseImmutableReserveSettings
+  depositAmount <- parseDepositAmount
   in
     CreateReserve
       { mutableReserveSettings
@@ -1004,31 +1004,31 @@ createReserveSpec = ado
       , depositAmount
       }
 
-depositReserveSpec ∷ Parser TxEndpoint
+depositReserveSpec :: Parser TxEndpoint
 depositReserveSpec = ado
-  asset ← parseAsset "deposit-reserve-asset" "ASSET-SCRIPT-HASH"
-  depositAmount ← parseDepositAmount
+  asset <- parseAsset "deposit-reserve-asset" "ASSET-SCRIPT-HASH"
+  depositAmount <- parseDepositAmount
   in
     DepositReserve { asset, depositAmount }
 
-parseUnit ∷ Parser UInt
+parseUnit :: Parser UInt
 parseUnit = option uint $ fold
   [ long "total-accrued-till-now"
   , metavar "INT"
   , help "Computerd integer for the v(t)"
   ]
 
-releaseReserveFundsSpec ∷ Parser TxEndpoint
+releaseReserveFundsSpec :: Parser TxEndpoint
 releaseReserveFundsSpec = ado
-  totalAccruedTillNow ← UInt.toInt <$> parseUnit
-  transactionInput ← parseTransactionInput
+  totalAccruedTillNow <- UInt.toInt <$> parseUnit
+  transactionInput <- parseTransactionInput
   in
     ReleaseReserveFunds
       { totalAccruedTillNow
       , transactionInput
       }
 
-parseTransactionInput ∷ Parser TransactionInput
+parseTransactionInput :: Parser TransactionInput
 parseTransactionInput =
   option Parsers.transactionInput $ fold
     [ long "reserve-transaction-input"

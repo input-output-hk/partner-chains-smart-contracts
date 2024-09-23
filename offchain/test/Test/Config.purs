@@ -6,7 +6,7 @@ import Contract.Test.Testnet (Era(Babbage), TestnetConfig)
 import Data.Time.Duration (Seconds(Seconds))
 import Data.UInt as UInt
 
-config ∷ TestnetConfig
+config :: TestnetConfig
 config =
   { logLevel: Info
   , ogmiosConfig:

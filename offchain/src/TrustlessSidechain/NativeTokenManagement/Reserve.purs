@@ -88,34 +88,34 @@ import TrustlessSidechain.Versioning.Types
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
 
-reserveValidator ∷
-  ∀ r.
-  VersionOracleConfig →
+reserveValidator ::
+  forall r.
+  VersionOracleConfig ->
   Run (EXCEPT OffchainError + r) PlutusScript
 reserveValidator voc =
   mkValidatorWithParams ReserveValidator [ toData voc ]
 
-reserveAuthPolicy ∷
-  ∀ r.
-  VersionOracleConfig →
+reserveAuthPolicy ::
+  forall r.
+  VersionOracleConfig ->
   Run (EXCEPT OffchainError + r) PlutusScript
 reserveAuthPolicy voc =
   mkMintingPolicyWithParams ReserveAuthPolicy [ toData voc ]
 
-reserveAuthTokenName ∷ AssetName
+reserveAuthTokenName :: AssetName
 reserveAuthTokenName = emptyAssetName
 
-vFunctionTotalAccruedTokenName ∷ AssetName
+vFunctionTotalAccruedTokenName :: AssetName
 vFunctionTotalAccruedTokenName = emptyAssetName
 
-getGovernancePolicy ∷
-  ∀ r.
-  SidechainParams →
+getGovernancePolicy ::
+  forall r.
+  SidechainParams ->
   Run
     (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     PlutusScript
 getGovernancePolicy sidechainParams = do
-  (_ /\ refTxOutput) ←
+  (_ /\ refTxOutput) <-
     Versioning.getVersionedScriptRefUtxo
       sidechainParams
       ( VersionOracle
@@ -125,18 +125,18 @@ getGovernancePolicy sidechainParams = do
       )
 
   case (unwrap refTxOutput).scriptRef of
-    Just (PlutusScriptRef s) → pure s
-    _ → throw $ GenericInternalError
+    Just (PlutusScriptRef s) -> pure s
+    _ -> throw $ GenericInternalError
       "Versioning system utxo does not carry governance script"
 
-getIlliquidCirculationSupplyValidator ∷
-  ∀ r.
-  SidechainParams →
+getIlliquidCirculationSupplyValidator ::
+  forall r.
+  SidechainParams ->
   Run
     (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     PlutusScript
 getIlliquidCirculationSupplyValidator sidechainParams = do
-  (_ /\ refTxOutput) ←
+  (_ /\ refTxOutput) <-
     Versioning.getVersionedScriptRefUtxo
       sidechainParams
       ( VersionOracle
@@ -146,16 +146,16 @@ getIlliquidCirculationSupplyValidator sidechainParams = do
       )
 
   case (unwrap refTxOutput).scriptRef of
-    Just (PlutusScriptRef s) → pure s
-    _ → throw $ GenericInternalError
+    Just (PlutusScriptRef s) -> pure s
+    _ -> throw $ GenericInternalError
       "Versioning system utxo does not carry ICS script"
 
-findReserveUtxos ∷
-  ∀ r.
-  SidechainParams →
+findReserveUtxos ::
+  forall r.
+  SidechainParams ->
   Run (APP r) UtxoMap
 findReserveUtxos sidechainParams = do
-  reserveAuthCurrencySymbol ←
+  reserveAuthCurrencySymbol <-
     Versioning.getVersionedCurrencySymbol
       sidechainParams
       ( VersionOracle
@@ -164,7 +164,7 @@ findReserveUtxos sidechainParams = do
           }
       )
 
-  reserveAddress ←
+  reserveAddress <-
     Versioning.getVersionedValidatorAddress
       sidechainParams
       ( VersionOracle
@@ -173,30 +173,30 @@ findReserveUtxos sidechainParams = do
           }
       )
 
-  utxos ← utxosAt reserveAddress
+  utxos <- utxosAt reserveAddress
 
-  pure $ flip Map.filter utxos $ \o → BigNum.one ==
+  pure $ flip Map.filter utxos $ \o -> BigNum.one ==
     valueOf (Asset reserveAuthCurrencySymbol reserveAuthTokenName)
       (unwrap o).amount
 
-findOneReserveUtxo ∷
-  ∀ r.
-  SidechainParams →
+findOneReserveUtxo ::
+  forall r.
+  SidechainParams ->
   Run (APP r) (TransactionInput /\ TransactionOutput)
 findOneReserveUtxo scParams =
   fromMaybeThrow (NotFoundUtxo "No Reserved UTxO exists for the given asset")
     $ Map.toUnfoldable
     <$> findReserveUtxos scParams
 
-reserveAuthLookupsAndConstraints ∷
-  ∀ r.
-  SidechainParams →
+reserveAuthLookupsAndConstraints ::
+  forall r.
+  SidechainParams ->
   Run (APP r)
-    { reserveAuthLookups ∷ Lookups.ScriptLookups
-    , reserveAuthConstraints ∷ TxConstraints.TxConstraints
+    { reserveAuthLookups :: Lookups.ScriptLookups
+    , reserveAuthConstraints :: TxConstraints.TxConstraints
     }
 reserveAuthLookupsAndConstraints sp = do
-  (reserveAuthRefTxInput /\ reserveAuthRefTxOutput) ←
+  (reserveAuthRefTxInput /\ reserveAuthRefTxOutput) <-
     Versioning.getVersionedScriptRefUtxo
       sp
       ( VersionOracle
@@ -212,15 +212,15 @@ reserveAuthLookupsAndConstraints sp = do
         reserveAuthRefTxInput
     }
 
-illiquidCirculationSupplyLookupsAndConstraints ∷
-  ∀ r.
-  SidechainParams →
+illiquidCirculationSupplyLookupsAndConstraints ::
+  forall r.
+  SidechainParams ->
   Run (APP r)
-    { icsLookups ∷ Lookups.ScriptLookups
-    , icsConstraints ∷ TxConstraints.TxConstraints
+    { icsLookups :: Lookups.ScriptLookups
+    , icsConstraints :: TxConstraints.TxConstraints
     }
 illiquidCirculationSupplyLookupsAndConstraints sp = do
-  (icsRefTxInput /\ icsRefTxOutput) ←
+  (icsRefTxInput /\ icsRefTxOutput) <-
     Versioning.getVersionedScriptRefUtxo
       sp
       ( VersionOracle
@@ -236,15 +236,15 @@ illiquidCirculationSupplyLookupsAndConstraints sp = do
         icsRefTxInput
     }
 
-reserveLookupsAndConstraints ∷
-  ∀ r.
-  SidechainParams →
+reserveLookupsAndConstraints ::
+  forall r.
+  SidechainParams ->
   Run (APP r)
-    { reserveLookups ∷ Lookups.ScriptLookups
-    , reserveConstraints ∷ TxConstraints.TxConstraints
+    { reserveLookups :: Lookups.ScriptLookups
+    , reserveConstraints :: TxConstraints.TxConstraints
     }
 reserveLookupsAndConstraints sp = do
-  (reserveRefTxInput /\ reserveRefTxOutput) ←
+  (reserveRefTxInput /\ reserveRefTxOutput) <-
     Versioning.getVersionedScriptRefUtxo
       sp
       ( VersionOracle
@@ -260,15 +260,15 @@ reserveLookupsAndConstraints sp = do
         reserveRefTxInput
     }
 
-governanceLookupsAndConstraints ∷
-  ∀ r.
-  SidechainParams →
+governanceLookupsAndConstraints ::
+  forall r.
+  SidechainParams ->
   Run (APP r)
-    { governanceLookups ∷ Lookups.ScriptLookups
-    , governanceConstraints ∷ TxConstraints.TxConstraints
+    { governanceLookups :: Lookups.ScriptLookups
+    , governanceConstraints :: TxConstraints.TxConstraints
     }
 governanceLookupsAndConstraints sp = do
-  (governanceRefTxInput /\ governanceRefTxOutput) ←
+  (governanceRefTxInput /\ governanceRefTxOutput) <-
     Versioning.getVersionedScriptRefUtxo
       sp
       ( VersionOracle
@@ -277,12 +277,12 @@ governanceLookupsAndConstraints sp = do
           }
       )
 
-  governancePolicy ← getGovernancePolicy sp
+  governancePolicy <- getGovernancePolicy sp
 
-  env ← ask
+  env <- ask
 
   let
-    members = maybe [] (\(MultiSig x) → (unwrap x).governanceMembers)
+    members = maybe [] (\(MultiSig x) -> (unwrap x).governanceMembers)
       env.governance
 
   pure
@@ -300,15 +300,15 @@ governanceLookupsAndConstraints sp = do
                 , output: governanceRefTxOutput
                 }
             )
-          <> (foldMap (\x → TxConstraints.mustBeSignedBy $ wrap x) members)
+          <> (foldMap (\x -> TxConstraints.mustBeSignedBy $ wrap x) members)
     }
 
-initialiseReserveUtxo ∷
-  ∀ r.
-  SidechainParams →
-  ImmutableReserveSettings →
-  MutableReserveSettings →
-  BigNum →
+initialiseReserveUtxo ::
+  forall r.
+  SidechainParams ->
+  ImmutableReserveSettings ->
+  MutableReserveSettings ->
+  BigNum ->
   Run (APP r) TransactionHash
 initialiseReserveUtxo
   sidechainParams
@@ -318,13 +318,13 @@ initialiseReserveUtxo
   do
     { governanceLookups
     , governanceConstraints
-    } ← governanceLookupsAndConstraints sidechainParams
+    } <- governanceLookupsAndConstraints sidechainParams
 
     { reserveLookups
     , reserveConstraints
-    } ← reserveLookupsAndConstraints sidechainParams
+    } <- reserveLookupsAndConstraints sidechainParams
 
-    reserveAuthCurrencySymbol ←
+    reserveAuthCurrencySymbol <-
       Versioning.getVersionedCurrencySymbol
         sidechainParams
         ( VersionOracle
@@ -333,11 +333,11 @@ initialiseReserveUtxo
             }
         )
 
-    versionOracleConfig ← Versioning.getVersionOracleConfig sidechainParams
+    versionOracleConfig <- Versioning.getVersionOracleConfig sidechainParams
 
-    reserveValidator' ← PlutusScript.hash <$> reserveValidator
+    reserveValidator' <- PlutusScript.hash <$> reserveValidator
       versionOracleConfig
-    reserveAuthPolicy' ← reserveAuthPolicy versionOracleConfig
+    reserveAuthPolicy' <- reserveAuthPolicy versionOracleConfig
 
     let
       valueToPay = singletonFromAsset (unwrap immutableSettings).tokenKind
@@ -349,12 +349,12 @@ initialiseReserveUtxo
           reserveAuthTokenName
           (BigNum.fromInt 1)
 
-    totalValueToPay ← fromMaybeThrow
+    totalValueToPay <- fromMaybeThrow
       (GenericInternalError "Could not calculate total value to pay")
       (pure (valueToPay `Value.add` reserveAuthTokenValue))
 
     let
-      lookups ∷ Lookups.ScriptLookups
+      lookups :: Lookups.ScriptLookups
       lookups =
         governanceLookups
           <> reserveLookups
@@ -377,7 +377,7 @@ initialiseReserveUtxo
       { constraints, lookups }
 
   where
-  initialReserveDatum ∷ ReserveDatum
+  initialReserveDatum :: ReserveDatum
   initialReserveDatum = ReserveDatum
     { immutableSettings
     , mutableSettings
@@ -385,68 +385,68 @@ initialiseReserveUtxo
     }
 
   --JSTOLAREK: parameterize version
-  reserveAuthPolicyRedeemer ∷ ReserveAuthPolicyRedeemer
+  reserveAuthPolicyRedeemer :: ReserveAuthPolicyRedeemer
   reserveAuthPolicyRedeemer = ReserveAuthPolicyRedeemer
     { governanceVersion: BigInt.fromInt 1
     }
 
-extractReserveDatum ∷ TransactionOutput → Maybe ReserveDatum
+extractReserveDatum :: TransactionOutput -> Maybe ReserveDatum
 extractReserveDatum txOut =
   (unwrap txOut).datum >>= outputDatumDatum >>= fromData
 
-findReserveUtxoForAssetClass ∷
-  ∀ r.
-  SidechainParams →
-  Asset →
+findReserveUtxoForAssetClass ::
+  forall r.
+  SidechainParams ->
+  Asset ->
   Run (APP r) UtxoMap
 findReserveUtxoForAssetClass sp ac = do
-  utxos ← findReserveUtxos sp
+  utxos <- findReserveUtxos sp
   let
     extractTokenKind =
       unwrap >>> _.immutableSettings >>> unwrap >>> _.tokenKind
-  pure $ flip Map.filter utxos $ \txOut →
+  pure $ flip Map.filter utxos $ \txOut ->
     flip (maybe false) (extractReserveDatum txOut)
       $ extractTokenKind
       >>> (_ == ac)
 
-depositToReserve ∷
-  ∀ r.
-  SidechainParams →
-  Asset →
-  BigNum →
+depositToReserve ::
+  forall r.
+  SidechainParams ->
+  Asset ->
+  BigNum ->
   Run (APP r) TransactionHash
 depositToReserve sp asset amount = do
-  utxo ← fromMaybeThrow (NotFoundUtxo "Reserve UTxO for asset class not found")
+  utxo <- fromMaybeThrow (NotFoundUtxo "Reserve UTxO for asset class not found")
     $ (Map.toUnfoldable <$> findReserveUtxoForAssetClass sp asset)
 
   { governanceLookups
   , governanceConstraints
-  } ← governanceLookupsAndConstraints sp
+  } <- governanceLookupsAndConstraints sp
 
   { reserveAuthLookups
   , reserveAuthConstraints
-  } ← reserveAuthLookupsAndConstraints sp
+  } <- reserveAuthLookupsAndConstraints sp
 
   { icsLookups
   , icsConstraints
-  } ← illiquidCirculationSupplyLookupsAndConstraints sp
+  } <- illiquidCirculationSupplyLookupsAndConstraints sp
 
-  versionOracleConfig ← Versioning.getVersionOracleConfig sp
-  reserveValidator' ← reserveValidator versionOracleConfig
+  versionOracleConfig <- Versioning.getVersionOracleConfig sp
+  reserveValidator' <- reserveValidator versionOracleConfig
 
-  datum ← fromMaybeThrow (InvalidData "Reserve does not carry inline datum")
+  datum <- fromMaybeThrow (InvalidData "Reserve does not carry inline datum")
     $ pure ((unwrap $ snd utxo).datum >>= (outputDatumDatum))
 
   let
     value = unwrap >>> _.amount $ snd utxo
 
-  newValue ←
+  newValue <-
     fromMaybeThrow
       (GenericInternalError "Could not calculate new reserve value")
       $ pure (value `Value.add` singletonFromAsset asset amount)
 
   let
-    lookups ∷ Lookups.ScriptLookups
+    lookups :: Lookups.ScriptLookups
     lookups =
       reserveAuthLookups
         <> icsLookups
@@ -474,29 +474,29 @@ depositToReserve sp asset amount = do
 
 -- utxo passed to this function must be a reserve utxo
 -- use `findReserveUtxos` and `extractReserveDatum` to find utxos of interest
-updateReserveUtxo ∷
-  ∀ r.
-  SidechainParams →
-  MutableReserveSettings →
-  (TransactionInput /\ TransactionOutput) →
+updateReserveUtxo ::
+  forall r.
+  SidechainParams ->
+  MutableReserveSettings ->
+  (TransactionInput /\ TransactionOutput) ->
   Run (APP r) TransactionHash
 updateReserveUtxo sp updatedMutableSettings utxo = do
   { governanceLookups
   , governanceConstraints
-  } ← governanceLookupsAndConstraints sp
+  } <- governanceLookupsAndConstraints sp
 
   { reserveAuthLookups
   , reserveAuthConstraints
-  } ← reserveAuthLookupsAndConstraints sp
+  } <- reserveAuthLookupsAndConstraints sp
 
   { icsLookups
   , icsConstraints
-  } ← illiquidCirculationSupplyLookupsAndConstraints sp
+  } <- illiquidCirculationSupplyLookupsAndConstraints sp
 
-  versionOracleConfig ← Versioning.getVersionOracleConfig sp
-  reserveValidator' ← reserveValidator versionOracleConfig
+  versionOracleConfig <- Versioning.getVersionOracleConfig sp
+  reserveValidator' <- reserveValidator versionOracleConfig
 
-  datum ← fromMaybeThrow (InvalidData "Reserve does not carry inline datum")
+  datum <- fromMaybeThrow (InvalidData "Reserve does not carry inline datum")
     $ pure
     $ extractReserveDatum
     $ snd
@@ -507,7 +507,7 @@ updateReserveUtxo sp updatedMutableSettings utxo = do
       { mutableSettings = updatedMutableSettings }
     value = unwrap >>> _.amount $ snd utxo
 
-    lookups ∷ Lookups.ScriptLookups
+    lookups :: Lookups.ScriptLookups
     lookups =
       reserveAuthLookups
         <> icsLookups
@@ -533,12 +533,12 @@ updateReserveUtxo sp updatedMutableSettings utxo = do
     "Update reserve mutable settings"
     { constraints, lookups }
 
-transferToIlliquidCirculationSupply ∷
-  ∀ r.
-  SidechainParams →
-  Int → -- total amount of assets paid out until now
-  PlutusScript →
-  (TransactionInput /\ TransactionOutput) →
+transferToIlliquidCirculationSupply ::
+  forall r.
+  SidechainParams ->
+  Int -> -- total amount of assets paid out until now
+  PlutusScript ->
+  (TransactionInput /\ TransactionOutput) ->
   Run (APP r) TransactionHash
 transferToIlliquidCirculationSupply
   sp
@@ -547,18 +547,18 @@ transferToIlliquidCirculationSupply
   utxo = do
   { reserveAuthLookups
   , reserveAuthConstraints
-  } ← reserveAuthLookupsAndConstraints sp
+  } <- reserveAuthLookupsAndConstraints sp
 
   { icsLookups
   , icsConstraints
-  } ← illiquidCirculationSupplyLookupsAndConstraints sp
+  } <- illiquidCirculationSupplyLookupsAndConstraints sp
 
-  versionOracleConfig ← Versioning.getVersionOracleConfig sp
-  reserveValidator' ← reserveValidator versionOracleConfig
+  versionOracleConfig <- Versioning.getVersionOracleConfig sp
+  reserveValidator' <- reserveValidator versionOracleConfig
 
-  illiquidCirculationSupplyValidator ← getIlliquidCirculationSupplyValidator sp
+  illiquidCirculationSupplyValidator <- getIlliquidCirculationSupplyValidator sp
 
-  datum ← fromMaybeThrow (InvalidData "Reserve does not carry inline datum")
+  datum <- fromMaybeThrow (InvalidData "Reserve does not carry inline datum")
     $ pure
     $ extractReserveDatum
     $ snd
@@ -572,7 +572,7 @@ transferToIlliquidCirculationSupply
         >>> _.tokenKind
         $ datum
 
-  tokenTotalAmountTransferred ← fromMaybeThrow
+  tokenTotalAmountTransferred <- fromMaybeThrow
     (GenericInternalError "Could not calculate total amount transferred")
     ( unwrap
         >>> _.stats
@@ -590,7 +590,7 @@ transferToIlliquidCirculationSupply
         >>> _.vFunctionTotalAccrued
         $ datum
 
-  incentiveAmount ←
+  incentiveAmount <-
     fromMaybeThrow
       (GenericInternalError "Could not calculate incentive amount")
       $ pure
@@ -630,16 +630,16 @@ transferToIlliquidCirculationSupply
       }
     value = unwrap >>> _.amount $ snd utxo
 
-  newValue ← fromMaybeThrow
+  newValue <- fromMaybeThrow
     (GenericInternalError "Could not calculate new reserve value")
     (pure (value `Value.minus` toTransferAsValue))
 
-  illiquidCirculationNewValue ← fromMaybeThrow
+  illiquidCirculationNewValue <- fromMaybeThrow
     (GenericInternalError "Could not calculate new ICS value")
     (pure (toTransferAsValue `Value.minus` incentiveAsValue))
 
   let
-    lookups ∷ Lookups.ScriptLookups
+    lookups :: Lookups.ScriptLookups
     lookups =
       reserveAuthLookups
         <> icsLookups
@@ -669,42 +669,42 @@ transferToIlliquidCirculationSupply
     "Transfer to illiquid circulation supply"
     { constraints, lookups }
 
-handover ∷
-  ∀ r.
-  SidechainParams →
-  (TransactionInput /\ TransactionOutput) →
+handover ::
+  forall r.
+  SidechainParams ->
+  (TransactionInput /\ TransactionOutput) ->
   Run (APP r) TransactionHash
 handover
   sp
   utxo = do
   { reserveAuthLookups
   , reserveAuthConstraints
-  } ← reserveAuthLookupsAndConstraints sp
+  } <- reserveAuthLookupsAndConstraints sp
 
   { icsLookups
   , icsConstraints
-  } ← illiquidCirculationSupplyLookupsAndConstraints sp
+  } <- illiquidCirculationSupplyLookupsAndConstraints sp
 
   { governanceLookups
   , governanceConstraints
-  } ← governanceLookupsAndConstraints sp
+  } <- governanceLookupsAndConstraints sp
 
   { reserveLookups
   , reserveConstraints
-  } ← reserveLookupsAndConstraints sp
+  } <- reserveLookupsAndConstraints sp
 
-  versionOracleConfig ← Versioning.getVersionOracleConfig sp
-  reserveAuthPolicy' ← reserveAuthPolicy versionOracleConfig
+  versionOracleConfig <- Versioning.getVersionOracleConfig sp
+  reserveAuthPolicy' <- reserveAuthPolicy versionOracleConfig
 
-  illiquidCirculationSupplyValidator ← getIlliquidCirculationSupplyValidator sp
+  illiquidCirculationSupplyValidator <- getIlliquidCirculationSupplyValidator sp
 
-  datum ← fromMaybeThrow (InvalidData "Reserve does not carry inline datum")
+  datum <- fromMaybeThrow (InvalidData "Reserve does not carry inline datum")
     $ pure
     $ extractReserveDatum
     $ snd
     $ utxo
 
-  (reserveAuthRefTxInput /\ reserveAuthRefTxOutput) ←
+  (reserveAuthRefTxInput /\ reserveAuthRefTxOutput) <-
     Versioning.getVersionedScriptRefUtxo
       sp
       ( VersionOracle
@@ -713,7 +713,7 @@ handover
           }
       )
 
-  (reserveRefTxInput /\ reserveRefTxOutput) ←
+  (reserveRefTxInput /\ reserveRefTxOutput) <-
     Versioning.getVersionedScriptRefUtxo
       sp
       ( VersionOracle
@@ -734,7 +734,7 @@ handover
     tokenValue = valueOf tokenKindAsset value
     toHandover = singletonFromAsset tokenKindAsset tokenValue
 
-    lookups ∷ Lookups.ScriptLookups
+    lookups :: Lookups.ScriptLookups
     lookups =
       reserveAuthLookups
         <> icsLookups

@@ -60,25 +60,25 @@ import TrustlessSidechain.Versioning.ScriptId
   )
 import Type.Row (type (+))
 
-getScriptCacheValidator ∷
-  ∀ r.
-  PaymentPubKeyHash →
+getScriptCacheValidator ::
+  forall r.
+  PaymentPubKeyHash ->
   Run (EXCEPT OffchainError + r) PlutusScript
 getScriptCacheValidator (PaymentPubKeyHash pkh) =
   mkValidatorWithParams ScriptCache [ toData pkh ]
 
-getScriptRefUtxo ∷
-  ∀ r.
-  SidechainParams →
-  ScriptRef →
+getScriptRefUtxo ::
+  forall r.
+  SidechainParams ->
+  ScriptRef ->
   Run (APP + r) (TransactionInput /\ TransactionOutput)
 getScriptRefUtxo (SidechainParams sp) scriptRef = do
-  pkh ← getOwnPaymentPubKeyHash
-  scriptCacheValidatorHash ← PlutusScript.hash <$> getScriptCacheValidator pkh
+  pkh <- getOwnPaymentPubKeyHash
+  scriptCacheValidatorHash <- PlutusScript.hash <$> getScriptCacheValidator pkh
 
-  valAddr ← toAddress scriptCacheValidatorHash
+  valAddr <- toAddress scriptCacheValidatorHash
 
-  scriptCacheUtxos ← Effect.utxosAt valAddr
+  scriptCacheUtxos <- Effect.utxosAt valAddr
 
   let
     correctOutput
@@ -87,21 +87,21 @@ getScriptRefUtxo (SidechainParams sp) scriptRef = do
       ) = scriptRef' == scriptRef
     correctOutput _ = false
 
-  case find correctOutput (Map.toUnfoldable scriptCacheUtxos ∷ Array _) of
-    Just scriptRefUtxo → pure scriptRefUtxo
-    Nothing → createScriptRefUtxo (SidechainParams sp) scriptRef
+  case find correctOutput (Map.toUnfoldable scriptCacheUtxos :: Array _) of
+    Just scriptRefUtxo -> pure scriptRefUtxo
+    Nothing -> createScriptRefUtxo (SidechainParams sp) scriptRef
 
-createScriptRefUtxo ∷
-  ∀ r.
-  SidechainParams →
-  ScriptRef →
+createScriptRefUtxo ::
+  forall r.
+  SidechainParams ->
+  ScriptRef ->
   Run (APP + r) (TransactionInput /\ TransactionOutput)
 createScriptRefUtxo (SidechainParams sp) scriptRef = do
-  pkh ← getOwnPaymentPubKeyHash
-  scriptCacheValidatorHash ← PlutusScript.hash <$> getScriptCacheValidator pkh
+  pkh <- getOwnPaymentPubKeyHash
+  scriptCacheValidatorHash <- PlutusScript.hash <$> getScriptCacheValidator pkh
 
   let
-    constraints ∷ TxConstraints
+    constraints :: TxConstraints
     constraints = Constraints.mustPayToScriptWithScriptRef
       scriptCacheValidatorHash
       unit
@@ -109,25 +109,25 @@ createScriptRefUtxo (SidechainParams sp) scriptRef = do
       scriptRef
       (Value.lovelaceValueOf $ BigNum.fromInt 1) -- minimum possible ada
 
-    lookups ∷ Lookups.ScriptLookups
+    lookups :: Lookups.ScriptLookups
     lookups = mempty
 
-    balanceTxConstraints ∷ BalanceTxConstraints.BalanceTxConstraintsBuilder
+    balanceTxConstraints :: BalanceTxConstraints.BalanceTxConstraintsBuilder
     balanceTxConstraints =
       BalanceTxConstraints.mustNotSpendUtxoWithOutRef sp.genesisUtxo
 
-  ubTx ← mapError BuildTxError $ Effect.mkUnbalancedTx lookups constraints
-  bsTx ← mapError BalanceTxError $ Effect.balanceTxWithConstraints ubTx
+  ubTx <- mapError BuildTxError $ Effect.mkUnbalancedTx lookups constraints
+  bsTx <- mapError BalanceTxError $ Effect.balanceTxWithConstraints ubTx
     balanceTxConstraints
-  signedTx ← Effect.signTransaction bsTx
-  versioningScriptRefUtxoTxId ← Effect.submit signedTx
+  signedTx <- Effect.signTransaction bsTx
+  versioningScriptRefUtxoTxId <- Effect.submit signedTx
   Effect.logInfo' $ "Submitted create script ref utxo: "
     <> show versioningScriptRefUtxoTxId
   Effect.awaitTxConfirmed versioningScriptRefUtxoTxId
 
-  valAddr ← toAddress scriptCacheValidatorHash
+  valAddr <- toAddress scriptCacheValidatorHash
 
-  scriptCacheUtxos ← Effect.utxosAt valAddr
+  scriptCacheUtxos <- Effect.utxosAt valAddr
 
   let
     correctOutput
@@ -139,12 +139,12 @@ createScriptRefUtxo (SidechainParams sp) scriptRef = do
         == scriptRef
     correctOutput _ = false
 
-  txInput /\ txOutput ←
+  txInput /\ txOutput <-
     Run.note
       ( GenericInternalError
           $ "Could not find unspent output with correct "
           <> "script ref locked at script cache address"
       )
-      $ find correctOutput (Map.toUnfoldable scriptCacheUtxos ∷ Array _)
+      $ find correctOutput (Map.toUnfoldable scriptCacheUtxos :: Array _)
 
   pure (txInput /\ txOutput)
