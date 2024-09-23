@@ -94,6 +94,8 @@ library
     TrustlessSidechain.OffChain
     TrustlessSidechain.OnlyMintMintingPolicy
     TrustlessSidechain.PermissionedCandidates
+    TrustlessSidechain.ProxyMintingPolicy
+    TrustlessSidechain.ProxyValidator
     TrustlessSidechain.Reserve
     TrustlessSidechain.ScriptCache
     TrustlessSidechain.Types

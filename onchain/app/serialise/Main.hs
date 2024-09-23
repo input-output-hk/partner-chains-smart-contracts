@@ -40,6 +40,8 @@ import TrustlessSidechain.IlliquidCirculationSupply qualified as IlliquidCircula
 import TrustlessSidechain.InitToken qualified as InitToken
 import TrustlessSidechain.OnlyMintMintingPolicy as OnlyMintMintingPolicy
 import TrustlessSidechain.PermissionedCandidates qualified as PermissionedCandidates
+import TrustlessSidechain.ProxyMintingPolicy qualified as ProxyMintingPolicy
+import TrustlessSidechain.ProxyValidator qualified as ProxyMintingPolicy
 import TrustlessSidechain.Reserve qualified as Reserve
 import TrustlessSidechain.ScriptCache qualified as ScriptCache
 import TrustlessSidechain.Utils (scriptToPlutusScript)
@@ -266,6 +268,8 @@ main =
           , ("OnlyMintMintingPolicy", OnlyMintMintingPolicy.serialisableOnlyMintMintingPolicy)
           , ("AlwaysPassingValidator", AlwaysPassing.serialisableAlwaysPassingValidator)
           , ("AlwaysPassingPolicy", AlwaysPassing.serialisableAlwaysPassingPolicy)
+          , ("ProxyMintingPolicy", ProxyMintingPolicy.serialisableProxyMintingPolicy)
+          , ("ProxyValidator", ProxyMintingPolicy.serialisableProxyValidator)
           ]
 
         plutusScriptsDotPlutus =

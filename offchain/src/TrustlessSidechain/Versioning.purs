@@ -8,6 +8,7 @@ module TrustlessSidechain.Versioning
   , mintVersionInitTokens
   , updateVersion
   , getNativeTokenManagementPoliciesAndValidators
+  , getGovernancePoliciesAndValidators
   ) where
 
 import Contract.Prelude
@@ -368,6 +369,20 @@ getNativeTokenManagementPoliciesAndValidators sidechainParams version = do
   case version of
     1 → V1.getNativeTokenManagementPoliciesAndValidators sidechainParams
     2 → V2.getNativeTokenManagementPoliciesAndValidators sidechainParams
+    _ → throw $ GenericInternalError ("Invalid version: " <> show version)
+
+getGovernancePoliciesAndValidators ∷
+  ∀ r.
+  SidechainParams →
+  Int →
+  Run (READER Env + EXCEPT OffchainError + WALLET + r)
+    { versionedPolicies ∷ List (Tuple Types.ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple Types.ScriptId PlutusScript)
+    }
+getGovernancePoliciesAndValidators sidechainParams version = do
+  case version of
+    1 → V1.getGovernancePoliciesAndValidators sidechainParams
+    2 → V2.getGovernancePoliciesAndValidators sidechainParams
     _ → throw $ GenericInternalError ("Invalid version: " <> show version)
 
 -- | Get the list of "actual" validators and minting policies that should be versioned.

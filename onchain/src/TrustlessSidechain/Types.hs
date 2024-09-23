@@ -16,6 +16,7 @@ module TrustlessSidechain.Types (
   PermissionedCandidatesPolicyRedeemer (..),
   PermissionedCandidatesValidatorDatum (..),
   PermissionedCandidatesValidatorRedeemer (..),
+  ProxyMintingPolicyRedeemer (..),
   PubKey (..),
   SidechainParams (..),
   Signature (..),
@@ -652,3 +653,17 @@ instance UnsafeFromData IlliquidCirculationSupplyRedeemer where
           0 -> DepositMoreToSupply
           1 -> WithdrawFromSupply
           _ -> error ()
+
+data ProxyMintingPolicyRedeemer
+  = MintProxyToken Integer
+  | BurnProxyToken Integer
+  deriving stock
+    ( TSPrelude.Eq
+    , TSPrelude.Show
+    )
+
+PlutusTx.makeIsDataIndexed
+  ''ProxyMintingPolicyRedeemer
+  [ ('MintProxyToken, 0)
+  , ('BurnProxyToken, 1)
+  ]

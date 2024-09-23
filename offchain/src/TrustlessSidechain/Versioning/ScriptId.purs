@@ -4,14 +4,16 @@ module TrustlessSidechain.Versioning.ScriptId
 
 import Contract.Prelude
 
-import Cardano.Types.BigInt (fromInt) as BigInt
+import Cardano.Types.BigInt (BigInt, fromInt) as BigInt
 import Contract.PlutusData
   ( class FromData
   , class ToData
   , PlutusData(Integer)
+  , toData
   )
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
+import Partial.Unsafe (unsafePartial)
 
 -- | 'ScriptId' lists IDs of all scripts that are used by the sidechain, most of
 -- | which are versioned using the versioning system.  Note that the list of
@@ -52,6 +54,8 @@ data ScriptId
   | AlwaysPassingValidator
   | AlwaysPassingPolicy
   | OnlyMintMintingPolicy
+  | ProxyMintingPolicy
+  | ProxyValidator
 
 derive instance Eq ScriptId
 derive instance Ord ScriptId
@@ -98,6 +102,10 @@ instance FromData ScriptId where
     Just AlwaysPassingPolicy
   fromData (Integer i) | i == BigInt.fromInt 36 =
     Just OnlyMintMintingPolicy
+  fromData (Integer i) | i == BigInt.fromInt 37 =
+    Just ProxyMintingPolicy
+  fromData (Integer i) | i == BigInt.fromInt 38 =
+    Just ProxyValidator
   fromData _ = Nothing
 
 instance ToData ScriptId where
@@ -120,3 +128,5 @@ instance ToData ScriptId where
   toData AlwaysPassingValidator = Integer (BigInt.fromInt 34)
   toData AlwaysPassingPolicy = Integer (BigInt.fromInt 35)
   toData OnlyMintMintingPolicy = Integer (BigInt.fromInt 36)
+  toData ProxyMintingPolicy = Integer (BigInt.fromInt 37)
+  toData ProxyValidator = Integer (BigInt.fromInt 38)

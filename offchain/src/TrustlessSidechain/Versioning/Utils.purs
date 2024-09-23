@@ -60,7 +60,9 @@ import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
   ( OffchainError(NotFoundReferenceScript, NotFoundUtxo, InvalidAddress)
   )
-import TrustlessSidechain.Governance.Admin as Governance
+import TrustlessSidechain.Governance.MultiSig
+  ( MultiSigGovRedeemer(MultiSignatureCheck)
+  )
 import TrustlessSidechain.InitSidechain.Types
   ( InitTokenAssetClass(InitTokenAssetClass)
   )
@@ -71,14 +73,14 @@ import TrustlessSidechain.InitSidechain.Utils
 import TrustlessSidechain.ScriptCache as ScriptCache
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (toAddress)
+import TrustlessSidechain.Utils.Asset (emptyAssetName, unsafeMkAssetName)
 import TrustlessSidechain.Utils.Asset (getScriptHash) as Asset
-import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   , mkValidatorWithParams
   )
 import TrustlessSidechain.Versioning.ScriptId
-  ( ScriptId(VersionOracleValidator, VersionOraclePolicy)
+  ( ScriptId(VersionOracleValidator, VersionOraclePolicy, GovernancePolicy)
   )
 import TrustlessSidechain.Versioning.Types
   ( ScriptId
@@ -283,11 +285,9 @@ insertVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
         (BigNum.fromInt 1)
       SidechainParams { governanceAuthority } = sp
 
-    let
-      { lookups: governanceAuthorityLookups
-      , constraints: governanceAuthorityConstraints
-      } = Governance.governanceAuthorityLookupsAndConstraints
-        governanceAuthority
+    { lookups: governanceAuthorityLookups
+    , constraints: governanceAuthorityConstraints
+    } ← governanceAuthorityLookupsAndConstraints sp ver
 
     scriptReftxInput /\ scriptReftxOutput ← ScriptCache.getScriptRefUtxo
       sp
@@ -393,10 +393,9 @@ invalidateVersionLookupsAndConstraints sp ver scriptId = do
           )
           $ Map.toUnfoldable scriptUtxos
       )
-  let
-    { lookups: governanceAuthorityLookups
-    , constraints: governanceAuthorityConstraints
-    } = Governance.governanceAuthorityLookupsAndConstraints governanceAuthority
+  { lookups: governanceAuthorityLookups
+  , constraints: governanceAuthorityConstraints
+  } ← governanceAuthorityLookupsAndConstraints sp ver
 
   let
     lookups ∷ ScriptLookups
@@ -520,3 +519,81 @@ getVersionedValidatorAddress sp versionOracle = do
             versionOracle
           <> ". Script reference is not a PlutusScriptRef."
       )
+
+governanceAuthorityLookupsAndConstraints ∷
+  ∀ r.
+  SidechainParams →
+  Int →
+  Run
+    ( EXCEPT OffchainError
+        + WALLET
+        + TRANSACTION
+        + r
+    )
+    { lookups ∷ ScriptLookups
+    , constraints ∷ TxConstraints
+    }
+governanceAuthorityLookupsAndConstraints sidechainParams version = do
+  { versionOracleMintingPolicy, versionOracleCurrencySymbol } ←
+    getVersionOraclePolicy sidechainParams
+  vValidator ← versionOracleValidator sidechainParams
+
+  versioningUtxos ← Effect.utxosAt
+    =<< toAddress (PlutusScript.hash vValidator)
+
+  let
+    SidechainParams { governanceAuthority } = sidechainParams
+
+    maybeGovernanceUtxo = Array.head
+      $ Array.filter
+          ( \(_ /\ TransactionOutput { datum: d, amount }) →
+              let
+                hasDatum = case d of
+                  Just (OutputDatum datum') → case fromData datum' of
+                    Just (VersionOracleDatum { versionOracle: vO }) → vO ==
+                      VersionOracle
+                        { version: BigNum.fromInt version
+                        , scriptId: GovernancePolicy
+                        }
+                    _ → false
+                  _ → false
+                hasToken =
+                  Value.valueOf
+                    (Asset versionOracleCurrencySymbol versionOracleTokenName)
+                    amount == BigNum.fromInt 1
+              in
+                hasDatum && hasToken
+          )
+      $ Map.toUnfoldable versioningUtxos
+
+    getMintingPolicyFromRefScript ∷ TransactionOutput → Maybe PlutusScript
+    getMintingPolicyFromRefScript
+      (TransactionOutput { scriptRef: Just (PlutusScriptRef script) }) = pure
+      script
+    getMintingPolicyFromRefScript _ = Nothing
+
+    governanceAuthorityLookups = fromMaybe mempty $ do
+      txInput /\ txOutput ← maybeGovernanceUtxo
+      mp ← getMintingPolicyFromRefScript txOutput
+
+      pure $ Lookups.unspentOutputs (Map.singleton txInput txOutput)
+
+    governanceAuthorityConstraints = fromMaybe mempty $ do
+      txInput /\ txOutput ← maybeGovernanceUtxo
+      sh ← PlutusScript.hash <$> getMintingPolicyFromRefScript txOutput
+
+      pure $ Constraints.mustReferenceOutput txInput
+        <> Constraints.mustBeSignedBy (unwrap governanceAuthority)
+        <> Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
+          sh
+          (RedeemerDatum $ toData $ MultiSignatureCheck)
+          emptyAssetName
+          (Int.fromInt 1)
+          ( RefInput $ TransactionUnspentOutput
+              { input: txInput, output: txOutput }
+          )
+
+  pure $
+    { lookups: governanceAuthorityLookups
+    , constraints: governanceAuthorityConstraints
+    }

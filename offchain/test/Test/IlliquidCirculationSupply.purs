@@ -39,13 +39,14 @@ import Test.Utils as Test.Utils
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
 import TrustlessSidechain.Effects.Env (Env, READER)
-import TrustlessSidechain.Effects.Log (LOG)
+import TrustlessSidechain.Effects.Log (LOG, logInfo')
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError(..))
 import TrustlessSidechain.Governance.Admin as Governance
+import TrustlessSidechain.InitSidechain.Governance (initGovernance)
 import TrustlessSidechain.InitSidechain.NativeTokenManagement
   ( initNativeTokenMgmt
   )
@@ -96,6 +97,7 @@ dummyInitialiseSidechain pkh = do
 
   _ ← initTokensMint sidechainParams 1
   _ ← initNativeTokenMgmt sidechainParams 1
+  _ ← initGovernance sidechainParams 1
 
   pure sidechainParams
 
@@ -229,6 +231,8 @@ testScenario =
         Test.Utils.withSingleMultiSig (unwrap pkh) $ do
 
           sidechainParams ← dummyInitialiseSidechain pkh
+
+          logInfo' ("TEST: " <> show sidechainParams)
           mintingPolicyHash ← insertFakeIcsWithdrawalPolicy sidechainParams
 
           initialiseICSUtxo sidechainParams

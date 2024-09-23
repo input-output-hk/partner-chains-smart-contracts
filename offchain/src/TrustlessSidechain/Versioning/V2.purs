@@ -2,6 +2,7 @@ module TrustlessSidechain.Versioning.V2
   ( getCommitteeSelectionPoliciesAndValidators
   , getVersionedPoliciesAndValidators
   , getNativeTokenManagementPoliciesAndValidators
+  , getGovernancePoliciesAndValidators
   ) where
 
 import Contract.Prelude
@@ -56,3 +57,16 @@ getNativeTokenManagementPoliciesAndValidators _ =
     versionedValidators = List.fromFoldable []
   in
     pure $ { versionedPolicies, versionedValidators }
+
+getGovernancePoliciesAndValidators ∷
+  ∀ r.
+  SidechainParams →
+  Run (EXCEPT OffchainError + r)
+    { versionedPolicies ∷ (List (Tuple Types.ScriptId PlutusScript))
+    , versionedValidators ∷ (List (Tuple Types.ScriptId PlutusScript))
+    }
+getGovernancePoliciesAndValidators _ = do
+  let
+    versionedPolicies = List.fromFoldable []
+    versionedValidators = List.fromFoldable []
+  pure $ { versionedPolicies, versionedValidators }

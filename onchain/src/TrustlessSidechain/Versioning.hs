@@ -100,7 +100,9 @@ committeeCandidateValidatorId
   , illiquidCirculationSupplyValidatorId
   , illiquidCirculationSupplyWithdrawalPolicyId
   , governancePolicyId
-  , multiSigPolicyId ::
+  , multiSigPolicyId
+  , proxyMintingPolicy
+  , proxyValidator ::
     Integer
 committeeCandidateValidatorId = 3
 candidatePermissionPolicyId = 4
@@ -118,6 +120,8 @@ illiquidCirculationSupplyValidatorId = 30
 illiquidCirculationSupplyWithdrawalPolicyId = 31
 governancePolicyId = 32
 multiSigPolicyId = 33
+proxyMintingPolicy = 37
+proxyValidator = 38
 
 -- | Datum attached to 'VersionOraclePolicy' tokens stored on the
 -- 'VersionOracleValidator' script.
