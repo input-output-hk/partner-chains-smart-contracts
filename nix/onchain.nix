@@ -1,15 +1,12 @@
-{ repoRoot
-, inputs
+{ inputs
 , pkgs
-, lib
-, system
-,
+, ...
 }:
 let
-  cabalProject' = pkgs.haskell-nix.cabalProject' ({ config
-                                                  , pkgs
-                                                  , ...
-                                                  }:
+  onchain = pkgs.haskell-nix.cabalProject' ({ config
+                                            , pkgs
+                                            , ...
+                                            }:
     let
       # Only a limited subset of components can be cross-compiled on windows.
       # When `isCross` is `true`, it means that we are cross-compiling the project.
@@ -18,7 +15,7 @@ let
     {
       name = "trustless-sidechain";
 
-      src = lib.cleanSource ../onchain;
+      src = pkgs.lib.cleanSource ../onchain;
 
       compiler-nix-name = "ghc96";
 
@@ -47,14 +44,6 @@ let
         }
       ];
     });
-
-  cabalProject = cabalProject';
-
-  onchain = lib.iogx.mkHaskellProject {
-    inherit cabalProject;
-    shellArgs = repoRoot.nix.shell;
-  };
 in
-onchain
+{ inherit (onchain.flake') apps packages devShells checks; }
 # haskell
-

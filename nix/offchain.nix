@@ -1,9 +1,7 @@
-{ repoRoot
-, inputs
+{ inputs
+, self
 , pkgs
-, lib
-, system
-,
+, ...
 }:
 let
   inherit (pkgs) lib nodejs-18_x stdenv;
@@ -52,7 +50,12 @@ let
     nativeBuildInputs = with pkgs; [
       purescript-psa
       purs
-      inputs.nixpkgs.legacyPackages.spago
+      (if stdenv.isDarwin
+      then
+        inputs.purescript-overlay.packages.x86_64-darwin.spago-0_21_0
+      else
+        spago
+      )
       nodejs-18_x
     ];
 

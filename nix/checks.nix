@@ -1,65 +1,70 @@
-{ repoRoot
-, inputs
+{ inputs
+, self
 , pkgs
-, lib
-, system
+, offchain
 , ...
 }: {
-  upToDatePlutusScriptCheck =
-    let
-      hsProject = repoRoot.nix.onchain.flake;
-    in
-    pkgs.runCommand "up-to-date-plutus-scripts-check"
-      {
-        nativeBuildInputs =
-          inputs.self.devShells.hs.nativeBuildInputs
-          ++ inputs.self.devShells.ps.nativeBuildInputs
-          ++ inputs.self.devShells.ps.buildInputs;
-      } ''
-      export LC_CTYPE=C.UTF-8
-      export LC_ALL=C.UTF-8
-      export LANG=C.UTF-8
-      export IN_NIX_SHELL='pure'
+  pre-commit-check = inputs.pre-commit-hooks.lib.run {
+    src = ./.;
+    hooks = {
+      fourmolu.enable = true;
+      shellcheck.enable = true;
+      cabal-fmt.enable = true;
+      # existed in iogx but not here, do we need it?
+      #optipng.enable = true;
+      nixpkgs-fmt.enable = true;
+      purs-tidy.enable = true;
+    };
+  };
 
-      # Acquire temporary files..
-      TMP=$(mktemp)
+  upToDatePlutusScriptCheck = pkgs.runCommand "up-to-date-plutus-scripts-check"
+    {
+      nativeBuildInputs =
+        self.devShells.${pkgs.system}.default.nativeBuildInputs
+        ++ self.devShells.${pkgs.system}.default.buildInputs;
+    } ''
+    export LC_CTYPE=C.UTF-8
+    export LC_ALL=C.UTF-8
+    export LANG=C.UTF-8
+    export IN_NIX_SHELL='pure'
 
-      # Setup temporary files cleanup
-      function cleanup() {
-      rm -rf $TMP
-      }
-      trap cleanup EXIT
+    # Acquire temporary files..
+    TMP=$(mktemp)
 
-      pushd ${inputs.self}/onchain > /dev/null
-      ${
-        hsProject.packages."trustless-sidechain-serialise"
-      }/bin/trustless-sidechain-serialise \
-      --purescript-plutus-scripts="$TMP"
-      popd > /dev/null
+    # Setup temporary files cleanup
+    function cleanup() {
+    rm -rf $TMP
+    }
+    trap cleanup EXIT
 
-      pushd ${inputs.self}/offchain > /dev/null
+    pushd ${self}/onchain > /dev/null
+    ${
+      self.packages."trustless-sidechain:exe:trustless-sidechain-serialise"
+    }/bin/trustless-sidechain-serialise \
+    --purescript-plutus-scripts="$TMP"
+    popd > /dev/null
 
-      # Compare the generated file and the file provided in the repo.
-      cmp $TMP src/TrustlessSidechain/RawScripts.purs || {
-      exitCode=$? ;
-      echo "Plutus scripts out of date." ;
-      echo 'See `offchain/src/TrustlessSidechain/RawScripts.purs` for instructions to resolve this' ;
-      exit $exitCode ;
-      }
+    pushd ${self}/offchain > /dev/null
 
-      popd > /dev/null
+    # Compare the generated file and the file provided in the repo.
+    cmp $TMP src/TrustlessSidechain/RawScripts.purs || {
+    exitCode=$? ;
+    echo "Plutus scripts out of date." ;
+    echo 'See `offchain/src/TrustlessSidechain/RawScripts.purs` for instructions to resolve this' ;
+    exit $exitCode ;
+    }
 
-      touch $out
-    '';
+    popd > /dev/null
+
+    touch $out
+  '';
   partner-chains-smart-contracts =
-    let
-      project = repoRoot.nix.offchain;
-    in
     pkgs.runCommand "pc-contracts-check"
       {
-        src = project.src;
-        nativeBuildInputs = with inputs.self.packages; [
+        src = offchain.src;
+        nativeBuildInputs = with self.packages; [
           ogmios
+
           kupo
           cardano-testnet
           cardano-node
@@ -67,7 +72,8 @@
         ];
       } ''
 
-        cp -r ${project.compiled}/* .
+        cp -r ${offchain.compiled}/* .
+
 
         # Does the following step really make sense? comes from the CTL...
         cp -r ${../offchain}/* .

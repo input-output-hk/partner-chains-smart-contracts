@@ -1,13 +1,11 @@
 { inputs
-, repoRoot
 , pkgs
-, system
+, offchain
 , ...
 }:
 let
   flake-compat = import inputs.flake-compat;
-  cardanoPackages = (flake-compat { src = inputs.cardano-node; }).defaultNix.packages.${system};
-  project = repoRoot.nix.offchain;
+  cardanoPackages = (flake-compat { src = inputs.cardano-node; }).defaultNix.packages.${pkgs.system};
 in
 rec {
   inherit (cardanoPackages) cardano-node cardano-cli cardano-testnet;
@@ -16,10 +14,10 @@ rec {
     name = "pc-contracts-cli";
     runtimeInputs = [ pkgs.nodejs-18_x ];
     text = ''
-      ${pkgs.nodejs-18_x}/bin/node --enable-source-maps -e 'import("${project.compiled}/output/Main/index.js").then(m => m.main())' pc-contracts-cli "$@"
+      ${pkgs.nodejs-18_x}/bin/node --enable-source-maps -e 'import("${offchain.compiled}/output/Main/index.js").then(m => m.main())' pc-contracts-cli "$@"
     '';
   };
-  pc-contracts-cli-bundled = project.bundled;
+  pc-contracts-cli-bundled = offchain.bundled;
   pc-contracts-release-bundle = pkgs.runCommand "bundled-cli" { buildInputs = [ pkgs.zip ]; } ''
     cp -R ${pc-contracts-cli-bundled}/node_modules .
     chmod -R u+rw ./node_modules

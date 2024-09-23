@@ -1,22 +1,32 @@
 {
   description = "partner-chains-smart-contracts";
 
+  nixConfig = {
+    extra-substituters = [
+      "https://cache.iog.io"
+      "https://cache.sc.iog.io"
+    ];
+    extra-trusted-public-keys = [
+      "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
+      "cache.sc.iog.io:b4YIcBabCEVKrLQgGW8Fylz4W8IvvfzRc+hy0idqrWU="
+    ];
+    allow-import-from-derivation = true;
+    accept-flake-config = true;
+  };
+
   inputs = {
-    iogx = {
-      url = "github:input-output-hk/iogx";
-      inputs.haskell-nix.follows = "haskell-nix";
-      inputs.hackage.follows = "hackage";
-      inputs.CHaP.follows = "CHaP";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.iohk-nix.follows = "iohk-nix";
-      inputs.nix2container.follows = "blank";
-      inputs.nixpkgs-stable.follows = "nixpkgs";
-    };
+    nixpkgs.follows = "haskell-nix/nixpkgs";
+    pkgs.follows = "nixpkgs";
+    nosys.url = "github:input-output-hk/nosys/overlays";
+
     blank.url = "github:input-output-hk/empty-flake";
 
     flake-compat = {
       url = "github:input-output-hk/flake-compat/fixes";
       flake = false;
+    };
+    pre-commit-hooks = {
+      url = "github:cachix/git-hooks.nix";
     };
     iohk-nix.url = "github:input-output-hk/iohk-nix";
     iohk-nix.inputs.nixpkgs.follows = "nixpkgs";
@@ -31,8 +41,6 @@
       url = "github:justinwoo/spago2nix";
       flake = false;
     };
-
-    nixpkgs.follows = "haskell-nix/nixpkgs";
 
     hackage = {
       url = "github:input-output-hk/hackage.nix";
@@ -49,42 +57,36 @@
       inputs.hackage.follows = "hackage";
       inputs.hydra.follows = "blank";
     };
-
     # Used to provide the cardano-node and cardano-cli executables.
     cardano-node = {
       url = "github:input-output-hk/cardano-node/9.1.0";
       flake = false;
     };
-
-    mithril = {
-      url = "github:input-output-hk/mithril";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
-  outputs = inputs:
-    inputs.iogx.lib.mkFlake {
-      inherit inputs;
-      repoRoot = ./.;
-      systems = [ "x86_64-linux" "aarch64-darwin" ];
-      outputs = import ./nix/outputs.nix;
-      nixpkgsArgs = {
+  outputs = inputs @ { nosys, pkgs, self, ... }:
+    let outputs = import ./nix/outputs.nix;
+    in nosys
+      (inputs // {
         overlays = [
-          inputs.iohk-nix.overlays.crypto
           inputs.haskell-nix.overlay
+          inputs.iohk-nix.overlays.crypto
+          inputs.iohk-nix.overlays.haskell-nix-extra
           inputs.purescript-overlay.overlays.default
+          (
+            self: super: {
+
+              # In order to actually apply the changes provided by iohk-nix
+              # we need to modify haskell.nix overwriting the attribute set
+              # with the altered crypto libraries
+              haskell-nix = super.haskell-nix // {
+                extraPkgconfigMappings = super.haskell-nix.extraPkgconfigMappings or { } // {
+                  "libblst" = [ "libblst" ];
+                  "libsodium" = [ "libsodium-vrf" ];
+                };
+              };
+            }
+          )
         ];
-      };
-    };
-  nixConfig = {
-    extra-substituters = [
-      "https://cache.iog.io"
-      "https://cache.sc.iog.io"
-    ];
-    extra-trusted-public-keys = [
-      "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
-      "cache.sc.iog.io:b4YIcBabCEVKrLQgGW8Fylz4W8IvvfzRc+hy0idqrWU="
-    ];
-    allow-import-from-derivation = true;
-    accept-flake-config = true;
-  };
+      })
+      outputs;
 }

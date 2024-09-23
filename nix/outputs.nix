@@ -1,96 +1,22 @@
-{ repoRoot
-, inputs
+inputs @ { self
 , pkgs
-, lib
-, system
 , ...
-}:
-let
-  onchain = repoRoot.nix.onchain;
-in
-[
-  (onchain.flake)
-  {
-    apps = rec {
-      default = pc-contracts-cli;
-      pc-contracts-cli = {
-        type = "app";
-        program = "${inputs.self.packages.pc-contracts-cli}/bin/pc-contracts-cli";
-      };
+}: let
+  onchain = (import ./onchain.nix { inherit inputs pkgs; });
+  offchain = import ./offchain.nix { inherit inputs self pkgs; };
+in pkgs.lib.recursiveUpdate onchain {
+  inherit onchain;
+  apps = rec {
+    default = pc-contracts-cli;
+    pc-contracts-cli = {
+      type = "app";
+      program = "${self.packages.pc-contracts-cli}/bin/pc-contracts-cli";
     };
-    devShells = rec {
-      default = pkgs.mkShell {
-        inputsFrom = [ ps hs ];
-        packages = with pkgs; [
-          moreutils
-        ];
-        nativeBuildInputs = [
-          # These packages are all required for running checks present
-          # in the makefiles
-          pkgs.hlint
-          pkgs.nixpkgs-fmt
-          pkgs.haskellPackages.cabal-fmt
-          pkgs.haskellPackages.fourmolu
-          pkgs.nodePackages.purs-tidy
-          pkgs.nodePackages.eslint
-        ];
-      };
-      profiled = onchain.variants.profiled.devShell;
-      hs = inputs.self.devShell;
-      ps = pkgs.mkShell {
-        packages = with pkgs; [
-          # Shell Utils
-          bashInteractive
-          git
-          jq
+  };
+  devShells = import ./shells.nix { inherit inputs self pkgs; };
+  packages = import ./packages { inherit inputs pkgs; inherit offchain; };
 
-          # Lint / Format
-          fd
-          dhall
+  # as 'check' isn't a default flake output, this prevents these from being built by the CI
+  check = import ./checks.nix { inherit inputs self pkgs; inherit offchain; };
 
-          # CTL Runtime
-          docker
-
-          nodejs-18_x
-          nodePackages.node2nix
-
-          # Purescript
-          purescript-psa
-          pscid
-          purs
-          purs-tidy
-
-          # no aarch64-darwin for spago 0.21 (stable) from purescript-overlay's spago
-          (if pkgs.stdenv.isDarwin
-          then
-            inputs.purescript-overlay.packages.x86_64-darwin.spago-0_21_0
-          else
-            spago
-          )
-
-          inputs.self.packages.spago2nix
-
-          inputs.self.packages.kupo
-          inputs.self.packages.ogmios
-
-        ];
-      };
-    };
-    packages = repoRoot.nix.packages.default;
-
-    _checks = repoRoot.nix.checks;
-
-    # This is used for nix build .#check.<system> because nix flake check
-    # does not work with haskell.nix import-from-derivtion.
-    check =
-      pkgs.runCommand "combined-check"
-        {
-          nativeBuildInputs =
-            builtins.attrValues inputs.self._checks.${system}
-            ++ builtins.attrValues inputs.self.packages.${system}
-            ++ inputs.self.devShells.${system}.hs.nativeBuildInputs
-            ++ inputs.self.devShells.${system}.ps.nativeBuildInputs
-            ++ inputs.self.devShells.${system}.ps.buildInputs;
-        } "touch $out";
-  }
-]
+}
