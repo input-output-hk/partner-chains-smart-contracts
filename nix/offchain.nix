@@ -50,12 +50,7 @@ let
     nativeBuildInputs = with pkgs; [
       purescript-psa
       purs
-      (if stdenv.isDarwin
-      then
-        inputs.purescript-overlay.packages.x86_64-darwin.spago-0_21_0
-      else
-        spago
-      )
+      spago
       nodejs-18_x
     ];
 

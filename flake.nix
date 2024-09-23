@@ -73,17 +73,27 @@
           inputs.iohk-nix.overlays.haskell-nix-extra
           inputs.purescript-overlay.overlays.default
           (
-            self: super: {
-
+            final: prev: {
               # In order to actually apply the changes provided by iohk-nix
               # we need to modify haskell.nix overwriting the attribute set
               # with the altered crypto libraries
-              haskell-nix = super.haskell-nix // {
-                extraPkgconfigMappings = super.haskell-nix.extraPkgconfigMappings or { } // {
+              haskell-nix = prev.haskell-nix // {
+                extraPkgconfigMappings = prev.haskell-nix.extraPkgconfigMappings or { } // {
                   "libblst" = [ "libblst" ];
                   "libsodium" = [ "libsodium-vrf" ];
                 };
               };
+            }
+          )
+          (
+            final: prev: {
+              # no aarch64-darwin for spago 0.21 (stable) from purescript-overlay's spago
+              spago =
+                if prev.stdenv.isDarwin
+                then
+                  inputs.purescript-overlay.packages.x86_64-darwin.spago-0_21_0
+                else
+                  prev.spago;
             }
           )
         ];
