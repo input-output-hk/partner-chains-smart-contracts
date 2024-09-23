@@ -4,7 +4,7 @@ import http from "node:http";
 import * as url from "url";
 
 if (process.argv.length < 6) {
-  throw `usage: node serve.js ENTRY_POINT OUTPUT_FILE SERVE_DIR PORT`;
+  throw "usage: node serve.js ENTRY_POINT OUTPUT_FILE SERVE_DIR PORT";
 }
 
 const ctx = await esbuild.context(
