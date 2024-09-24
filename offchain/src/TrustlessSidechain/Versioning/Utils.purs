@@ -54,6 +54,7 @@ import Run (Run)
 import Run.Except (EXCEPT, throw)
 import Run.Except as Run
 import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.Log (LOG, logInfo')
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Transaction (utxosAt) as Effect
 import TrustlessSidechain.Effects.Wallet (WALLET)
@@ -287,7 +288,7 @@ insertVersionLookupsAndConstraints sp ver (Tuple scriptId versionedScript) =
 
     { lookups: governanceAuthorityLookups
     , constraints: governanceAuthorityConstraints
-    } ← governanceAuthorityLookupsAndConstraints sp ver
+    } ← governanceAuthorityLookupsAndConstraints sp 1
 
     scriptReftxInput /\ scriptReftxOutput ← ScriptCache.getScriptRefUtxo
       sp
@@ -339,6 +340,7 @@ invalidateVersionLookupsAndConstraints ∷
     ( EXCEPT OffchainError
         + WALLET
         + TRANSACTION
+        + LOG
         + r
     )
     { lookups ∷ ScriptLookups
@@ -395,8 +397,8 @@ invalidateVersionLookupsAndConstraints sp ver scriptId = do
       )
   { lookups: governanceAuthorityLookups
   , constraints: governanceAuthorityConstraints
-  } ← governanceAuthorityLookupsAndConstraints sp ver
-
+  } ← governanceAuthorityLookupsAndConstraints sp 1
+  logInfo' ("CS: " <> show governanceAuthorityConstraints)
   let
     lookups ∷ ScriptLookups
     lookups = Lookups.plutusMintingPolicy versionOracleMintingPolicy

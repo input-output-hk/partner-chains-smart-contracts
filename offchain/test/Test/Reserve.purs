@@ -44,6 +44,7 @@ import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.Governance.Admin as Governance
+import TrustlessSidechain.InitSidechain.Governance (initGovernance)
 import TrustlessSidechain.InitSidechain.NativeTokenManagement
   ( initNativeTokenMgmt
   )
@@ -128,6 +129,7 @@ dummyInitialiseSidechain pkh = do
 
   _ ← initTokensMint sidechainParams 1
   _ ← initNativeTokenMgmt sidechainParams 1
+  _ ← initGovernance sidechainParams 1
 
   pure sidechainParams
 

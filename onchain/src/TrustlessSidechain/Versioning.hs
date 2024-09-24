@@ -298,10 +298,10 @@ mkVersionOraclePolicy _sp itac validatorAddress redeemer ctx =
         && traceIfFalse "ERROR-VERSION-POLICY-08" versionOutputAbsent
         && traceIfFalse "ERROR-VERSION-POLICY-09" approvedByGovernance
   where
-    version = case redeemer of
-      InitializeVersionOracle VersionOracle {version = v} _ -> v
-      MintVersionOracle VersionOracle {version = v} _ -> v
-      BurnVersionOracle VersionOracle {version = v} -> v
+    -- version = case redeemer of
+    --   InitializeVersionOracle VersionOracle {version = v} _ -> v
+    --   MintVersionOracle VersionOracle {version = v} _ -> v
+    --   BurnVersionOracle VersionOracle {version = v} -> v
 
     txInfo = Unsafe.scriptContextTxInfo ctx
 
@@ -347,7 +347,7 @@ mkVersionOraclePolicy _sp itac validatorAddress redeemer ctx =
     governanceCurrencySymbol =
       getVersionedCurrencySymbolUnsafe
         (VersionOracleConfig currSym)
-        (VersionOracle {version, scriptId = governancePolicyId})
+        (VersionOracle {version = 1, scriptId = governancePolicyId})
         ctx
 
     -- Check that transaction was approved by governance authority
@@ -430,11 +430,6 @@ mkVersionOracleValidator
       && traceIfFalse "ERROR-VERSION-ORACLE-03" versionOutputAbsent
       && traceIfFalse "ERROR-VERSION-ORACLE-04" isSpending
     where
-      currSym =
-        fromJust "ERROR-ORACLE-POLICY-10"
-          $ Unsafe.decode
-          <$> (Unsafe.getMinting . Unsafe.scriptContextPurpose $ ctx)
-
       isSpending = isJust $ Unsafe.getSpending $ Unsafe.scriptContextPurpose ctx
 
       txInfo = Unsafe.scriptContextTxInfo ctx
@@ -444,8 +439,8 @@ mkVersionOracleValidator
 
       governanceCurrencySymbol =
         getVersionedCurrencySymbolUnsafe
-          (VersionOracleConfig currSym)
-          versionOracle' {scriptId = governancePolicyId}
+          (VersionOracleConfig currencySymbol)
+          VersionOracle {version = 1, scriptId = governancePolicyId}
           ctx
 
       -- Check that transaction was approved by governance authority
