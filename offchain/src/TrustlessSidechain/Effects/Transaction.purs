@@ -217,7 +217,7 @@ handleTransactionLive =
       (Transaction.getUtxo oref)
     MkUnbalancedTx lookups constraints f ->
       f <$> withTry
-        (fromError "mkUnabalancedTx: ")
+        (fromError "mkUnbalancedTx: ")
         (toUnbalancedTx <$> UnbalancedTx.mkUnbalancedTx lookups constraints)
     BalanceTxWithConstraints unbalancedTx constraints f ->
       f <$> withTry
