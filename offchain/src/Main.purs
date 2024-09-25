@@ -8,6 +8,7 @@ import Control.Monad.Error.Class (throwError)
 import Data.Array as Array
 import Effect.Exception (error)
 import JS.BigInt as BigInt
+import Node.Process (exit)
 import Options.Applicative (execParser)
 import Run (EFFECT, Run)
 import TrustlessSidechain.CLIVersion (versionString)
@@ -128,14 +129,14 @@ main = do
       -----------------------
       let numerator = (unwrap scParams).thresholdNumerator
       let denominator = (unwrap scParams).thresholdDenominator
-      unless (gcd numerator denominator == one) $ throwError $ error
+      unless (gcd numerator denominator == one) $ failWith
         $ "Threshold numerator and denominator are not coprime.\n"
         <> "Numerator: "
         <> BigInt.toString numerator
         <> "\nDenominator: "
         <> BigInt.toString denominator
 
-      unless (numerator <= denominator) $ throwError $ error
+      unless (numerator <= denominator) $ failWith
         $ "Threshold numerator is greater than denominator.\n"
         <> "Numerator: "
         <> BigInt.toString numerator
@@ -157,15 +158,18 @@ main = do
               opts.sidechainEndpointParams
               opts.endpoint
 
-        case endpointResp of
-          Right resp -> liftEffect $ printEndpointResp resp
-          Left e -> log (show e)
+        liftEffect $ case endpointResp of
+          Right resp -> printEndpointResp resp
+          Left e -> failWith $ show e
 
     UtilsOptions opts -> do
       endpointResp <- runUtilsEndpoint opts.utilsOptions
       printEndpointResp endpointResp
 
     CLIVersion -> log versionString
+
+failWith :: String -> Effect Unit
+failWith errStr = log errStr *> exit 1
 
 -- | Reads configuration file from `./config.json`, then
 -- | parses CLI arguments. CLI arguments override the config files.

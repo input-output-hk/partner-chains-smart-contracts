@@ -123,13 +123,14 @@ nix run .#pc-contracts-cli -- deregister \
   --network testnet \
   --ogmios-host localhost \
   --ogmios-port 1442 \
-  --ogmios-secure false \
+  --ogmios-secure \
   --kupo-host localhost \
   --kupo-port 1337 \
-  --kupo-secure false \
+  --kupo-secure \
   --payment-signing-key-file payment.skey \
   --stake-signing-key-file stake.skey \
-  --spo-public-key aabbcc
+  --spo-public-key aabbcc \
+  --ada-based-staking
 ```
 
 to:
@@ -384,7 +385,6 @@ specify `--reserve-ada-asset` flag to indicate that Ada is being used as the
 reserve asset.
 
 #### 3.2.10 Release currently available funds from an existing reserve
-
 
 ```
 nix run .#pc-contracts-cli -- reserve-release-funds \
