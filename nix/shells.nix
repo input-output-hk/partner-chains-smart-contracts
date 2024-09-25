@@ -26,7 +26,6 @@ in
     nativeBuildInputs = [
       # These packages are all required for running checks present
       # in the makefiles
-      haskellPackages
       pkgs.nixpkgs-fmt
       pkgs.nodePackages.purs-tidy
       pkgs.nodePackages.eslint
