@@ -17,7 +17,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   * Removed `init-checkpoint`, `init-fuel`, `save-checkpoint`, `cbor-update-committee-message`, `cbor-merkle-root-insertion-message`, `cbor-merkle-tree-entry`, `cbor-merkle-tree`, `cbor-combined-merkle-proof`, and `cbor-plain-aggregate-public-keys` commands
 
 ## Fixed
-  * CLI not returning correct error status on failure
+  * CLI now returns non-zero exit code on failure
 
 # v6.1.0
 
