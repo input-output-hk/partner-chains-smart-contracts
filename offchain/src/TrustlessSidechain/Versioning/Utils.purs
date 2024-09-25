@@ -536,55 +536,27 @@ governanceAuthorityLookupsAndConstraints ∷
     , constraints ∷ TxConstraints
     }
 governanceAuthorityLookupsAndConstraints sidechainParams version = do
-  { versionOracleMintingPolicy, versionOracleCurrencySymbol } ←
-    getVersionOraclePolicy sidechainParams
-  vValidator ← versionOracleValidator sidechainParams
-
-  versioningUtxos ← Effect.utxosAt
-    =<< toAddress (PlutusScript.hash vValidator)
-
   let
     SidechainParams { governanceAuthority } = sidechainParams
 
-    maybeGovernanceUtxo = Array.head
-      $ Array.filter
-          ( \(_ /\ TransactionOutput { datum: d, amount }) →
-              let
-                hasDatum = case d of
-                  Just (OutputDatum datum') → case fromData datum' of
-                    Just (VersionOracleDatum { versionOracle: vO }) → vO ==
-                      VersionOracle
-                        { version: BigNum.fromInt version
-                        , scriptId: GovernancePolicy
-                        }
-                    _ → false
-                  _ → false
-                hasToken =
-                  Value.valueOf
-                    (Asset versionOracleCurrencySymbol versionOracleTokenName)
-                    amount == BigNum.fromInt 1
-              in
-                hasDatum && hasToken
-          )
-      $ Map.toUnfoldable versioningUtxos
+  governanceTxInput /\ governanceTxOutput ←
+    getVersionedScriptRefUtxo sidechainParams $ VersionOracle
+      { version: BigNum.fromInt 1, scriptId: GovernancePolicy }
 
+  let
     getMintingPolicyFromRefScript ∷ TransactionOutput → Maybe PlutusScript
     getMintingPolicyFromRefScript
       (TransactionOutput { scriptRef: Just (PlutusScriptRef script) }) = pure
       script
     getMintingPolicyFromRefScript _ = Nothing
 
-    governanceAuthorityLookups = fromMaybe mempty $ do
-      txInput /\ txOutput ← maybeGovernanceUtxo
-      mp ← getMintingPolicyFromRefScript txOutput
-
-      pure $ Lookups.unspentOutputs (Map.singleton txInput txOutput)
+    governanceAuthorityLookups = Lookups.unspentOutputs
+      (Map.singleton governanceTxInput governanceTxOutput)
 
     governanceAuthorityConstraints = fromMaybe mempty $ do
-      txInput /\ txOutput ← maybeGovernanceUtxo
-      sh ← PlutusScript.hash <$> getMintingPolicyFromRefScript txOutput
+      sh ← PlutusScript.hash <$> getMintingPolicyFromRefScript governanceTxOutput
 
-      pure $ Constraints.mustReferenceOutput txInput
+      pure $ Constraints.mustReferenceOutput governanceTxInput
         <> Constraints.mustBeSignedBy (unwrap governanceAuthority)
         <> Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
           sh
@@ -592,10 +564,49 @@ governanceAuthorityLookupsAndConstraints sidechainParams version = do
           emptyAssetName
           (Int.fromInt 1)
           ( RefInput $ TransactionUnspentOutput
-              { input: txInput, output: txOutput }
+              { input: governanceTxInput, output: governanceTxOutput }
           )
 
   pure $
     { lookups: governanceAuthorityLookups
     , constraints: governanceAuthorityConstraints
     }
+
+getReferenceUtxo ∷
+  ∀ r.
+  SidechainParams →
+  VersionOracle →
+  Run
+    ( EXCEPT OffchainError
+        + WALLET
+        + TRANSACTION
+        + r
+    )
+    (Maybe (TransactionInput /\ TransactionOutput))
+getReferenceUtxo sidechainParams versionOracle = do
+  { versionOracleMintingPolicy, versionOracleCurrencySymbol } ←
+    getVersionOraclePolicy sidechainParams
+
+  vValidator ← versionOracleValidator sidechainParams
+
+  versioningUtxos ← Effect.utxosAt
+    =<< toAddress (PlutusScript.hash vValidator)
+
+  pure $ Array.head
+    $ Array.filter
+        ( \(_ /\ TransactionOutput { datum: d, amount }) →
+            let
+              hasDatum = case d of
+                Just (OutputDatum datum') → case fromData datum' of
+                  Just (VersionOracleDatum { versionOracle: vO }) → vO ==
+                    versionOracle
+                  _ → false
+                _ → false
+              hasToken =
+                Value.valueOf
+                  (Asset versionOracleCurrencySymbol versionOracleTokenName)
+                  amount == BigNum.fromInt 1
+            in
+              hasDatum && hasToken
+        )
+    $ Map.toUnfoldable versioningUtxos

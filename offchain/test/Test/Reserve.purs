@@ -31,7 +31,6 @@ import Mote.Monad as Mote.Monad
 import Partial.Unsafe (unsafePartial)
 import Run (EFFECT, Run)
 import Run.Except (EXCEPT)
-import Test.AlwaysPassingScripts (alwaysPassingPolicy)
 import Test.TestnetTest (TestnetTest)
 import Test.TestnetTest as Test.TestnetTest
 import Test.Utils (WrappedTests, testnetGroup)
@@ -64,6 +63,7 @@ import TrustlessSidechain.NativeTokenManagement.Types
   )
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
+import TrustlessSidechain.Utils.AlwaysPassingScripts (alwaysPassingPolicy)
 import TrustlessSidechain.Utils.Asset (emptyAssetName)
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.ScriptId

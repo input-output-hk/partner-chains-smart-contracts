@@ -14,6 +14,9 @@ import Cardano.Types.OutputDatum (OutputDatum(OutputDatum))
 import Cardano.Types.PlutusData as PlutusData
 import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
+import Cardano.Types.TransactionUnspentOutput
+  ( TransactionUnspentOutput(TransactionUnspentOutput)
+  )
 import Cardano.Types.Value as Value
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData (RedeemerDatum(RedeemerDatum))
@@ -21,6 +24,7 @@ import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
+  , InputWithScriptRef(RefInput)
   , TxConstraints
   )
 import Contract.TxConstraints as Constraints
@@ -41,8 +45,17 @@ import TrustlessSidechain.Error
   ( OffchainError(NotFoundUtxo, InvalidCLIParams, GenericInternalError)
   )
 import TrustlessSidechain.Governance.Admin as Governance
+import TrustlessSidechain.ProxyMintingPolicy
+  ( decodeProxyMintingPolicy
+  , mkProxyMintingPolicyTokenLookupsAndConstraints
+  )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Asset (emptyAssetName)
+import TrustlessSidechain.Versioning.ScriptId
+  ( ScriptId(DParameterPolicy, AlwaysPassingPolicy)
+  )
+import TrustlessSidechain.Versioning.Types (VersionOracle(VersionOracle))
+import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
 
 dParameterTokenName ∷ AssetName
@@ -54,7 +67,7 @@ mkInsertDParameterLookupsAndConstraints ∷
   { permissionedCandidatesCount ∷ BigInt
   , registeredCandidatesCount ∷ BigInt
   } →
-  Run (EXCEPT OffchainError + WALLET + r)
+  Run (EXCEPT OffchainError + TRANSACTION + WALLET + r)
     { lookups ∷ ScriptLookups
     , constraints ∷ TxConstraints
     }
@@ -63,6 +76,21 @@ mkInsertDParameterLookupsAndConstraints
   { permissionedCandidatesCount, registeredCandidatesCount } = do
   { dParameterCurrencySymbol, dParameterMintingPolicy } ←
     DParameter.getDParameterMintingPolicyAndCurrencySymbol sidechainParams
+
+  proxyCurrencySymbol ← PlutusScript.hash <$> decodeProxyMintingPolicy
+    sidechainParams
+    { subMintingPolicy: DParameterPolicy
+    , subBurningPolicy: AlwaysPassingPolicy
+    }
+
+  { lookups: proxyLookups, constraints: proxyConstraints } ←
+    mkProxyMintingPolicyTokenLookupsAndConstraints sidechainParams
+      { subMintingPolicy: DParameterPolicy
+      , subBurningPolicy: AlwaysPassingPolicy
+      , mintAmount: 1
+      , assetName: dParameterTokenName
+      , version: 1
+      }
 
   let
     dParameterMintingPolicyHash = dParameterCurrencySymbol
@@ -77,10 +105,17 @@ mkInsertDParameterLookupsAndConstraints
       Governance.governanceAuthorityLookupsAndConstraints
         (unwrap sidechainParams).governanceAuthority
 
+  alwaysPassingTxInput /\ alwaysPassingTxOutput ←
+    Versioning.getVersionedScriptRefUtxo sidechainParams
+      (VersionOracle { version: BigNum.fromInt 1, scriptId: AlwaysPassingPolicy })
+  dParamTxInput /\ dParamTxOutput ← Versioning.getVersionedScriptRefUtxo
+    sidechainParams
+    (VersionOracle { version: BigNum.fromInt 1, scriptId: DParameterPolicy })
+
   let
     value ∷ Value.Value
     value = Value.singleton
-      dParameterCurrencySymbol
+      proxyCurrencySymbol
       dParameterTokenName
       (BigNum.fromInt 1)
 
@@ -89,20 +124,32 @@ mkInsertDParameterLookupsAndConstraints
       { permissionedCandidatesCount, registeredCandidatesCount }
 
     lookups ∷ ScriptLookups
-    lookups = Lookups.plutusMintingPolicy dParameterMintingPolicy
-      <> governanceLookups
+    lookups = governanceLookups
+      <> proxyLookups
+      <> Lookups.unspentOutputs
+        ( Map.fromFoldable
+            [ (dParamTxInput /\ dParamTxOutput)
+            ]
+        )
 
     constraints ∷ TxConstraints
     constraints =
-      Constraints.mustMintCurrencyWithRedeemer
+      Constraints.mustMintCurrencyWithRedeemerUsingScriptRef
         dParameterMintingPolicyHash
         (RedeemerDatum $ PlutusData.unit)
         dParameterTokenName
         (Int.fromInt 1)
+        ( RefInput $ TransactionUnspentOutput
+            { input: dParamTxInput
+            , output: dParamTxOutput
+            }
+        )
         <> Constraints.mustPayToScript dParameterValidatorHash dParameterDatum
           DatumInline
           value
+        <> Constraints.mustReferenceOutput dParamTxInput
         <> governanceConstraints
+        <> proxyConstraints
   pure { lookups, constraints }
 
 mkUpdateDParameterLookupsAndConstraints ∷
@@ -124,6 +171,12 @@ mkUpdateDParameterLookupsAndConstraints
   { dParameterValidatorAddress, dParameterValidator } ←
     DParameter.getDParameterValidatorAndAddress sidechainParams
 
+  proxyCurrencySymbol ← PlutusScript.hash <$> decodeProxyMintingPolicy
+    sidechainParams
+    { subMintingPolicy: DParameterPolicy
+    , subBurningPolicy: AlwaysPassingPolicy
+    }
+
   let dParameterValidatorHash = PlutusScript.hash dParameterValidator
 
   -- find one UTxO at DParameterValidator address that contain DParameterToken
@@ -133,7 +186,7 @@ mkUpdateDParameterLookupsAndConstraints
         <<< Map.toUnfoldable
         <<< Map.filter
           ( \(TransactionOutput { amount }) →
-              Value.valueOf (Asset dParameterCurrencySymbol dParameterTokenName)
+              Value.valueOf (Asset proxyCurrencySymbol dParameterTokenName)
                 amount
                 > BigNum.fromInt 0
           )
@@ -149,7 +202,7 @@ mkUpdateDParameterLookupsAndConstraints
   let
     dParameterTokenAmount = case oldDParameterOutput of
       TransactionOutput { amount }
-      → Value.valueOf (Asset dParameterCurrencySymbol dParameterTokenName) amount
+      → Value.valueOf (Asset proxyCurrencySymbol dParameterTokenName) amount
 
   -- if the old D Parameter is exactly the same as the new one, throw an error
   case oldDParameterOutput of
@@ -178,7 +231,7 @@ mkUpdateDParameterLookupsAndConstraints
   let
     value ∷ Value.Value
     value = Value.singleton
-      dParameterCurrencySymbol
+      proxyCurrencySymbol
       dParameterTokenName
       dParameterTokenAmount
 

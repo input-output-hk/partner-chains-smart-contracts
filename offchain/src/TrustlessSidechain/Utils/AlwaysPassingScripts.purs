@@ -1,4 +1,4 @@
-module Test.AlwaysPassingScripts
+module TrustlessSidechain.Utils.AlwaysPassingScripts
   ( alwaysPassingValidator
   , alwaysPassingPolicy
   ) where

@@ -10,13 +10,16 @@ import Test.TestnetTest (TestnetTest)
 import Test.TestnetTest as Test.TestnetTest
 import Test.Utils (WrappedTests, fails, getOwnTransactionInput, testnetGroup)
 import TrustlessSidechain.DParameter as DParameter
+import TrustlessSidechain.Effects.Log (logInfo')
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Governance.Admin as Governance
+import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Transaction
   ( balanceSignAndSubmitWithoutSpendingUtxo
   )
+import TrustlessSidechain.Versioning as Versioning
 
 -- | `tests` aggregate all the DParameterPolicy tests in one convenient
 -- | function
@@ -48,6 +51,12 @@ testScenario =
               , governanceAuthority: Governance.mkGovernanceAuthority pkh
               }
 
+        logInfo' "Version not yet inserted"
+
+        void $ initTokensMint sidechainParams 1
+        void $ Versioning.initializeVersion sidechainParams 1
+
+        logInfo' "DParameter not yet inserted"
         void
           $
             ( DParameter.mkInsertDParameterLookupsAndConstraints
@@ -60,7 +69,7 @@ testScenario =
                     (unwrap sidechainParams).genesisUtxo
                     "Test: insert D param"
             )
-
+        logInfo' "DParameter inserted"
         void
           $
             ( DParameter.mkUpdateDParameterLookupsAndConstraints

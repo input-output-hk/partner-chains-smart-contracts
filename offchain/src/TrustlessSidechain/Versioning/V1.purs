@@ -16,6 +16,10 @@ import Run.Except (EXCEPT)
 import TrustlessSidechain.CommitteeCandidateValidator
   ( getCommitteeCandidateValidator
   )
+import TrustlessSidechain.DParameter.Utils
+  ( decodeDParameterMintingPolicy
+  , decodeDParameterValidator
+  )
 import TrustlessSidechain.Effects.Env (Env, READER, ask)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
@@ -34,6 +38,10 @@ import TrustlessSidechain.NativeTokenManagement.Reserve
   , reserveValidator
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.AlwaysPassingScripts
+  ( alwaysPassingPolicy
+  , alwaysPassingValidator
+  )
 import TrustlessSidechain.Versioning.Types
   ( ScriptId
       ( GovernancePolicy
@@ -41,6 +49,10 @@ import TrustlessSidechain.Versioning.Types
       , ReserveAuthPolicy
       , ReserveValidator
       , CommitteeCandidateValidator
+      , DParameterPolicy
+      , DParameterValidator
+      , AlwaysPassingPolicy
+      , AlwaysPassingValidator
       )
   )
 import TrustlessSidechain.Versioning.Utils as Versioning
@@ -58,10 +70,33 @@ getVersionedPoliciesAndValidators sidechainParams = do
   nativeTokenManagementScripts ← getNativeTokenManagementPoliciesAndValidators
     sidechainParams
   governance ← getGovernancePoliciesAndValidators sidechainParams
+  dParam ← getDPameterPoliciesAndValidators sidechainParams
+  alwaysPassing ← getAlwaysPassingPoliciesAndValidators
 
   pure $ committeeScripts
     <> nativeTokenManagementScripts
     <> governance
+    <> dParam
+    <> alwaysPassing
+
+getAlwaysPassingPoliciesAndValidators ∷
+  ∀ r.
+  Run (EXCEPT OffchainError + r)
+    { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
+    }
+getAlwaysPassingPoliciesAndValidators = do
+  alwaysPassingValidator' ← alwaysPassingValidator $ BigInt.fromInt 1
+  alwaysPassingPolicy' ← alwaysPassingPolicy $ BigInt.fromInt 1
+
+  pure $
+    { versionedPolicies: List.fromFoldable
+        [ AlwaysPassingPolicy /\ alwaysPassingPolicy'
+        ]
+    , versionedValidators: List.fromFoldable
+        [ AlwaysPassingValidator /\ alwaysPassingValidator'
+        ]
+    }
 
 getGovernancePoliciesAndValidators ∷
   ∀ r.
@@ -79,6 +114,26 @@ getGovernancePoliciesAndValidators sp = do
     { versionedPolicies: List.fromFoldable
         [ GovernancePolicy /\ governanceScript ]
     , versionedValidators: mempty
+    }
+
+getDPameterPoliciesAndValidators ∷
+  ∀ r.
+  SidechainParams →
+  Run (READER Env + EXCEPT OffchainError + WALLET + r)
+    { versionedPolicies ∷ List (Tuple ScriptId PlutusScript)
+    , versionedValidators ∷ List (Tuple ScriptId PlutusScript)
+    }
+getDPameterPoliciesAndValidators sp = do
+  dParameterMintingPolicy ← decodeDParameterMintingPolicy sp
+  dParameterValidator ← decodeDParameterValidator sp
+
+  pure $
+    { versionedPolicies: List.fromFoldable
+        [ DParameterPolicy /\ dParameterMintingPolicy
+        ]
+    , versionedValidators: List.fromFoldable
+        [ DParameterValidator /\ dParameterValidator
+        ]
     }
 
 getCommitteeSelectionPoliciesAndValidators ∷

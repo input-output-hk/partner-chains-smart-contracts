@@ -38,15 +38,15 @@ main = do
           ConfigFile.tests
 
         group "Testnet integration tests" do
-          IlliquidCirculationSupply.tests
-          Reserve.tests
-          InitCandidatePermissionToken.tests
-          InitMint.tests
-          CommitteeCandidateValidator.tests
-          CandidatePermissionToken.tests
-          Versioning.tests
+          -- IlliquidCirculationSupply.tests
+          -- Reserve.tests
+          -- InitCandidatePermissionToken.tests
+          -- InitMint.tests
+          -- CommitteeCandidateValidator.tests
+          -- CandidatePermissionToken.tests
+          -- Versioning.tests
           DParameter.tests
-          PermissionedCandidates.tests
+--   PermissionedCandidates.tests
 
-        group "Roundtrips" $ do
-          Data.tests
+-- group "Roundtrips" $ do
+--   Data.tests

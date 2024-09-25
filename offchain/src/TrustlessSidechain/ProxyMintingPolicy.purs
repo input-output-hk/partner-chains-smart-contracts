@@ -1,5 +1,6 @@
 module TrustlessSidechain.ProxyMintingPolicy
   ( mkProxyMintingPolicyTokenLookupsAndConstraints
+  , decodeProxyMintingPolicy
   ) where
 
 import Contract.Prelude
@@ -49,23 +50,23 @@ instance FromData ProxyMintingPolicyRedeemer where
 decodeProxyMintingPolicy ∷
   ∀ r.
   SidechainParams →
-  { subMintingPolicy ∷ PlutusScript
-  , subBurningPolicy ∷ PlutusScript
+  { subMintingPolicy ∷ ScriptId
+  , subBurningPolicy ∷ ScriptId
   } →
   Run (EXCEPT OffchainError + WALLET + r) PlutusScript
 decodeProxyMintingPolicy sp { subMintingPolicy, subBurningPolicy } = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sp
   mkMintingPolicyWithParams ProxyMintingPolicy $
     [ toData versionOracleConfig
-    , toData $ PlutusScript.hash subMintingPolicy
-    , toData $ PlutusScript.hash subBurningPolicy
+    , toData subMintingPolicy
+    , toData subBurningPolicy
     ]
 
 mkProxyMintingPolicyTokenLookupsAndConstraints ∷
   ∀ r.
   SidechainParams →
-  { subMintingPolicy ∷ PlutusScript
-  , subBurningPolicy ∷ PlutusScript
+  { subMintingPolicy ∷ ScriptId
+  , subBurningPolicy ∷ ScriptId
   , mintAmount ∷ Int
   , assetName ∷ AssetName
   , version ∷ Int

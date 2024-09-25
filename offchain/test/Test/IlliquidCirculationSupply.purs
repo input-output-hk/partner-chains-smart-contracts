@@ -31,7 +31,6 @@ import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Run (EFFECT, Run)
 import Run.Except (EXCEPT)
-import Test.AlwaysPassingScripts (alwaysPassingPolicy)
 import Test.TestnetTest (TestnetTest)
 import Test.TestnetTest as Test.TestnetTest
 import Test.Utils (WrappedTests, testnetGroup)
@@ -58,6 +57,7 @@ import TrustlessSidechain.NativeTokenManagement.IlliquidCirculationSupply
   )
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
+import TrustlessSidechain.Utils.AlwaysPassingScripts (alwaysPassingPolicy)
 import TrustlessSidechain.Utils.Asset (emptyAssetName, singletonFromAsset)
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.ScriptId

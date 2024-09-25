@@ -1,6 +1,8 @@
 module TrustlessSidechain.DParameter.Utils
   ( getDParameterMintingPolicyAndCurrencySymbol
   , getDParameterValidatorAndAddress
+  , decodeDParameterMintingPolicy
+  , decodeDParameterValidator
   ) where
 
 import Contract.Prelude hiding (note)
@@ -17,6 +19,7 @@ import Run (Run)
 import Run.Except (EXCEPT, note)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError(InvalidAddress))
+import TrustlessSidechain.ProxyMintingPolicy (decodeProxyMintingPolicy)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (toAddress)
 import TrustlessSidechain.Utils.Scripts
@@ -27,6 +30,7 @@ import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId
       ( DParameterValidator
       , DParameterPolicy
+      , AlwaysPassingPolicy
       )
   )
 import Type.Row (type (+))
@@ -38,6 +42,8 @@ decodeDParameterMintingPolicy ∷
   SidechainParams →
   Run (EXCEPT OffchainError + WALLET + r) PlutusScript
 decodeDParameterMintingPolicy sidechainParams = do
+  proxyMintingPolicy ← decodeProxyMintingPolicy sidechainParams
+    { subMintingPolicy: DParameterPolicy, subBurningPolicy: AlwaysPassingPolicy }
   { dParameterValidatorAddress } ← getDParameterValidatorAndAddress
     sidechainParams
   plutusAddressData ←
@@ -47,7 +53,10 @@ decodeDParameterMintingPolicy sidechainParams = do
       )
       $ fromCardano dParameterValidatorAddress
   mkMintingPolicyWithParams DParameterPolicy $
-    [ toData sidechainParams, toData plutusAddressData ]
+    [ toData sidechainParams
+    , toData plutusAddressData
+    , toData (PlutusScript.hash proxyMintingPolicy)
+    ]
 
 decodeDParameterValidator ∷
   ∀ r.

@@ -9,6 +9,7 @@ module TrustlessSidechain.DParameter (
 ) where
 
 import PlutusLedgerApi.V2 (
+  CurrencySymbol,
   SerialisedScript,
   serialiseCompiledCode,
  )
@@ -29,52 +30,50 @@ import TrustlessSidechain.Utils (currencySymbolValueOf)
 --   ERROR-DPARAMETER-POLICY-02: some tokens were not sent to the
 --   dParameterValidatorAddress
 --
---   ERROR-DPARAMETER-POLICY-03: Wrong ScriptContext - this should never happen
 mkMintingPolicy ::
   SidechainParams ->
   Unsafe.Address ->
+  CurrencySymbol ->
   BuiltinData ->
   Unsafe.ScriptContext ->
   Bool
 mkMintingPolicy
   sp
   dParameterValidatorAddress
+  dParameterProxyCurrencySymbol
   _redeemer
-  ctx
-    | Just currSym <-
-        Unsafe.decode <$> (Unsafe.getMinting . Unsafe.scriptContextPurpose $ ctx) =
-        let txInfo = Unsafe.scriptContextTxInfo ctx
+  ctx =
+    let txInfo = Unsafe.scriptContextTxInfo ctx
 
-            -- Check that transaction was approved by governance authority
-            signedByGovernanceAuthority :: Bool
-            signedByGovernanceAuthority =
-              txInfo `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
+        -- Check that transaction was approved by governance authority
+        signedByGovernanceAuthority :: Bool
+        signedByGovernanceAuthority =
+          txInfo `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
 
-            -- Amount of DParameterToken sent to the DParameterValidator address
-            outAmount :: Integer
-            outAmount =
-              sum
-                [ currencySymbolValueOf value currSym
-                | txOut <- Unsafe.txInfoOutputs txInfo
-                , let address = Unsafe.txOutAddress txOut
-                , let value = Unsafe.decode $ Unsafe.txOutValue txOut
-                , -- look at UTxOs that are sent to the dParameterValidatorAddress
-                address == dParameterValidatorAddress
-                ]
+        -- Amount of DParameterToken sent to the DParameterValidator address
+        outAmount :: Integer
+        outAmount =
+          sum
+            [ currencySymbolValueOf value dParameterProxyCurrencySymbol
+            | txOut <- Unsafe.txInfoOutputs txInfo
+            , let address = Unsafe.txOutAddress txOut
+            , let value = Unsafe.decode $ Unsafe.txOutValue txOut
+            , -- look at UTxOs that are sent to the dParameterValidatorAddress
+            address == dParameterValidatorAddress
+            ]
 
-            -- Amount of DParameterToken minted by this transaction
-            mintAmount :: Integer
-            mintAmount = currencySymbolValueOf (Unsafe.decode $ Unsafe.txInfoMint txInfo) currSym
+        -- Amount of DParameterToken minted by this transaction
+        mintAmount :: Integer
+        mintAmount = currencySymbolValueOf (Unsafe.decode $ Unsafe.txInfoMint txInfo) dParameterProxyCurrencySymbol
 
-            -- Check wether the amount of tokens minted equal to the amount of tokens
-            -- sent to the DParameterValidator address
-            allTokensSentToDParameterValidator :: Bool
-            allTokensSentToDParameterValidator = mintAmount == outAmount
-         in traceIfFalse "ERROR-DPARAMETER-POLICY-01" signedByGovernanceAuthority
-              && traceIfFalse
-                "ERROR-DPARAMETER-POLICY-02"
-                allTokensSentToDParameterValidator
-mkMintingPolicy _ _ _ _ = traceError "ERROR-DPARAMETER-POLICY-03"
+        -- Check wether the amount of tokens minted equal to the amount of tokens
+        -- sent to the DParameterValidator address
+        allTokensSentToDParameterValidator :: Bool
+        allTokensSentToDParameterValidator = mintAmount == outAmount
+     in traceIfFalse "ERROR-DPARAMETER-POLICY-01" signedByGovernanceAuthority
+          && traceIfFalse
+            "ERROR-DPARAMETER-POLICY-02"
+            allTokensSentToDParameterValidator
 
 -- OnChain error descriptions:
 --
@@ -123,12 +122,14 @@ mkMintingPolicyUntyped ::
   BuiltinData ->
   BuiltinData ->
   BuiltinData ->
+  BuiltinData ->
   ()
-mkMintingPolicyUntyped sp validatorAddress redeemer ctx =
+mkMintingPolicyUntyped sp validatorAddress proxyCurrencySymbol redeemer ctx =
   check
     $ mkMintingPolicy
       (unsafeFromBuiltinData sp)
       (Unsafe.wrap validatorAddress)
+      (unsafeFromBuiltinData proxyCurrencySymbol)
       redeemer
       (Unsafe.wrap ctx)
 
