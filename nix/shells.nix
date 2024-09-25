@@ -8,7 +8,6 @@ let
   cardano-node = self.packages.cardano-node;
   cardano-testnet = self.packages.cardano-testnet;
   haskellPackages = pkgs.haskell.packages.ghc96.ghcWithPackages (ps: with ps; [
-    cabal-install
     hlint
     hoogle
     cabal-fmt
@@ -44,6 +43,9 @@ in
       self.packages.ogmios
 
       haskellPackages
+      # cabal-install installed separately from haskellPackages, see:
+      # https://github.com/NixOS/nixpkgs/issues/321569#issuecomment-2212382173
+      cabal-install
 
       watchexec
 
