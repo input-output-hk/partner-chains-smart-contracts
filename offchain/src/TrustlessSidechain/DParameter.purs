@@ -9,6 +9,7 @@ import Cardano.FromData (fromData)
 import Cardano.ToData (toData)
 import Cardano.Types.Asset (Asset(Asset))
 import Cardano.Types.AssetName (AssetName)
+import Cardano.Types.BigInt as BigInt
 import Cardano.Types.Int as Int
 import Cardano.Types.OutputDatum (OutputDatum(OutputDatum))
 import Cardano.Types.PlutusData as PlutusData
@@ -49,10 +50,11 @@ import TrustlessSidechain.ProxyMintingPolicy
   ( decodeProxyMintingPolicy
   , mkProxyMintingPolicyTokenLookupsAndConstraints
   )
+import TrustlessSidechain.ProxyValidator (getProxyValidatorAndAddress)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Asset (emptyAssetName)
 import TrustlessSidechain.Versioning.ScriptId
-  ( ScriptId(DParameterPolicy, AlwaysPassingPolicy)
+  ( ScriptId(DParameterPolicy, AlwaysPassingPolicy, GovernancePolicy)
   )
 import TrustlessSidechain.Versioning.Types (VersionOracle(VersionOracle))
 import TrustlessSidechain.Versioning.Utils as Versioning
@@ -95,15 +97,15 @@ mkInsertDParameterLookupsAndConstraints
   let
     dParameterMintingPolicyHash = dParameterCurrencySymbol
 
-  { dParameterValidator } ←
-    DParameter.getDParameterValidatorAndAddress sidechainParams
+  { proxyValidator: proxyDParamValidator } ←
+    getProxyValidatorAndAddress sidechainParams GovernancePolicy
 
-  let dParameterValidatorHash = PlutusScript.hash dParameterValidator
+  let proxyDParamValidatorHash = PlutusScript.hash proxyDParamValidator
 
-  let
-    { lookups: governanceLookups, constraints: governanceConstraints } =
-      Governance.governanceAuthorityLookupsAndConstraints
-        (unwrap sidechainParams).governanceAuthority
+  { lookups: governanceLookups, constraints: governanceConstraints } ←
+    Versioning.governanceAuthorityLookupsAndConstraints
+      sidechainParams
+      1
 
   alwaysPassingTxInput /\ alwaysPassingTxOutput ←
     Versioning.getVersionedScriptRefUtxo sidechainParams
@@ -144,7 +146,7 @@ mkInsertDParameterLookupsAndConstraints
             , output: dParamTxOutput
             }
         )
-        <> Constraints.mustPayToScript dParameterValidatorHash dParameterDatum
+        <> Constraints.mustPayToScript proxyDParamValidatorHash dParameterDatum
           DatumInline
           value
         <> Constraints.mustReferenceOutput dParamTxInput
@@ -168,8 +170,10 @@ mkUpdateDParameterLookupsAndConstraints
   { dParameterCurrencySymbol } ←
     DParameter.getDParameterMintingPolicyAndCurrencySymbol sidechainParams
 
-  { dParameterValidatorAddress, dParameterValidator } ←
-    DParameter.getDParameterValidatorAndAddress sidechainParams
+  { proxyValidator: proxyDParamValidator
+  , proxyValidatorAddress: proxyDParamValidatorAddress
+  } ←
+    getProxyValidatorAndAddress sidechainParams GovernancePolicy
 
   proxyCurrencySymbol ← PlutusScript.hash <$> decodeProxyMintingPolicy
     sidechainParams
@@ -177,7 +181,7 @@ mkUpdateDParameterLookupsAndConstraints
     , subBurningPolicy: AlwaysPassingPolicy
     }
 
-  let dParameterValidatorHash = PlutusScript.hash dParameterValidator
+  let proxyDParamValidatorHash = PlutusScript.hash proxyDParamValidator
 
   -- find one UTxO at DParameterValidator address that contain DParameterToken
 
@@ -191,7 +195,7 @@ mkUpdateDParameterLookupsAndConstraints
                 > BigNum.fromInt 0
           )
     )
-      <$> Effect.utxosAt dParameterValidatorAddress
+      <$> Effect.utxosAt proxyDParamValidatorAddress
 
   (oldDParameterInput /\ oldDParameterOutput) ← Run.note
     (NotFoundUtxo "Old D parameter not found")
@@ -223,10 +227,10 @@ mkUpdateDParameterLookupsAndConstraints
     $ GenericInternalError
         "No previous DParameter tokens were found. Please insert a new DParameter before trying to update."
 
-  let
-    { lookups: governanceLookups, constraints: governanceConstraints } =
-      Governance.governanceAuthorityLookupsAndConstraints
-        (unwrap sidechainParams).governanceAuthority
+  { lookups: governanceLookups, constraints: governanceConstraints } ←
+    Versioning.governanceAuthorityLookupsAndConstraints
+      sidechainParams
+      1
 
   let
     value ∷ Value.Value
@@ -240,7 +244,7 @@ mkUpdateDParameterLookupsAndConstraints
       { permissionedCandidatesCount, registeredCandidatesCount }
 
     lookups ∷ ScriptLookups
-    lookups = Lookups.validator dParameterValidator
+    lookups = Lookups.validator proxyDParamValidator
       <> Lookups.unspentOutputs
         (Map.singleton oldDParameterInput oldDParameterOutput)
       <> governanceLookups
@@ -248,11 +252,11 @@ mkUpdateDParameterLookupsAndConstraints
     spendScriptOutputConstraints ∷ TxConstraints
     spendScriptOutputConstraints = Constraints.mustSpendScriptOutput
       oldDParameterInput
-      (RedeemerDatum $ PlutusData.unit)
+      (RedeemerDatum $ toData $ BigInt.fromInt 1)
 
     constraints ∷ TxConstraints
     constraints =
-      Constraints.mustPayToScript dParameterValidatorHash dParameterDatum
+      Constraints.mustPayToScript proxyDParamValidatorHash dParameterDatum
         DatumInline
         value
         <> spendScriptOutputConstraints

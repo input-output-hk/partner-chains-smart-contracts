@@ -1,11 +1,14 @@
 module TrustlessSidechain.ProxyValidator
   ( mkProxyValidatorTokenLookupsAndConstraints
+  , decodeProxyValidator
+  , getProxyValidatorAndAddress
   ) where
 
 import Contract.Prelude
 
 import Cardano.FromData (class FromData, fromData)
 import Cardano.ToData (class ToData, toData)
+import Cardano.Types.Address (Address)
 import Cardano.Types.AssetName (AssetName)
 import Cardano.Types.BigInt (BigInt)
 import Cardano.Types.BigInt as BigInt
@@ -28,6 +31,9 @@ import TrustlessSidechain.Error
   ( OffchainError
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Address
+  ( toAddress
+  )
 import TrustlessSidechain.Utils.Scripts (mkValidatorWithParams)
 import TrustlessSidechain.Versioning.ScriptId (ScriptId(ProxyValidator))
 import TrustlessSidechain.Versioning.Utils as Versioning
@@ -36,19 +42,32 @@ import Type.Row (type (+))
 decodeProxyValidator ∷
   ∀ r.
   SidechainParams →
-  PlutusScript →
+  ScriptId →
   Run (EXCEPT OffchainError + WALLET + r) PlutusScript
 decodeProxyValidator sp subMintingPolicy = do
   versionOracleConfig ← Versioning.getVersionOracleConfig sp
   mkValidatorWithParams ProxyValidator $
     [ toData versionOracleConfig
-    , toData $ PlutusScript.hash subMintingPolicy
+    , toData subMintingPolicy
     ]
+
+getProxyValidatorAndAddress ∷
+  ∀ r.
+  SidechainParams →
+  ScriptId →
+  Run (EXCEPT OffchainError + WALLET + r)
+    { proxyValidator ∷ PlutusScript
+    , proxyValidatorAddress ∷ Address
+    }
+getProxyValidatorAndAddress sp subMintingPolicy = do
+  proxyValidator ← decodeProxyValidator sp subMintingPolicy
+  proxyValidatorAddress ← toAddress $ PlutusScript.hash proxyValidator
+  pure { proxyValidator, proxyValidatorAddress }
 
 mkProxyValidatorTokenLookupsAndConstraints ∷
   ∀ r.
   SidechainParams →
-  { subMintingPolicy ∷ PlutusScript
+  { subMintingPolicy ∷ ScriptId
   , txInput ∷ TransactionInput
   , version ∷ Int
   } →

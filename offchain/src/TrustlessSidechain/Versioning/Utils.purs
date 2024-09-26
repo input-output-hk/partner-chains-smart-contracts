@@ -11,6 +11,7 @@ module TrustlessSidechain.Versioning.Utils
   , versionOracleTokenName
   , versionOracleInitTokenName
   , versionOracleValidator
+  , governanceAuthorityLookupsAndConstraints
   ) where
 
 import Contract.Prelude
@@ -571,42 +572,3 @@ governanceAuthorityLookupsAndConstraints sidechainParams version = do
     { lookups: governanceAuthorityLookups
     , constraints: governanceAuthorityConstraints
     }
-
-getReferenceUtxo ∷
-  ∀ r.
-  SidechainParams →
-  VersionOracle →
-  Run
-    ( EXCEPT OffchainError
-        + WALLET
-        + TRANSACTION
-        + r
-    )
-    (Maybe (TransactionInput /\ TransactionOutput))
-getReferenceUtxo sidechainParams versionOracle = do
-  { versionOracleMintingPolicy, versionOracleCurrencySymbol } ←
-    getVersionOraclePolicy sidechainParams
-
-  vValidator ← versionOracleValidator sidechainParams
-
-  versioningUtxos ← Effect.utxosAt
-    =<< toAddress (PlutusScript.hash vValidator)
-
-  pure $ Array.head
-    $ Array.filter
-        ( \(_ /\ TransactionOutput { datum: d, amount }) →
-            let
-              hasDatum = case d of
-                Just (OutputDatum datum') → case fromData datum' of
-                  Just (VersionOracleDatum { versionOracle: vO }) → vO ==
-                    versionOracle
-                  _ → false
-                _ → false
-              hasToken =
-                Value.valueOf
-                  (Asset versionOracleCurrencySymbol versionOracleTokenName)
-                  amount == BigNum.fromInt 1
-            in
-              hasDatum && hasToken
-        )
-    $ Map.toUnfoldable versioningUtxos

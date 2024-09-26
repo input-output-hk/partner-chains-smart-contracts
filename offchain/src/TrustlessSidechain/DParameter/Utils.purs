@@ -20,6 +20,7 @@ import Run.Except (EXCEPT, note)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError(InvalidAddress))
 import TrustlessSidechain.ProxyMintingPolicy (decodeProxyMintingPolicy)
+import TrustlessSidechain.ProxyValidator (getProxyValidatorAndAddress)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (toAddress)
 import TrustlessSidechain.Utils.Scripts
@@ -31,6 +32,7 @@ import TrustlessSidechain.Versioning.ScriptId
       ( DParameterValidator
       , DParameterPolicy
       , AlwaysPassingPolicy
+      , GovernancePolicy
       )
   )
 import Type.Row (type (+))
@@ -44,8 +46,10 @@ decodeDParameterMintingPolicy ∷
 decodeDParameterMintingPolicy sidechainParams = do
   proxyMintingPolicy ← decodeProxyMintingPolicy sidechainParams
     { subMintingPolicy: DParameterPolicy, subBurningPolicy: AlwaysPassingPolicy }
-  { dParameterValidatorAddress } ← getDParameterValidatorAndAddress
-    sidechainParams
+  { proxyValidatorAddress: dParameterValidatorAddress } ←
+    getProxyValidatorAndAddress
+      sidechainParams
+      GovernancePolicy
   plutusAddressData ←
     note
       ( InvalidAddress "Couldn't map address to PlutusData"
