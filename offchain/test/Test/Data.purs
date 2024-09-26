@@ -28,8 +28,6 @@ import Test.Utils.QuickCheck
   , ArbitraryScriptHash(ArbitraryScriptHash)
   , ArbitrarySignature(ArbitrarySignature)
   , ArbitraryTransactionInput(ArbitraryTransactionInput)
-  , NonNegative(NonNegative)
-  , Positive(Positive)
   , suchThatMap
   )
 import TrustlessSidechain.CommitteeCandidateValidator
@@ -309,16 +307,10 @@ genPK = suchThatMap (genByteArrayLen 33) ecdsaSecp256k1PubKey
 
 genSP :: Gen SidechainParams
 genSP = do
-  NonNegative (ArbitraryBigInt chainId) <- arbitrary
   ArbitraryTransactionInput genesisUtxo <- arbitrary
-  Positive (ArbitraryBigInt thresholdNumerator) <- arbitrary
-  Positive (ArbitraryBigInt thresholdDenominator) <- arbitrary
   governanceAuthority <- genGA
   pure $ SidechainParams
-    { chainId
-    , genesisUtxo
-    , thresholdNumerator
-    , thresholdDenominator
+    { genesisUtxo
     , governanceAuthority
     }
 

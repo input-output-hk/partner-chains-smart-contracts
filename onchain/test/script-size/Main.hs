@@ -58,11 +58,11 @@ main =
           , scriptFitsInto
               "mkDParameterValidatorCode (DParameter) serialized"
               DParameter.serialisableValidator
-              498
+              455
           , scriptFitsInto
               "mkDParameterPolicyCode (DParameter) serialized"
               DParameter.serialisableMintingPolicy
-              984
+              942
           , scriptFitsInto
               "mkPermissionedCandidatePolicyCode (PermissionedCandidates) serialized"
               PermissionedCandidates.serialisableCandidatePermissionMintingPolicy
@@ -70,15 +70,15 @@ main =
           , scriptFitsInto
               "mkPermissionedCandidatesValidatorCode (PermissionedCandidates) serialized"
               PermissionedCandidates.serialisableValidator
-              565
+              521
           , scriptFitsInto
               "mkVersionOraclePolicyCode (Versioning) serialized"
               Versioning.serialisableVersionOraclePolicy
-              3_125
+              3_080
           , scriptFitsInto
               "mkVersionOracleValidatorCode (Versioning) serialized"
               Versioning.serialisableVersionOracleValidator
-              935
+              893
           , scriptFitsInto
               "mkInitTokenPolicy (InitToken) serialized"
               InitToken.serialisableInitTokenPolicy

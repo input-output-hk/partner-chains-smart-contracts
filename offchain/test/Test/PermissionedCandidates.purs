@@ -5,7 +5,6 @@ import Contract.Prelude
 import Cardano.Types.BigNum as BigNum
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
-import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Test.TestnetTest (TestnetTest)
 import Test.TestnetTest as Test.TestnetTest
@@ -43,10 +42,7 @@ testScenario =
         let
           sidechainParams =
             SidechainParams
-              { chainId: BigInt.fromInt 1
-              , genesisUtxo
-              , thresholdNumerator: BigInt.fromInt 2
-              , thresholdDenominator: BigInt.fromInt 3
+              { genesisUtxo
               , governanceAuthority: Governance.mkGovernanceAuthority pkh
               }
 

@@ -127,22 +127,6 @@ main = do
 
       -- Do some validation on the CLI options
       -----------------------
-      let numerator = (unwrap scParams).thresholdNumerator
-      let denominator = (unwrap scParams).thresholdDenominator
-      unless (gcd numerator denominator == one) $ failWith
-        $ "Threshold numerator and denominator are not coprime.\n"
-        <> "Numerator: "
-        <> BigInt.toString numerator
-        <> "\nDenominator: "
-        <> BigInt.toString denominator
-
-      unless (numerator <= denominator) $ failWith
-        $ "Threshold numerator is greater than denominator.\n"
-        <> "Numerator: "
-        <> BigInt.toString numerator
-        <> "\nDenominator: "
-        <> BigInt.toString denominator
-
       let
         governance = Just $ MultiSig $ MultiSigGovParams
           { governanceMembers:
@@ -160,16 +144,15 @@ main = do
 
         liftEffect $ case endpointResp of
           Right resp -> printEndpointResp resp
-          Left e -> failWith $ show e
+          Left e -> do
+            log $ show e
+            exit 1
 
     UtilsOptions opts -> do
       endpointResp <- runUtilsEndpoint opts.utilsOptions
       printEndpointResp endpointResp
 
     CLIVersion -> log versionString
-
-failWith :: String -> Effect Unit
-failWith errStr = log errStr *> exit 1
 
 -- | Reads configuration file from `./config.json`, then
 -- | parses CLI arguments. CLI arguments override the config files.

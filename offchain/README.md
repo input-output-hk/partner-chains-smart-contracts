@@ -85,12 +85,7 @@ file `$CWD/config.json` in the following format:
 
 ```json
   "sidechainParameters": {
-    "chainId": 123,
     "genesisUtxo": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1",
-    "threshold": {
-      "numerator": 2,
-      "denominator": 3
-    },
     "governanceAuthority": "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
   },
   "runtimeConfig": {
@@ -115,10 +110,7 @@ file `$CWD/config.json` in the following format:
 This allows to shorten a CLI call from:
 ```
 nix run .#pc-contracts-cli -- deregister \
-  --sidechain-id 123 \
   --genesis-committee-hash-utxo 3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1 \
-  --threshold-numerator 2 \
-  --threshold-denominator 3 \
   --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
   --network testnet \
   --ogmios-host localhost \
@@ -563,16 +555,10 @@ nix run .#pc-contracts-cli -- utils sign schnorr-secp256k1 \
 The result corresponds to `BlockProducerRegistrationMsg` type in the code.
 
 Available options:
-  - `-i,--sidechain-id` \
-    Sidechain ID
   - `-c,--genesis-committee-hash-utxo TX_ID#TX_IDX` \
     Input UTxO to be spent with the first committee hash setup
   - `-g,--governance-authority PUB_KEY_HASH` \
     Public key hash of governance authority
-  - `--threshold-numerator INT` \
-    The numerator for the ratio of the threshold
-  - `--threshold-denominator INT` \
-    The denominator for the ratio of the threshold
   - `--sidechain-public-key SIDECHAIN_PUB_KEY` \
     Sidechain public key
   - `--input-utxo TX_ID#TX_IDX` \

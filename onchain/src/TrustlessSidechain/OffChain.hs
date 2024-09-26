@@ -13,7 +13,6 @@ module TrustlessSidechain.OffChain (
   encodeTxOutRef,
   encodeHexBuiltinBS,
   encodeScPubKeyAndSig,
-  showThreshold,
   encodeHexSecpPrivKey,
   encodeHexOfCborBuiltinData,
   toSpoPubKey,
@@ -344,15 +343,6 @@ encodeScPubKeyAndSig sckey sig =
     , ":"
     , Plutus.bytes $ getSignature sig
     ]
-
--- | 'showThreshold' shows integers @n@ and @m@ as
--- > n/m
--- Importantly, this is compatible with the purescript parser format
-showThreshold ::
-  Integer ->
-  Integer ->
-  Text
-showThreshold n m = Text.pack (show n) <> "/" <> Text.pack (show m)
 
 -- | 'encodeHexOfCborBuiltinData' shows the hex of the cbor serialized
 -- BuiltinData representation of the given argument.
