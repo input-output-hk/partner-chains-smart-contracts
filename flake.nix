@@ -57,6 +57,9 @@
       inputs.hackage.follows = "hackage";
       inputs.hydra.follows = "blank";
     };
+    devx = {
+      url = "github:input-output-hk/devx";
+    };
     # Used to provide the cardano-node and cardano-cli executables.
     cardano-node = {
       url = "github:input-output-hk/cardano-node/9.1.0";
