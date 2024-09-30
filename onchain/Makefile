@@ -1,10 +1,6 @@
-.PHONY: nix-cabal-repl format_check format cabalfmt cabalfmt_check hoogle lint
+.PHONY: format_check format cabalfmt cabalfmt_check lint
 
 CABAL_SOURCES := $(shell fd -ecabal)
-
-# Starts a hoogle Server.
-hoogle:
-	@ nix develop -c hoogle server --local --port 8008
 
 cabalfmt: requires_nix_shell
 	cabal-fmt --inplace $(CABAL_SOURCES)
@@ -23,10 +19,6 @@ format_check:
 
 lint: requires_nix_shell
 	hlint --no-summary $(shell fd -ehs -elhs)
-
-# Starts a ghci repl inside the nix environment.
-nix-cabal-repl:
-	@ nix develop -c cabal new-repl
 
 # Include the makefile in the root directory so we can use rules like
 # `requires_nix_shell`

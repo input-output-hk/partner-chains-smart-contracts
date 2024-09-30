@@ -1,22 +1,9 @@
-.PHONY: build-nix hoogle nix-build-library nix-build-executables \
-        nix-build-test requires_nix_shell ci-build-run format-staged \
+.PHONY: nix-build-executables nix-build-test requires_nix_shell format-staged \
 		unreachable-commit-staged format-whitespace-staged format-nix-staged \
 		format-hs-staged format-cabal-staged format-purs-staged format-js-staged \
 		format-dhall-staged check-format-hs-staged check-format-cabal-staged \
 		check-format-purs-staged check-format-js-staged check-format-dhall-staged \
 		check-format-nix-staged check-format-whitespace
-
-# Generate TOC for README.md
-# It has to be manually inserted into the README.md for now.
-generate-readme-contents:
-	nix shell nixpkgs#nodePackages.npm --command "npx markdown-toc ./README.md --no-firsth1"
-
-# Attempt the CI locally
-# TODO
-
-# Build the library with nix.
-nix-build-library:
-	@ nix build .#trustless-sidechain:lib:trustless-sidechain
 
 current-system := $(shell nix eval --impure --expr builtins.currentSystem)
 
@@ -172,12 +159,6 @@ check-format-dhall-staged: requires_nix_shell
 	@git diff -z --name-only --diff-filter=d --cached HEAD\
 		| grep -Ez '^.*\.dhall$$'\
 		| xargs -0 -r dhall lint --check
-
-nixpkgsfmt: requires_nix_shell
-	nixpkgs-fmt $(NIX_SOURCES)
-
-nixpkgsfmt_check: requires_nix_shell
-	nixpkgs-fmt --check $(NIX_SOURCES)
 
 lock: requires_nix_shell
 	nix flake lock
