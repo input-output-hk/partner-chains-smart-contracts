@@ -1,10 +1,12 @@
 inputs @ { self
 , pkgs
 , ...
-}: let
+}:
+let
   onchain = (import ./onchain.nix { inherit inputs pkgs; });
   offchain = import ./offchain.nix { inherit inputs self pkgs; };
-in pkgs.lib.recursiveUpdate onchain {
+in
+pkgs.lib.recursiveUpdate onchain {
   inherit onchain;
   apps = rec {
     default = pc-contracts-cli;

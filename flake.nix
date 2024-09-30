@@ -57,6 +57,11 @@
       inputs.hackage.follows = "hackage";
       inputs.hydra.follows = "blank";
     };
+    devx = {
+      url = "github:input-output-hk/devx/e0d22b5e52a90be3ee23c1056e8334b737bd88e2";
+      inputs.haskellNix.follows = "haskell-nix";
+      inputs.iohk-nix.follows = "iohk-nix";
+    };
     # Used to provide the cardano-node and cardano-cli executables.
     cardano-node = {
       url = "github:input-output-hk/cardano-node/9.1.0";

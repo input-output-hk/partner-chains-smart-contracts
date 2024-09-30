@@ -7,13 +7,6 @@ let
   cardano-cli = self.packages.cardano-cli;
   cardano-node = self.packages.cardano-node;
   cardano-testnet = self.packages.cardano-testnet;
-  haskellPackages = pkgs.haskell.packages.ghc96.ghcWithPackages (ps: with ps; [
-    hlint
-    hoogle
-    cabal-fmt
-    fourmolu
-    haskell-language-server
-  ]);
 in
 {
   default = pkgs.mkShell {
@@ -32,6 +25,7 @@ in
     ];
     inputsFrom = [
       #self.devShells.default
+      inputs.devx.devShells.ghc96-iog
     ];
     packages = with pkgs; [
       # local stack
@@ -41,12 +35,8 @@ in
       self.packages.kupo
       self.packages.ogmios
 
-      haskellPackages
-      # cabal-install installed separately from haskellPackages, see:
-      # https://github.com/NixOS/nixpkgs/issues/321569#issuecomment-2212382173
-      cabal-install
-
       watchexec
+      moreutils
 
       # Shell Utils
       bashInteractive

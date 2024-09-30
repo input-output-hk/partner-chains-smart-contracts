@@ -19,13 +19,6 @@ let
 
       compiler-nix-name = "ghc96";
 
-      flake.variants.profiled.modules = [
-        {
-          enableProfiling = true;
-          enableLibraryProfiling = true;
-        }
-      ];
-
       shell.withHoogle = false;
 
       inputMap = {
