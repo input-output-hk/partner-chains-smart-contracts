@@ -15,6 +15,11 @@ import TrustlessSidechain.PermissionedCandidates qualified as PermissionedCandid
 import TrustlessSidechain.Reserve qualified as Reserve
 import TrustlessSidechain.Versioning qualified as Versioning
 
+import Cardano.Api (serialiseToTextEnvelope)
+import Data.Aeson qualified as Aeson
+import TrustlessSidechain.Utils (scriptToPlutusScript)
+import Prelude (read)
+
 -- Process for adding a new script to measurements:
 --
 -- 1. Add a CompiledCode for it in the Compiled module.
@@ -42,7 +47,9 @@ import TrustlessSidechain.Versioning qualified as Versioning
 -- so try that first.
 
 main :: IO ()
-main =
+main = do
+  let scriptToJson = Aeson.encode . serialiseToTextEnvelope Nothing . scriptToPlutusScript
+  putStrLn $ "CCV.serialisableValidator: " <> (read . show . scriptToJson $ CCV.serialisableValidator)
   defaultMain
     . testGroup "Size"
     $ [ testGroup

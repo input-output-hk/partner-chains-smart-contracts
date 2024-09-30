@@ -260,7 +260,9 @@ test-suite script-size
     Sizer
 
   build-depends:
+    , aeson
     , bytestring
+    , cardano-api
     , plutus-core
     , plutus-ledger-api
     , plutus-shim-prelude
