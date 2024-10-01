@@ -42,10 +42,7 @@ import TrustlessSidechain.Types (
   EcdsaSecp256k1PubKey (getEcdsaSecp256k1PubKey),
   SidechainParams (
     SidechainParams,
-    chainId,
-    genesisUtxo,
-    thresholdDenominator,
-    thresholdNumerator
+    genesisUtxo
   ),
  )
 
@@ -72,9 +69,6 @@ genCliCommand signingKeyFile scParams@SidechainParams {..} cliCommand =
       sidechainParamFlags =
         [ ["--payment-signing-key-file", ByteString.Char8.pack signingKeyFile]
         , ["--genesis-committee-hash-utxo", OffChain.encodeTxOutRef genesisUtxo]
-        , ["--sidechain-id", bytesFromShow chainId]
-        , ["--threshold-numerator", bytesFromShow thresholdNumerator]
-        , ["--threshold-denominator", bytesFromShow thresholdDenominator]
         ]
    in ByteString.Char8.intercalate " \\\n"
         $ fmap ByteString.Char8.unwords

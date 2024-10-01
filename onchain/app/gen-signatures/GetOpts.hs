@@ -19,7 +19,7 @@ import Cardano.Crypto.DSIGN.Class (
  )
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Control.Exception (ioError)
-import Control.Monad (MonadPlus (mzero), guard, join, return)
+import Control.Monad (MonadPlus (mzero), join, return)
 import Crypto.Secp256k1 qualified as SECP
 import Data.Aeson qualified as Aeson
 import Data.Attoparsec.Text (Parser, char, decimal, parseOnly, takeWhile)
@@ -195,20 +195,6 @@ parseTxOutRef =
       txIx <- decimal
       pure $ TxOutRef txId txIx
 
--- | 'parseThreshold' parses the CLI flag value
--- > UINT/UINT
--- where the second UINT must satisfy > 0.
-parseThreshold :: OptParse.ReadM (Integer, Integer)
-parseThreshold = eitherReader $ parseOnly thresholdParser . Text.pack
-  where
-    thresholdParser :: Parser (Integer, Integer)
-    thresholdParser = do
-      numerator <- decimal
-      void (char '/')
-      denominator <- decimal
-      Control.Monad.guard $ denominator > 0
-      pure (numerator, denominator)
-
 -- | 'parseSpoPrivKey' parses the CLI flag value which is an SPO private key
 parseSpoPrivKey :: OptParse.ReadM (SignKeyDSIGN Ed25519DSIGN)
 parseSpoPrivKey = eitherReader toSpoPrivKey
@@ -354,15 +340,6 @@ initCommitteePublicKeysParser =
 -- | CLI parser for gathering the 'SidechainParams'
 sidechainParamsParser :: OptParse.Parser SidechainParams
 sidechainParamsParser = do
-  chainId <-
-    option auto
-      $ mconcat
-        [ short 'i'
-        , long "sidechain-id"
-        , metavar "1"
-        , help "Sidechain ID"
-        ]
-
   genesisUtxo <-
     option parseTxOutRef
       $ mconcat
@@ -379,14 +356,6 @@ sidechainParamsParser = do
         , long "governance-authority"
         , metavar "PUB_KEY_HASH"
         , help "Public key hash of governance authority"
-        ]
-
-  (thresholdNumerator, thresholdDenominator) <-
-    option parseThreshold
-      $ mconcat
-        [ long "threshold"
-        , metavar "UINT/UINT"
-        , help "Threshold ratio for the required number of signatures"
         ]
 
   pure SidechainParams {..}

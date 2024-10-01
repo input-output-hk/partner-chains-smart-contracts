@@ -6,7 +6,6 @@ import Cardano.Types.BigNum as BigNum
 import Contract.Log as Log
 import Contract.Wallet as Wallet
 import JS.BigInt (fromInt)
-import JS.BigInt as BigInt
 import Mote.Monad as Mote.Monad
 import Test.InitSidechain.Utils (failMsg)
 import Test.TestnetTest (TestnetTest)
@@ -57,10 +56,7 @@ testInitCandidatePermissionTokenIdempotent =
               version = 1
               initCandidatePermissionTokenMintInfo = Just (fromInt 1)
               sidechainParams = SidechainParams.SidechainParams
-                { chainId: BigInt.fromInt 9
-                , genesisUtxo: genesisUtxo
-                , thresholdNumerator: BigInt.fromInt 2
-                , thresholdDenominator: BigInt.fromInt 3
+                { genesisUtxo: genesisUtxo
                 , governanceAuthority: initGovernanceAuthority
                 }
 
