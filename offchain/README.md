@@ -300,15 +300,6 @@ policy of the candidate permission tokens.
 
 #### 3.2.4. Register committee candidate
 
-In order to generate the signatures, you can use the signature generator tool:
-```
-cabal run trustless-sidechain-gen-signatures -- register \
-  --spo-signing-key c460e6d00d5e4e11240469046a988cecd136f10e12e6115ddc46566e01d199f4 \
-  --sidechain-signing-key c460e6d00d5e4e11240469046a988cecd136f10e12e6115ddc46566e01d199f4 \
-  --registration-utxo a03ebf281ed96549f74d0e724841fcf928194c44f6ff9a8056d1829598042c62#1
-```
-
-And use it's output for the registration:
 ```
 nix run .#pc-contracts-cli -- register \
   --spo-public-key 67663ee94098ceca0dacbf7f947946bfdc4de1848d76da5249b1c3a18a41a57a \

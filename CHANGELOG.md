@@ -15,6 +15,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   * Removed `claim-v1` and `claim-v2` commands
   * Removed `save-root`, `committee-hash`, `committee-handover` and `collect-garbage` commands
   * Removed `init-checkpoint`, `init-fuel`, `save-checkpoint`, `cbor-update-committee-message`, `cbor-merkle-root-insertion-message`, `cbor-merkle-tree-entry`, `cbor-merkle-tree`, `cbor-combined-merkle-proof`, and `cbor-plain-aggregate-public-keys` commands
+  * Removed `gen-signatures` tool
 
 ## Fixed
   * CLI now returns non-zero exit code on failure

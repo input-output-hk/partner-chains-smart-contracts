@@ -12,14 +12,8 @@ cradle:
     - path: "./src"
       component: "lib:quickcheck-extra"
 
-    - path: "./app/gen-signatures"
-      component: "exe:trustless-sidechain-gen-signatures"
-
     - path: "./app/serialise"
       component: "exe:trustless-sidechain-serialise"
-
-    - path: "./app/merkle-tree"
-      component: "exe:trustless-sidechain-merkle-tree"
 
     - path: "./test"
       component: "test:trustless-sidechain-test"
