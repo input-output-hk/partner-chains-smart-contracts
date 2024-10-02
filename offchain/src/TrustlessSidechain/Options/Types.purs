@@ -123,12 +123,9 @@ data TxEndpoint
       , sidechainPubKey :: ByteArray
       , sidechainSig :: ByteArray
       , inputUtxo :: TransactionInput
-      , usePermissionToken :: Boolean
       , auraKey :: ByteArray
       , grandpaKey :: ByteArray
       }
-  | CandidiatePermissionTokenAct
-      { candidatePermissionTokenAmount :: BigInt }
   | CommitteeCandidateDereg { spoPubKey :: Maybe PubKey }
   | GetAddrs
       SidechainAddressesExtra
@@ -136,9 +133,6 @@ data TxEndpoint
       { version :: Int }
   | InitReserveManagement
       { version :: Int
-      }
-  | InitCandidatePermissionToken
-      { initCandidatePermissionTokenMintInfo :: Maybe BigInt
       }
 
   -- See Note [Supporting version insertion beyond version 2]

@@ -36,7 +36,6 @@ import Data.Map (Map)
 import Foreign.Object as Object
 import TrustlessSidechain.GetSidechainAddresses (SidechainAddresses)
 import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Asset (currencySymbolToHex)
 import TrustlessSidechain.Utils.Codecs
   ( encodeInitTokenStatusData
   , scParamsCodec
@@ -59,10 +58,6 @@ import TrustlessSidechain.Versioning.Types as Types
 -- | Response data to be presented after contract endpoint execution
 data EndpointResp
   = CommitteeCandidateRegResp { transactionId :: ByteArray }
-  | CandidatePermissionTokenResp
-      { transactionId :: ByteArray
-      , candidatePermissionCurrencySymbol :: ScriptHash
-      }
   | CommitteeCandidateDeregResp { transactionId :: ByteArray }
   | GetAddrsResp { sidechainAddresses :: SidechainAddresses }
   | InitTokensMintResp
@@ -73,8 +68,6 @@ data EndpointResp
   | InitReserveManagementResp
       { scriptsInitTxIds :: Array ByteArray
       }
-  | InitCandidatePermissionTokenResp
-      { initTransactionId :: Maybe ByteArray }
   | InsertVersionResp { versioningTransactionIds :: Array ByteArray }
   | UpdateVersionResp { versioningTransactionIds :: Array ByteArray }
   | InvalidateVersionResp { versioningTransactionIds :: Array ByteArray }
@@ -150,16 +143,6 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         [ "endpoint" /\ J.fromString "CommitteeCandidateDereg"
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
         ]
-    CandidatePermissionTokenResp
-      { transactionId, candidatePermissionCurrencySymbol } ->
-      J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "CandidatePermissionToken"
-        , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
-        , "candidatePermissionCurrencySymbol"
-            /\ J.fromString
-              ( currencySymbolToHex candidatePermissionCurrencySymbol
-              )
-        ]
     GetAddrsResp { sidechainAddresses } ->
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "GetAddrs"
@@ -225,14 +208,6 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
               (map (J.fromString <<< byteArrayToHex) scriptsInitTxIds)
           ]
 
-    InitCandidatePermissionTokenResp { initTransactionId } ->
-      J.fromObject $
-        Object.fromFoldable
-          [ "endpoint" /\ J.fromString "InitCandidatePermissionToken"
-          , "initTransactionId" /\ CA.encode
-              (CAC.maybe CA.string) -- Nothing encoded to null
-              (map (byteArrayToHex) initTransactionId)
-          ]
     InsertVersionResp { versioningTransactionIds } ->
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "InitVersion"

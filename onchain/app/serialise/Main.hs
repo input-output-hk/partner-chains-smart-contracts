@@ -31,7 +31,6 @@ import System.IO (FilePath, Handle, print)
 import System.IO qualified as IO
 import System.IO.Error qualified as Error
 import TrustlessSidechain.AlwaysPassingScripts qualified as AlwaysPassing
-import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as CandidatePermissionMintingPolicy
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.DParameter qualified as DParameter
 import TrustlessSidechain.Governance.MultiSig qualified as MultiSig
@@ -231,10 +230,6 @@ main =
           [
             ( "CommitteeCandidateValidator"
             , CommitteeCandidateValidator.serialisableValidator
-            )
-          ,
-            ( "CandidatePermissionPolicy"
-            , CandidatePermissionMintingPolicy.serialisableCandidatePermissionMintingPolicy
             )
           , ("InitTokenPolicy", InitToken.serialisableInitTokenPolicy)
           , ("ScriptCache", ScriptCache.serialisableScriptCache)

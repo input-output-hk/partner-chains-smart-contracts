@@ -4,8 +4,6 @@ import Compiled qualified
 import PlutusLedgerApi.V1 (serialiseCompiledCode)
 import Sizer (scriptFitsInto, scriptFitsUnder)
 import Test.Tasty (defaultMain, testGroup)
-import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as CPMP
-import TrustlessSidechain.CandidatePermissionMintingPolicy qualified as PermissionedCandidates
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CCV
 import TrustlessSidechain.DParameter qualified as DParameter
 import TrustlessSidechain.HaskellPrelude
@@ -52,10 +50,6 @@ main =
               CCV.serialisableValidator
               315
           , scriptFitsInto
-              "mkCandidatePermissionMintingPolicy (serialized)"
-              CPMP.serialisableCandidatePermissionMintingPolicy
-              396
-          , scriptFitsInto
               "mkDParameterValidatorCode (DParameter) serialized"
               DParameter.serialisableValidator
               498
@@ -63,10 +57,6 @@ main =
               "mkDParameterPolicyCode (DParameter) serialized"
               DParameter.serialisableMintingPolicy
               984
-          , scriptFitsInto
-              "mkPermissionedCandidatePolicyCode (PermissionedCandidates) serialized"
-              PermissionedCandidates.serialisableCandidatePermissionMintingPolicy
-              396
           , scriptFitsInto
               "mkPermissionedCandidatesValidatorCode (PermissionedCandidates) serialized"
               PermissionedCandidates.serialisableValidator

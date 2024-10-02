@@ -34,7 +34,6 @@ import Data.Show.Generic (genericShow)
 -- | its definition is changed.
 data ScriptId
   = CommitteeCandidateValidator
-  | CandidatePermissionPolicy
   | VersionOraclePolicy -- not versioned
   | VersionOracleValidator -- not versioned
   | DParameterPolicy
@@ -62,8 +61,6 @@ instance Show ScriptId where
 instance FromData ScriptId where
   fromData (Integer i) | i == BigInt.fromInt 3 =
     Just CommitteeCandidateValidator
-  fromData (Integer i) | i == BigInt.fromInt 4 =
-    Just CandidatePermissionPolicy
   fromData (Integer i) | i == BigInt.fromInt 15 =
     Just VersionOraclePolicy
   fromData (Integer i) | i == BigInt.fromInt 16 =
@@ -102,7 +99,6 @@ instance FromData ScriptId where
 
 instance ToData ScriptId where
   toData CommitteeCandidateValidator = Integer (BigInt.fromInt 3)
-  toData CandidatePermissionPolicy = Integer (BigInt.fromInt 4)
   toData VersionOraclePolicy = Integer (BigInt.fromInt 15)
   toData VersionOracleValidator = Integer (BigInt.fromInt 16)
   toData DParameterPolicy = Integer (BigInt.fromInt 22)

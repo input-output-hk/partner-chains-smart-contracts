@@ -16,7 +16,6 @@ import Contract.TxConstraints as Constraints
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT, throw)
-import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Log (logDebug', logInfo')
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
@@ -67,10 +66,6 @@ initTokensMint sidechainParams version = do
     GetSidechainAddresses.getSidechainAddresses $
       SidechainAddressesEndpointParams
         { sidechainParams
-        -- NOTE: This field is used to configure minting the candidate
-        -- permission tokens themselves, not the candidate permission
-        -- init tokens.
-        , usePermissionToken: false
         , version
         }
 
@@ -90,8 +85,7 @@ mintAllTokens sidechainParams version = do
   { constraints, lookups } <- foldM
     (\acc f -> (append acc) <$> f sidechainParams)
     mempty
-    [ CandidatePermissionToken.mintOneCandidatePermissionInitToken
-    , initSpendGenesisUtxo
+    [ initSpendGenesisUtxo
     , \sps -> Versioning.mintVersionInitTokens
         sps
         version

@@ -3,13 +3,11 @@ module Test.Main (main) where
 import Contract.Prelude
 
 import Mote.Monad (group)
-import Test.CandidatePermissionToken as CandidatePermissionToken
 import Test.CommitteeCandidateValidator as CommitteeCandidateValidator
 import Test.ConfigFile as ConfigFile
 import Test.DParameter as DParameter
 import Test.Data as Data
 import Test.IlliquidCirculationSupply as IlliquidCirculationSupply
-import Test.InitSidechain.CandidatePermissionToken as InitCandidatePermissionToken
 import Test.InitSidechain.TokensMint as InitMint
 import Test.Options.Parsers as Options.Parsers
 import Test.PermissionedCandidates as PermissionedCandidates
@@ -40,10 +38,8 @@ main = do
         group "Testnet integration tests" do
           IlliquidCirculationSupply.tests
           Reserve.tests
-          InitCandidatePermissionToken.tests
           InitMint.tests
           CommitteeCandidateValidator.tests
-          CandidatePermissionToken.tests
           Versioning.tests
           DParameter.tests
           PermissionedCandidates.tests

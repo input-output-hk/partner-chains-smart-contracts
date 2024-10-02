@@ -54,18 +54,6 @@ import TrustlessSidechain.NativeTokenManagement.Types
   , ReserveRedeemer(..)
   , ReserveStats(..)
   )
-import TrustlessSidechain.PermissionedCandidates.Types
-  ( PermissionedCandidateKeys(PermissionedCandidateKeys)
-  , PermissionedCandidatesPolicyRedeemer
-      ( PermissionedCandidatesMint
-      , PermissionedCandidatesBurn
-      )
-  , PermissionedCandidatesValidatorDatum(PermissionedCandidatesValidatorDatum)
-  , PermissionedCandidatesValidatorRedeemer
-      ( UpdatePermissionedCandidates
-      , RemovePermissionedCandidates
-      )
-  )
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Crypto
   ( EcdsaSecp256k1PubKey
@@ -74,7 +62,6 @@ import TrustlessSidechain.Utils.Crypto
 import TrustlessSidechain.Versioning.Types
   ( ScriptId
       ( CommitteeCandidateValidator
-      , CandidatePermissionPolicy
       , VersionOraclePolicy
       , VersionOracleValidator
       , DParameterPolicy
@@ -105,15 +92,6 @@ tests = pureGroup "Data roundtrip tests" $ do
     genInitTokenAssetClass
   test "DParameterValidatorDatum" $ liftEffect $ toDataLaws testCount
     genDParameterValidatorDatum
-  test "PermissionedCandidatesValidatorRedeemer" $ liftEffect $ toDataLaws
-    testCount
-    genPermissionedCandidatesValidatorRedeemer
-  test "PermissionedCandidatesValidatorDatum" $ liftEffect $ toDataLaws testCount
-    genPermissionedCandidatesValidatorDatum
-  test "PermissionedCandidatesPolicyRedeemer" $ liftEffect $ toDataLaws testCount
-    genPermissionedCandidatesPolicyRedeemer
-  test "PermissionedCandidateKeys" $ liftEffect $ toDataLaws testCount
-    genPermissionedCandidateKeys
   test "ScriptId" $ liftEffect $ toDataLaws testCount genScriptId
   test "VersionOracle" $ liftEffect $ toDataLaws testCount genVersionOracle
   test "VersionOracleConfig" $ liftEffect $ toDataLaws testCount
@@ -162,41 +140,10 @@ genDParameterValidatorDatum = do
     , registeredCandidatesCount
     }
 
-genPermissionedCandidatesValidatorRedeemer ::
-  Gen PermissionedCandidatesValidatorRedeemer
-genPermissionedCandidatesValidatorRedeemer = QGen.oneOf $ NE.cons'
-  (pure UpdatePermissionedCandidates)
-  [ pure RemovePermissionedCandidates ]
-
-genPermissionedCandidatesValidatorDatum ::
-  Gen PermissionedCandidatesValidatorDatum
-genPermissionedCandidatesValidatorDatum = do
-  PermissionedCandidatesValidatorDatum <<< { candidates: _ } <$> QGen.arrayOf
-    genPermissionedCandidateKeys
-
-genPermissionedCandidatesPolicyRedeemer ::
-  Gen PermissionedCandidatesPolicyRedeemer
-genPermissionedCandidatesPolicyRedeemer = QGen.oneOf $ NE.cons'
-  (pure PermissionedCandidatesMint)
-  [ pure PermissionedCandidatesBurn ]
-
-genPermissionedCandidateKeys :: Gen PermissionedCandidateKeys
-genPermissionedCandidateKeys = do
-  sidechainKey <- arbitrary
-  auraKey <- arbitrary
-  grandpaKey <- arbitrary
-
-  pure $ PermissionedCandidateKeys
-    { sidechainKey
-    , auraKey
-    , grandpaKey
-    }
-
 genScriptId :: Gen ScriptId
 genScriptId = QGen.oneOf $ NE.cons' (pure CommitteeCandidateValidator) $ pure
   <$>
-    [ CandidatePermissionPolicy
-    , VersionOraclePolicy
+    [ VersionOraclePolicy
     , VersionOracleValidator
     , DParameterPolicy
     , DParameterValidator
