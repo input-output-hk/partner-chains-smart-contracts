@@ -422,12 +422,9 @@ mkVersionOracleValidator
 
       -- Check that transaction doesn't output any version tokens.
       versionOutputAbsent =
-        -- TODO replace with all after Plutus version upgrade
-        null
-          [ ()
-          | txOut <- Unsafe.txInfoOutputs txInfo
-          , valueOf (Unsafe.decode $ Unsafe.txOutValue txOut) currencySymbol versionOracleTokenName > 0
-          ]
+        all
+          (\txOut -> valueOf (Unsafe.decode $ Unsafe.txOutValue txOut) currencySymbol versionOracleTokenName <= 0)
+          (Unsafe.txInfoOutputs txInfo)
 
 {-# INLINEABLE mkVersionOracleValidatorUntyped #-}
 mkVersionOracleValidatorUntyped ::

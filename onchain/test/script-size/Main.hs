@@ -68,7 +68,7 @@ main =
           , scriptFitsInto
               "mkVersionOracleValidatorCode (Versioning) serialized"
               Versioning.serialisableVersionOracleValidator
-              935
+              927
           , scriptFitsInto
               "mkInitTokenPolicy (InitToken) serialized"
               InitToken.serialisableInitTokenPolicy
@@ -120,23 +120,7 @@ main =
               "fromBuiltinData (list)"
               ("handwritten", serialiseCompiledCode Compiled.listFromDataHandwritten)
               ("generated", serialiseCompiledCode Compiled.listFromDataGenerated)
-          , {- TODO
-            -------------------------------------------------------
-            We have a size discrepancy of 3 bytes.
-            This test is commented out for now, as we attempt to reason the size difference
-            --
-            Additional note:
-            This test seem to be a test of Plutus temaplate haskell code generation and implementation.
-            We seem to be testing the implementation of Plutus to UPLC based on our expectaions.
-            I argue that such tests are not in scope here and belong to plutus project.
-            From our prespective, Plutus -> UPLC code gereration is Black Box Api call.
-            -------------------------------------------------------
-                    , scriptFitsUnder
-                        "unsafeFromBuiltinData (list)"
-                        ("handwritten", serialiseCompiledCode Compiled.listUnsafeFromDataHandwritten)
-                        ("generated", serialiseCompiledCode Compiled.listUnsafeFromDataGenerated)
-            -}
-            scriptFitsUnder
+          , scriptFitsUnder
               "toBuiltinData (solution 3)"
               ("using wrappers", serialiseCompiledCode Compiled.toDataWrapper)
               ("direct", serialiseCompiledCode Compiled.toDataDirect)

@@ -60,10 +60,8 @@ mkInitTokenPolicy _ BurnInitToken ctx
             (AssocMap.lookup cs mintedValue)
 
         -- Check that we only burn tokens
-        -- TODO replace with `all` (or `any`? why the `||`?)
         allBurned :: [Integer] -> Bool
-        allBurned [] = True
-        allBurned (x : xs) = x < 0 || allBurned xs
+        allBurned = all (< 0)
        in
         traceIfFalse "ERROR-INIT-TOKENS-02" (allBurned ownMintedAmounts)
 mkInitTokenPolicy _ _ _ =

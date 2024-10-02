@@ -10,7 +10,6 @@ module Data.Handwritten (
   pairUnsafeFromData,
   listToData,
   listFromData,
-  listUnsafeFromData,
 ) where
 
 import Data.Kind (Type)
@@ -165,18 +164,6 @@ listFromData dat = Unsafe.chooseData dat Nothing Nothing (go (unsafeDataAsList d
         Just x' -> case go xs of
           Nothing -> Nothing
           Just xs' -> Just (x' : xs')
-
-{-# INLINE listUnsafeFromData #-}
-listUnsafeFromData ::
-  forall (a :: Type).
-  (UnsafeFromData a) =>
-  BuiltinData ->
-  [a]
-listUnsafeFromData dat = go (unsafeDataAsList dat)
-  where
-    go :: BuiltinList BuiltinData -> [a]
-    go ell = matchList ell [] $ \x xs ->
-      unsafeFromBuiltinData x : go xs
 
 data Bar = Bar Integer BuiltinByteString
 

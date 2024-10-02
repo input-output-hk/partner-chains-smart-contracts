@@ -17,8 +17,6 @@ module Compiled (
   listToDataHandwritten,
   listFromDataHandwritten,
   listFromDataGenerated,
-  listUnsafeFromDataGenerated,
-  listUnsafeFromDataHandwritten,
   toDataWrapper,
   toDataDirect,
   fromDataWrapper,
@@ -74,12 +72,6 @@ unsafeFromDataDirect = $$(compile [||unsafeFromBuiltinData||])
 
 unsafeFromDataWrapper :: CompiledCode (BuiltinData -> Generated.Bar)
 unsafeFromDataWrapper = $$(compile [||unsafeFromBuiltinData||])
-
-listUnsafeFromDataGenerated :: CompiledCode (BuiltinData -> [Integer])
-listUnsafeFromDataGenerated = $$(compile [||unsafeFromBuiltinData||])
-
-listUnsafeFromDataHandwritten :: CompiledCode (BuiltinData -> [Integer])
-listUnsafeFromDataHandwritten = $$(compile [||Handwritten.listUnsafeFromData||])
 
 listFromDataGenerated :: CompiledCode (BuiltinData -> Maybe [Integer])
 listFromDataGenerated = $$(compile [||fromBuiltinData||])
