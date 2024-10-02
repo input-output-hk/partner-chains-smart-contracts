@@ -210,10 +210,7 @@ findOwnInput _ = Nothing
 --   Adapted from Plutus.V2.Ledger.Contexts.txSignedBy
 {-# INLINEABLE txSignedBy #-}
 txSignedBy :: TxInfo -> V2.PubKeyHash -> Bool
--- TODO replace with `any` when we have newer Plutus vesion
-txSignedBy info k = case find ((k ==) . decode) (txInfoSignatories info) of
-  Just _ -> True
-  Nothing -> False
+txSignedBy info k = any ((k ==) . decode) (txInfoSignatories info)
 
 {-# INLINEABLE getOutputsAt #-}
 getOutputsAt :: TxInfo -> V2.Address -> [TxOut]

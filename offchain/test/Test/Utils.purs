@@ -156,17 +156,6 @@ fails contract = do
     Left e ->
       Log.logInfo' ("Expected failure (and got failure): " <> Exception.message e)
 
--- fails ∷
---   ∀ r. Run (EXCEPT OffchainError + r) Unit → Run (EXCEPT OffchainError + r) Unit
--- fails contract = do
---   result ← lift _except $ runExcept contract
---   case result of
---     Right _ → throw $ GenericInternalError
---       "Contract should have failed but it didn't."
---     Left e →
---       liftContract $ Log.logInfo'
---         ("Expected failure (and got failure): " <> show e)
-
 -- | Unsafely converts a String to a BigInt
 unsafeBigIntFromString :: String -> BigInt
 unsafeBigIntFromString str = Unsafe.unsafePartial Maybe.fromJust
@@ -183,21 +172,6 @@ interpretConstVoidTest = go <<< Mote.Monad.plan
     (\label -> Test.Unit.testSkip label (pure unit))
     (\{ label, value } -> Test.Unit.suite label (go value))
     sequence_
-
--- TODO: getTxByHash is removed, find a way to implent this
--- | Verifies that the fees of a certain transaction does
--- | not exceed a given amount, it throws an effor otherwise
--- assertMaxFee ∷ ∀ (r ∷ Row Type). BigInt → TransactionHash → Contract Unit
--- assertMaxFee maxFee txId = do
---   Transaction tx ← liftedM "Couldn't find transaction." $ getTxByHash txId
---   let fee = (unwrap (unwrap tx.body).fee)
---   when (fee > maxFee) $ throwContractError
---     ( "Expected transaction fee to be less than "
---         <> BigInt.toString maxFee
---         <> " lovelaces, but it was "
---         <> BigInt.toString fee
---         <> " lovelaces."
---     )
 
 -- | Test wrapper, to distinguish between different test interpreters
 data WithTestRunner

@@ -21,6 +21,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 ## Fixed
   * CLI now returns non-zero exit code on failure
+  * `InitToken` minting policy with `BurnInitToken` redeemer no longer allows minting of tokens
 
 # v6.1.0
 
