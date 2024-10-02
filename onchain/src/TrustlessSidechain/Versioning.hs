@@ -423,7 +423,7 @@ mkVersionOracleValidator
       -- Check that transaction doesn't output any version tokens.
       versionOutputAbsent =
         all
-          (\txOut -> valueOf (Unsafe.decode $ Unsafe.txOutValue txOut) currencySymbol versionOracleTokenName > 0)
+          (\txOut -> valueOf (Unsafe.decode $ Unsafe.txOutValue txOut) currencySymbol versionOracleTokenName <= 0)
           (Unsafe.txInfoOutputs txInfo)
 
 {-# INLINEABLE mkVersionOracleValidatorUntyped #-}
