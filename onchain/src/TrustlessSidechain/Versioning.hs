@@ -23,7 +23,6 @@ module TrustlessSidechain.Versioning (
   VersionOraclePolicyRedeemer,
   -- | Script IDs
   committeeCandidateValidatorId,
-  candidatePermissionPolicyId,
   versionOraclePolicyId,
   versionOracleValidatorId,
   dParameterPolicyId,
@@ -87,7 +86,6 @@ import TrustlessSidechain.Utils (
 
 -- See Note [Versioned script identifiers]
 committeeCandidateValidatorId
-  , candidatePermissionPolicyId
   , versionOraclePolicyId
   , versionOracleValidatorId
   , dParameterPolicyId
@@ -104,7 +102,6 @@ committeeCandidateValidatorId
   , multiSigPolicyId ::
     Integer
 committeeCandidateValidatorId = 3
-candidatePermissionPolicyId = 4
 versionOraclePolicyId = 15
 versionOracleValidatorId = 16
 dParameterPolicyId = 22

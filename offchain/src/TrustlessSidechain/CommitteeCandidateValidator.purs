@@ -41,11 +41,10 @@ import Data.Array (catMaybes)
 import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT, throw)
-import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Transaction (utxosAt) as Effect
 import TrustlessSidechain.Error
-  ( OffchainError(InvalidCLIParams, NotFoundInputUtxo, GenericInternalError)
+  ( OffchainError(InvalidCLIParams, NotFoundInputUtxo)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
@@ -69,7 +68,6 @@ newtype RegisterParams = RegisterParams
   , sidechainPubKey :: ByteArray
   , sidechainSig :: ByteArray
   , inputUtxo :: TransactionInput
-  , usePermissionToken :: Boolean
   , auraKey :: ByteArray
   , grandpaKey :: ByteArray
   }
@@ -234,7 +232,6 @@ register
       , sidechainPubKey
       , sidechainSig
       , inputUtxo
-      , usePermissionToken
       , auraKey
       , grandpaKey
       }
@@ -279,31 +276,11 @@ register
           "BlockProducer with given set of keys is already registered"
       )
 
-  { currencySymbol: candidateCurrencySymbol
-  , mintingPolicy: candidateMintingPolicy
-  } <- CandidatePermissionToken.candidatePermissionCurrencyInfo sidechainParams
-
-  let
-    mVal = Value.lovelaceValueOf (BigNum.fromInt 1)
-      `Value.add`
-        if usePermissionToken then Value.singleton candidateCurrencySymbol
-          CandidatePermissionToken.candidatePermissionTokenName
-          (BigNum.fromInt 1)
-        else Value.empty
-
-  val <- case mVal of
-    Just x -> pure x
-    Nothing -> throw (GenericInternalError "Invalid value")
-
   let
     lookups :: Lookups.ScriptLookups
     lookups = Lookups.unspentOutputs ownUtxos
       <> Lookups.validator validator
       <> Lookups.unspentOutputs valUtxos
-      <>
-        if usePermissionToken then Lookups.plutusMintingPolicy
-          candidateMintingPolicy
-        else mempty
 
     constraints :: Constraints.TxConstraints
     constraints =
@@ -311,7 +288,7 @@ register
       Constraints.mustSpendPubKeyOutput inputUtxo
         <> Constraints.mustPayToScript valHash (toData datum)
           Constraints.DatumInline
-          val
+          (Value.lovelaceValueOf (BigNum.fromInt 1))
 
         -- Consuming old registration UTxOs
         <> Constraints.mustBeSignedBy ownPkh

@@ -14,7 +14,6 @@ import Test.TestnetTest as Test.TestnetTest
 import Test.Unit.Assert (assert)
 import Test.Utils (WrappedTests, testnetGroup)
 import Test.Utils as Test.Utils
-import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.Effects.Log (logInfo') as Effect
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow) as Effect
@@ -82,8 +81,7 @@ initTokensMintIdempotent =
 
           let
             expected = expectedInitTokens 0 versionedPolicies versionedValidators
-              [ CandidatePermissionToken.candidatePermissionInitTokenName
-              ]
+              []
 
           -- Get the tokens just created
           { initTokenStatusData: res } <- Init.getInitTokenStatus

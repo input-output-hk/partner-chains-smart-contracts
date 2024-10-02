@@ -84,7 +84,6 @@ library
   import:          common-lang, common-script-lang
   exposed-modules:
     TrustlessSidechain.AlwaysPassingScripts
-    TrustlessSidechain.CandidatePermissionMintingPolicy
     TrustlessSidechain.CommitteeCandidateValidator
     TrustlessSidechain.DParameter
     TrustlessSidechain.Governance.Admin

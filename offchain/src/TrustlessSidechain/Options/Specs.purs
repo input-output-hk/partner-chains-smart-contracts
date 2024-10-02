@@ -64,8 +64,7 @@ import TrustlessSidechain.NativeTokenManagement.Types
   , MutableReserveSettings(MutableReserveSettings)
   )
 import TrustlessSidechain.Options.Parsers
-  ( bigInt
-  , byteArray
+  ( byteArray
   , denominator
   , ecdsaSecp256k1PrivateKey
   , governanceAuthority
@@ -84,10 +83,8 @@ import TrustlessSidechain.Options.Types
   , SidechainEndpointParams(SidechainEndpointParams)
   , TxEndpoint
       ( GetAddrs
-      , CandidiatePermissionTokenAct
       , InitTokensMint
       , InitReserveManagement
-      , InitCandidatePermissionToken
       , CommitteeCandidateReg
       , CommitteeCandidateDereg
       , InsertVersion2
@@ -133,10 +130,6 @@ optSpec maybeConfig =
         ( info (withCommonOpts maybeConfig initReserveManagementSpec)
             (progDesc "Initialise native token reserve management system")
         )
-    , command "init-candidate-permission-token"
-        ( info (withCommonOpts maybeConfig initCandidatePermissionTokenSpec)
-            (progDesc "Initialise candidate permission token")
-        )
     , command "addresses"
         ( info (withCommonOpts maybeConfig getAddrSpec)
             (progDesc "Get the script addresses for a given sidechain")
@@ -144,10 +137,6 @@ optSpec maybeConfig =
     , command "register"
         ( info (withCommonOpts maybeConfig regSpec)
             (progDesc "Register a committee candidate")
-        )
-    , command "candidate-permission-token"
-        ( info (withCommonOpts maybeConfig candidatePermissionTokenSpec)
-            (progDesc "Mint candidate permission tokens")
         )
     , command "deregister"
         ( info (withCommonOpts maybeConfig deregSpec)
@@ -522,21 +511,12 @@ regSpec = ado
     , help "Input UTxO to be spend with the commitee candidate registration"
     ]
   stakeOwnership <- stakeOwnershipSpec
-  usePermissionToken <- switch $ fold
-    -- `switch` is
-    --  No flag given ==> false
-    --  Flag given ==> true
-    [ long "use-candidate-permission-token"
-    , help
-        "Use candidate permission tokens during committee candidate registration"
-    ]
   in
     CommitteeCandidateReg
       { stakeOwnership
       , sidechainPubKey: sidechainKey
       , sidechainSig
       , inputUtxo
-      , usePermissionToken
       , auraKey
       , grandpaKey
       }
@@ -563,17 +543,6 @@ parseSpoPubKey = option byteArray $ fold
   , help "SPO cold verification key value"
   ]
 
--- | `initCandidatePermissionTokenMintHelper` helps mint candidate permission
--- | tokens from initializing the sidechain
-initCandidatePermissionTokenMintHelper ::
-  Parser BigInt
-initCandidatePermissionTokenMintHelper =
-  option bigInt $ fold
-    [ long "candidate-permission-token-amount"
-    , metavar "INT"
-    , help "Amount of the candidate permission token to be minted"
-    ]
-
 parseVersion :: Parser Int
 parseVersion =
   option
@@ -591,15 +560,6 @@ initTokensMintSpec = ado
   version <- parseVersion
   in
     InitTokensMint { version }
-
-initCandidatePermissionTokenSpec :: Parser TxEndpoint
-initCandidatePermissionTokenSpec = ado
-  initCandidatePermissionTokenMintInfo <-
-    optional initCandidatePermissionTokenMintHelper
-  in
-    InitCandidatePermissionToken
-      { initCandidatePermissionTokenMintInfo
-      }
 
 initReserveManagementSpec :: Parser TxEndpoint
 initReserveManagementSpec = ado
@@ -763,33 +723,14 @@ updatePermissionedCandidatesSpec = ado
 initTokenStatusSpec :: Parser TxEndpoint
 initTokenStatusSpec = pure InitTokenStatus
 
--- | Parse all parameters for the `candidiate-permission-token` endpoint
-candidatePermissionTokenSpec :: Parser TxEndpoint
-candidatePermissionTokenSpec = ado
-  candidatePermissionTokenAmount <- option bigInt $ fold
-    [ long "candidate-permission-token-amount"
-    , metavar "INT"
-    , help "Amount of the candidate permission token to be minted"
-    ]
-  in CandidiatePermissionTokenAct { candidatePermissionTokenAmount }
-
 -- | `getAddrSpec` provides a parser for getting the required information for
 -- | the `addresses` endpoint
 getAddrSpec :: Parser TxEndpoint
 getAddrSpec = ado
-  usePermissionToken <- switch $ fold
-    -- `switch` is
-    --  No flag given ==> false
-    --  Flag given ==> true
-    [ long "use-candidate-permission-token"
-    , help
-        "Use candidate permission tokens during committee candidate registration"
-    ]
   version <- parseVersion
   in
     GetAddrs
-      { usePermissionToken
-      , version
+      { version
       }
 
 ecdsaSecp256k1GenSpec :: Parser Options

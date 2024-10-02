@@ -67,7 +67,7 @@ runRegister ::
         + r
     )
     TransactionHash
-runRegister = runRegisterWithCandidatePermissionInfo false
+runRegister = runRegisterWithCandidatePermissionInfo
 
 -- | `runRegister` runs the register endpoint without any candidate permission
 -- | information.
@@ -80,18 +80,17 @@ runRegisterWithFixedKeys ::
     )
     TransactionHash
 runRegisterWithFixedKeys =
-  runRegisterWithCandidatePermissionInfoWithFixedKeys false
+  runRegisterWithCandidatePermissionInfoWithFixedKeys
 
 runRegisterWithCandidatePermissionInfoWithFixedKeys ::
   forall r.
-  Boolean ->
   SidechainParams ->
   Run
     ( READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT +
         r
     )
     TransactionHash
-runRegisterWithCandidatePermissionInfoWithFixedKeys usePermissionToken scParams =
+runRegisterWithCandidatePermissionInfoWithFixedKeys scParams =
   do
     ownAddr <- getOwnWalletAddress
     ownUtxos <- liftContract $ utxosAt ownAddr
@@ -107,7 +106,6 @@ runRegisterWithCandidatePermissionInfoWithFixedKeys usePermissionToken scParams 
       , sidechainSig: hexToByteArrayUnsafe
           "1f14b8e3d2291cdf11c8b77b63bc20cab2f0ed106f49a7282bc92da08cb90b0c56a8e667fcde29af358e1df55f75e9118c465041dcadeec0b89d5661dca4dbf3"
       , inputUtxo: registrationUtxo
-      , usePermissionToken
       , auraKey: hexToByteArrayUnsafe
           "02a4ee86ede04284ca75be10e08536d8772e66a80f654c3880659fb4143f716fc6"
       , grandpaKey: hexToByteArrayUnsafe
@@ -116,7 +114,6 @@ runRegisterWithCandidatePermissionInfoWithFixedKeys usePermissionToken scParams 
 
 runRegisterWithCandidatePermissionInfo ::
   forall r.
-  Boolean ->
   SidechainParams ->
   Run
     ( READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT
@@ -124,7 +121,7 @@ runRegisterWithCandidatePermissionInfo ::
         + r
     )
     TransactionHash
-runRegisterWithCandidatePermissionInfo usePermissionToken scParams = do
+runRegisterWithCandidatePermissionInfo scParams = do
   let
     generateKey = byteArrayFromIntArrayUnsafe <$>
       (sequence $ Array.replicate 32 (randomInt 0 255))
@@ -149,7 +146,6 @@ runRegisterWithCandidatePermissionInfo usePermissionToken scParams = do
     , sidechainSig: hexToByteArrayUnsafe
         "1f14b8e3d2291cdf11c8b77b63bc20cab2f0ed106f49a7282bc92da08cb90b0c56a8e667fcde29af358e1df55f75e9118c465041dcadeec0b89d5661dca4dbf3"
     , inputUtxo: registrationUtxo
-    , usePermissionToken
     , auraKey
     , grandpaKey
     }

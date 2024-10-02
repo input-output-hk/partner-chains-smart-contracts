@@ -21,7 +21,6 @@ import Data.Functor (map)
 import Data.List as List
 import Run (Run)
 import Run.Except (EXCEPT)
-import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.DParameter.Utils as DParameter
 import TrustlessSidechain.Effects.Env (Env, READER)
@@ -39,8 +38,7 @@ import TrustlessSidechain.Utils.Asset
 import TrustlessSidechain.Versioning as Versioning
 import TrustlessSidechain.Versioning.Types
   ( ScriptId
-      ( CandidatePermissionPolicy
-      , VersionOraclePolicy
+      ( VersionOraclePolicy
       , PermissionedCandidatesPolicy
       , DParameterPolicy
       , CommitteeCandidateValidator
@@ -75,17 +73,13 @@ type SidechainAddresses =
 -- | In particular, this allows us to optionally grab the minting policy of the
 -- | candidate permission token.
 type SidechainAddressesExtra =
-  { usePermissionToken :: Boolean
-  , version :: Int
+  { version :: Int
   }
 
 -- | `SidechainAddressesEndpointParams` is the offchain endpoint parameter for
 -- | bundling the required data to grab all the sidechain addresses.
 newtype SidechainAddressesEndpointParams = SidechainAddressesEndpointParams
   { sidechainParams :: SidechainParams
-  , -- Used to optionally grab the minting policy of candidate permission
-    -- token.
-    usePermissionToken :: Boolean
   , version :: Int
   }
 
@@ -101,22 +95,11 @@ getSidechainAddresses ::
 getSidechainAddresses
   ( SidechainAddressesEndpointParams
       { sidechainParams
-      , usePermissionToken
       , version
       }
   ) = do
 
   -- Minting policies
-
-  mCandidatePermissionPolicyId <-
-    if usePermissionToken then do
-      { mintingPolicy: candidatePermissionPolicy } <-
-        CandidatePermissionToken.candidatePermissionCurrencyInfo sidechainParams
-      let
-        candidatePermissionPolicyId = currencySymbolToHex $
-          PlutusScript.hash candidatePermissionPolicy
-      pure $ Just candidatePermissionPolicyId
-    else pure Nothing
 
   { versionOracleCurrencySymbol } <- getVersionOraclePolicy sidechainParams
   let
@@ -176,11 +159,6 @@ getSidechainAddresses
       , DParameterPolicy /\ dParameterPolicyId
       , InitTokenPolicy /\ initTokenPolicyId
       ]
-        <>
-          Array.catMaybes
-            [ map (CandidatePermissionPolicy /\ _)
-                mCandidatePermissionPolicyId
-            ]
         <> versionedCurrencySymbols
 
     validators =

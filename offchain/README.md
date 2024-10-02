@@ -173,12 +173,8 @@ Available commands:
   init                     Initialise sidechain
   init-tokens-mint         Mint all sidechain initialisation tokens
   init-reserve-management  Initialise native token reserve management system
-  init-candidate-permission-token
-                           Initialise candidate permission token
   addresses                Get the script addresses for a given sidechain
   register                 Register a committee candidate
-  candidate-permission-token
-                           Mint candidate permission tokens
   deregister               Deregister a committee member
   reserve-create           Create a new token reserve
   reserve-handover         Empty and remove an existing reserve
@@ -220,19 +216,6 @@ nix run .#pc-contracts-cli -- init \
   --version 1
 ```
 
-To use permissioned registrations, i.e. such registrations that require a
-distinguished token, pass the optional `--candidate-permission-token-amount`
-parameter followed by an integer to denote how many permission tokens should be
-minted:
-```
-nix run .#pc-contracts-cli -- init \
-  --committee-pub-key aabbcc \
-  --committee-pub-key ccbbaa \
-  --sidechain-epoch 0 \
-  --version 1 \
-  --candidate-permission-token-amount 42
-```
-
 The `init` command is idempotent, i.e. in case of failure it can safely be
 re-run to finish an interrupted sidechain initialization.
 
@@ -251,23 +234,11 @@ of whether there's an intention to use all of them.
 Spends Genesis Utxo
 
 Mints:
-* `"CandidatePermission InitToken"`
 * `"Committee oracle InitToken"`
 * `"Version oracle InitToken"` (multiple tokens)
 
 ```
 nix run .#pc-contracts-cli -- init-tokens-mint --version 1
-```
-
-##### Initialise Candidate Permission Token
-
-Initialise the Candidate Permission Token mechanism.
-Burns `"Candidate permission token init"`.
-
-```
-nix run .#pc-contracts-cli -- init-candidate-permission-token \
-  --version 1
-  --candidate-permission-token-amount 42
 ```
 
 #### 3.2.2. List currently versioned scripts
@@ -295,9 +266,6 @@ nix run .#pc-contracts-cli -- addresses \
   --version 1
 ```
 
-An optional `--use-candidate-permission-token` flag can be used to also display
-policy of the candidate permission tokens.
-
 #### 3.2.4. Register committee candidate
 
 ```
@@ -309,18 +277,6 @@ nix run .#pc-contracts-cli -- register \
   --registration-utxo a03ebf281ed96549f74d0e724841fcf928194c44f6ff9a8056d1829598042c62#1
 ```
 
-Optionally, assuming that we are using a permissioned candidates system, one
-can include the candidate permission token when registering as follows.
-```
-nix run .#pc-contracts-cli -- register \
-  --spo-public-key e734ea6c2b6257de72355e472aa05a4c487e6b463c029ed306df2f01b5636b58 \
-  --sidechain-public-key 0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d \
-  --spo-signature de9a8ac3db51bab648a97b56bdbe6757d189633dac91b129156607cf6f3db51217ec1b3c327ab781c6e2de3c4338e3a989449e119daed60a3530aaf268cd3709 \
-  --sidechain-signature 5fe405ba531216cf5bfe65f2826d618c5d4a84df7016fcc4f4a6a68323ecb5f56799e08aa8dba6bc087b9131c5b76483ededa250da0ddbf2d24e00991b627e6e \
-  --registration-utxo "fff1c0f7f2834cb30a2136c7aadeb37a4680b30e3ae6ea088edc4e1ece939026#3" \
-  --use-candidate-permission-token
-```
-
 #### 3.2.5. Deregister committee candidate
 
 ```
@@ -328,14 +284,7 @@ nix run .#pc-contracts-cli -- deregister \
   --spo-public-key aabbcc
 ```
 
-#### 3.2.6 Candidiate permission token
-
-```
-nix run .#pc-contracts-cli -- candidate-permission-token \
-  --candidate-permission-token-amount 10
-```
-
-#### 3.2.7 Create a new token reserve
+#### 3.2.6 Create a new token reserve
 
 ```
 nix run .#pc-contracts-cli -- reserve-create \
@@ -354,7 +303,7 @@ Optionally one might also pass `--reserve-initial-incentive-amount
 RESERVE-INCENTIVE-AMOUNT` option to set the incentive, i.e. the amount of tokens
 awarded for a reserve release.
 
-#### 3.2.8 Empty and remove an existing reserve
+#### 3.2.7 Empty and remove an existing reserve
 
 ```
 nix run .#pc-contracts-cli -- reserve-handover
@@ -362,7 +311,7 @@ nix run .#pc-contracts-cli -- reserve-handover
 
 Perform the reserve handover.
 
-#### 3.2.9 Deposit assets to existing reserve
+#### 3.2.8 Deposit assets to existing reserve
 
 ```
 nix run .#pc-contracts-cli -- reserve-deposit \
@@ -375,7 +324,7 @@ Instead of `--deposit-reserve-asset` and `--reserve-asset-name` one might
 specify `--reserve-ada-asset` flag to indicate that Ada is being used as the
 reserve asset.
 
-#### 3.2.10 Release currently available funds from an existing reserve
+#### 3.2.9 Release currently available funds from an existing reserve
 
 ```
 nix run .#pc-contracts-cli -- reserve-release-funds \
@@ -383,7 +332,7 @@ nix run .#pc-contracts-cli -- reserve-release-funds \
   --reserve-transaction-input RESERVE-TRANSACTION-INPUT
 ```
 
-#### 3.2.11 Insert new protocol version
+#### 3.2.10 Insert new protocol version
 
 This command is only for testing purposes and shouldn't be used.
 
@@ -391,7 +340,7 @@ This command is only for testing purposes and shouldn't be used.
 nix run .#pc-contracts-cli --insert-version-2
 ```
 
-#### 3.2.12 Update existing protocol version
+#### 3.2.11 Update existing protocol version
 
 ```
 nix run .#pc-contracts-cli -- update-version \
@@ -399,14 +348,14 @@ nix run .#pc-contracts-cli -- update-version \
   --new-version 2
 ```
 
-#### 3.2.13 Invalidate protocol version
+#### 3.2.12 Invalidate protocol version
 
 ```
 nix run .#pc-contracts-cli -- invalidate-version \
   --version 1
 ```
 
-#### 3.2.14 Insert a D parameter value
+#### 3.2.13 Insert a D parameter value
 
 ```
 nix run .#pc-contracts-cli -- insert-d-parameter \
@@ -418,7 +367,7 @@ where N and M are integers.  Note that this should be only done once and then
 `update-d-parameter` value should be used (see below).  However, there is no
 safeguard against inserting multiple D parameter values.
 
-#### 3.2.15 Update a D parameter value
+#### 3.2.14 Update a D parameter value
 
 ```
 nix run .#pc-contracts-cli -- update-d-parameter \
@@ -430,7 +379,7 @@ where N and M are integers.  If more than one D parameter value was inserted
 this will remove all inserted values first and then replace them with a single
 new value.
 
-#### 3.2.16 Insert a list of permissioned candidates
+#### 3.2.15 Insert a list of permissioned candidates
 
 ```
 nix run .#pc-contracts-cli -- update-permissioned-candidates \
@@ -446,7 +395,7 @@ only be used once to initialize the list.  All subsequent updates should be done
 using the `update-permissioned-candidates` command below, though there is no
 safeguard against calling `insert-permissioned-candidates` multiple times.
 
-#### 3.2.17 Update a list of permissioned candidates
+#### 3.2.16 Update a list of permissioned candidates
 
 ```
 nix run .#pc-contracts-cli -- update-permissioned-candidates \
@@ -459,7 +408,7 @@ You can add and remove candidates in a single transaction.  Each candidate is
 listed separately using the `--add-candidate` or `--remove-candidate` flag
 followed by a string of four keys separated from each other by a single colon.
 
-#### 3.2.18 Remove all permissioned candidates
+#### 3.2.17 Remove all permissioned candidates
 
 ```
 nix run .#pc-contracts-cli -- update-permissioned-candidates \
@@ -470,7 +419,7 @@ Remove all currently registered permissioned candidates. You can also remove all
 candidates and add new ones in a single transaction. Just provide
 `--add-candidate` as described above.
 
-#### 3.2.19 Utils
+#### 3.2.18 Utils
 
 All commands in this section are supposed to be used mostly by developers.
 
@@ -485,7 +434,7 @@ Utils commands that start with `encode` allow for producing messages in CBOR for
 One needs to provide all necessary fields of a message as CLI arguments and the command
 produces CBOR encoded message of a desired type.
 
-##### 3.2.19.1 Generate an ECDSA SECP256k1 public / private key pair
+##### 3.2.18.1 Generate an ECDSA SECP256k1 public / private key pair
 
 ```
 nix run .#pc-contracts-cli -- utils key-gen ecdsa-secp256k1
@@ -500,7 +449,7 @@ Sample output:
 }
 ```
 
-##### 3.2.19.2 Generate an Schnorr SECP256k1 public / private key pair
+##### 3.2.18.2 Generate an Schnorr SECP256k1 public / private key pair
 
 ```
 nix run .#pc-contracts-cli -- utils key-gen schnorr-secp256k1
@@ -515,7 +464,7 @@ Sample output:
 }
 ```
 
-##### 3.2.19.3 Sign a message with an ECDSA SECP256k1 private key
+##### 3.2.18.3 Sign a message with an ECDSA SECP256k1 private key
 
 Available options:
   - `--private-key SIDECHAIN_PRIVATE_KEY` \
@@ -540,16 +489,16 @@ Sample output:
 }
 ```
 
-##### 3.2.19.4 Sign a message with a Schnorr SECP256k1 private key
+##### 3.2.18.4 Sign a message with a Schnorr SECP256k1 private key
 
-Arguments and the output format are the same as in 3.2.19.3.
+Arguments and the output format are the same as in 3.2.18.3.
 ```
 nix run .#pc-contracts-cli -- utils sign schnorr-secp256k1 \
   --private-key "d2a77accb66f065001dc225fb0b0e570aac266241ab9358e823cb909ad62e07f" \
   --message "0xab40"
 ```
 
-##### 3.2.19.6 Produce a CBOR encoded block producer registration message
+##### 3.2.18.6 Produce a CBOR encoded block producer registration message
 
 The result corresponds to `BlockProducerRegistrationMsg` type in the code.
 

@@ -12,7 +12,6 @@ import Node.Process (exit)
 import Options.Applicative (execParser)
 import Run (EFFECT, Run)
 import TrustlessSidechain.CLIVersion (versionString)
-import TrustlessSidechain.CandidatePermissionToken as CandidatePermissionToken
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.ConfigFile as ConfigFile
 import TrustlessSidechain.DParameter as DParameter
@@ -22,10 +21,8 @@ import TrustlessSidechain.Effects.Util as Effect
 import TrustlessSidechain.EndpointResp
   ( EndpointResp
       ( CommitteeCandidateRegResp
-      , CandidatePermissionTokenResp
       , CommitteeCandidateDeregResp
       , GetAddrsResp
-      , InitCandidatePermissionTokenResp
       , InitTokensMintResp
       , InitReserveManagementResp
       , InsertVersionResp
@@ -54,9 +51,6 @@ import TrustlessSidechain.Governance (Governance(MultiSig))
 import TrustlessSidechain.Governance.MultiSig
   ( MultiSigGovParams(MultiSigGovParams)
   )
-import TrustlessSidechain.InitSidechain.CandidatePermissionToken
-  ( initCandidatePermissionToken
-  )
 import TrustlessSidechain.InitSidechain.Init (getInitTokenStatus)
 import TrustlessSidechain.InitSidechain.NativeTokenManagement
   ( initNativeTokenMgmt
@@ -77,9 +71,7 @@ import TrustlessSidechain.Options.Types
   , TxEndpoint
       ( GetAddrs
       , CommitteeCandidateReg
-      , CandidiatePermissionTokenAct
       , CommitteeCandidateDereg
-      , InitCandidatePermissionToken
       , InitTokensMint
       , InitReserveManagement
       , InsertVersion2
@@ -194,7 +186,6 @@ runTxEndpoint sidechainEndpointParams endpoint =
         , sidechainPubKey
         , sidechainSig
         , inputUtxo
-        , usePermissionToken
         , auraKey
         , grandpaKey
         } ->
@@ -205,7 +196,6 @@ runTxEndpoint sidechainEndpointParams endpoint =
             , sidechainPubKey
             , sidechainSig
             , inputUtxo
-            , usePermissionToken
             , auraKey
             , grandpaKey
             }
@@ -214,14 +204,6 @@ runTxEndpoint sidechainEndpointParams endpoint =
             <#> txHashToByteArray
             >>> { transactionId: _ }
             >>> CommitteeCandidateRegResp
-
-      CandidiatePermissionTokenAct { candidatePermissionTokenAmount: amount } ->
-        CandidatePermissionToken.runCandidatePermissionToken scParams amount
-          <#> \{ transactionId, candidatePermissionCurrencySymbol } ->
-            CandidatePermissionTokenResp
-              { transactionId: txHashToByteArray transactionId
-              , candidatePermissionCurrencySymbol
-              }
 
       CommitteeCandidateDereg { spoPubKey } ->
         let
@@ -238,7 +220,6 @@ runTxEndpoint sidechainEndpointParams endpoint =
         sidechainAddresses <- GetSidechainAddresses.getSidechainAddresses
           $ SidechainAddressesEndpointParams
               { sidechainParams: scParams
-              , usePermissionToken: extraInfo.usePermissionToken
               , version: extraInfo.version
               }
         pure $ GetAddrsResp { sidechainAddresses }
@@ -257,15 +238,6 @@ runTxEndpoint sidechainEndpointParams endpoint =
             , sidechainParams
             , sidechainAddresses
             }
-
-      InitCandidatePermissionToken
-        { initCandidatePermissionTokenMintInfo
-        } -> do
-        resp <- initCandidatePermissionToken scParams
-          initCandidatePermissionTokenMintInfo
-        pure $ InitCandidatePermissionTokenResp
-          { initTransactionId: map txHashToByteArray resp
-          }
 
       InitReserveManagement { version } -> do
         resp <- initNativeTokenMgmt scParams version
