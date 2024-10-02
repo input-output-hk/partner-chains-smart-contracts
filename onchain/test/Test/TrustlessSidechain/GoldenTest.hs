@@ -2,6 +2,7 @@ module Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest) where
 
 import TrustlessSidechain.HaskellPrelude
 
+import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Lazy (fromStrict)
 import Data.String qualified as HString
 import Data.Text qualified as Text
@@ -10,7 +11,6 @@ import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.IsData.Class (ToData (toBuiltinData))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Golden (goldenVsString)
-import TrustlessSidechain.OffChain (encodeHexBuiltinBS)
 
 -- | Creating a test group with two golden tests:
 -- - encoding data using `toBuiltinData`
@@ -22,7 +22,7 @@ dataEncoderGoldenTest :: (ToData a) => HString.String -> a -> TestTree
 dataEncoderGoldenTest name sampleData =
   let builtinData = toBuiltinData sampleData
       plutusDataBS = fromStrict $ encodeUtf8 $ Text.pack $ show builtinData
-      cborBS = fromStrict $ encodeHexBuiltinBS $ Builtins.serialiseData builtinData
+      cborBS = fromStrict $ Base16.encode $ Builtins.fromBuiltin $ Builtins.serialiseData builtinData
    in testGroup
         ("Serialising " <> name)
         [ goldenVsString "IsData encoding" ("./test/golden/" <> name <> "-isdata.golden") $ pure plutusDataBS

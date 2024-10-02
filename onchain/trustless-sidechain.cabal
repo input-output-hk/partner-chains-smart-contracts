@@ -91,7 +91,6 @@ library
     TrustlessSidechain.Governance.MultiSig
     TrustlessSidechain.IlliquidCirculationSupply
     TrustlessSidechain.InitToken
-    TrustlessSidechain.OffChain
     TrustlessSidechain.OnlyMintMintingPolicy
     TrustlessSidechain.PermissionedCandidates
     TrustlessSidechain.Reserve
@@ -169,34 +168,6 @@ library quickcheck-extra
   hs-source-dirs:  test/quickcheck-extra/src
 
 -- Executables
-
-executable trustless-sidechain-gen-signatures
-  import:         common-lang, common-optimized-parallel, common-script-lang
-  main-is:        Main.hs
-  other-modules:
-    GenOutput
-    GetOpts
-
-  build-depends:
-    , aeson
-    , attoparsec
-    , base16-bytestring
-    , bech32
-    , bytestring
-    , cardano-binary
-    , cardano-crypto-class
-    , cryptonite
-    , either
-    , optparse-applicative
-    , plutus-core
-    , plutus-ledger-api
-    , secp256k1-haskell
-    , serialise
-    , text
-    , trustless-sidechain
-    , trustless-sidechain-prelude
-
-  hs-source-dirs: app/gen-signatures
 
 executable trustless-sidechain-serialise
   import:         common-lang, common-optimized-parallel
