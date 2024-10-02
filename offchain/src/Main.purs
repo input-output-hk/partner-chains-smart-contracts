@@ -3,10 +3,7 @@ module Main (main) where
 import Contract.Prelude
 
 import Contract.Monad (launchAff_)
-import Contract.PlutusData as PlutusData
-import Control.Monad.Error.Class (throwError)
 import Data.Array as Array
-import Effect.Exception (error)
 import JS.BigInt as BigInt
 import Node.Process (exit)
 import Options.Applicative (execParser)
@@ -28,11 +25,6 @@ import TrustlessSidechain.EndpointResp
       , InsertVersionResp
       , UpdateVersionResp
       , InvalidateVersionResp
-      , EcdsaSecp256k1KeyGenResp
-      , SchnorrSecp256k1KeyGenResp
-      , EcdsaSecp256k1SignResp
-      , SchnorrSecp256k1SignResp
-      , CborBlockProducerRegistrationMessageResp
       , InsertDParameterResp
       , UpdateDParameterResp
       , UpdatePermissionedCandidatesResp
@@ -66,7 +58,7 @@ import TrustlessSidechain.NativeTokenManagement.Reserve
   )
 import TrustlessSidechain.Options.Specs (options)
 import TrustlessSidechain.Options.Types
-  ( Options(TxOptions, UtilsOptions, CLIVersion)
+  ( Options(TxOptions, CLIVersion)
   , SidechainEndpointParams
   , TxEndpoint
       ( GetAddrs
@@ -88,17 +80,8 @@ import TrustlessSidechain.Options.Types
       , ReleaseReserveFunds
       , HandoverReserve
       )
-  , UtilsEndpoint
-      ( EcdsaSecp256k1KeyGenAct
-      , SchnorrSecp256k1KeyGenAct
-      , EcdsaSecp256k1SignAct
-      , SchnorrSecp256k1SignAct
-      , CborBlockProducerRegistrationMessageAct
-      )
   )
 import TrustlessSidechain.PermissionedCandidates as PermissionedCandidates
-import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
 import TrustlessSidechain.Utils.Transaction
   ( balanceSignAndSubmitWithoutSpendingUtxo
   , txHashToByteArray
@@ -153,10 +136,6 @@ main = do
         liftEffect $ case endpointResp of
           Right resp -> printEndpointResp resp
           Left e -> failWith $ show e
-
-    UtilsOptions opts -> do
-      endpointResp <- runUtilsEndpoint opts.utilsOptions
-      printEndpointResp endpointResp
 
     CLIVersion -> log versionString
 
@@ -362,73 +341,6 @@ runTxEndpoint sidechainEndpointParams endpoint =
         utxo <- findOneReserveUtxo scParams
         txHash <- handover scParams utxo
         pure $ ReserveResp { transactionHash: txHashToByteArray txHash }
-
--- | Executes an endpoint for the `utils` subcommand. Note that this does _not_
--- | need to be in the Contract monad.
-runUtilsEndpoint :: UtilsEndpoint -> Effect EndpointResp
-runUtilsEndpoint = case _ of
-  EcdsaSecp256k1KeyGenAct -> do
-    privateKey <- Utils.Crypto.generateRandomPrivateKey
-    let publicKey = Utils.Crypto.toPubKeyUnsafe privateKey
-    pure $ EcdsaSecp256k1KeyGenResp
-      { privateKey
-      , publicKey
-      }
-  SchnorrSecp256k1KeyGenAct -> do
-    privateKey <- Utils.SchnorrSecp256k1.generateRandomPrivateKey
-    let publicKey = Utils.SchnorrSecp256k1.toPubKey privateKey
-    pure $ SchnorrSecp256k1KeyGenResp
-      { privateKey
-      , publicKey
-      }
-
-  EcdsaSecp256k1SignAct
-    { message, privateKey, noHashMessage } -> do
-    realMessage <-
-      if noHashMessage then case Utils.Crypto.ecdsaSecp256k1Message message of
-        Just realMsg -> pure realMsg
-        Nothing -> throwError $ error $
-          "Message invalid (should be 32 bytes)"
-      else pure
-        $ Utils.Crypto.byteArrayToEcdsaSecp256k1MessageUnsafe
-        $ Utils.Crypto.blake2b256Hash message
-
-    let signature = Utils.Crypto.sign realMessage privateKey
-    pure $
-      EcdsaSecp256k1SignResp
-        { publicKey: Utils.Crypto.toPubKeyUnsafe privateKey
-        , signature
-        , signedMessage:
-            Utils.Crypto.getEcdsaSecp256k1MessageByteArray realMessage
-        }
-
-  SchnorrSecp256k1SignAct
-    { message, privateKey, noHashMessage } -> do
-    let
-      realMessage =
-        if noHashMessage then message
-        else Utils.Crypto.blake2b256Hash message
-
-    let signature = Utils.SchnorrSecp256k1.sign realMessage privateKey
-    pure $
-      SchnorrSecp256k1SignResp
-        { publicKey: Utils.SchnorrSecp256k1.toPubKey privateKey
-        , signature
-        , signedMessage: realMessage
-        }
-
-  CborBlockProducerRegistrationMessageAct
-    { blockProducerRegistrationMsg
-    } ->
-    let
-      plutusData =
-        PlutusData.toData $
-          blockProducerRegistrationMsg
-    in
-      pure $
-        CborBlockProducerRegistrationMessageResp
-          { plutusData
-          }
 
 printEndpointResp :: EndpointResp -> Effect Unit
 printEndpointResp =

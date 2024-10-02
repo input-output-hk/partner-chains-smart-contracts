@@ -10,18 +10,11 @@ import Aeson
   ( encodeAeson
   , toStringifiedNumbersJson
   )
-import Cardano.AsCbor (encodeCbor)
-import Cardano.ToData (toData)
 import Cardano.Types.AssetName (AssetName)
 import Cardano.Types.BigNum (BigNum)
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.ScriptHash (ScriptHash)
-import Contract.CborBytes (cborBytesToByteArray)
-import Contract.PlutusData
-  ( class ToData
-  , PlutusData
-  )
 import Contract.Prim.ByteArray
   ( ByteArray
   , byteArrayToHex
@@ -40,18 +33,6 @@ import TrustlessSidechain.Utils.Codecs
   ( encodeInitTokenStatusData
   , scParamsCodec
   )
-import TrustlessSidechain.Utils.Crypto
-  ( EcdsaSecp256k1PrivateKey
-  , EcdsaSecp256k1PubKey
-  , EcdsaSecp256k1Signature
-  )
-import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.SchnorrSecp256k1
-  ( SchnorrSecp256k1PrivateKey
-  , SchnorrSecp256k1PublicKey
-  , SchnorrSecp256k1Signature
-  )
-import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
 import TrustlessSidechain.Versioning.ScriptId (ScriptId)
 import TrustlessSidechain.Versioning.Types as Types
 
@@ -71,27 +52,6 @@ data EndpointResp
   | InsertVersionResp { versioningTransactionIds :: Array ByteArray }
   | UpdateVersionResp { versioningTransactionIds :: Array ByteArray }
   | InvalidateVersionResp { versioningTransactionIds :: Array ByteArray }
-  | EcdsaSecp256k1KeyGenResp
-      { publicKey :: EcdsaSecp256k1PubKey
-      , privateKey :: EcdsaSecp256k1PrivateKey
-      }
-  | SchnorrSecp256k1KeyGenResp
-      { publicKey :: SchnorrSecp256k1PublicKey
-      , privateKey :: SchnorrSecp256k1PrivateKey
-      }
-  | EcdsaSecp256k1SignResp
-      { publicKey :: EcdsaSecp256k1PubKey
-      , signature :: EcdsaSecp256k1Signature
-      , signedMessage :: ByteArray
-      }
-  | SchnorrSecp256k1SignResp
-      { publicKey :: SchnorrSecp256k1PublicKey
-      , signature :: SchnorrSecp256k1Signature
-      , signedMessage :: ByteArray
-      }
-  | CborBlockProducerRegistrationMessageResp
-      { plutusData :: PlutusData
-      }
   | InsertDParameterResp
       { transactionId :: ByteArray }
   | UpdateDParameterResp
@@ -105,13 +65,6 @@ data EndpointResp
       , versionedValidators :: List (Tuple Types.ScriptId PlutusScript)
       }
   | ReserveResp { transactionHash :: ByteArray }
-
--- | `serialisePlutusDataToHex` serialises plutus data to CBOR, and shows the
--- | hex encoded CBOR.
-serialisePlutusDataToHex :: forall a. ToData a => a -> String
-serialisePlutusDataToHex = byteArrayToHex <<< cborBytesToByteArray
-  <<< encodeCbor
-  <<< toData
 
 -- Note [BigInt values and JSON]
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -225,46 +178,6 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         [ "endpoint" /\ J.fromString "InvalidateVersion"
         , "versioningTransactionIds" /\ J.fromArray
             (map (J.fromString <<< byteArrayToHex) versioningTransactionIds)
-        ]
-    EcdsaSecp256k1KeyGenResp { publicKey, privateKey } ->
-      J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "EcdsaSecp256k1KeyGen"
-        , "rawHexPublicKey" /\ J.fromString
-            (Utils.Crypto.serialiseEcdsaSecp256k1PubKey publicKey)
-        , "rawHexPrivateKey" /\ J.fromString
-            (Utils.Crypto.serialiseEcdsaSecp256k1PrivateKey privateKey)
-        ]
-    SchnorrSecp256k1KeyGenResp { publicKey, privateKey } ->
-      J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "SchnorrSecp256k1KeyGen"
-        , "rawHexPublicKey" /\ J.fromString
-            (Utils.SchnorrSecp256k1.serializePublicKey publicKey)
-        , "rawHexPrivateKey" /\ J.fromString
-            (Utils.SchnorrSecp256k1.serializePrivateKey privateKey)
-        ]
-    EcdsaSecp256k1SignResp { publicKey, signature, signedMessage } ->
-      J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "EcdsaSecp256k1Sign"
-        , "rawHexPublicKey" /\ J.fromString
-            (Utils.Crypto.serialiseEcdsaSecp256k1PubKey publicKey)
-        , "rawHexSignature" /\ J.fromString
-            (Utils.Crypto.serialiseEcdsaSecp256k1Signature signature)
-        , "rawHexSignedMessage" /\ J.fromString (byteArrayToHex signedMessage)
-        ]
-    SchnorrSecp256k1SignResp { publicKey, signature, signedMessage } ->
-      J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "SchnorrSecp256k1Sign"
-        , "rawHexPublicKey" /\ J.fromString
-            (Utils.SchnorrSecp256k1.serializePublicKey publicKey)
-        , "rawHexSignature" /\ J.fromString
-            (Utils.SchnorrSecp256k1.serializeSignature signature)
-        , "rawHexSignedMessage" /\ J.fromString (byteArrayToHex signedMessage)
-        ]
-    CborBlockProducerRegistrationMessageResp { plutusData } ->
-      J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "CborBlockProducerRegistrationMessage"
-        , "cborHexBlockProducerRegistrationMessage" /\ J.fromString
-            (serialisePlutusDataToHex plutusData)
         ]
     InsertDParameterResp
       { transactionId } ->

@@ -5,7 +5,6 @@ module TrustlessSidechain.Options.Types
   , RuntimeConfig(..)
   , SidechainEndpointParams(..)
   , TxEndpoint(..)
-  , UtilsEndpoint(..)
   ) where
 
 import Contract.Prelude
@@ -53,15 +52,6 @@ data Options
       , endpoint :: TxEndpoint
       , contractParams :: ContractParams
       }
-  |
-    -- | `UtilsOptions` are the options for endpoints for functionality
-    -- | related to signing messages such as: creating key pairs, creating
-    -- | messages to sign, signing messages, aggregating keys, etc.
-    -- | In particular, these endpoints do _not_ need to be in the `Contract`
-    -- | monad
-    UtilsOptions
-      { utilsOptions :: UtilsEndpoint
-      }
   | CLIVersion
 
 -- | Sidechain configuration file including common parameters.
@@ -89,32 +79,6 @@ type Config =
   , -- | Network configuration of the runtime dependencies (kupo, ogmios)
     runtimeConfig :: Maybe RuntimeConfig
   }
-
--- | Data for CLI endpoints which provide supporting utilities for the
--- | sidechain
-data UtilsEndpoint
-  = EcdsaSecp256k1KeyGenAct
-  | EcdsaSecp256k1SignAct
-      { message :: ByteArray
-      , privateKey :: EcdsaSecp256k1PrivateKey
-      , noHashMessage :: Boolean
-      -- whether to hash the message or not before signing.
-      -- true ===> do NOT hash the message
-      -- false ===> hash the message
-      }
-  | SchnorrSecp256k1KeyGenAct
-  | SchnorrSecp256k1SignAct
-      { message :: ByteArray
-      , privateKey :: SchnorrSecp256k1PrivateKey
-      , noHashMessage :: Boolean
-      -- whether to hash the message or not before signing.
-      -- true ===> do NOT hash the message
-      -- false ===> hash the message
-      }
-
-  | CborBlockProducerRegistrationMessageAct
-      { blockProducerRegistrationMsg :: BlockProducerRegistrationMsg
-      }
 
 -- | Data for CLI endpoints which submit a transaction to the blockchain.
 data TxEndpoint
