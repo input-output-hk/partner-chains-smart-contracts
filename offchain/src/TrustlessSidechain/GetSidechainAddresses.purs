@@ -29,6 +29,8 @@ import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.InitSidechain.Utils as InitSidechain
 import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
+import TrustlessSidechain.ProxyMintingPolicy (decodeProxyMintingPolicy)
+import TrustlessSidechain.ProxyValidator (getProxyValidatorAndAddress)
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address
   ( toAddress
@@ -43,11 +45,14 @@ import TrustlessSidechain.Versioning.Types
       , VersionOraclePolicy
       , PermissionedCandidatesPolicy
       , DParameterPolicy
+      , DParameterProxyPolicy
       , CommitteeCandidateValidator
       , VersionOracleValidator
       , PermissionedCandidatesValidator
-      , DParameterValidator
+      , DParameterProxyValidator
       , InitTokenPolicy
+      , GovernancePolicy
+      , AlwaysPassingPolicy
       )
   )
 import TrustlessSidechain.Versioning.Utils
@@ -130,13 +135,6 @@ getSidechainAddresses
     permissionedCandidatesPolicyId =
       currencySymbolToHex permissionedCandidatesCurrencySymbol
 
-  { dParameterCurrencySymbol } ←
-    DParameter.getDParameterMintingPolicyAndCurrencySymbol
-      sidechainParams
-  let
-    dParameterPolicyId = currencySymbolToHex
-      dParameterCurrencySymbol
-
   { currencySymbol: initTokenCurrencySymbol } ←
     InitSidechain.initTokenCurrencyInfo sidechainParams
   let
@@ -165,15 +163,23 @@ getSidechainAddresses
     PermissionedCandidates.getPermissionedCandidatesValidatorAndAddress
       sidechainParams
 
-  { dParameterValidator } ←
-    DParameter.getDParameterValidatorAndAddress sidechainParams
+  { proxyValidator: proxyDParamValidator
+  } ←
+    getProxyValidatorAndAddress sidechainParams GovernancePolicy
+
+  proxyDParamPolicyId ← (currencySymbolToHex <<< PlutusScript.hash) <$>
+    decodeProxyMintingPolicy
+      sidechainParams
+      { subMintingPolicy: DParameterPolicy
+      , subBurningPolicy: AlwaysPassingPolicy
+      }
 
   let
     mintingPolicies ∷ Array (Tuple ScriptId String)
     mintingPolicies =
       [ VersionOraclePolicy /\ versionOraclePolicyId
       , PermissionedCandidatesPolicy /\ permissionedCandidatesPolicyId
-      , DParameterPolicy /\ dParameterPolicyId
+      , DParameterProxyPolicy /\ proxyDParamPolicyId
       , InitTokenPolicy /\ initTokenPolicyId
       ]
         <>
@@ -187,7 +193,7 @@ getSidechainAddresses
       [ CommitteeCandidateValidator /\ committeeCandidateValidator
       , VersionOracleValidator /\ versionOracleValidator
       , PermissionedCandidatesValidator /\ permissionedCandidatesValidator
-      , DParameterValidator /\ dParameterValidator
+      , DParameterProxyValidator /\ proxyDParamValidator
       ] <> List.toUnfoldable versionedValidators
 
   addresses ← traverse (traverse getAddr) validators

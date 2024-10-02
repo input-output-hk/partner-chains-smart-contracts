@@ -56,6 +56,8 @@ data ScriptId
   | OnlyMintMintingPolicy
   | ProxyMintingPolicy
   | ProxyValidator
+  | DParameterProxyPolicy
+  | DParameterProxyValidator
 
 derive instance Eq ScriptId
 derive instance Ord ScriptId
@@ -106,6 +108,10 @@ instance FromData ScriptId where
     Just ProxyMintingPolicy
   fromData (Integer i) | i == BigInt.fromInt 38 =
     Just ProxyValidator
+  fromData (Integer i) | i == BigInt.fromInt 39 =
+    Just DParameterProxyPolicy
+  fromData (Integer i) | i == BigInt.fromInt 40 =
+    Just DParameterProxyValidator
   fromData _ = Nothing
 
 instance ToData ScriptId where
@@ -130,3 +136,5 @@ instance ToData ScriptId where
   toData OnlyMintMintingPolicy = Integer (BigInt.fromInt 36)
   toData ProxyMintingPolicy = Integer (BigInt.fromInt 37)
   toData ProxyValidator = Integer (BigInt.fromInt 38)
+  toData DParameterProxyPolicy = Integer (BigInt.fromInt 39)
+  toData DParameterProxyValidator = Integer (BigInt.fromInt 40)
