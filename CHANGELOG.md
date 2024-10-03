@@ -18,6 +18,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   * Removed `gen-signatures` tool
   * Removed `init-candidate-permission-token` and `candidate-permission-token` commands
   * Removed `--use-candidate-permission-token` switch
+  * Removed `utils` commands
 
 ## Fixed
   * CLI now returns non-zero exit code on failure
