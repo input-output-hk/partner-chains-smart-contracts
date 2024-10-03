@@ -9,7 +9,6 @@ import Test.DParameter as DParameter
 import Test.Data as Data
 import Test.IlliquidCirculationSupply as IlliquidCirculationSupply
 import Test.InitSidechain.TokensMint as InitMint
-import Test.Options.Parsers as Options.Parsers
 import Test.PermissionedCandidates as PermissionedCandidates
 import Test.Reserve as Reserve
 import Test.Unit.Main as Test.Unit.Main
@@ -31,7 +30,6 @@ main = do
     $ interpretWrappedTest do
 
         group "Unit tests" do
-          Options.Parsers.tests
           AddressUtils.tests
           ConfigFile.tests
 

@@ -16,7 +16,7 @@ import Data.Array.NonEmpty as NE
 import JS.BigInt as BigInt
 import Mote.Monad (test)
 import Test.QuickCheck.Arbitrary (arbitrary)
-import Test.QuickCheck.Gen (Gen, arrayOf, chooseInt, vectorOf)
+import Test.QuickCheck.Gen (Gen, arrayOf, chooseInt)
 import Test.QuickCheck.Gen as QGen
 import Test.Utils (WrappedTests, pureGroup)
 import Test.Utils.Laws (toDataLaws)
@@ -30,7 +30,6 @@ import Test.Utils.QuickCheck
   , ArbitraryTransactionInput(ArbitraryTransactionInput)
   , NonNegative(NonNegative)
   , Positive(Positive)
-  , suchThatMap
   )
 import TrustlessSidechain.CommitteeCandidateValidator
   ( BlockProducerRegistration(BlockProducerRegistration)
@@ -55,10 +54,6 @@ import TrustlessSidechain.NativeTokenManagement.Types
   , ReserveStats(..)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
-import TrustlessSidechain.Utils.Crypto
-  ( EcdsaSecp256k1PubKey
-  , ecdsaSecp256k1PubKey
-  )
 import TrustlessSidechain.Versioning.Types
   ( ScriptId
       ( CommitteeCandidateValidator
@@ -82,7 +77,6 @@ import TrustlessSidechain.Versioning.Types
 tests :: WrappedTests
 tests = pureGroup "Data roundtrip tests" $ do
   test "SidechainParams" $ liftEffect $ toDataLaws testCount genSP
-  test "EcdsaSecp256k1PubKey" $ liftEffect $ toDataLaws smallTestCount genPK
   test "BlockProducerRegistration" $ liftEffect $ toDataLaws testCount genBPR
   test "BlockProducerRegistrationMsg" $ liftEffect $ toDataLaws testCount
     genBPRM
@@ -107,9 +101,6 @@ tests = pureGroup "Data roundtrip tests" $ do
   where
   testCount :: Int
   testCount = 10_000
-
-  smallTestCount :: Int
-  smallTestCount = 1_000
 
 -- Generators
 
@@ -251,9 +242,6 @@ genBPR = do
     , grandpaKey
     }
 
-genPK :: Gen EcdsaSecp256k1PubKey
-genPK = suchThatMap (genByteArrayLen 33) ecdsaSecp256k1PubKey
-
 genSP :: Gen SidechainParams
 genSP = do
   NonNegative (ArbitraryBigInt chainId) <- arbitrary
@@ -271,7 +259,3 @@ genSP = do
 
 genGH :: Gen ByteArray
 genGH = byteArrayFromIntArrayUnsafe <$> arrayOf (chooseInt 0 255)
-
-genByteArrayLen :: Int -> Gen ByteArray
-genByteArrayLen len =
-  byteArrayFromIntArrayUnsafe <$> vectorOf len (chooseInt 0 255)

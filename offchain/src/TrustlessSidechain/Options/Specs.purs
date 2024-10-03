@@ -51,12 +51,10 @@ import Options.Applicative
   , short
   , showDefault
   , str
-  , switch
   , value
   )
 import TrustlessSidechain.CommitteeCandidateValidator
-  ( BlockProducerRegistrationMsg(BlockProducerRegistrationMsg)
-  , StakeOwnership(AdaBasedStaking, TokenBasedStaking)
+  ( StakeOwnership(AdaBasedStaking, TokenBasedStaking)
   )
 import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.NativeTokenManagement.Types
@@ -66,20 +64,18 @@ import TrustlessSidechain.NativeTokenManagement.Types
 import TrustlessSidechain.Options.Parsers
   ( byteArray
   , denominator
-  , ecdsaSecp256k1PrivateKey
   , governanceAuthority
   , networkId
   , numerator
   , permissionedCandidateKeys
   , registrationSidechainKeys
-  , schnorrSecp256k1PrivateKey
   , uint
   , validatorHashParser
   )
 import TrustlessSidechain.Options.Parsers as Parsers
 import TrustlessSidechain.Options.Types
   ( Config
-  , Options(TxOptions, UtilsOptions, CLIVersion)
+  , Options(TxOptions, CLIVersion)
   , SidechainEndpointParams(SidechainEndpointParams)
   , TxEndpoint
       ( GetAddrs
@@ -99,13 +95,6 @@ import TrustlessSidechain.Options.Types
       , DepositReserve
       , ReleaseReserveFunds
       , HandoverReserve
-      )
-  , UtilsEndpoint
-      ( EcdsaSecp256k1KeyGenAct
-      , EcdsaSecp256k1SignAct
-      , SchnorrSecp256k1KeyGenAct
-      , SchnorrSecp256k1SignAct
-      , CborBlockProducerRegistrationMessageAct
       )
   )
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
@@ -202,69 +191,7 @@ optSpec maybeConfig =
             )
         )
 
-    , command "utils"
-        ( info (utilsSpec maybeConfig)
-            ( progDesc
-                "Utility functions for cryptographic primitives and messages."
-            )
-        )
-
     ]
-
--- | `utilsSpec` provides CLI options for utilities in the sidechain that do
--- | not submit a tx to the blockchain
-utilsSpec :: Maybe Config -> Parser Options
-utilsSpec maybeConfig =
-  let
-    keyGenSpecs :: Parser Options
-    keyGenSpecs = hsubparser $ fold
-      [ command "ecdsa-secp256k1"
-          ( info ecdsaSecp256k1GenSpec
-              (progDesc "Generate an ECDSA SECP256k1 public / private key pair")
-          )
-      , command "schnorr-secp256k1"
-          ( info schnorrSecp256k1GenSpec
-              (progDesc "Generate an Schnorr SECP256k1 public / private key pair")
-          )
-      ]
-
-    signSpecs :: Parser Options
-    signSpecs = hsubparser $ fold
-      [ command "ecdsa-secp256k1"
-          ( info ecdsaSecp256k1SignSpec
-              (progDesc "Sign a message with an ECDSA SECP256k1 private key")
-          )
-      , command "schnorr-secp256k1"
-          ( info schnorrSecp256k1SignSpec
-              (progDesc "Sign a message with a Schnorr SECP256k1 private key")
-          )
-      ]
-
-    encodeSpecs :: Parser Options
-    encodeSpecs = hsubparser $ fold
-      [ command "cbor-block-producer-registration-message"
-          ( info (cborBlockProducerRegistrationMessageSpec maybeConfig)
-              ( progDesc
-                  "Generate the CBOR of a block producer registration message"
-              )
-          )
-      ]
-
-  in
-    hsubparser $ fold
-      [ command "key-gen"
-          ( info keyGenSpecs
-              (progDesc "Generate a public / private key pair")
-          )
-      , command "sign"
-          ( info signSpecs
-              (progDesc "Sign a message")
-          )
-      , command "encode"
-          ( info encodeSpecs
-              (progDesc "Generate CBOR encoded data")
-          )
-      ]
 
 -- | Helper function, adding parsers of common fields (private key, staking key,
 -- | sidechain parameters and runtime configuration)
@@ -731,105 +658,6 @@ getAddrSpec = ado
   in
     GetAddrs
       { version
-      }
-
-ecdsaSecp256k1GenSpec :: Parser Options
-ecdsaSecp256k1GenSpec = pure $
-  UtilsOptions
-    { utilsOptions: EcdsaSecp256k1KeyGenAct
-    }
-
-schnorrSecp256k1GenSpec :: Parser Options
-schnorrSecp256k1GenSpec = pure $
-  UtilsOptions
-    { utilsOptions: SchnorrSecp256k1KeyGenAct
-    }
-
-ecdsaSecp256k1SignSpec :: Parser Options
-ecdsaSecp256k1SignSpec = ado
-  privateKey <-
-    option ecdsaSecp256k1PrivateKey $ fold
-      [ long "private-key"
-      , metavar "SIDECHAIN_PRIVATE_KEY"
-      , help "Hex encoded raw bytes of an ECDSA SECP256k1 private key"
-      ]
-  message <- option byteArray $ fold
-    [ long "message"
-    , metavar "MESSAGE"
-    , help "Hex encoded raw bytes of a message to sign"
-    ]
-  noHashMessage <- switch $ fold
-    -- `switch` is
-    --  No flag given ==> false
-    --  Flag given ==> true
-    [ long "no-hash-message"
-    , help "Do not hash the message with blake2b256 before signing"
-    ]
-  in
-    UtilsOptions
-      { utilsOptions:
-          EcdsaSecp256k1SignAct
-            { message
-            , privateKey
-            , noHashMessage
-            }
-      }
-
-schnorrSecp256k1SignSpec :: Parser Options
-schnorrSecp256k1SignSpec = ado
-  privateKey <-
-    option schnorrSecp256k1PrivateKey $ fold
-      [ long "private-key"
-      , metavar "SIDECHAIN_PRIVATE_KEY"
-      , help "Hex encoded raw bytes of an Schnorr SECP256k1 private key"
-      ]
-  message <- option byteArray $ fold
-    [ long "message"
-    , metavar "MESSAGE"
-    , help "Hex encoded raw bytes of a message to sign"
-    ]
-  noHashMessage <- switch $ fold
-    -- `switch` is
-    --  No flag given ==> false
-    --  Flag given ==> true
-    [ long "no-hash-message"
-    , help "Do not hash the message with blake2b256 before signing"
-    ]
-  in
-    UtilsOptions
-      { utilsOptions:
-          SchnorrSecp256k1SignAct
-            { message
-            , privateKey
-            , noHashMessage
-            }
-      }
-
-cborBlockProducerRegistrationMessageSpec :: Maybe Config -> Parser Options
-cborBlockProducerRegistrationMessageSpec mConfig = ado
-  scParams <- sidechainParamsSpec mConfig
-  scPublicKey <-
-    option byteArray $ fold
-      [ long "sidechain-public-key"
-      , metavar "SIDECHAIN_PUB_KEY"
-      , help "Sidechain public key"
-      ]
-  inputUtxo <- option Parsers.transactionInput $ fold
-    [ long "input-utxo"
-    , metavar "TX_ID#TX_IDX"
-    , help "Input UTxO which must be spent by the transaction"
-    ]
-
-  in
-    UtilsOptions
-      { utilsOptions: CborBlockProducerRegistrationMessageAct
-          { blockProducerRegistrationMsg:
-              BlockProducerRegistrationMsg
-                { bprmSidechainParams: scParams
-                , bprmSidechainPubKey: scPublicKey
-                , bprmInputUtxo: inputUtxo
-                }
-          }
       }
 
 parseDepositAmount :: Parser BigNum
