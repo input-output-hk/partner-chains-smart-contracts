@@ -2,8 +2,6 @@ module TrustlessSidechain.ConfigFile.Codecs
   ( committeeSignaturesCodec
   , committeeCodec
   , configCodec
-  , sidechainSignatureCodec
-  , sidechainPubKeyCodec
   ) where
 
 import Contract.Prelude
@@ -25,13 +23,6 @@ import TrustlessSidechain.Utils.Codecs
   , thresholdCodec
   , transactionInputCodec
   )
-import TrustlessSidechain.Utils.Crypto
-  ( EcdsaSecp256k1PubKey
-  , EcdsaSecp256k1Signature
-  , getEcdsaSecp256k1PubKeyByteArray
-  , getEcdsaSecp256k1SignatureByteArray
-  )
-import TrustlessSidechain.Utils.Crypto as Utils.Crypto
 
 configCodec :: CA.JsonCodec Config
 configCodec =
@@ -130,26 +121,6 @@ committeeCodec = nonEmptyListCodec memberCodec
     { "public-key" :: ByteArray
     }
   enc p = { "public-key": p }
-
-sidechainPubKeyCodec :: CA.JsonCodec EcdsaSecp256k1PubKey
-sidechainPubKeyCodec = CA.prismaticCodec "EcdsaSecp256k1PubKey" dec enc
-  byteArrayCodec
-  where
-  dec :: ByteArray -> Maybe EcdsaSecp256k1PubKey
-  dec = Utils.Crypto.ecdsaSecp256k1PubKey
-
-  enc :: EcdsaSecp256k1PubKey -> ByteArray
-  enc = getEcdsaSecp256k1PubKeyByteArray
-
-sidechainSignatureCodec :: CA.JsonCodec EcdsaSecp256k1Signature
-sidechainSignatureCodec = CA.prismaticCodec "EcdsaSecp256k1Signature" dec enc
-  byteArrayCodec
-  where
-  dec :: ByteArray -> Maybe EcdsaSecp256k1Signature
-  dec = Utils.Crypto.ecdsaSecp256k1Signature
-
-  enc :: EcdsaSecp256k1Signature -> ByteArray
-  enc = getEcdsaSecp256k1SignatureByteArray
 
 serverConfigCodec :: CA.JsonCodec ServerConfig
 serverConfigCodec = CAR.object "serverConfig"

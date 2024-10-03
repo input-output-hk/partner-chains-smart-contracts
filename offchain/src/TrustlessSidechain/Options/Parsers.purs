@@ -7,16 +7,12 @@ module TrustlessSidechain.Options.Parsers
   , blockHash
   , byteArray
   , cborEncodedAddressParser
-  , committeeSignature
   , currencySymbolParser
   , denominator
-  , ecdsaSecp256k1PrivateKey
-  , ecdsaSecp256k1PublicKey
   , epoch
   , governanceAuthority
   , mkCurrencySymbol
   , numerator
-  , parsePubKeyAndSignature
   , parsePubKeyBytesAndSignatureBytes
   , parseAssetName
   , parseTokenName
@@ -29,9 +25,7 @@ module TrustlessSidechain.Options.Parsers
   , pubKeyBytesAndSignatureBytes
   , pubKeyHash
   , registeredCandidatesCount
-  , schnorrSecp256k1PrivateKey
   , sidechainAddress
-  , sidechainSignature
   , tokenAmount
   , depositAmount
   , transactionInput
@@ -70,14 +64,6 @@ import JS.BigInt as BigInt
 import Options.Applicative (ReadM, eitherReader, maybeReader, readerError)
 import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.Governance.Admin as Governance
-import TrustlessSidechain.Utils.Crypto
-  ( EcdsaSecp256k1PrivateKey
-  , EcdsaSecp256k1PubKey
-  , EcdsaSecp256k1Signature
-  )
-import TrustlessSidechain.Utils.Crypto as Utils.Crypto
-import TrustlessSidechain.Utils.SchnorrSecp256k1 (SchnorrSecp256k1PrivateKey)
-import TrustlessSidechain.Utils.SchnorrSecp256k1 as Utils.SchnorrSecp256k1
 
 hexToByteArray :: String -> Maybe ByteArray
 hexToByteArray s = ByteArray.hexToByteArray $ fromMaybe s $ stripPrefix
@@ -174,32 +160,6 @@ bech32BytesParser = eitherReader parseHumanReadableBech32ToBech32Bytes
 -- | Parse ByteArray from hexadecimal representation
 byteArray :: ReadM ByteArray
 byteArray = maybeReader hexToByteArray
-
--- | Parses a EcdsaSecp256k1PubKey from hexadecimal representation.
--- | See `EcdsaSecp256k1PubKey` for the invariants.
-ecdsaSecp256k1PublicKey :: ReadM EcdsaSecp256k1PubKey
-ecdsaSecp256k1PublicKey = maybeReader
-  $ Utils.Crypto.ecdsaSecp256k1PubKey
-  <=< hexToByteArray
-
--- | Parses a EcdsaSecp256k1PrivateKey from hexadecimal representation.
-ecdsaSecp256k1PrivateKey :: ReadM EcdsaSecp256k1PrivateKey
-ecdsaSecp256k1PrivateKey = maybeReader
-  $ Utils.Crypto.ecdsaSecp256k1PrivateKey
-  <=< hexToByteArray
-
--- | Parses a schnorr private key from the hexadecimal representation
-schnorrSecp256k1PrivateKey :: ReadM SchnorrSecp256k1PrivateKey
-schnorrSecp256k1PrivateKey = maybeReader
-  $ Utils.SchnorrSecp256k1.parsePrivateKey
-  <=< hexToByteArray
-
--- | Parses a SidechainSignature from hexadecimal representation.
--- | See `SidechainSignature` for the invariants.
-sidechainSignature :: ReadM EcdsaSecp256k1Signature
-sidechainSignature = maybeReader
-  $ Utils.Crypto.ecdsaSecp256k1Signature
-  <=< hexToByteArray
 
 -- | Parses a PubKeyHash from hexadecimal representation.
 pubKeyHash :: ReadM PaymentPubKeyHash
@@ -303,34 +263,6 @@ hexString = maybeReader $ \str ->
   case split (Pattern "0x") str of
     [ "", hex ] -> hexToByteArray hex
     [ hex ] -> hexToByteArray hex
-    _ -> Nothing
-
--- | `committeeSignature` is a the CLI parser for `parsePubKeyAndSignature`.
-committeeSignature ::
-  ReadM (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature)
-committeeSignature = maybeReader parsePubKeyAndSignature
-
--- | `parsePubKeyAndSignature` parses the following format `hexStr[:[hexStr]]`
--- | subject to the hex strings satisfying some conditions about whether the
--- | public key  / signature could be a `EcdsaSecp256k1PubKey` or a
--- | `SidechainSignature`
--- Note: should we make this more strict and disallow `aa:`? in a sense:
--- `aa` denotes a pubkey without a signature
--- `aa:bb` denotes a pubkey and a signature
--- anything else is likely an error, and should be treated as malformed input
-parsePubKeyAndSignature ::
-  String -> Maybe (EcdsaSecp256k1PubKey /\ Maybe EcdsaSecp256k1Signature)
-parsePubKeyAndSignature str =
-  case split (Pattern ":") str of
-    [ l, r ] | l /= "" -> do
-      l' <- Utils.Crypto.ecdsaSecp256k1PubKey <=< hexToByteArray $ l
-      if r == "" then pure $ l' /\ Nothing
-      else do
-        r' <- Utils.Crypto.ecdsaSecp256k1Signature <=< hexToByteArray $ r
-        pure $ l' /\ Just r'
-    [ l ] -> ado
-      l' <- Utils.Crypto.ecdsaSecp256k1PubKey <=< hexToByteArray $ l
-      in l' /\ Nothing
     _ -> Nothing
 
 -- | `pubKeyBytesAndSignatureBytes` is a the CLI parser for `parsePubKeyBytesAndSignatureBytes`.

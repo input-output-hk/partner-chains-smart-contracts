@@ -19,8 +19,7 @@ import Data.List (List)
 import JS.BigInt (BigInt)
 import Node.Path (FilePath)
 import TrustlessSidechain.CommitteeCandidateValidator
-  ( BlockProducerRegistrationMsg
-  , StakeOwnership
+  ( StakeOwnership
   )
 import TrustlessSidechain.GetSidechainAddresses (SidechainAddressesExtra)
 import TrustlessSidechain.NativeTokenManagement.Types
@@ -29,8 +28,6 @@ import TrustlessSidechain.NativeTokenManagement.Types
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey)
-import TrustlessSidechain.Utils.Crypto (EcdsaSecp256k1PrivateKey)
-import TrustlessSidechain.Utils.SchnorrSecp256k1 (SchnorrSecp256k1PrivateKey)
 
 -- | `SidechainEndpointParams` is an offchain type for grabbing information
 -- | related to the sidechain.
