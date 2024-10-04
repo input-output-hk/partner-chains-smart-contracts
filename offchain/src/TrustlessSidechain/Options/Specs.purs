@@ -784,7 +784,7 @@ parseUnit :: Parser UInt
 parseUnit = option uint $ fold
   [ long "total-accrued-till-now"
   , metavar "INT"
-  , help "Computerd integer for the v(t)"
+  , help "Value of v(t) calculated based on policy script"
   ]
 
 releaseReserveFundsSpec :: Parser TxEndpoint
@@ -803,5 +803,5 @@ parseTransactionInput =
     [ long "reserve-transaction-input"
     , metavar "RESERVE-TRANSACTION-INPUT"
     , help
-        "Transaction input of the policy script for to transfer illiquid circulation"
+        "Transaction input where v(t) policy script to transfer illiquid circulation is stored"
     ]

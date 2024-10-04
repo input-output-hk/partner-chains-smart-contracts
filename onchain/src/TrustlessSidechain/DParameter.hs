@@ -66,8 +66,8 @@ mkMintingPolicy
             mintAmount :: Integer
             mintAmount = currencySymbolValueOf (Unsafe.decode $ Unsafe.txInfoMint txInfo) currSym
 
-            -- Check wether the amount of tokens minted equal to the amount of tokens
-            -- sent to the DParameterValidator address
+            -- Check whether the amount of tokens minted is equal to the
+            -- amount of tokens sent to the DParameterValidator address
             allTokensSentToDParameterValidator :: Bool
             allTokensSentToDParameterValidator = mintAmount == outAmount
          in traceIfFalse "ERROR-DPARAMETER-POLICY-01" signedByGovernanceAuthority
