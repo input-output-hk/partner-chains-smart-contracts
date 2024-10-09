@@ -1,5 +1,5 @@
 let upstream =
-      https://github.com/purescript/package-sets/releases/download/psc-0.15.4-20230105/packages.dhall
+      https://github.com/purescript/package-sets/releases/download/psc-0.15.15-20241008/packages.dhall
         sha256:3e9fbc9ba03e9a1fcfd895f65e2d50ee2f5e86c4cd273f3d5c841b655a0e1bda
 
 let additions =
@@ -29,6 +29,8 @@ let additions =
           , "cip30"
           , "cip30-mock"
           , "cip30-typesafe"
+          , "cip95"
+          , "cip95-typesafe"
           , "console"
           , "control"
           , "crypto"
@@ -111,7 +113,7 @@ let additions =
           , "web-storage"
           ]
         , repo = "https://github.com/Plutonomicon/cardano-transaction-lib.git"
-        , version = "3c134eabb573c5b7b9eed3a064be194c8273d1c3"
+        , version = "v9.3.1"
         }
       , aeson =
         { dependencies =
@@ -228,7 +230,7 @@ let additions =
           , "untagged-union"
           ]
         , repo = "https://github.com/mlabs-haskell/purescript-cip30"
-        , version = "8f1b34b48825fcec5e9c67f33e255770b1e0bc45"
+        , version = "v1.0.1"
         }
       , cip30-typesafe =
         { dependencies =
@@ -246,7 +248,34 @@ let additions =
           , "variant"
           ]
         , repo = "https://github.com/mlabs-haskell/purescript-cip30-typesafe"
-        , version = "d72e51fbc0255eb3246c9132d295de7f65e16a99"
+        , version = "v1.0.0"
+        }
+      , cip95 =
+        { dependencies =
+          [ "aff", "aff-promise", "console", "effect", "prelude" ]
+        , repo = "https://github.com/mlabs-haskell/purescript-cip95"
+        , version = "v1.0.0"
+        }
+      , cip95-typesafe =
+        { dependencies =
+          [ "aff"
+          , "bifunctors"
+          , "cip30"
+          , "cip30-typesafe"
+          , "cip95"
+          , "console"
+          , "control"
+          , "effect"
+          , "either"
+          , "exceptions"
+          , "maybe"
+          , "prelude"
+          , "spec"
+          , "transformers"
+          , "variant"
+          ]
+        , repo = "https://github.com/mlabs-haskell/purescript-cip95-typesafe"
+        , version = "v1.0.0"
         }
       , bytearrays =
         { dependencies =
@@ -290,7 +319,7 @@ let additions =
           ]
         , repo =
             "https://github.com/mlabs-haskell/purescript-cardano-serialization-lib"
-        , version = "v1.0.0"
+        , version = "v2.0.0"
         }
       , cardano-plutus-data-schema =
         { dependencies = [ "prelude" ]
@@ -332,7 +361,7 @@ let additions =
         { dependencies =
           [ "aff-promise", "console", "effect", "functions", "prelude" ]
         , repo = "https://github.com/mlabs-haskell/purescript-cip30-mock"
-        , version = "v1.0.0"
+        , version = "v1.1.0"
         }
       , cardano-collateral-select =
         { dependencies =
@@ -374,7 +403,7 @@ let additions =
           ]
         , repo =
             "https://github.com/mlabs-haskell/purescript-cardano-key-wallet"
-        , version = "v1.0.0"
+        , version = "v2.0.0"
         }
       , uplc-apply-args =
         { dependencies =
@@ -449,7 +478,7 @@ let additions =
           , "unsafe-coerce"
           ]
         , repo = "https://github.com/mlabs-haskell/purescript-cardano-types"
-        , version = "56877b43ea392ef6486e37d52e1c37d8c2b8c42d"
+        , version = "v3.0.0"
         }
       , cardano-message-signing =
         { dependencies =
@@ -475,7 +504,7 @@ let additions =
           , "uint"
           ]
         , repo = "https://github.com/mlabs-haskell/purescript-cardano-hd-wallet"
-        , version = "v1.0.0"
+        , version = "cc1073ddf8bce72407ef6671e3decb59f422e304"
         }
       , cardano-transaction-builder =
         { dependencies =
@@ -530,7 +559,7 @@ let additions =
           ]
         , repo =
             "https://github.com/mlabs-haskell/purescript-cardano-transaction-builder"
-        , version = "48866bd7f5eeb8e0870c97384264d08bda9c2725"
+        , version = "v2.0.0"
         }
       , mote-testplan =
         { dependencies =

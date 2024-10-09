@@ -8,6 +8,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 ## Changed
   * Nicer error messages from the CLI in some cases
   * Updated readme
+  * Updated cardano-transaction-lib to v9.3.1
 
 ## Removed
   * Removed `init` command
@@ -25,6 +26,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   * CLI now returns non-zero exit code on failure
   * `InitToken` minting policy with `BurnInitToken` redeemer no longer allows minting of tokens
   * Fixed some help text
+  * Fee calculation now supports Conway
 
 # v6.1.0
 
@@ -35,7 +37,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   * Obtain cardano-address via CHaP
 
 ## Changed
-  * Update ghc from 8.7 to 9.66
+  * Update ghc from 8.7 to 9.6.6
   * Update plutus-tx from 1.0 to 1.27, and remove plutonic dependency
   * Update ctl to version 8.6
 
