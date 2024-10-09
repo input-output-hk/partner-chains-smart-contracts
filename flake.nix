@@ -64,7 +64,7 @@
     };
     # Used to provide the cardano-node and cardano-cli executables.
     cardano-node = {
-      url = "github:input-output-hk/cardano-node/9.1.0";
+      url = "github:input-output-hk/cardano-node/9.2.1";
       flake = false;
     };
   };
