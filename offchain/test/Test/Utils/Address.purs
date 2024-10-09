@@ -26,7 +26,7 @@ import Test.Utils (WrappedTests, pureGroup)
 type TestCase = Mote (Const Void) Test Unit
 
 tests :: WrappedTests
-tests = pureGroup "Merkle proof serialisation for #249" do
+tests = pureGroup "PaymentPubKeyHash address tests" do
   test1
 
 test1 :: TestCase

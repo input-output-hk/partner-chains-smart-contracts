@@ -20,7 +20,7 @@ import TrustlessSidechain.ConfigFile (readConfigJson)
 type ConfigFileTest = Mote (Const Void) Test Unit
 
 tests :: WrappedTests
-tests = pureGroup "Merkle tree integration tests" do
+tests = pureGroup "Config tests" do
   test1
 
 test1 :: ConfigFileTest
