@@ -14,11 +14,11 @@ import Control.Alt ((<|>))
 import Ctl.Internal.Types.Interval (POSIXTime(..))
 import Data.Array.NonEmpty as NE
 import JS.BigInt as BigInt
-import Mote.Monad (test)
+import Mote.Monad (group, test)
 import Test.QuickCheck.Arbitrary (arbitrary)
 import Test.QuickCheck.Gen (Gen, arrayOf, chooseInt)
 import Test.QuickCheck.Gen as QGen
-import Test.Utils (WrappedTests, pureGroup)
+import Test.Utils (PureTest)
 import Test.Utils.Laws (toDataLaws)
 import Test.Utils.QuickCheck
   ( ArbitraryAssetName(ArbitraryAssetName)
@@ -74,8 +74,8 @@ import TrustlessSidechain.Versioning.Types
       )
   )
 
-tests :: WrappedTests
-tests = pureGroup "Data roundtrip tests" $ do
+tests :: PureTest
+tests = group "Data roundtrip tests" $ do
   test "SidechainParams" $ liftEffect $ toDataLaws testCount genSP
   test "BlockProducerRegistration" $ liftEffect $ toDataLaws testCount genBPR
   test "BlockProducerRegistrationMsg" $ liftEffect $ toDataLaws testCount

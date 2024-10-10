@@ -28,13 +28,12 @@ import Control.Monad.Error.Class (throwError)
 import Data.Map as Map
 import Effect.Exception (error)
 import JS.BigInt as BigInt
-import Mote.Monad as Mote.Monad
+import Mote.Monad (group, test)
 import Run (EFFECT, Run)
 import Run.Except (EXCEPT)
 import Test.AlwaysPassingScripts (alwaysPassingPolicy)
 import Test.TestnetTest (TestnetTest)
 import Test.TestnetTest as Test.TestnetTest
-import Test.Utils (WrappedTests, testnetGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
@@ -71,8 +70,8 @@ import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
 
 -- | `tests` aggregates all UpdateCommitteeHash the tests.
-tests :: WrappedTests
-tests = testnetGroup "IlliquidCirculationSupply" $ do
+tests :: TestnetTest
+tests = group "IlliquidCirculationSupply" $ do
   testScenario
 
 dummyInitialiseSidechain ::
@@ -221,7 +220,7 @@ findICSUtxo
 
 testScenario :: TestnetTest
 testScenario =
-  Mote.Monad.test
+  test
     "Withdraw from ICS"
     $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
     $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) do

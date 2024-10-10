@@ -20,14 +20,14 @@ import Data.List.Lazy (replicate)
 import Data.Map as Map
 import Data.Set as Set
 import Effect.Random (randomInt)
-import Mote.Monad as Mote.Monad
+import Mote.Monad (group, test)
 import Run (EFFECT, Run)
 import Run (liftEffect) as Run
 import Run.Except (EXCEPT)
 import Run.Except (note) as Run
 import Test.TestnetTest (TestnetTest)
 import Test.TestnetTest as Test.TestnetTest
-import Test.Utils (WrappedTests, dummySidechainParams, fails, testnetGroup)
+import Test.Utils (dummySidechainParams, fails)
 import TrustlessSidechain.CommitteeCandidateValidator
   ( DeregisterParams(DeregisterParams)
   , RegisterParams(RegisterParams)
@@ -51,8 +51,8 @@ mockSpoPubKey = hexToByteArrayUnsafe
   "40802011e4fa2af0ec57dbf341cac38b344fe0867bfc67d38988dd1006d3eb9e"
 
 -- | `tests` wraps up all the committee candidate validator tests conveniently
-tests :: WrappedTests
-tests = testnetGroup "Committe candidate registration/deregistration" $ do
+tests :: TestnetTest
+tests = group "Committe candidate registration/deregistration" $ do
   testScenarioSuccess1
   testScenarioFailure1
 
@@ -161,7 +161,7 @@ runDeregister scParams =
 -- Register multipe times then Deregister
 testScenarioSuccess1 :: TestnetTest
 testScenarioSuccess1 =
-  Mote.Monad.test "10 registrations followed by 1 deregister"
+  test "10 registrations followed by 1 deregister"
     $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 5_000_000
@@ -176,7 +176,7 @@ testScenarioSuccess1 =
 -- also, alice tries to register again with the same set of keys. not allowed & should fail
 testScenarioFailure1 :: TestnetTest
 testScenarioFailure1 =
-  Mote.Monad.test
+  test
     "Register followed by a deregister from a distinct wallet (should fail)"
     $ Test.TestnetTest.mkTestnetConfigTest
         ( [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ] /\

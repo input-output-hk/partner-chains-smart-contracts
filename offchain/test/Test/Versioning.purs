@@ -6,17 +6,15 @@ import Cardano.Types.BigNum as BigNum
 import Contract.Wallet as Wallet
 import Data.List as List
 import JS.BigInt as BigInt
-import Mote.Monad as Mote.Monad
+import Mote.Monad (group, test)
 import Run (AFF, EFFECT, Run)
 import Run.Except (EXCEPT)
 import Test.TestnetTest (TestnetTest)
 import Test.TestnetTest as Test.TestnetTest
 import Test.Unit.Assert (assert)
 import Test.Utils
-  ( WrappedTests
-  , fails
+  ( fails
   , getOwnTransactionInput
-  , testnetGroup
   , withSingleMultiSig
   )
 import TrustlessSidechain.CommitteeCandidateValidator
@@ -47,8 +45,8 @@ import TrustlessSidechain.Versioning.Utils
 import Type.Row (type (+))
 
 -- | `tests` aggregate all the Versioning tests in one convenient function
-tests :: WrappedTests
-tests = testnetGroup "Minting and burning versioning tokens" $ do
+tests :: TestnetTest
+tests = group "Minting and burning versioning tokens" $ do
   testInsertAndInvalidateSuccessScenario
   testInsertSameScriptTwiceSuccessScenario
   testInsertUnversionedScriptSuccessScenario
@@ -57,7 +55,7 @@ tests = testnetGroup "Minting and burning versioning tokens" $ do
 -- | We insert a new version of a script, and invalidate the old one.
 testInsertAndInvalidateSuccessScenario :: TestnetTest
 testInsertAndInvalidateSuccessScenario =
-  Mote.Monad.test "Inserting new version, then invalidate the old one"
+  test "Inserting new version, then invalidate the old one"
     $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -133,7 +131,7 @@ testInsertAndInvalidateSuccessScenario =
 -- should work.
 testInsertSameScriptTwiceSuccessScenario :: TestnetTest
 testInsertSameScriptTwiceSuccessScenario =
-  Mote.Monad.test "Insert same script with the same version twice"
+  test "Insert same script with the same version twice"
     $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -187,7 +185,7 @@ testInsertSameScriptTwiceSuccessScenario =
 -- | We insert an script that is not part of the initial versioned scripts.
 testInsertUnversionedScriptSuccessScenario :: TestnetTest
 testInsertUnversionedScriptSuccessScenario =
-  Mote.Monad.test "Insert an unversioned script"
+  test "Insert an unversioned script"
     $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -236,7 +234,7 @@ testInsertUnversionedScriptSuccessScenario =
 -- | invalidation call.
 testRemovingTwiceSameScriptFailScenario :: TestnetTest
 testRemovingTwiceSameScriptFailScenario =
-  Mote.Monad.test "Removing the same script twice should fail"
+  test "Removing the same script twice should fail"
     $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000

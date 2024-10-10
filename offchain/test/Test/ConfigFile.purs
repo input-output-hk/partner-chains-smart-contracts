@@ -8,22 +8,18 @@ import Contract.Prim.ByteArray (hexToByteArray, hexToByteArrayUnsafe)
 import Contract.Transaction
   ( TransactionInput(TransactionInput)
   )
-import Data.Const (Const)
 import Data.UInt as UInt
-import Mote.Monad (Mote, test)
+import Mote.Monad (group, test)
 import Partial.Unsafe (unsafePartial)
-import Test.Unit (Test)
 import Test.Unit.Assert (shouldEqual)
-import Test.Utils (WrappedTests, pureGroup)
+import Test.Utils (PureTest)
 import TrustlessSidechain.ConfigFile (readConfigJson)
 
-type ConfigFileTest = Mote (Const Void) Test Unit
-
-tests :: WrappedTests
-tests = pureGroup "Config tests" do
+tests :: PureTest
+tests = group "Config tests" do
   test1
 
-test1 :: ConfigFileTest
+test1 :: PureTest
 test1 =
   test "Parse example config file"
     $ do

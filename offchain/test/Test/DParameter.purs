@@ -5,10 +5,10 @@ import Contract.Prelude
 import Cardano.Types.BigNum as BigNum
 import Contract.Wallet as Wallet
 import JS.BigInt as BigInt
-import Mote.Monad as Mote.Monad
+import Mote.Monad (group, test)
 import Test.TestnetTest (TestnetTest)
 import Test.TestnetTest as Test.TestnetTest
-import Test.Utils (WrappedTests, fails, getOwnTransactionInput, testnetGroup)
+import Test.Utils (fails, getOwnTransactionInput)
 import TrustlessSidechain.DParameter as DParameter
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Governance.Admin as Governance
@@ -20,14 +20,14 @@ import TrustlessSidechain.Utils.Transaction
 
 -- | `tests` aggregate all the DParameterPolicy tests in one convenient
 -- | function
-tests :: WrappedTests
-tests = testnetGroup "Minting, and burning a DParameter Token" $
+tests :: TestnetTest
+tests = group "Minting, and burning a DParameter Token" $
   do
     testScenario
 
 testScenario :: TestnetTest
 testScenario =
-  Mote.Monad.test "Minting and updating a DParameter Token"
+  test "Minting and updating a DParameter Token"
     $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 1_000_000
         , BigNum.fromInt 5_000_000
