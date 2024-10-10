@@ -7,12 +7,11 @@ import Contract.Prelude
 import Cardano.Types.BigNum as BigNum
 import Contract.Wallet as Wallet
 import JS.BigInt as BigInt
-import Mote.Monad as Mote.Monad
+import Mote.Monad (group, test)
 import Test.InitSidechain.Utils (expectedInitTokens, failMsg, unorderedEq)
 import Test.TestnetTest (TestnetTest)
 import Test.TestnetTest as Test.TestnetTest
 import Test.Unit.Assert (assert)
-import Test.Utils (WrappedTests, testnetGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.Effects.Log (logInfo') as Effect
 import TrustlessSidechain.Effects.Run (withUnliftApp)
@@ -26,8 +25,8 @@ import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Versioning as Versioning
 
 -- | `tests` aggregates all the tests together in one convenient function
-tests :: WrappedTests
-tests = testnetGroup "Minting the init tokens" $ do
+tests :: TestnetTest
+tests = group "Minting the init tokens" $ do
   -- InitTokensMint endpoint
   initTokensMintIdempotent
 
@@ -38,7 +37,7 @@ tests = testnetGroup "Minting the init tokens" $ do
 -- | 3. The minted tokens should match the expected values after both calls.
 initTokensMintIdempotent :: TestnetTest
 initTokensMintIdempotent =
-  Mote.Monad.test "`initTokensMint` gives expected results when called twice"
+  test "`initTokensMint` gives expected results when called twice"
     $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000

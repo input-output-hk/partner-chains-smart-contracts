@@ -15,23 +15,18 @@ import Cardano.Plutus.Types.PubKeyHash (PubKeyHash(..))
 import Cardano.Types.Address (fromBech32, toBech32) as Address
 import Cardano.Types.NetworkId (NetworkId(TestnetId))
 import Contract.CborBytes (hexToCborBytesUnsafe)
-import Data.Const (Const)
-import Mote.Monad (Mote)
-import Mote.Monad as Mote.Monad
+import Mote.Monad (group, test)
 import Partial.Unsafe (unsafePartial)
-import Test.Unit (Test)
 import Test.Unit.Assert (shouldEqual)
-import Test.Utils (WrappedTests, pureGroup)
+import Test.Utils (PureTest)
 
-type TestCase = Mote (Const Void) Test Unit
-
-tests :: WrappedTests
-tests = pureGroup "PaymentPubKeyHash address tests" do
+tests :: PureTest
+tests = group "PaymentPubKeyHash address tests" do
   test1
 
-test1 :: TestCase
+test1 :: PureTest
 test1 =
-  Mote.Monad.test
+  test
     "Pub key hash address <-> binary roundtrip"
     $
       let

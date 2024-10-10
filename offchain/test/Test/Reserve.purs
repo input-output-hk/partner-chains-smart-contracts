@@ -27,14 +27,13 @@ import Data.Array as Array
 import Data.Map as Map
 import Effect.Exception (error)
 import JS.BigInt as BigInt
-import Mote.Monad as Mote.Monad
+import Mote.Monad (group, test)
 import Partial.Unsafe (unsafePartial)
 import Run (EFFECT, Run)
 import Run.Except (EXCEPT)
 import Test.AlwaysPassingScripts (alwaysPassingPolicy)
 import Test.TestnetTest (TestnetTest)
 import Test.TestnetTest as Test.TestnetTest
-import Test.Utils (WrappedTests, testnetGroup)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
@@ -86,8 +85,8 @@ immutableAdaSettings = ImmutableReserveSettings
   }
 
 -- | `tests` aggregates all UpdateCommitteeHash the tests.
-tests :: WrappedTests
-tests = testnetGroup "Reserve" $ do
+tests :: TestnetTest
+tests = group "Reserve" do
   testScenario3
   testScenario4
   testScenario5
@@ -182,7 +181,7 @@ initialDistribution =
 
 testScenario3 :: TestnetTest
 testScenario3 =
-  Mote.Monad.test
+  test
     "Deposit more non-ADA to a reserve"
     $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
     $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) do
@@ -232,7 +231,7 @@ testScenario3 =
 
 testScenario4 :: TestnetTest
 testScenario4 =
-  Mote.Monad.test
+  test
     "Update reserve utxo mutable settings"
     $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
     $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) do
@@ -288,7 +287,7 @@ testScenario4 =
 
 testScenario5 :: TestnetTest
 testScenario5 =
-  Mote.Monad.test
+  test
     "Transfer to illiquid circulation supply with non-ADA as reserve token"
     $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
     $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) do
@@ -360,7 +359,7 @@ testScenario5 =
 
 testScenario8 :: TestnetTest
 testScenario8 =
-  Mote.Monad.test
+  test
     "Transfer to illiquid circulation supply with ADA as reserve token"
     $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
     $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) do
@@ -425,7 +424,7 @@ testScenario8 =
 
 testScenario6 :: TestnetTest
 testScenario6 =
-  Mote.Monad.test
+  test
     "Handover with non-ADA as reserve token"
     $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
     $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) do
@@ -478,7 +477,7 @@ testScenario6 =
 
 testScenario7 :: TestnetTest
 testScenario7 =
-  Mote.Monad.test
+  test
     "Handover with ADA as reserve token"
     $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
     $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) do
