@@ -2,16 +2,11 @@ module Test.Utils
   ( toTxIn
   , getUniqueUtxoAt
   , paymentPubKeyHashToByteArray
-  -- , assertMaxFee
   , getOwnTransactionInput
   , fails
   , unsafeBigIntFromString
-  , interpretConstVoidTest
-  , interpretWrappedTest
-  , pureGroup
-  , testnetGroup
-  , WithTestRunner(..)
-  , WrappedTests
+  , interpretPureTest
+  , PureTest
   , assertHasOutputWithAsset
   , assertIHaveOutputWithAsset
   , dummySidechainParams
@@ -63,7 +58,6 @@ import Partial.Unsafe as Unsafe
 import Run (Run)
 import Run.Except (EXCEPT, throw)
 import Run.Reader (local)
-import Test.TestnetTest (TestnetConfigTest, interpretTestnetTest)
 import Test.Unit (Test, TestSuite)
 import Test.Unit as Test.Unit
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
@@ -161,11 +155,11 @@ unsafeBigIntFromString :: String -> BigInt
 unsafeBigIntFromString str = Unsafe.unsafePartial Maybe.fromJust
   (BigInt.fromString str)
 
--- | `interpretConstVoidTest` interprets a standard collection of `Mote (Const Void) Test Unit`
+-- | `interpretPureTest` interprets a standard collection of `PureTest`
 -- | and converts this to a `TestSuite`. Following this function with `Test.Unit.Main.runTest`
 -- | will run the tests.
-interpretConstVoidTest :: Mote (Const Void) Test Unit -> TestSuite
-interpretConstVoidTest = go <<< Mote.Monad.plan
+interpretPureTest :: PureTest -> TestSuite
+interpretPureTest = go <<< Mote.Monad.plan
   where
   go = Mote.Plan.foldPlan
     (\{ label, value } -> Test.Unit.test label value)
@@ -173,42 +167,7 @@ interpretConstVoidTest = go <<< Mote.Monad.plan
     (\{ label, value } -> Test.Unit.suite label (go value))
     sequence_
 
--- | Test wrapper, to distinguish between different test interpreters
-data WithTestRunner
-  = WithTestnetRunner (Mote (Const Void) TestnetConfigTest Unit)
-  | PureRunner (Mote (Const Void) Test Unit)
-
--- | A type synonym for wrapped tests
-type WrappedTests = Mote (Const Void) WithTestRunner Unit
-
--- | Interpreting wrapped tests with their respective interpreters
-interpretWrappedTest :: WrappedTests -> TestSuite
-interpretWrappedTest = go <<< Mote.Monad.plan
-  where
-  go =
-    Mote.Plan.foldPlan
-      ( \{ label, value } -> Test.Unit.suite label $
-          case value of
-            WithTestnetRunner testCase -> interpretTestnetTest testCase
-            PureRunner testCase -> interpretConstVoidTest testCase
-
-      )
-      (\label -> Test.Unit.testSkip label (pure unit))
-      (\{ label, value } -> Test.Unit.suite label (go value))
-      sequence_
-
--- | A test group function to conveniently wrap multiple Mote tests using `WithTestRunner`
--- | Tests in this group will be executed in Cardano Testnet
-testnetGroup ::
-  String -> Mote (Const Void) TestnetConfigTest Unit -> WrappedTests
-testnetGroup label tests =
-  Mote.Monad.test label $ WithTestnetRunner tests
-
--- | A test group function to conveniently wrap multiple Mote tests using `WithTestRunner`
--- | Tests in this group will be executed purely
-pureGroup :: String -> Mote (Const Void) Test Unit -> WrappedTests
-pureGroup label tests =
-  Mote.Monad.test label $ PureRunner tests
+type PureTest = Mote (Const Void) Test Unit
 
 -- | `assertIHaveOutputWithAsset` asserts that of all `getWalletUtxos`, there
 -- | exists a UTxO with at least one of the given asset.

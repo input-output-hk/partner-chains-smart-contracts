@@ -6,10 +6,10 @@ import Cardano.Types.BigNum as BigNum
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Wallet as Wallet
 import JS.BigInt as BigInt
-import Mote.Monad as Mote.Monad
+import Mote.Monad (group, test)
 import Test.TestnetTest (TestnetTest)
 import Test.TestnetTest as Test.TestnetTest
-import Test.Utils (WrappedTests, fails, getOwnTransactionInput, testnetGroup)
+import Test.Utils (fails, getOwnTransactionInput)
 import TrustlessSidechain.Effects.Run (withUnliftApp)
 import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
@@ -22,14 +22,14 @@ import TrustlessSidechain.Utils.Transaction
 
 -- | `tests` aggregate all the PermissionedCandidatesPolicy tests in one convenient
 -- | function
-tests :: WrappedTests
-tests = testnetGroup "Minting, and burning a PermissionedCandidates Token" $
+tests :: TestnetTest
+tests = group "Minting, and burning a PermissionedCandidates Token" $
   do
     testScenario
 
 testScenario :: TestnetTest
 testScenario =
-  Mote.Monad.test "Minting, updating and removing a PermissionedCandidates Token"
+  test "Minting, updating and removing a PermissionedCandidates Token"
     $ Test.TestnetTest.mkTestnetConfigTest
         [ BigNum.fromInt 1_000_000
         , BigNum.fromInt 5_000_000
