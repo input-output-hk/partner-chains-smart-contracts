@@ -269,7 +269,7 @@ PlutusTx.makeIsDataIndexed
 --
 --   ERROR-VERSION-POLICY-09: Transaction should be signed by the governance.
 --
---   ERROR-VERSION-POLICY-10: Invalid script purpose.
+--   ERROR-VERSION-POLICY-10: Script purpose is not Minting.
 mkVersionOraclePolicy ::
   SidechainParams ->
   InitTokenAssetClass ->

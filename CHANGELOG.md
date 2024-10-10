@@ -7,6 +7,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 ## Changed
   * Nicer error messages from the CLI in some cases
+  * Updated readme
 
 ## Removed
   * Removed `init` command
@@ -23,6 +24,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 ## Fixed
   * CLI now returns non-zero exit code on failure
   * `InitToken` minting policy with `BurnInitToken` redeemer no longer allows minting of tokens
+  * Fixed some help text
 
 # v6.1.0
 
