@@ -8,7 +8,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 ## Changed
   * Nicer error messages from the CLI in some cases
   * Updated readme
-  * Updated cardano-transaction-lib to v9.3.1
+  * Updated cardano-transaction-lib to v9.3.0
 
 ## Removed
   * Removed `init` command
