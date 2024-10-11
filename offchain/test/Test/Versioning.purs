@@ -1,19 +1,19 @@
-module Test.Versioning (tests) where
+module Test.Versioning (suite) where
 
 import Contract.Prelude
 
 import Cardano.Types.BigNum as BigNum
-import Contract.Wallet as Wallet
+import Contract.Test.Testnet (withWallets)
+import Contract.Wallet (withKeyWallet)
 import Data.List as List
 import JS.BigInt as BigInt
 import Mote.Monad (group, test)
 import Run (AFF, EFFECT, Run)
 import Run.Except (EXCEPT)
-import Test.TestnetTest (TestnetTest)
-import Test.TestnetTest as Test.TestnetTest
 import Test.Unit.Assert (assert)
 import Test.Utils
-  ( fails
+  ( TestnetTest
+  , fails
   , getOwnTransactionInput
   , withSingleMultiSig
   )
@@ -23,8 +23,8 @@ import TrustlessSidechain.CommitteeCandidateValidator
 import TrustlessSidechain.DParameter.Utils
   ( getDParameterMintingPolicyAndCurrencySymbol
   )
-import TrustlessSidechain.Effects.Env (Env, READER)
-import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Env (Env, READER, emptyEnv)
+import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
@@ -44,9 +44,8 @@ import TrustlessSidechain.Versioning.Utils
   ) as Versioning
 import Type.Row (type (+))
 
--- | `tests` aggregate all the Versioning tests in one convenient function
-tests :: TestnetTest
-tests = group "Minting and burning versioning tokens" $ do
+suite :: TestnetTest
+suite = group "Minting and burning versioning tokens" $ do
   testInsertAndInvalidateSuccessScenario
   testInsertSameScriptTwiceSuccessScenario
   testInsertUnversionedScriptSuccessScenario
@@ -55,8 +54,9 @@ tests = group "Minting and burning versioning tokens" $ do
 -- | We insert a new version of a script, and invalidate the old one.
 testInsertAndInvalidateSuccessScenario :: TestnetTest
 testInsertAndInvalidateSuccessScenario =
-  test "Inserting new version, then invalidate the old one"
-    $ Test.TestnetTest.mkTestnetConfigTest
+  test "Inserting new version, then invalidate the old one" do
+    let
+      initialDistribution =
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -64,7 +64,8 @@ testInsertAndInvalidateSuccessScenario =
         , BigNum.fromInt 40_000_000
         , BigNum.fromInt 40_000_000
         ]
-    $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) $ do
+    withWallets initialDistribution \alice -> do
+      withKeyWallet alice $ unliftApp emptyEnv do
         pkh <- getOwnPaymentPubKeyHash
         withSingleMultiSig (unwrap pkh) $ do
           genesisUtxo <- getOwnTransactionInput
@@ -131,8 +132,9 @@ testInsertAndInvalidateSuccessScenario =
 -- should work.
 testInsertSameScriptTwiceSuccessScenario :: TestnetTest
 testInsertSameScriptTwiceSuccessScenario =
-  test "Insert same script with the same version twice"
-    $ Test.TestnetTest.mkTestnetConfigTest
+  test "Insert same script with the same version twice" do
+    let
+      initialDistribution =
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -140,7 +142,8 @@ testInsertSameScriptTwiceSuccessScenario =
         , BigNum.fromInt 40_000_000
         , BigNum.fromInt 40_000_000
         ]
-    $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) do
+    withWallets initialDistribution \alice -> do
+      withKeyWallet alice $ unliftApp emptyEnv do
         pkh <- getOwnPaymentPubKeyHash
         withSingleMultiSig (unwrap pkh) $ do
           genesisUtxo <- getOwnTransactionInput
@@ -185,8 +188,9 @@ testInsertSameScriptTwiceSuccessScenario =
 -- | We insert an script that is not part of the initial versioned scripts.
 testInsertUnversionedScriptSuccessScenario :: TestnetTest
 testInsertUnversionedScriptSuccessScenario =
-  test "Insert an unversioned script"
-    $ Test.TestnetTest.mkTestnetConfigTest
+  test "Insert an unversioned script" do
+    let
+      initialDistribution =
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -194,7 +198,8 @@ testInsertUnversionedScriptSuccessScenario =
         , BigNum.fromInt 40_000_000
         , BigNum.fromInt 40_000_000
         ]
-    $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) do
+    withWallets initialDistribution \alice -> do
+      withKeyWallet alice $ unliftApp emptyEnv do
         pkh <- getOwnPaymentPubKeyHash
         withSingleMultiSig (unwrap pkh) $ do
           genesisUtxo <- getOwnTransactionInput
@@ -234,8 +239,9 @@ testInsertUnversionedScriptSuccessScenario =
 -- | invalidation call.
 testRemovingTwiceSameScriptFailScenario :: TestnetTest
 testRemovingTwiceSameScriptFailScenario =
-  test "Removing the same script twice should fail"
-    $ Test.TestnetTest.mkTestnetConfigTest
+  test "Removing the same script twice should fail" do
+    let
+      initialDistribution =
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
         , BigNum.fromInt 50_000_000
@@ -243,7 +249,8 @@ testRemovingTwiceSameScriptFailScenario =
         , BigNum.fromInt 40_000_000
         , BigNum.fromInt 40_000_000
         ]
-    $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) do
+    withWallets initialDistribution \alice -> do
+      withKeyWallet alice $ unliftApp emptyEnv do
         pkh <- getOwnPaymentPubKeyHash
         withSingleMultiSig (unwrap pkh) $ do
           genesisUtxo <- getOwnTransactionInput

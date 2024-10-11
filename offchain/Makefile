@@ -42,7 +42,7 @@ build: ${raw-scripts-purs}
 	@spago build --purs-args ${purs-args}
 
 test: ${raw-scripts-purs}
-	@spago test ${spago-args} -m ${ps-test-entrypoint}
+	@spago test --purs-args=${purs-args} -m ${ps-test-entrypoint}
 
 update-scripts: ${raw-scripts-purs}
 

@@ -7,6 +7,7 @@ module Test.Utils
   , unsafeBigIntFromString
   , interpretPureTest
   , PureTest
+  , TestnetTest
   , assertHasOutputWithAsset
   , assertIHaveOutputWithAsset
   , dummySidechainParams
@@ -29,6 +30,7 @@ import Contract.Monad (Contract)
 import Contract.Monad as Monad
 import Contract.PlutusData (PlutusData(..), fromData)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
+import Contract.Test (ContractTest)
 import Contract.Transaction
   ( TransactionHash(TransactionHash)
   , TransactionInput(TransactionInput)
@@ -53,6 +55,7 @@ import JS.BigInt as BigInt
 import Mote.Monad (Mote)
 import Mote.Monad as Mote.Monad
 import Mote.Plan as Mote.Plan
+import Mote.TestPlanM (TestPlanM)
 import Partial.Unsafe (unsafePartial)
 import Partial.Unsafe as Unsafe
 import Run (Run)
@@ -71,6 +74,9 @@ import TrustlessSidechain.Governance.MultiSig
   )
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import Type.Row (type (+))
+
+type TestnetTest = TestPlanM ContractTest Unit
+type PureTest = Mote (Const Void) Test Unit
 
 toTxIn :: String -> Int -> TransactionInput
 toTxIn txId txIdx =
@@ -166,8 +172,6 @@ interpretPureTest = go <<< Mote.Monad.plan
     (\label -> Test.Unit.testSkip label (pure unit))
     (\{ label, value } -> Test.Unit.suite label (go value))
     sequence_
-
-type PureTest = Mote (Const Void) Test Unit
 
 -- | `assertIHaveOutputWithAsset` asserts that of all `getWalletUtxos`, there
 -- | exists a UTxO with at least one of the given asset.
