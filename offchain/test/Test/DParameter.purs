@@ -1,16 +1,16 @@
-module Test.DParameter (tests) where
+module Test.DParameter (suite) where
 
 import Contract.Prelude
 
 import Cardano.Types.BigNum as BigNum
-import Contract.Wallet as Wallet
+import Contract.Test.Testnet (withWallets)
+import Contract.Wallet (withKeyWallet)
 import JS.BigInt as BigInt
 import Mote.Monad (group, test)
-import Test.TestnetTest (TestnetTest)
-import Test.TestnetTest as Test.TestnetTest
-import Test.Utils (fails, getOwnTransactionInput)
+import Test.Utils (TestnetTest, fails, getOwnTransactionInput)
 import TrustlessSidechain.DParameter as DParameter
-import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Env (emptyEnv)
+import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
 import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
@@ -18,23 +18,22 @@ import TrustlessSidechain.Utils.Transaction
   ( balanceSignAndSubmitWithoutSpendingUtxo
   )
 
--- | `tests` aggregate all the DParameterPolicy tests in one convenient
--- | function
-tests :: TestnetTest
-tests = group "Minting, and burning a DParameter Token" $
-  do
-    testScenario
+suite :: TestnetTest
+suite = group "Minting, and burning a DParameter Token" do
+  testScenario
 
 testScenario :: TestnetTest
 testScenario =
-  test "Minting and updating a DParameter Token"
-    $ Test.TestnetTest.mkTestnetConfigTest
+  test "Minting and updating a DParameter Token" do
+    let
+      initialDistribution =
         [ BigNum.fromInt 1_000_000
         , BigNum.fromInt 5_000_000
         , BigNum.fromInt 150_000_000
         , BigNum.fromInt 150_000_000
         ]
-    $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) do
+    withWallets initialDistribution \alice -> do
+      withKeyWallet alice $ unliftApp emptyEnv do
 
         pkh <- getOwnPaymentPubKeyHash
         genesisUtxo <- getOwnTransactionInput

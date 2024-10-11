@@ -1,5 +1,5 @@
 module Test.CommitteeCandidateValidator
-  ( tests
+  ( suite
   , runRegisterWithCandidatePermissionInfo
   , runDeregister
   ) where
@@ -12,8 +12,10 @@ import Contract.Prim.ByteArray
   , byteArrayFromIntArrayUnsafe
   , hexToByteArrayUnsafe
   )
+import Contract.Test.Testnet (withWallets)
 import Contract.Transaction (TransactionHash)
 import Contract.Utxos (utxosAt)
+import Contract.Wallet (withKeyWallet)
 import Contract.Wallet as Wallet
 import Data.Array as Array
 import Data.List.Lazy (replicate)
@@ -25,9 +27,7 @@ import Run (EFFECT, Run)
 import Run (liftEffect) as Run
 import Run.Except (EXCEPT)
 import Run.Except (note) as Run
-import Test.TestnetTest (TestnetTest)
-import Test.TestnetTest as Test.TestnetTest
-import Test.Utils (dummySidechainParams, fails)
+import Test.Utils (TestnetTest, dummySidechainParams, fails)
 import TrustlessSidechain.CommitteeCandidateValidator
   ( DeregisterParams(DeregisterParams)
   , RegisterParams(RegisterParams)
@@ -36,9 +36,9 @@ import TrustlessSidechain.CommitteeCandidateValidator
   , register
   )
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
-import TrustlessSidechain.Effects.Env (Env, READER)
+import TrustlessSidechain.Effects.Env (Env, READER, emptyEnv)
 import TrustlessSidechain.Effects.Log (LOG)
-import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
@@ -50,9 +50,8 @@ mockSpoPubKey :: ByteArray
 mockSpoPubKey = hexToByteArrayUnsafe
   "40802011e4fa2af0ec57dbf341cac38b344fe0867bfc67d38988dd1006d3eb9e"
 
--- | `tests` wraps up all the committee candidate validator tests conveniently
-tests :: TestnetTest
-tests = group "Committe candidate registration/deregistration" $ do
+suite :: TestnetTest
+suite = group "Committe candidate registration/deregistration" $ do
   testScenarioSuccess1
   testScenarioFailure1
 
@@ -69,8 +68,6 @@ runRegister ::
     TransactionHash
 runRegister = runRegisterWithCandidatePermissionInfo
 
--- | `runRegister` runs the register endpoint without any candidate permission
--- | information.
 runRegisterWithFixedKeys ::
   forall r.
   SidechainParams ->
@@ -79,18 +76,7 @@ runRegisterWithFixedKeys ::
         r
     )
     TransactionHash
-runRegisterWithFixedKeys =
-  runRegisterWithCandidatePermissionInfoWithFixedKeys
-
-runRegisterWithCandidatePermissionInfoWithFixedKeys ::
-  forall r.
-  SidechainParams ->
-  Run
-    ( READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT +
-        r
-    )
-    TransactionHash
-runRegisterWithCandidatePermissionInfoWithFixedKeys scParams =
+runRegisterWithFixedKeys scParams =
   do
     ownAddr <- getOwnWalletAddress
     ownUtxos <- liftContract $ utxosAt ownAddr
@@ -161,14 +147,16 @@ runDeregister scParams =
 -- Register multipe times then Deregister
 testScenarioSuccess1 :: TestnetTest
 testScenarioSuccess1 =
-  test "10 registrations followed by 1 deregister"
-    $ Test.TestnetTest.mkTestnetConfigTest
+  test "10 registrations followed by 1 deregister" do
+    let
+      initialDistribution =
         [ BigNum.fromInt 50_000_000
         , BigNum.fromInt 5_000_000
         , BigNum.fromInt 5_000_000
         , BigNum.fromInt 5_000_000
         ]
-    $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) do
+    withWallets initialDistribution \alice -> do
+      withKeyWallet alice $ unliftApp emptyEnv do
         sequence_ $ replicate 10 $ runRegister dummySidechainParams
         runDeregister dummySidechainParams
 
@@ -176,20 +164,20 @@ testScenarioSuccess1 =
 -- also, alice tries to register again with the same set of keys. not allowed & should fail
 testScenarioFailure1 :: TestnetTest
 testScenarioFailure1 =
-  test
-    "Register followed by a deregister from a distinct wallet (should fail)"
-    $ Test.TestnetTest.mkTestnetConfigTest
-        ( [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ] /\
-            [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ]
-        )
-    $ \(alice /\ bob) ->
+  test "Register followed by a deregister from a distinct wallet (should fail)"
+    do
+      let
+        initialDistribution =
+          [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ]
+      withWallets (initialDistribution /\ initialDistribution) \(alice /\ bob) ->
         do
-          withUnliftApp (Wallet.withKeyWallet alice) $ do
-            void $ runRegister dummySidechainParams
+          unliftApp emptyEnv do
+            withUnliftApp (Wallet.withKeyWallet alice) do
+              void $ runRegisterWithFixedKeys dummySidechainParams
 
-            -- alice tries to register again with the same set of keys. not allowed & should fail
-            (void $ runRegisterWithFixedKeys dummySidechainParams) # withUnliftApp
-              fails
-          withUnliftApp (Wallet.withKeyWallet bob) $ runDeregister
-            dummySidechainParams
-          # withUnliftApp fails
+              -- alice tries to register again with the same set of keys. not allowed & should fail
+              (void $ runRegisterWithFixedKeys dummySidechainParams) #
+                withUnliftApp fails
+
+            withUnliftApp (Wallet.withKeyWallet bob) do
+              (void $ runDeregister dummySidechainParams) # withUnliftApp fails

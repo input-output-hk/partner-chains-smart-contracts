@@ -1,5 +1,5 @@
 module Test.IlliquidCirculationSupply
-  ( tests
+  ( suite
   ) where
 
 import Contract.Prelude
@@ -19,11 +19,12 @@ import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Types.Value (valueOf)
 import Contract.PlutusData (toData)
 import Contract.ScriptLookups as Lookups
+import Contract.Test.Testnet (withWallets)
 import Contract.Transaction (TransactionInput, TransactionOutput)
 import Contract.TxConstraints (DatumPresence(DatumInline))
 import Contract.TxConstraints as TxConstraints
 import Contract.Value as Value
-import Contract.Wallet as Wallet
+import Contract.Wallet (withKeyWallet)
 import Control.Monad.Error.Class (throwError)
 import Data.Map as Map
 import Effect.Exception (error)
@@ -32,14 +33,13 @@ import Mote.Monad (group, test)
 import Run (EFFECT, Run)
 import Run.Except (EXCEPT)
 import Test.AlwaysPassingScripts (alwaysPassingPolicy)
-import Test.TestnetTest (TestnetTest)
-import Test.TestnetTest as Test.TestnetTest
+import Test.Utils (TestnetTest)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
-import TrustlessSidechain.Effects.Env (Env, READER)
+import TrustlessSidechain.Effects.Env (Env, READER, emptyEnv)
 import TrustlessSidechain.Effects.Log (LOG)
-import TrustlessSidechain.Effects.Run (withUnliftApp)
+import TrustlessSidechain.Effects.Run (unliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow)
 import TrustlessSidechain.Effects.Wallet (WALLET)
@@ -69,9 +69,8 @@ import TrustlessSidechain.Versioning.Utils (insertVersionLookupsAndConstraints)
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
 
--- | `tests` aggregates all UpdateCommitteeHash the tests.
-tests :: TestnetTest
-tests = group "IlliquidCirculationSupply" $ do
+suite :: TestnetTest
+suite = group "IlliquidCirculationSupply" do
   testScenario
 
 dummyInitialiseSidechain ::
@@ -220,10 +219,9 @@ findICSUtxo
 
 testScenario :: TestnetTest
 testScenario =
-  test
-    "Withdraw from ICS"
-    $ Test.TestnetTest.mkTestnetConfigTest initialDistribution
-    $ \alice -> withUnliftApp (Wallet.withKeyWallet alice) do
+  test "Withdraw from ICS" do
+    withWallets initialDistribution \alice -> do
+      withKeyWallet alice $ unliftApp emptyEnv do
         pkh <- getOwnPaymentPubKeyHash
         Test.Utils.withSingleMultiSig (unwrap pkh) $ do
 
