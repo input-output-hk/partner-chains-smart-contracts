@@ -62,3 +62,6 @@ contractlog.json
 
 # Purescript
 .psc-ide-port
+
+.nixie
+result

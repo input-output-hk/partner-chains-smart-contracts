@@ -1,2 +1,4 @@
 flake.lock linguist-generated=true
 *.golden	-text
+
+nix  linguist-generated=true -diff
