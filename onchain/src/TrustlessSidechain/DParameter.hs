@@ -17,6 +17,7 @@ import TrustlessSidechain.Governance.Admin qualified as Governance
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   SidechainParams,
+  VersionedGenericDatum (..),
  )
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Utils (currencySymbolValueOf)
@@ -88,7 +89,7 @@ dParameterValidator ::
   -- Here raw BuiltinData is passed instead of 'DParameterValidatorDatum'
   -- to allow to spend from this validator even if UTxO contains invalid
   -- datum
-  BuiltinData ->
+  VersionedGenericDatum () ->
   BuiltinData ->
   Unsafe.ScriptContext ->
   Bool
@@ -110,7 +111,7 @@ mkValidatorUntyped sp dat redeemer ctx =
   check
     $ dParameterValidator
       (unsafeFromBuiltinData sp)
-      dat
+      (unsafeFromBuiltinData dat)
       redeemer
       (Unsafe.wrap ctx)
 
