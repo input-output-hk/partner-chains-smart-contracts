@@ -21,6 +21,7 @@ module TrustlessSidechain.Utils.Data
   , productFromData6
   , productFromData6'
   , VersionedGenericDatum(VersionedGenericDatum)
+  , getDatum
   ) where
 
 import Contract.Prelude
@@ -33,6 +34,7 @@ import Contract.PlutusData
   , fromData
   , toData
   )
+import Data.Eq (class Eq, (==))
 
 productToData2 ::
   forall (a :: Type) (b :: Type).
@@ -272,3 +274,9 @@ instance ToData a => ToData (VersionedGenericDatum a) where
 instance FromData a => FromData (VersionedGenericDatum a) where
   fromData = productFromData3
     (\d b v -> VersionedGenericDatum { datum: d, builtinData: b, version: v })
+
+instance Eq a => Eq (VersionedGenericDatum a) where
+  eq a b = getDatum a == getDatum b
+
+getDatum :: forall a. VersionedGenericDatum a -> a
+getDatum (VersionedGenericDatum { datum }) = datum

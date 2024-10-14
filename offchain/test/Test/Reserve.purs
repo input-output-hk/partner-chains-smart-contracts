@@ -64,6 +64,9 @@ import TrustlessSidechain.NativeTokenManagement.Types
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Asset (emptyAssetName)
+import TrustlessSidechain.Utils.Data
+  ( VersionedGenericDatum(VersionedGenericDatum)
+  )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId(IlliquidCirculationSupplyValidator)
@@ -275,10 +278,15 @@ testScenario4 =
             unwrappedDatum =
               snd
                 >>> extractReserveDatum
-                >>> map unwrap
 
-            withUpdatedMutableSettings = _
-              { mutableSettings = updatedMutableSettings }
+            withUpdatedMutableSettings
+              (VersionedGenericDatum { datum, builtinData, version }) =
+              VersionedGenericDatum
+                { datum: wrap $ (unwrap datum)
+                    { mutableSettings = updatedMutableSettings }
+                , builtinData
+                , version
+                }
 
           unless
             ( (withUpdatedMutableSettings <$> unwrappedDatum utxoBefore)
