@@ -9,6 +9,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   * Nicer error messages from the CLI in some cases
   * Updated readme
   * Updated cardano-transaction-lib to v9.3.0
+  * Moved DParameter, Permissioned Candidates, CommitteeCandidateValidator, Reserve and IlliquidCirculationSupply to the Generic Validators implementation.
 
 ## Removed
   * Removed `init` command
