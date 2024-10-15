@@ -63,7 +63,7 @@ delete-bundle-entrypoint:
 
 esbuild-bundle: build create-bundle-entrypoint
 	@mkdir -p dist/
-	BROWSER_RUNTIME=${browser-runtime} node esbuild/bundle.js ./dist/entrypoint.js dist/index.js
+	BROWSER_RUNTIME=${browser-runtime} node esbuild/bundle.js ./dist/entrypoint.js dist/pc-contracts-cli
 	@make delete-bundle-entrypoint
 
 spago2nix:

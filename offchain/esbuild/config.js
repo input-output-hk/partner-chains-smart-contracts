@@ -13,7 +13,7 @@ export const buildOptions = ({ entryPoint, outfile }) => {
       wasmLoader({
         mode: "deferred"
       }),
-      replace( {
+      replace({
         '__semVer': pkg.version,
       }),
     ],
@@ -22,7 +22,12 @@ export const buildOptions = ({ entryPoint, outfile }) => {
     format: "esm",
     treeShaking: true,
     logLevel: "error",
-    minify: true
+    minify: true,
+    banner: !isBrowser
+      ? {
+          js: "#!/usr/bin/env node\n",
+        }
+      : {},
   };
 
   // https://esbuild.github.io/api/#packages

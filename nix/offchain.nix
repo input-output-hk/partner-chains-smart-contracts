@@ -12,8 +12,8 @@ let
     fileset = (fileset.unions [
       ../offchain/package.json
       ../offchain/package-lock.json
-      ../offchain/entry.js
-      ../offchain/esbuild.js
+      ../offchain/esbuild
+      ../offchain/README.md
       ../offchain/src
       ../offchain/test
       ../offchain/config.example.json
@@ -91,38 +91,24 @@ let
     '';
     nativeBuildInputs = [
       pkgs.nodejs-18_x
+      pkgs.spago
+    ];
+    buildInputs = [
+      pkgs.fd
     ];
     buildPhase = ''
-      node ./esbuild.js --loglevel=verbose
+      mkdir -p dist/
+      echo 'import("../output/Main/index.js").then(m => m.main());' > ./dist/entrypoint.js
+      node ./esbuild/bundle.js ./dist/entrypoint.js dist/pc-contracts-cli --loglevel=verbose
     '';
-    installPhase =
-      let
-        cliScript = pkgs.writeScript "pc-contracts-cli" ''
-          #!/usr/bin/env bash
-
-          SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
-          CLI_TMP="$SCRIPT_DIR/.index.mjs"
-
-          cat << 'EOFCLI' > "$CLI_TMP"
-          TEMPSCRIPT
-          EOFCLI
-
-          export NODE_PATH="$SCRIPT_DIR/node_modules"
-
-          node "$CLI_TMP" "$@"
-        '';
-      in
-      ''
-        mkdir -p $out
-        contents=$(cat dist/index.js)
-        cp ${cliScript} $out/pc-contracts-cli
-
-        substituteInPlace $out/pc-contracts-cli \
-          --replace 'TEMPSCRIPT' "$contents"
-
-        npm prune --offline --cache node_modules --omit=dev --ignore-scripts
-        cp -R node_modules $out
-      '';
+    installPhase = ''
+      mkdir -p $out/dist
+      cp dist/pc-contracts-cli $out/dist
+      cp package.json README.md $out/
+      chmod +x $out/dist/pc-contracts-cli
+      npm prune --offline --cache node_modules --omit=dev --ignore-scripts
+      cp -R node_modules $out
+    '';
   };
 in
 {
