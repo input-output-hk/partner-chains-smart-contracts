@@ -6,6 +6,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 # Unreleased
 
 ## Changed
+  * Updated error messages when utxo is not found, or ogmios / kupo connection failed.
   * Nicer error messages from the CLI in some cases
   * Updated readme
 
