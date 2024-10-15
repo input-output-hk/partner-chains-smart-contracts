@@ -235,6 +235,7 @@ withCommonOpts maybeConfig endpointParser = ado
           , walletSpec = Just $ UseKeys
               (PrivatePaymentKeyFile pSkey)
               (PrivateStakeKeyFile <$> stSkey)
+              Nothing
           , backendParams = mkCtlBackendParams { kupoConfig, ogmiosConfig }
           }
       }

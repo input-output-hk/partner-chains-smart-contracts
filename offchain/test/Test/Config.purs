@@ -2,7 +2,7 @@ module Test.Config (config) where
 
 import Contract.Prelude
 
-import Contract.Test.Testnet (Era(Babbage), TestnetConfig)
+import Contract.Test.Testnet (Era(Conway), TestnetConfig)
 import Data.Time.Duration (Seconds(Seconds))
 import Data.UInt as UInt
 
@@ -28,6 +28,6 @@ config =
       { slotLength: Seconds 0.05
       , epochSize: Nothing
       , testnetMagic: 2
-      , era: Babbage
+      , era: Conway
       }
   }

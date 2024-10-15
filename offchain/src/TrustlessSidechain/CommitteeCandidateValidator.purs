@@ -11,6 +11,7 @@ module TrustlessSidechain.CommitteeCandidateValidator
 
 import Contract.Prelude hiding (unit)
 
+import Cardano.Types.BigInt as BigInt
 import Cardano.Types.OutputDatum (outputDatumDatum)
 import Cardano.Types.PlutusData (unit)
 import Cardano.Types.PlutusScript as PlutusScript
@@ -52,6 +53,9 @@ import TrustlessSidechain.Utils.Address
   ( getOwnPaymentPubKeyHash
   , getOwnWalletAddress
   , toAddress
+  )
+import TrustlessSidechain.Utils.Data
+  ( VersionedGenericDatum(VersionedGenericDatum)
   )
 import TrustlessSidechain.Utils.Scripts
   ( mkValidatorWithParams
@@ -121,7 +125,6 @@ newtype BlockProducerRegistration = BlockProducerRegistration
   , sidechainPubKey :: ByteArray -- public key in the sidechain's desired format
   , sidechainSignature :: ByteArray -- Signature of the sidechain candidate
   , inputUtxo :: TransactionInput -- A UTxO that must be spent by the transaction
-  , ownPkh :: PaymentPubKeyHash -- Owner public key hash
   , auraKey :: ByteArray -- sidechain authority discovery key
   , grandpaKey :: ByteArray -- sidechain grandpa key
   }
@@ -142,7 +145,6 @@ instance ToData BlockProducerRegistration where
         , sidechainPubKey
         , sidechainSignature
         , inputUtxo
-        , ownPkh
         , auraKey
         , grandpaKey
         }
@@ -152,14 +154,13 @@ instance ToData BlockProducerRegistration where
       , toData sidechainPubKey
       , toData sidechainSignature
       , toData inputUtxo
-      , toData ownPkh
       , toData auraKey
       , toData grandpaKey
       ]
 
 instance FromData BlockProducerRegistration where
   fromData plutusData = case plutusData of
-    Constr n [ x1, x2, x3, x4, x5, x6, x7 ] -> do
+    Constr n [ x1, x2, x3, x4, x5, x6 ] -> do
       guard (n == BigNum.fromInt 0)
       x1' <- fromData x1
       x2' <- fromData x2
@@ -167,16 +168,14 @@ instance FromData BlockProducerRegistration where
       x4' <- fromData x4
       x5' <- fromData x5
       x6' <- fromData x6
-      x7' <- fromData x7
       pure
         ( BlockProducerRegistration
             { stakeOwnership: x1'
             , sidechainPubKey: x2'
             , sidechainSignature: x3'
             , inputUtxo: x4'
-            , ownPkh: x5'
-            , auraKey: x6'
-            , grandpaKey: x7'
+            , auraKey: x5'
+            , grandpaKey: x6'
             }
         )
     _ -> Nothing
@@ -251,14 +250,19 @@ register
     valUtxos
 
   let
-    datum = BlockProducerRegistration
+    blockProducerDatum = BlockProducerRegistration
       { stakeOwnership
       , sidechainPubKey
       , sidechainSignature: sidechainSig
       , inputUtxo: inputUtxo
-      , ownPkh
       , auraKey
       , grandpaKey
+      }
+
+    datum = toData $ VersionedGenericDatum
+      { datum: ownPkh
+      , builtinData: toData blockProducerDatum
+      , version: BigInt.fromInt 0
       }
 
     matchingKeys (BlockProducerRegistration r1) (BlockProducerRegistration r2) =
@@ -270,7 +274,7 @@ register
         && r1.grandpaKey
         == r2.grandpaKey
 
-  when (any (matchingKeys datum) ownRegistrationDatums) $
+  when (any (matchingKeys blockProducerDatum) ownRegistrationDatums) $
     throw
       ( InvalidCLIParams
           "BlockProducer with given set of keys is already registered"
@@ -349,10 +353,13 @@ findOwnRegistrations ownPkh spoPubKey validatorUtxos = do
       \(input /\ TransactionOutput out) ->
         pure do
           d <- outputDatumDatum =<< out.datum
-          BlockProducerRegistration r <- fromData d
+          VersionedGenericDatum { builtinData, datum: pkh } ::
+            VersionedGenericDatum PaymentPubKeyHash <-
+            fromData d
+          BlockProducerRegistration r <- fromData builtinData
           guard
             ( (getSPOPubKey r.stakeOwnership == spoPubKey) &&
-                (r.ownPkh == ownPkh)
+                (pkh == ownPkh)
             )
           pure (input /\ BlockProducerRegistration r)
 
