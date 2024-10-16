@@ -56,6 +56,7 @@ jobs:
           token: ${{ github.token }}
       - name: Run tests
         run: |
-          nix build .#check.x86_64-linux.pre-commit-check -L --fallback
-          nix build .#check.x86_64-linux.upToDatePlutusScriptCheck -L --fallback
-          nix build .#check.x86_64-linux.partner-chains-smart-contracts -L --fallback
+          nix-build -A check.x86_64-linux.pre-commit-check
+          nix-build -A check.x86_64-linux.upToDatePlutusScriptCheck
+          nix-build  -A check.x86_64-linux.upToDatePlutusScriptCheck
+          nix-build -A check.x86_64-linux.partner-chains-smart-contracts
