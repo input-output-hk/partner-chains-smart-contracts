@@ -14,7 +14,8 @@ rec {
   pc-contracts-release-bundle = pkgs.runCommand "bundled-cli" { buildInputs = [ pkgs.zip ]; } ''
     cp -r ${pc-contracts-cli}/* ./
     mkdir -p $out
-    zip -r $out/release.zip  ./{package.json,node_modules,dist,README.md}
+    zip -r $out/release.zip ./package.json ./node_modules README.md
+    zip -j $out/release.zip ./dist/pc-contracts-cli
   '';
   kupo = pkgs.callPackage ./kupo.nix { };
   ogmios = pkgs.callPackage ./ogmios.nix { };
