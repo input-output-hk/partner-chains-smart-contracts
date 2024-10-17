@@ -5,10 +5,16 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 # Unreleased
 
+# v6.2.0
+
+## Added
+  * Added the following smart contracts: `OnlyMintMintingPolicy`, `AlwaysPassingValidator`, `AlwaysPassingPolicy`
+
 ## Changed
   * Nicer error messages from the CLI in some cases
   * Updated readme
   * Updated cardano-transaction-lib to v9.3.1
+  * Updated the following smart contracts: `InitTokenPolicy`, `VersionOraclePolicy`, `CommitteePlainSchnorrSecp256k1ATMSPolicy`, `ReserveValidator`, `ReserveAuthPolicy`, `IlliquidCirculationSupplyValidator`
 
 ## Removed
   * Removed `init` command
@@ -21,6 +27,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   * Removed `init-candidate-permission-token` and `candidate-permission-token` commands
   * Removed `--use-candidate-permission-token` switch
   * Removed `utils` commands
+  * Removed the following smart contracts: `CandidatePermissionPolicy`, `CheckpointPolicy`, `CheckpointValidator`, `CommitteeHashValidator`, `CommitteeOraclePolicy`, `CommitteePlainEcdsaSecp256k1ATMSPolicy`, `CommitteePlainSchnorrSecp256k1ATMSPolicy`, `DsConfPolicy`, `DsConfValidator`, `DsInsertValidator`, `DsKeyPolicy`, `FUELBurningPolicy`, `FUELMintingPolicy`, `FUELProxyPolicy`, `MerkleRootTokenPolicy`, `MerkleRootTokenValidator`
 
 ## Fixed
   * CLI now returns non-zero exit code on failure
