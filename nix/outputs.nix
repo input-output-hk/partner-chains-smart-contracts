@@ -12,7 +12,7 @@ pkgs.lib.recursiveUpdate onchain {
     default = pc-contracts-cli;
     pc-contracts-cli = {
       type = "app";
-      program = "${self.packages.pc-contracts-cli}/bin/pc-contracts-cli";
+      program = "${self.packages.pc-contracts-cli}/dist/pc-contracts-cli";
     };
   };
   devShells = import ./shells.nix { inherit inputs self pkgs; };
