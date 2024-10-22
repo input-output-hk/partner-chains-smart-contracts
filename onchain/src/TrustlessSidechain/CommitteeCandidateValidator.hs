@@ -14,6 +14,7 @@ import PlutusLedgerApi.Common (SerialisedScript)
 import PlutusLedgerApi.V2 (PubKeyHash, serialiseCompiledCode)
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.Types (VersionedGenericDatum (..))
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 
 {-# INLINEABLE mkCommitteeCandidateValidator #-}
@@ -23,17 +24,15 @@ import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 --   original submitter.
 mkCommitteeCandidateValidator ::
   BuiltinData ->
-  Unsafe.BlockProducerRegistration ->
+  VersionedGenericDatum PubKeyHash ->
   BuiltinData ->
   Unsafe.ScriptContext ->
   Bool
-mkCommitteeCandidateValidator _sidechainParams datum _redeemer ctx =
+mkCommitteeCandidateValidator _sidechainParams (VersionedGenericDatum {datum = pkh}) _redeemer ctx =
   traceIfFalse "ERROR-COMMITTEE-CANDIDATE-VALIDATOR-01" isSigned
   where
     info :: Unsafe.TxInfo
     info = Unsafe.scriptContextTxInfo ctx
-    pkh :: PubKeyHash
-    pkh = Unsafe.decode $ Unsafe.ownPkh datum
     isSigned :: Bool
     isSigned = Unsafe.txSignedBy info pkh
 
@@ -48,7 +47,7 @@ committeeCandidateValidatorUntyped sidechainParams datum red ctx =
   check
     $ mkCommitteeCandidateValidator
       sidechainParams
-      (Unsafe.BlockProducerRegistration datum)
+      (unsafeFromBuiltinData datum)
       red
       (Unsafe.ScriptContext ctx)
 

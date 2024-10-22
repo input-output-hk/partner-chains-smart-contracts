@@ -29,6 +29,7 @@ import TrustlessSidechain.Types (
     UpdatePermissionedCandidates
   ),
   SidechainParams,
+  VersionedGenericDatum (..),
  )
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Utils (currencySymbolValueOf)
@@ -139,7 +140,7 @@ permissionedCandidatesValidator ::
   -- Here raw BuiltinData is passed instead of
   -- 'PermissionedCandidatesValidatorDatum' to allow to spend from this
   -- validator even if UTxO contains invalid datum
-  BuiltinData ->
+  VersionedGenericDatum () ->
   PermissionedCandidatesValidatorRedeemer ->
   Unsafe.ScriptContext ->
   Bool
@@ -186,11 +187,11 @@ serialisableMintingPolicy =
 
 mkValidatorUntyped ::
   BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkValidatorUntyped sp address redeemer ctx =
+mkValidatorUntyped sp datum redeemer ctx =
   check
     $ permissionedCandidatesValidator
       (unsafeFromBuiltinData sp)
-      address
+      (unsafeFromBuiltinData datum)
       (unsafeFromBuiltinData redeemer)
       (Unsafe.wrap ctx)
 
