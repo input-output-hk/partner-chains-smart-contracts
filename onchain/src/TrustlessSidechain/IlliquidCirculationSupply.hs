@@ -23,6 +23,7 @@ import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types (
   IlliquidCirculationSupplyRedeemer (..),
+  VersionedGenericDatum,
  )
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Utils (oneTokenMinted)
@@ -109,7 +110,7 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
         ( getDatum
             . Unsafe.decode
             <$> (Unsafe.getOutputDatum . Unsafe.txOutDatum) txOut
-            >>= PlutusTx.fromBuiltinData @()
+            >>= PlutusTx.fromBuiltinData @(VersionedGenericDatum ())
         )
 
 mkIlliquidCirculationSupplyValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()

@@ -24,6 +24,7 @@ module TrustlessSidechain.Types (
   ReserveDatum (..),
   ReserveRedeemer (..),
   IlliquidCirculationSupplyRedeemer (..),
+  VersionedGenericDatum (..),
 ) where
 
 import PlutusLedgerApi.V1.Crypto (PubKeyHash)
@@ -568,3 +569,26 @@ instance UnsafeFromData IlliquidCirculationSupplyRedeemer where
           0 -> DepositMoreToSupply
           1 -> WithdrawFromSupply
           _ -> error ()
+
+data VersionedGenericDatum a = VersionedGenericDatum
+  { datum :: a
+  , genericData :: BuiltinData
+  , version :: Integer
+  }
+  deriving stock
+    ( TSPrelude.Eq
+    , TSPrelude.Show
+    )
+
+instance (ToData a) => ToData (VersionedGenericDatum a) where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (VersionedGenericDatum d g v) =
+    productToData3 d g v
+
+instance (FromData a) => FromData (VersionedGenericDatum a) where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = productFromData3 VersionedGenericDatum
+
+instance (UnsafeFromData a) => UnsafeFromData (VersionedGenericDatum a) where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = productUnsafeFromData3 VersionedGenericDatum

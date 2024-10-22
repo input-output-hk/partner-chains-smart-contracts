@@ -44,7 +44,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   * Updated readme
   * Updated cardano-transaction-lib to v9.3.1
   * Updated the following smart contracts: `InitTokenPolicy`, `VersionOraclePolicy`, `CommitteePlainSchnorrSecp256k1ATMSPolicy`, `ReserveValidator`, `ReserveAuthPolicy`, `IlliquidCirculationSupplyValidator`
-
+  * Moved DParameter, Permissioned Candidates, CommitteeCandidateValidator, Reserve and IlliquidCirculationSupply to the Generic Validators implementation.
 ## Removed
   * Removed `init` command
   * the PoC test modules were removed

@@ -20,10 +20,13 @@ module TrustlessSidechain.Utils.Data
   , productFromData5'
   , productFromData6
   , productFromData6'
+  , VersionedGenericDatum(VersionedGenericDatum)
+  , getDatum
   ) where
 
 import Contract.Prelude
 
+import Cardano.Types.BigInt (BigInt)
 import Contract.PlutusData
   ( class FromData
   , class ToData
@@ -31,6 +34,7 @@ import Contract.PlutusData
   , fromData
   , toData
   )
+import Data.Eq (class Eq, (==))
 
 productToData2 ::
   forall (a :: Type) (b :: Type).
@@ -256,3 +260,23 @@ productFromData6' f = case _ of
     x6' <- fromData x6
     f x1' x2' x3' x4' x5' x6'
   _ -> Nothing
+
+data VersionedGenericDatum a = VersionedGenericDatum
+  { datum :: a
+  , builtinData :: PlutusData
+  , version :: BigInt
+  }
+
+instance ToData a => ToData (VersionedGenericDatum a) where
+  toData (VersionedGenericDatum { datum, builtinData, version }) =
+    productToData3 datum builtinData version
+
+instance FromData a => FromData (VersionedGenericDatum a) where
+  fromData = productFromData3
+    (\d b v -> VersionedGenericDatum { datum: d, builtinData: b, version: v })
+
+instance Eq a => Eq (VersionedGenericDatum a) where
+  eq a b = getDatum a == getDatum b
+
+getDatum :: forall a. VersionedGenericDatum a -> a
+getDatum (VersionedGenericDatum { datum }) = datum
