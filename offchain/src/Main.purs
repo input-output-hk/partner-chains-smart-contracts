@@ -5,7 +5,9 @@ import Contract.Prelude
 import Contract.Monad (launchAff_)
 import Data.Array as Array
 import JS.BigInt as BigInt
-import Node.Process (exit)
+import Node.Encoding (Encoding(UTF8))
+import Node.Process (exit, stderr)
+import Node.Stream (writeString)
 import Options.Applicative (execParser)
 import Run (EFFECT, Run)
 import TrustlessSidechain.CLIVersion (versionString)
@@ -140,7 +142,7 @@ main = do
     CLIVersion -> log versionString
 
 failWith :: String -> Effect Unit
-failWith errStr = log errStr *> exit 1
+failWith errStr = writeString stderr UTF8 errStr (const $ pure unit) *> exit 1
 
 -- | Reads configuration file from `./config.json`, then
 -- | parses CLI arguments. CLI arguments override the config files.

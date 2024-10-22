@@ -31,6 +31,7 @@
   , "node-fs-aff"
   , "node-path"
   , "node-process"
+  , "node-streams"
   , "nonempty"
   , "optparse"
   , "ordered-collections"
