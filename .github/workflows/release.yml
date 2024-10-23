@@ -4,10 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       partner_chains_smart_contracts_sha:
-        description: "partner-chains-smart-contracts commit SHA or branch to build from"
+        description: "Commit SHA or branch to build from"
       partner-chains-smart-contracts-tag:
-        description: "partner-chains-smart-contract release tag to append to artifact name"
-        required: true
+        description: "Specify a new tag or leave empty for default (default: package.json version)"
+        required: false
       create_draft_release_page:
         type: boolean
         description: "Create a draft release page"
@@ -34,10 +34,10 @@ jobs:
   partner-chains-smart-contracts-process:
     runs-on: ubuntu-latest
     needs: partner-chains-smart-contracts
+    outputs:
+      pc_contracts_cli: ${{ steps.set_filename_vars.outputs.pc_contracts_cli }}
+      version: ${{ steps.set_version.outputs.version }}
     steps:
-      - name: Set filename variables
-        run: |
-          echo "PC_CONTRACTS_CLI=pc-contracts-cli-${{ github.event.inputs.partner-chains-smart-contracts-tag }}" >> $GITHUB_ENV
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
@@ -50,35 +50,44 @@ jobs:
         run: |
           mkdir -p ./non-arch/unzipped
           unzip ./non-arch/release.zip -d ./non-arch/unzipped
-          ls -al
+      - name: Set version
+        id: set_version
+        run: |
+          if [ -n "${{ github.event.inputs.partner-chains-smart-contracts-tag }}" ]; then
+            echo "version=${{ github.event.inputs.partner-chains-smart-contracts-tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=$(jq -r '.version' ./non-arch/unzipped/package.json)" >> $GITHUB_OUTPUT
+          fi
+      - name: Set filename variables
+        id: set_filename_vars
+        run: |
+          PC_CONTRACTS_CLI="pc-contracts-cli-v${{ steps.set_version.outputs.version }}"
+          echo "pc_contracts_cli=${PC_CONTRACTS_CLI}" >> $GITHUB_OUTPUT
       - name: Zip the artifact
         run: |
           cd ./non-arch/unzipped
-          zip -r "../../${{ env.PC_CONTRACTS_CLI }}.zip" ./*
+          zip -r "../../${{ steps.set_filename_vars.outputs.pc_contracts_cli }}.zip" ./*
           cd ../../
       - name: Upload zipped Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ env.PC_CONTRACTS_CLI }}.zip"
-          path: "${{ env.PC_CONTRACTS_CLI }}.zip"
+          name: "${{ steps.set_filename_vars.outputs.pc_contracts_cli }}.zip"
+          path: "${{ steps.set_filename_vars.outputs.pc_contracts_cli }}.zip"
 
   release:
     runs-on: ubuntu-latest
     needs: partner-chains-smart-contracts-process
     if: ${{ github.event.inputs.create_draft_release_page == 'true' }}
     steps:
-      - name: Set filename variables
-        run: |
-          echo "PC_CONTRACTS_CLI=pc-contracts-cli-${{ github.event.inputs.partner-chains-smart-contracts-tag }}" >> $GITHUB_ENV
       - name: Download zipped artifact
         uses: actions/download-artifact@v4
         with:
-          name: "${{ env.PC_CONTRACTS_CLI }}.zip"
+          name: "${{ needs.partner-chains-smart-contracts-process.outputs.pc_contracts_cli }}.zip"
           path: ./
       - name: Check if release already exists
         id: check_release
         run: |
-          tag="${{ github.event.inputs.partner-chains-smart-contracts-tag }}"
+          tag="v${{ needs.partner-chains-smart-contracts-process.outputs.version }}"
           release_response=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                             "https://api.github.com/repos/${{ github.repository }}/releases/tags/$tag")
           if echo "$release_response" | grep -q '"message": "Not Found"'; then
@@ -94,7 +103,7 @@ jobs:
         id: create_release
         if: ${{ steps.check_release.outputs.release_exists == 'false' }}
         run: |
-          tag="${{ github.event.inputs.partner-chains-smart-contracts-tag }}"
+          tag="v${{ needs.partner-chains-smart-contracts-process.outputs.version }}"
           release_response=$(curl -s -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                               -d '{"tag_name": "'$tag'", "name": "'$tag'", "body": "Draft release for '$tag'", "draft": true}' \
                               "https://api.github.com/repos/${{ github.repository }}/releases")
@@ -107,7 +116,7 @@ jobs:
           if [ -z "$release_id" ]; then
             release_id="${{ steps.check_release.outputs.release_id }}"
           fi
-          artifact="${{ env.PC_CONTRACTS_CLI }}.zip"
+          artifact="${{ needs.partner-chains-smart-contracts-process.outputs.pc_contracts_cli }}.zip"
           curl -s -X POST \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/octet-stream" \
@@ -122,22 +131,19 @@ jobs:
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
     steps:
-      - name: Set filename variables
-        run: |
-          echo "PC_CONTRACTS_CLI=pc-contracts-cli-${{ github.event.inputs.partner-chains-smart-contracts-tag }}" >> $GITHUB_ENV
       - name: Download zipped Artifact
         uses: actions/download-artifact@v4
         with:
-          name: "${{ env.PC_CONTRACTS_CLI }}.zip"
+          name: "${{ needs.partner-chains-smart-contracts-process.outputs.pc_contracts_cli }}.zip"
           path: ./
       - name: Extract Artifact
         run: |
-          unzip "${{ env.PC_CONTRACTS_CLI }}.zip" -d extracted
+          unzip "${{ needs.partner-chains-smart-contracts-process.outputs.pc_contracts_cli }}.zip" -d extracted
           chmod -R 755 extracted
       - name: Update package.json version
         run: |
           cd extracted
-          npm version "${{ github.event.inputs.partner-chains-smart-contracts-tag }}" --no-git-tag-version
+          npm version "${{ needs.partner-chains-smart-contracts-process.outputs.version }}" --no-git-tag-version
           cd ..
       - name: Set up Node.js
         uses: actions/setup-node@v3
