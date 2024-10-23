@@ -40,8 +40,10 @@ serve_port := "4008"
 
 # The `all` recipe serves as the default target.
 # It builds both the Haskell and PureScript projects.
-all: nix-build-library nix-build-executables nix-build-test build
+all: build
 
+# Builds nix versions of Project
+nix-builds: nix-build-library nix-build-executables nix-build-test
 # ------------------------------------------------------------------------------
 # Build Targets
 # ------------------------------------------------------------------------------
