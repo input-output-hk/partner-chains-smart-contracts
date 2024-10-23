@@ -27,7 +27,6 @@ in
       pkgs.nodePackages.eslint
     ];
     inputsFrom = [
-      #self.devShells.default
       inputs.devx.devShells.ghc96-iog
     ];
     packages = with pkgs; [
@@ -46,6 +45,7 @@ in
       git
       jq
       curl
+      just
 
       # Lint / Format
       fd
