@@ -5,6 +5,8 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 # Unreleased
 
+# v6.2.1
+
 ## Fixed
   * CLI now prints errors on stderr instead of stdout
 
