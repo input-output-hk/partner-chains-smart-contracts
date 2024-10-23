@@ -39,14 +39,17 @@ serve_port := "4008"
 # Default Target
 # ------------------------------------------------------------------------------
 
-# The `all` recipe serves as the default target.
 # Build both the Haskell and PureScript projects.
 [group('general')]
 all: build
 
 # Builds nix versions of Project
 [group('onchain')]
+all: build
+
+# Builds nix versions of Project
 nix-builds: nix-build-library nix-build-executables nix-build-test
+
 # ------------------------------------------------------------------------------
 # Build Targets
 # ------------------------------------------------------------------------------
