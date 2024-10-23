@@ -47,11 +47,11 @@ main =
           [ scriptFitsInto
               "mkCommitteeCandidateValidator (serialized)"
               CCV.serialisableValidator
-              315
+              352
           , scriptFitsInto
               "mkDParameterValidatorCode (DParameter) serialized"
               DParameter.serialisableValidator
-              1_531
+              581
           , scriptFitsInto
               "mkDParameterPolicyCode (DParameter) serialized"
               DParameter.serialisableMintingPolicy
@@ -59,7 +59,7 @@ main =
           , scriptFitsInto
               "mkPermissionedCandidatesValidatorCode (PermissionedCandidates) serialized"
               PermissionedCandidates.serialisableValidator
-              1_587
+              648
           , scriptFitsInto
               "mkVersionOraclePolicyCode (Versioning) serialized"
               Versioning.serialisableVersionOraclePolicy
@@ -71,15 +71,15 @@ main =
           , scriptFitsInto
               "mkReserveValidator (Reserve) serialized"
               Reserve.serialisableReserveValidator
-              5_936
+              5_946
           , scriptFitsInto
               "mkReserveAuthPolicy (Reserve) serialized"
               Reserve.serialisableReserveAuthPolicy
-              2_640
+              2_771
           , scriptFitsInto
               "mkIlliquidCirculationSupplyValidator (IlliquidCirculationSupply) serialized"
               IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyValidator
-              3_254
+              3_352
           ]
       , testGroup
           "Data rep"
