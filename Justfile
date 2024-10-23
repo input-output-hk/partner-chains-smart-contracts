@@ -244,10 +244,6 @@ check-format-whitespace: requires_nix_shell
   @echo "Checking for whitespace errors in staged changes..."
   git diff --check --cached HEAD --
 
-# ------------------------------------------------------------------------------
-# Other Targets
-# ------------------------------------------------------------------------------
-
 # Check formatting for PureScript, JavaScript, and Dhall files
 check-format-offchain: requires_nix_shell npm-install
   @echo "Checking formatting for PureScript, JavaScript, and Dhall files..."
@@ -259,3 +255,11 @@ format-offchain: requires_nix_shell npm-install
   @echo "Formatting PureScript, JavaScript, and Dhall files..."
   purs-tidy format-in-place {{ps_sources}}
   eslint -c {{offchain_dir}}/eslint.config.mjs --fix {{js_sources}} && dhall lint {{dhall_sources}}
+
+# ------------------------------------------------------------------------------
+# Other Targets
+# ------------------------------------------------------------------------------
+
+# Publish nodejs package to npmjs.com
+publish: build
+ cd {{offchain_dir}} && npm publish
