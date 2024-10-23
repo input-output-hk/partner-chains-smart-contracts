@@ -310,7 +310,6 @@ format-offchain: requires_nix_shell install
 # Publish nodejs package to npmjs.com
 [confirm]
 [group('offchain')]
-publish: build
  cd {{offchain_dir}} && npm publish
 
 # ------------------------------------------------------------------------------
