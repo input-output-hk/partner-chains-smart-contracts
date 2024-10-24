@@ -12,6 +12,7 @@ import Contract.Prelude
   , (<>)
   , (>=)
   )
+import Control.Alt ((<|>))
 import Data.Either (Either(Left, Right))
 import Data.Int (fromString)
 import Data.List.NonEmpty (toUnfoldable)
@@ -53,7 +54,23 @@ parseFromError p mCtx e =
       Right err -> err
 
 parseDefaultError :: String -> Parser String OffchainError
-parseDefaultError = parseMissingCtlRuntime
+parseDefaultError s = parseMissingCtlRuntime s
+  <|> parseReferenceInputNotFound s
+  <|> pareseAggregateError s
+
+parseReferenceInputNotFound :: String -> Parser String OffchainError
+parseReferenceInputNotFound ctx = do
+  _ <- token $ string "It maybe have been consumed, or was never created."
+  pure $ InterpretedContractError
+    $ ctx
+    <> "The chain follower might also not be fully synced."
+
+pareseAggregateError :: String -> Parser String OffchainError
+pareseAggregateError ctx = do
+  _ <- token $ string "AggregateError"
+  pure $ InterpretedContractError
+    $ ctx
+    <> "Are Kupo and Ogmios running?"
 
 {- | Parses a `connection refused` error and returns a helpful error message, with a prompt to fix
 the most likely cause of the issue.-}

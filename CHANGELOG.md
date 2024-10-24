@@ -19,6 +19,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   * Added the following smart contracts: `OnlyMintMintingPolicy`, `AlwaysPassingValidator`, `AlwaysPassingPolicy`
 
 ## Changed
+  * Updated error messages when utxo is not found, or ogmios / kupo connection failed.
   * Nicer error messages from the CLI in some cases
   * Updated readme
   * Updated cardano-transaction-lib to v9.3.1
