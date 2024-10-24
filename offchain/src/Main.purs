@@ -142,7 +142,8 @@ main = do
     CLIVersion -> log versionString
 
 failWith :: String -> Effect Unit
-failWith errStr = writeString stderr UTF8 errStr (const $ pure unit) *> exit 1
+failWith errStr = writeString stderr UTF8 (errStr <> "\n") (const $ pure unit)
+  *> exit 1
 
 -- | Reads configuration file from `./config.json`, then
 -- | parses CLI arguments. CLI arguments override the config files.

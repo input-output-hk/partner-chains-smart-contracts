@@ -5,6 +5,9 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 # Unreleased
 
+## Fixed
+  * Add missing newline at end of CLI error output
+
 # v6.2.1
 
 ## Fixed
