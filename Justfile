@@ -39,15 +39,13 @@ serve_port := "4008"
 # Default Target
 # ------------------------------------------------------------------------------
 
+# The `all` recipe serves as the default target.
 # Build both the Haskell and PureScript projects.
 [group('general')]
 all: build
 
 # Builds nix versions of Project
 [group('onchain')]
-all: build
-
-# Builds nix versions of Project
 nix-builds: nix-build-library nix-build-executables nix-build-test
 
 # ------------------------------------------------------------------------------
@@ -310,6 +308,7 @@ format-offchain: requires_nix_shell install
 # Publish nodejs package to npmjs.com
 [confirm]
 [group('offchain')]
+publish: build
  cd {{offchain_dir}} && npm publish
 
 # ------------------------------------------------------------------------------
@@ -416,7 +415,6 @@ release version: requires_nix_shell
     sed -i -r "s/@since (U|u)nreleased/@since v$next_version/" $hsfiles
   fi
 
-  # shellcheck disable=SC2086
   cargo set-version --manifest-path raw-scripts/Cargo.toml $next_version
 
   # Create new release branch
