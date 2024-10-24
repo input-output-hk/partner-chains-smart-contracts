@@ -171,9 +171,9 @@ requires_nix_shell:
 
 # Hoogle server for Haskell documentation
 [group('onchain')]
-hoogle:
+hoogle port: requires_nix_shell
   @echo "Starting Hoogle server..."
-  nix develop -c hoogle server --local --port 8008
+  hoogle server --local --port {{port}}
 
 # Format .cabal files in the onchain directory
 [group('onchain')]
