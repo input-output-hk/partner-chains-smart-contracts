@@ -10,6 +10,7 @@ in
 rec {
   inherit (cardanoPackages) cardano-node cardano-cli cardano-testnet;
 
+  default = pc-contracts-cli;
   pc-contracts-cli = offchain.bundled;
   pc-contracts-release-bundle = pkgs.runCommand "bundled-cli" { buildInputs = [ pkgs.zip ]; } ''
     cp -r ${pc-contracts-cli}/* ./
