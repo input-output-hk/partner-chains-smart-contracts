@@ -13,7 +13,10 @@ let
 in
 {
   default = pkgs.mkShell {
-    inherit (self.check.pre-commit-check) shellHook;
+    shellHook = ''
+      ${self.check.pre-commit-check.shellHook}
+      echo -e "\e[1;34mType 'just -l' to see all available commands\e[0m"
+    '';
     buildInputs = self.check.pre-commit-check.enabledPackages;
     env = {
       CARDANO_CLI = "${cardano-cli}/bin/cardano-cli";
