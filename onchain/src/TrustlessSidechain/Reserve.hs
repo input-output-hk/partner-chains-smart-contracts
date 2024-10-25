@@ -41,6 +41,7 @@ import PlutusTx qualified
 import PlutusTx.Bool
 import TrustlessSidechain.HaskellPrelude (on)
 import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types (
   ReserveAuthPolicyRedeemer (..),
   ReserveDatum (mutableSettings, stats),
@@ -60,9 +61,6 @@ import TrustlessSidechain.Versioning (
   approvedByMultiSigGovernance,
   getVersionedCurrencySymbolUnsafe,
   getVersionedValidatorAddressUnsafe,
-  illiquidCirculationSupplyValidatorId,
-  reserveAuthPolicyId,
-  reserveValidatorId,
  )
 
 reserveAuthTokenTokenName :: TokenName
@@ -137,14 +135,22 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
     reserveAuthCurrencySymbol =
       getVersionedCurrencySymbolUnsafe
         voc
-        (VersionOracle {version = 1, scriptId = reserveAuthPolicyId})
+        ( VersionOracle
+            { version = 1
+            , scriptId = ScriptId.reserveAuthPolicyId
+            }
+        )
         ctx
 
     illiquidCirculationSupplyAddress :: Address
     !illiquidCirculationSupplyAddress =
       getVersionedValidatorAddressUnsafe
         voc
-        (VersionOracle {version = 1, scriptId = illiquidCirculationSupplyValidatorId})
+        ( VersionOracle
+            { version = 1
+            , scriptId = ScriptId.illiquidCirculationSupplyValidatorId
+            }
+        )
         ctx
 
     carriesAuthToken :: Unsafe.TxOut -> Bool
@@ -383,7 +389,11 @@ mkReserveAuthPolicy voc ReserveAuthPolicyRedeemer {..} ctx =
     reserveAddress =
       getVersionedValidatorAddressUnsafe
         voc
-        (VersionOracle {version = 1, scriptId = reserveValidatorId})
+        ( VersionOracle
+            { version = 1
+            , scriptId = ScriptId.reserveValidatorId
+            }
+        )
         ctx
 
     reserveUtxo :: TxOut

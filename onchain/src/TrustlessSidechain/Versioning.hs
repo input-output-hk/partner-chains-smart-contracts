@@ -21,22 +21,6 @@ module TrustlessSidechain.Versioning (
   VersionOracleDatum (..),
   VersionOracleConfig (..),
   VersionOraclePolicyRedeemer,
-  -- | Script IDs
-  committeeCandidateValidatorId,
-  versionOraclePolicyId,
-  versionOracleValidatorId,
-  dParameterPolicyId,
-  dParameterValidatorId,
-  permissionedCandidatesPolicyId,
-  permissionedCandidatesValidatorId,
-  scriptCacheId,
-  initTokensPolicyId,
-  reserveValidatorId,
-  reserveAuthPolicyId,
-  illiquidCirculationSupplyValidatorId,
-  illiquidCirculationSupplyWithdrawalPolicyId,
-  governancePolicyId,
-  multiSigPolicyId,
 ) where
 
 import PlutusLedgerApi.V1.Address (scriptHashAddress)
@@ -60,6 +44,7 @@ import PlutusTx.AssocMap (lookup, toList)
 import TrustlessSidechain.Governance.Admin qualified as Governance
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types (
   InitTokenAssetClass,
   SidechainParams,
@@ -70,52 +55,6 @@ import TrustlessSidechain.Utils (
   fromSingleton,
   oneTokenBurned,
  )
-
--- Note [Versioned script identifiers]
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
---
--- Each versioned script has an assigned identifier.  On-chain code must permit
--- addition of new versioned scripts without any changes to existing code, i.e.
--- minting policies and validator hashes must remain stable when new script is
--- being added.  For this purpose we use integers as script identifiers, with
--- each known script being assigned its own number.  In the off-chain code we
--- decode these integers into an ADT using hand-written ToData/FromData
--- instances since it's not a problem to have changes there and it is safer and
--- more descriptive to operate on an ADT.  Integers defined in on-chain code
--- need to match instances in the off-chain portion of the code.
-
--- See Note [Versioned script identifiers]
-committeeCandidateValidatorId
-  , versionOraclePolicyId
-  , versionOracleValidatorId
-  , dParameterPolicyId
-  , dParameterValidatorId
-  , permissionedCandidatesPolicyId
-  , permissionedCandidatesValidatorId
-  , scriptCacheId
-  , initTokensPolicyId
-  , reserveValidatorId
-  , reserveAuthPolicyId
-  , illiquidCirculationSupplyValidatorId
-  , illiquidCirculationSupplyWithdrawalPolicyId
-  , governancePolicyId
-  , multiSigPolicyId ::
-    Integer
-committeeCandidateValidatorId = 3
-versionOraclePolicyId = 15
-versionOracleValidatorId = 16
-dParameterPolicyId = 22
-dParameterValidatorId = 23
-permissionedCandidatesPolicyId = 24
-permissionedCandidatesValidatorId = 25
-scriptCacheId = 26
-initTokensPolicyId = 27
-reserveValidatorId = 28
-reserveAuthPolicyId = 29
-illiquidCirculationSupplyValidatorId = 30
-illiquidCirculationSupplyWithdrawalPolicyId = 31
-governancePolicyId = 32
-multiSigPolicyId = 33
 
 -- | Datum attached to 'VersionOraclePolicy' tokens stored on the
 -- 'VersionOracleValidator' script.
@@ -585,7 +524,7 @@ approvedByMultiSigGovernance voc version ctx =
     governanceTokenCurrencySymbol =
       getVersionedCurrencySymbolUnsafe
         voc
-        (VersionOracle {version, scriptId = governancePolicyId})
+        (VersionOracle {version, scriptId = ScriptId.governancePolicyId})
         ctx
 
     minted :: Value
