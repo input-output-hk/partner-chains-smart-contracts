@@ -20,6 +20,7 @@ import PlutusLedgerApi.V2 (
  )
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types (
   IlliquidCirculationSupplyRedeemer (..),
  )
@@ -30,7 +31,6 @@ import TrustlessSidechain.Versioning (
   VersionOracle (VersionOracle, scriptId, version),
   VersionOracleConfig,
   getVersionedCurrencySymbolUnsafe,
-  illiquidCirculationSupplyWithdrawalPolicyId,
  )
 
 icsWithdrawalMintingPolicyTokenName :: TokenName
@@ -72,7 +72,7 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
     icsWithdrawalPolicyCurrencySymbol =
       getVersionedCurrencySymbolUnsafe
         voc
-        (VersionOracle {version = 1, scriptId = illiquidCirculationSupplyWithdrawalPolicyId})
+        (VersionOracle {version = 1, scriptId = ScriptId.illiquidCirculationSupplyWithdrawalPolicyId})
         ctx
 
     minted :: Value

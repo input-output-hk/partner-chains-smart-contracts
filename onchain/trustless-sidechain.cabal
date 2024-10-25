@@ -94,6 +94,7 @@ library
     TrustlessSidechain.PermissionedCandidates
     TrustlessSidechain.Reserve
     TrustlessSidechain.ScriptCache
+    TrustlessSidechain.ScriptId
     TrustlessSidechain.Types
     TrustlessSidechain.Types.Unsafe
     TrustlessSidechain.Utils
