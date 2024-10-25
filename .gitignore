@@ -62,3 +62,7 @@ contractlog.json
 
 # Purescript
 .psc-ide-port
+
+# Rust
+raw-scripts/target
+raw-scripts/Cargo.lock

@@ -67,6 +67,11 @@
       url = "github:input-output-hk/cardano-node/d7abccd4e90c38ff5cd4d6a7839689d888332056";
       flake = false;
     };
+    # Rust toolchains in nix
+    fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
   outputs = inputs @ { nosys, pkgs, self, ... }:
     let outputs = import ./nix/outputs.nix;

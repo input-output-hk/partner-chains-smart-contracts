@@ -179,6 +179,27 @@
         "type": "github"
       }
     },
+    "fenix": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "rust-analyzer-src": "rust-analyzer-src"
+      },
+      "locked": {
+        "lastModified": 1729751566,
+        "narHash": "sha256-99u/hrgBdi8bxSXZc9ZbNkR5EL1htrkbd3lsbKzS60g=",
+        "owner": "nix-community",
+        "repo": "fenix",
+        "rev": "f32a2d484091a6dc98220b1f4a2c2d60b7c97c64",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "fenix",
+        "type": "github"
+      }
+    },
     "flake-compat": {
       "flake": false,
       "locked": {
@@ -874,6 +895,7 @@
         "blank": "blank",
         "cardano-node": "cardano-node",
         "devx": "devx",
+        "fenix": "fenix",
         "flake-compat": "flake-compat",
         "hackage": "hackage",
         "haskell-nix": "haskell-nix",
@@ -890,6 +912,23 @@
         "pre-commit-hooks": "pre-commit-hooks",
         "purescript-overlay": "purescript-overlay",
         "spago2nix": "spago2nix"
+      }
+    },
+    "rust-analyzer-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1729715509,
+        "narHash": "sha256-jUDN4e1kObbksb4sc+57NEeujBEDRdLCOu9wiE3RZdM=",
+        "owner": "rust-lang",
+        "repo": "rust-analyzer",
+        "rev": "40492e15d49b89cf409e2c5536444131fac49429",
+        "type": "github"
+      },
+      "original": {
+        "owner": "rust-lang",
+        "ref": "nightly",
+        "repo": "rust-analyzer",
+        "type": "github"
       }
     },
     "secp256k1": {

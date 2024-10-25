@@ -7,6 +7,9 @@ let
   cardano-cli = self.packages.cardano-cli;
   cardano-node = self.packages.cardano-node;
   cardano-testnet = self.packages.cardano-testnet;
+  fenixPkgs = inputs.fenix.packages;
+  rustToolchain = with fenixPkgs;
+    stable;
 in
 {
   default = pkgs.mkShell {
@@ -59,6 +62,17 @@ in
       purs-tidy
       spago
       self.packages.spago2nix
+
+      # Rust
+      rustToolchain.cargo
+      rustToolchain.clippy
+      rustToolchain.rust-analyzer
+      rustToolchain.rust-src
+      rustToolchain.rust-std
+      rustToolchain.rustc-dev
+      rustToolchain.rustc
+      rustToolchain.rustfmt
+      cargo-edit
     ];
   };
 }

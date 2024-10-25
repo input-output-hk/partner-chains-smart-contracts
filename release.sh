@@ -76,6 +76,8 @@ sed -i "s/# Unreleased/# Unreleased\n\n# v$next_version/" $changelog
 sed -i -r "s/^version:(\s*)\S+$/version:\1$next_version/" $cabalfile
 # shellcheck disable=SC2086
 sed -i -r "s/@since (U|u)nreleased/@since v$next_version/" $hsfiles
+# shellcheck disable=SC2086
+cargo set-version --manifest-path raw-scripts/Cargo.toml $next_version
 
 git checkout -b "release-v$next_version"
 git add .
