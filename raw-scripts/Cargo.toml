@@ -1,0 +1,7 @@
+[package]
+name = "raw-scripts"
+version = "6.2.1"
+edition = "2021"
+
+[dependencies]
+hex-literal = "0.4.1"

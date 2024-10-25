@@ -174,8 +174,10 @@ executable trustless-sidechain-serialise
   main-is:        Main.hs
   build-depends:
     , aeson
+    , base16-bytestring
     , bytestring
     , cardano-api
+    , casing
     , filepath
     , plutus-ledger-api
     , text
