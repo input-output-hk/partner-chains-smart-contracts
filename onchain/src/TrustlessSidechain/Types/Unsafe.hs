@@ -59,6 +59,7 @@ module TrustlessSidechain.Types.Unsafe (
   txInfoFee,
   txInfoId,
   txInfoMint,
+  txInfoWdrl,
   txInfoReferenceInputs,
   txInfoValidRange,
   txInfoInputs,
@@ -136,6 +137,7 @@ unsafeDataAsMaybe bd = case Builtins.unsafeDataAsConstr bd of
   (1, []) -> Nothing
   _ -> traceError "unsafeDataAsMaybe: unreachable"
 
+makeUnsafeNewtypes ''V2.StakingCredential
 makeUnsafeNewtypes ''Types.BlockProducerRegistration
 makeUnsafeNewtypes ''Types.GovernanceAuthority
 makeUnsafeNewtypes ''Types.SidechainParams
@@ -154,13 +156,13 @@ makeUnsafeNewtypes ''V2.PubKeyHash
 makeUnsafeNewtypes ''V2.ScriptContext
 makeUnsafeNewtypes ''V2.ScriptHash
 makeUnsafeNewtypes ''V2.ScriptPurpose
-makeUnsafeNewtypes ''V2.StakingCredential
 makeUnsafeNewtypes ''V2.TxId
 makeUnsafeNewtypes ''V2.TxInfo
 makeUnsafeNewtypes ''V2.TxInInfo
 makeUnsafeNewtypes ''V2.TxOut
 makeUnsafeNewtypes ''V2.TxOutRef
 makeUnsafeNewtypes ''V2.Value
+makeUnsafeNewtypes ''V2.Redeemer
 makeUnsafeNewtypes ''PTPrelude.Integer
 
 makeUnsafeGetters ''Types.BlockProducerRegistration

@@ -7,6 +7,7 @@ module TrustlessSidechain.PlutusPrelude.TH (
 ) where
 
 import Control.Monad
+import Data.List (isSuffixOf)
 import Language.Haskell.TH
 import Language.Haskell.TH.Datatype
 import Language.Haskell.TH.Syntax
@@ -148,6 +149,7 @@ makeUnsafeGetters name = do
           ConT n -> [(ConT (makeNameUnqualified n), getterBodySimple)]
           AppT ListT (ConT n) -> [(AppT ListT (ConT (makeNameUnqualified n)), getterBodyList)]
           AppT (ConT m) (ConT n) | show m == "GHC.Maybe.Maybe" -> [(AppT (ConT m) (ConT (makeNameUnqualified n)), getterBodyMaybe)]
+          AppT (AppT (ConT m) (ConT k)) (ConT v) | isSuffixOf "Map" (show m) -> [(AppT ListT (AppT (AppT (TupleT 2) (ConT (makeNameUnqualified k))) (ConT (makeNameUnqualified v))), getterBodyMap)]
           _ -> [] -- TODO support for fields with more complex types should be implemented as needed
 
         -- (nthFieldOf ix) (unwrap x)
@@ -165,6 +167,9 @@ makeUnsafeGetters name = do
         -- (fmap wrap) (unsafeDataAsMaybe (unwrap x))
         getterBodyMaybe =
           (fun "fmap" $$ fun "wrap") $$ fun "unsafeDataAsMaybe" $$ fun "unwrap" $$ var "x"
+
+        getterBodyMap =
+          (fun "fmap" $$ (LamE [TupP [VarP (mkName "a"), VarP (mkName "b")]] (TupE [Just (fun "wrap" $$ (VarE (mkName "a"))), Just (fun "wrap" $$ (VarE (mkName "b")))]))) $$ fun "Builtins.unsafeDataAsMap" $$ nthFieldOf_ix_unwrap_x
 
         getterDec :: (Type, Exp) -> [Dec]
         getterDec (targetType, getterBody) =

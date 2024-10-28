@@ -51,17 +51,14 @@ import JS.BigInt as BigInt
 import Run (Run)
 import Run.Except (EXCEPT, throw)
 import TrustlessSidechain.Effects.App (APP)
-import TrustlessSidechain.Effects.Env (ask)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError(..))
-import TrustlessSidechain.Governance (Governance(MultiSig))
-import TrustlessSidechain.Governance.MultiSig (MultiSigGovRedeemer(..))
+import TrustlessSidechain.Governance.Utils as Governance
 import TrustlessSidechain.NativeTokenManagement.Types
   ( ImmutableReserveSettings
   , MutableReserveSettings
-  , ReserveAuthPolicyRedeemer(..)
   , ReserveDatum(..)
   , ReserveRedeemer(..)
   , ReserveStats(..)
@@ -75,8 +72,7 @@ import TrustlessSidechain.Utils.Scripts
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId
-      ( GovernancePolicy
-      , IlliquidCirculationSupplyValidator
+      ( IlliquidCirculationSupplyValidator
       , ReserveAuthPolicy
       , ReserveValidator
       )
@@ -108,27 +104,6 @@ reserveAuthTokenName = emptyAssetName
 vFunctionTotalAccruedTokenName :: AssetName
 vFunctionTotalAccruedTokenName = emptyAssetName
 
-getGovernancePolicy ::
-  forall r.
-  SidechainParams ->
-  Run
-    (EXCEPT OffchainError + WALLET + TRANSACTION + r)
-    PlutusScript
-getGovernancePolicy sidechainParams = do
-  (_ /\ refTxOutput) <-
-    Versioning.getVersionedScriptRefUtxo
-      sidechainParams
-      ( VersionOracle
-          { version: BigNum.fromInt 1
-          , scriptId: GovernancePolicy
-          }
-      )
-
-  case (unwrap refTxOutput).scriptRef of
-    Just (PlutusScriptRef s) -> pure s
-    _ -> throw $ GenericInternalError
-      "Versioning system utxo does not carry governance script"
-
 getIlliquidCirculationSupplyValidator ::
   forall r.
   SidechainParams ->
@@ -140,8 +115,7 @@ getIlliquidCirculationSupplyValidator sidechainParams = do
     Versioning.getVersionedScriptRefUtxo
       sidechainParams
       ( VersionOracle
-          { version: BigNum.fromInt 1
-          , scriptId: IlliquidCirculationSupplyValidator
+          { scriptId: IlliquidCirculationSupplyValidator
           }
       )
 
@@ -156,11 +130,10 @@ findReserveUtxos ::
   Run (APP r) UtxoMap
 findReserveUtxos sidechainParams = do
   reserveAuthCurrencySymbol <-
-    Versioning.getVersionedCurrencySymbol
+    Versioning.getVersionedScriptHash
       sidechainParams
       ( VersionOracle
-          { version: BigNum.fromInt 1
-          , scriptId: ReserveAuthPolicy
+          { scriptId: ReserveAuthPolicy
           }
       )
 
@@ -168,8 +141,7 @@ findReserveUtxos sidechainParams = do
     Versioning.getVersionedValidatorAddress
       sidechainParams
       ( VersionOracle
-          { version: BigNum.fromInt 1
-          , scriptId: ReserveValidator
+          { scriptId: ReserveValidator
           }
       )
 
@@ -200,8 +172,7 @@ reserveAuthLookupsAndConstraints sp = do
     Versioning.getVersionedScriptRefUtxo
       sp
       ( VersionOracle
-          { version: BigNum.fromInt 1
-          , scriptId: ReserveAuthPolicy
+          { scriptId: ReserveAuthPolicy
           }
       )
 
@@ -224,8 +195,7 @@ illiquidCirculationSupplyLookupsAndConstraints sp = do
     Versioning.getVersionedScriptRefUtxo
       sp
       ( VersionOracle
-          { version: BigNum.fromInt 1
-          , scriptId: IlliquidCirculationSupplyValidator
+          { scriptId: IlliquidCirculationSupplyValidator
           }
       )
 
@@ -248,8 +218,7 @@ reserveLookupsAndConstraints sp = do
     Versioning.getVersionedScriptRefUtxo
       sp
       ( VersionOracle
-          { version: BigNum.fromInt 1
-          , scriptId: ReserveValidator
+          { scriptId: ReserveValidator
           }
       )
 
@@ -258,49 +227,6 @@ reserveLookupsAndConstraints sp = do
         (Map.singleton reserveRefTxInput reserveRefTxOutput)
     , reserveConstraints: TxConstraints.mustReferenceOutput
         reserveRefTxInput
-    }
-
-governanceLookupsAndConstraints ::
-  forall r.
-  SidechainParams ->
-  Run (APP r)
-    { governanceLookups :: Lookups.ScriptLookups
-    , governanceConstraints :: TxConstraints.TxConstraints
-    }
-governanceLookupsAndConstraints sp = do
-  (governanceRefTxInput /\ governanceRefTxOutput) <-
-    Versioning.getVersionedScriptRefUtxo
-      sp
-      ( VersionOracle
-          { version: BigNum.fromInt 1
-          , scriptId: GovernancePolicy
-          }
-      )
-
-  governancePolicy <- getGovernancePolicy sp
-
-  env <- ask
-
-  let
-    members = maybe [] (\(MultiSig x) -> (unwrap x).governanceMembers)
-      env.governance
-
-  pure
-    { governanceLookups: Lookups.unspentOutputs
-        (Map.singleton governanceRefTxInput governanceRefTxOutput)
-    , governanceConstraints:
-        TxConstraints.mustReferenceOutput governanceRefTxInput
-          <> TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
-            (PlutusScript.hash governancePolicy)
-            (RedeemerDatum $ toData MultiSignatureCheck)
-            emptyAssetName
-            (Int.fromInt 1)
-            ( RefInput $ TransactionUnspentOutput
-                { input: governanceRefTxInput
-                , output: governanceRefTxOutput
-                }
-            )
-          <> (foldMap (\x -> TxConstraints.mustBeSignedBy $ wrap x) members)
     }
 
 initialiseReserveUtxo ::
@@ -316,20 +242,19 @@ initialiseReserveUtxo
   mutableSettings
   numOfTokens =
   do
-    { governanceLookups
-    , governanceConstraints
-    } <- governanceLookupsAndConstraints sidechainParams
+    { lookups: governanceLookups
+    , constraints: governanceConstraints
+    } <- Governance.approveByGovernanceLookupsAndConstraints sidechainParams
 
     { reserveLookups
     , reserveConstraints
     } <- reserveLookupsAndConstraints sidechainParams
 
     reserveAuthCurrencySymbol <-
-      Versioning.getVersionedCurrencySymbol
+      Versioning.getVersionedScriptHash
         sidechainParams
         ( VersionOracle
-            { version: BigNum.fromInt 1
-            , scriptId: ReserveAuthPolicy
+            { scriptId: ReserveAuthPolicy
             }
         )
 
@@ -364,7 +289,7 @@ initialiseReserveUtxo
         governanceConstraints
           <> reserveConstraints
           <> TxConstraints.mustMintValueWithRedeemer
-            (RedeemerDatum $ toData reserveAuthPolicyRedeemer)
+            (RedeemerDatum $ toData unit)
             (Mint.fromMultiAsset $ Value.getMultiAsset reserveAuthTokenValue)
           <> TxConstraints.mustPayToScript
             reserveValidator'
@@ -382,12 +307,6 @@ initialiseReserveUtxo
     { immutableSettings
     , mutableSettings
     , stats: ReserveStats { tokenTotalAmountTransferred: BigInt.fromInt 0 }
-    }
-
-  --JSTOLAREK: parameterize version
-  reserveAuthPolicyRedeemer :: ReserveAuthPolicyRedeemer
-  reserveAuthPolicyRedeemer = ReserveAuthPolicyRedeemer
-    { governanceVersion: BigInt.fromInt 1
     }
 
 extractReserveDatum :: TransactionOutput -> Maybe ReserveDatum
@@ -419,9 +338,9 @@ depositToReserve sp asset amount = do
   utxo <- fromMaybeThrow (NotFoundUtxo "Reserve UTxO for asset class not found")
     $ (Map.toUnfoldable <$> findReserveUtxoForAssetClass sp asset)
 
-  { governanceLookups
-  , governanceConstraints
-  } <- governanceLookupsAndConstraints sp
+  { lookups: governanceLookups
+  , constraints: governanceConstraints
+  } <- Governance.approveByGovernanceLookupsAndConstraints sp
 
   { reserveAuthLookups
   , reserveAuthConstraints
@@ -481,9 +400,9 @@ updateReserveUtxo ::
   (TransactionInput /\ TransactionOutput) ->
   Run (APP r) TransactionHash
 updateReserveUtxo sp updatedMutableSettings utxo = do
-  { governanceLookups
-  , governanceConstraints
-  } <- governanceLookupsAndConstraints sp
+  { lookups: governanceLookups
+  , constraints: governanceConstraints
+  } <- Governance.approveByGovernanceLookupsAndConstraints sp
 
   { reserveAuthLookups
   , reserveAuthConstraints
@@ -685,9 +604,9 @@ handover
   , icsConstraints
   } <- illiquidCirculationSupplyLookupsAndConstraints sp
 
-  { governanceLookups
-  , governanceConstraints
-  } <- governanceLookupsAndConstraints sp
+  { lookups: governanceLookups
+  , constraints: governanceConstraints
+  } <- Governance.approveByGovernanceLookupsAndConstraints sp
 
   { reserveLookups
   , reserveConstraints
@@ -708,8 +627,7 @@ handover
     Versioning.getVersionedScriptRefUtxo
       sp
       ( VersionOracle
-          { version: BigNum.fromInt 1
-          , scriptId: ReserveAuthPolicy
+          { scriptId: ReserveAuthPolicy
           }
       )
 
@@ -717,8 +635,7 @@ handover
     Versioning.getVersionedScriptRefUtxo
       sp
       ( VersionOracle
-          { version: BigNum.fromInt 1
-          , scriptId: ReserveValidator
+          { scriptId: ReserveValidator
           }
       )
 
@@ -764,8 +681,7 @@ handover
           )
         <> TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
           (PlutusScript.hash reserveAuthPolicy')
-          ( RedeemerDatum $ toData $ ReserveAuthPolicyRedeemer
-              { governanceVersion: BigInt.fromInt 1 }
+          ( RedeemerDatum $ toData $ unit
           )
           emptyAssetName
           (Int.fromInt (-1))

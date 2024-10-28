@@ -5,7 +5,6 @@
 -- transaction.
 module TrustlessSidechain.Governance.MultiSig (
   MultiSigGovParams (..),
-  MultiSigGovRedeemer (..),
   serialisableGovernanceMultiSigPolicy,
 ) where
 
@@ -15,7 +14,6 @@ import PlutusTx
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
-import TrustlessSidechain.Utils (currencySymbolValueOf)
 
 -- | Parameters of the security mechanism.  Note that setting
 -- `requiredSignatures` to a value greater than `length governanceMembers` will
@@ -54,39 +52,6 @@ instance UnsafeFromData MultiSigGovParams where
 -- | @since v6.1.0
 makeHasField ''MultiSigGovParams
 
--- | Redemeer for the multi-sig governance policy that tells whether we are
--- checking for approval from the governance or just burning unused tokens
--- generated during signature checks.
---
--- @since v6.1.0
-data MultiSigGovRedeemer = MultiSignatureCheck | MultiSigTokenGC
-  deriving (TSPrelude.Show, TSPrelude.Eq)
-
--- | @since v6.1.0
-instance ToData MultiSigGovRedeemer where
-  {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData MultiSignatureCheck = toBuiltinData (0 :: Integer)
-  toBuiltinData MultiSigTokenGC = toBuiltinData (1 :: Integer)
-
--- | @since v6.1.0
-instance FromData MultiSigGovRedeemer where
-  {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData x = do
-    integerValue <- fromBuiltinData x
-    case integerValue :: Integer of
-      0 -> Just MultiSignatureCheck
-      1 -> Just MultiSigTokenGC
-      _ -> Nothing
-
--- | @since v6.1.0
-instance UnsafeFromData MultiSigGovRedeemer where
-  {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData x =
-    case unsafeFromBuiltinData x :: Integer of
-      0 -> MultiSignatureCheck
-      1 -> MultiSigTokenGC
-      _ -> error ()
-
 -- | N-out-of-M multisignature governance check.
 --
 -- When passed the `MultiSignatureCheck` redeemer this policy checks that the
@@ -99,10 +64,10 @@ instance UnsafeFromData MultiSigGovRedeemer where
 -- generated during the checks.
 mkGovernanceMultiSigPolicy ::
   MultiSigGovParams ->
-  MultiSigGovRedeemer ->
+  BuiltinData ->
   Unsafe.ScriptContext ->
   Bool
-mkGovernanceMultiSigPolicy MultiSigGovParams {..} MultiSignatureCheck ctx =
+mkGovernanceMultiSigPolicy MultiSigGovParams {..} _ ctx =
   traceIfFalse "ERROR-MULTISIG-GOV-POLICY-01" enoughSignatures
   where
     txInfo :: Unsafe.TxInfo
@@ -124,25 +89,6 @@ mkGovernanceMultiSigPolicy MultiSigGovParams {..} MultiSignatureCheck ctx =
     -- Is the number of signatures enough?
     enoughSignatures :: Bool
     enoughSignatures = govSigCount >= requiredSignatures
-mkGovernanceMultiSigPolicy _ MultiSigTokenGC ctx =
-  traceIfFalse "ERROR-MULTISIG-GOV-POLICY-02" tokensBurned
-  where
-    txInfo :: Unsafe.TxInfo
-    txInfo = Unsafe.scriptContextTxInfo ctx
-
-    -- Get currency symbol of this policy
-    currSymbol = Unsafe.ownCurrencySymbol ctx
-
-    -- Check the amount of minted tokens
-    mintedAmount :: Integer
-    mintedAmount =
-      currencySymbolValueOf
-        (Unsafe.decode $ Unsafe.txInfoMint txInfo)
-        currSymbol
-
-    -- Are we burning tokens?
-    tokensBurned :: Bool
-    tokensBurned = mintedAmount < 0
 
 {-# INLINEABLE mkGovernanceMultiSigPolicyUntyped #-}
 mkGovernanceMultiSigPolicyUntyped ::
@@ -157,7 +103,7 @@ mkGovernanceMultiSigPolicyUntyped params red ctx =
   check
     $ mkGovernanceMultiSigPolicy
       (unsafeFromBuiltinData params)
-      (unsafeFromBuiltinData red)
+      red
       (Unsafe.ScriptContext ctx)
 
 serialisableGovernanceMultiSigPolicy :: SerialisedScript

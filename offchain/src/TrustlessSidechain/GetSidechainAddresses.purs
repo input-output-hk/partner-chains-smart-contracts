@@ -2,8 +2,6 @@
 -- | identifying its associated hex encoded validator and currency symbol.
 module TrustlessSidechain.GetSidechainAddresses
   ( SidechainAddresses
-  , SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
-  , SidechainAddressesExtra
   , getSidechainAddresses
   ) where
 
@@ -24,9 +22,9 @@ import Run.Except (EXCEPT)
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.DParameter.Utils as DParameter
 import TrustlessSidechain.Effects.Env (Env, READER)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
-import TrustlessSidechain.InitSidechain.Utils as InitSidechain
 import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address
@@ -45,7 +43,6 @@ import TrustlessSidechain.Versioning.Types
       , VersionOracleValidator
       , PermissionedCandidatesValidator
       , DParameterValidator
-      , InitTokenPolicy
       )
   )
 import TrustlessSidechain.Versioning.Utils
@@ -68,36 +65,18 @@ type SidechainAddresses =
     validatorHashes :: Array (Tuple ScriptId String)
   }
 
--- | `SidechainAddressesExtra` provides extra information for creating more
--- | addresses related to the sidechain.
--- | In particular, this allows us to optionally grab the minting policy of the
--- | candidate permission token.
-type SidechainAddressesExtra =
-  { version :: Int
-  }
-
--- | `SidechainAddressesEndpointParams` is the offchain endpoint parameter for
--- | bundling the required data to grab all the sidechain addresses.
-newtype SidechainAddressesEndpointParams = SidechainAddressesEndpointParams
-  { sidechainParams :: SidechainParams
-  , version :: Int
-  }
-
 -- | `getSidechainAddresses` returns a `SidechainAddresses` corresponding to
--- | the given `SidechainAddressesEndpointParams` which contains related
+-- | the given `SidechainParams` which contains related
 -- | addresses and currency symbols. Moreover, it returns the currency symbol
 -- | of the candidate permission token provided the `permissionTokenUtxo` is
 -- | given.
 getSidechainAddresses ::
   forall r.
-  SidechainAddressesEndpointParams ->
-  Run (EXCEPT OffchainError + WALLET + READER Env + r) SidechainAddresses
+  SidechainParams ->
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + READER Env + r)
+    SidechainAddresses
 getSidechainAddresses
-  ( SidechainAddressesEndpointParams
-      { sidechainParams
-      , version
-      }
-  ) = do
+  sidechainParams = do
 
   -- Minting policies
 
@@ -120,12 +99,6 @@ getSidechainAddresses
     dParameterPolicyId = currencySymbolToHex
       dParameterCurrencySymbol
 
-  { currencySymbol: initTokenCurrencySymbol } <-
-    InitSidechain.initTokenCurrencyInfo sidechainParams
-  let
-    initTokenPolicyId = currencySymbolToHex
-      initTokenCurrencySymbol
-
   -- Validators
   committeeCandidateValidator <-
     CommitteeCandidateValidator.getCommitteeCandidateValidator sidechainParams
@@ -136,7 +109,7 @@ getSidechainAddresses
   { versionedPolicies, versionedValidators } <-
     Versioning.getExpectedVersionedPoliciesAndValidators
       sidechainParams
-      version
+
   let
     versionedCurrencySymbols = Array.fromFoldable $ map
       ( \(Tuple scriptId mps) ->
@@ -157,7 +130,6 @@ getSidechainAddresses
       [ VersionOraclePolicy /\ versionOraclePolicyId
       , PermissionedCandidatesPolicy /\ permissionedCandidatesPolicyId
       , DParameterPolicy /\ dParameterPolicyId
-      , InitTokenPolicy /\ initTokenPolicyId
       ]
         <> versionedCurrencySymbols
 

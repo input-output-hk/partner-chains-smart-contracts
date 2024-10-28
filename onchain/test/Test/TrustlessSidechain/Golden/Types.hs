@@ -11,10 +11,6 @@ import Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest)
 import TrustlessSidechain.Governance.Admin (mkGovernanceAuthority)
 import TrustlessSidechain.Governance.MultiSig (
   MultiSigGovParams (..),
-  MultiSigGovRedeemer (
-    MultiSigTokenGC,
-    MultiSignatureCheck
-  ),
  )
 import TrustlessSidechain.Types (
   BlockProducerRegistration (
@@ -45,15 +41,6 @@ import TrustlessSidechain.Types (
   ImmutableReserveSettings (
     ImmutableReserveSettings
   ),
-  InitTokenAssetClass (
-    InitTokenAssetClass,
-    initTokenCurrencySymbol,
-    initTokenName
-  ),
-  InitTokenRedeemer (
-    BurnInitToken,
-    MintInitToken
-  ),
   MutableReserveSettings (MutableReserveSettings),
   PermissionedCandidateKeys (
     PermissionedCandidateKeys,
@@ -73,7 +60,6 @@ import TrustlessSidechain.Types (
     RemovePermissionedCandidates,
     UpdatePermissionedCandidates
   ),
-  ReserveAuthPolicyRedeemer (ReserveAuthPolicyRedeemer),
   ReserveDatum (ReserveDatum, immutableSettings, mutableSettings, stats),
   ReserveRedeemer (
     DepositToReserve,
@@ -112,20 +98,14 @@ tests =
     , dataEncoderGoldenTest "PermissionedCandidatesValidatorDatum" samplePermissionedCandidatesValidatorDatum
     , dataEncoderGoldenTest "PermissionedCandidatesValidatorRedeemer1" samplePermissionedCandidatesValidatorRedeemer1
     , dataEncoderGoldenTest "PermissionedCandidatesValidatorRedeemer2" samplePermissionedCandidatesValidatorRedeemer2
-    , dataEncoderGoldenTest "InitTokenRedeemer1" sampleInitTokenRedeemer1
-    , dataEncoderGoldenTest "InitTokenRedeemer2" sampleInitTokenRedeemer2
-    , dataEncoderGoldenTest "InitTokenAssetClass" sampleInitTokenAssetClass
     , dataEncoderGoldenTest "ReserveDatum" sampleReserveDatum
     , dataEncoderGoldenTest "ReserveRedeemer1" sampleReserveRedeemer1
     , dataEncoderGoldenTest "ReserveRedeemer2" sampleReserveRedeemer2
     , dataEncoderGoldenTest "ReserveRedeemer3" sampleReserveRedeemer3
     , dataEncoderGoldenTest "ReserveRedeemer4" sampleReserveRedeemer4
-    , dataEncoderGoldenTest "ReserveAuthPolicyRedeemer" sampleReserveAuthPolicyRedeemer
     , dataEncoderGoldenTest "IlliquidCirculationSupplyRedeemer1" sampleIlliquidCirculationSupplyRedeemer1
     , dataEncoderGoldenTest "IlliquidCirculationSupplyRedeemer2" sampleIlliquidCirculationSupplyRedeemer2
     , dataEncoderGoldenTest "MultiSigGovParams" sampleMultiSigGovParams
-    , dataEncoderGoldenTest "MultiSigGovRedeemer1" sampleMultiSigGovRedeemer1
-    , dataEncoderGoldenTest "MultiSigGovRedeemer2" sampleMultiSigGovRedeemer2
     ]
 
 -- * Sample data - building blocks
@@ -213,19 +193,6 @@ samplePermissionedCandidatesValidatorRedeemer1 = UpdatePermissionedCandidates
 samplePermissionedCandidatesValidatorRedeemer2 :: PermissionedCandidatesValidatorRedeemer
 samplePermissionedCandidatesValidatorRedeemer2 = RemovePermissionedCandidates
 
-sampleInitTokenRedeemer1 :: InitTokenRedeemer
-sampleInitTokenRedeemer1 = MintInitToken
-
-sampleInitTokenRedeemer2 :: InitTokenRedeemer
-sampleInitTokenRedeemer2 = BurnInitToken
-
-sampleInitTokenAssetClass :: InitTokenAssetClass
-sampleInitTokenAssetClass =
-  InitTokenAssetClass
-    { initTokenCurrencySymbol = "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
-    , initTokenName = "foo bar"
-    }
-
 sampleReserveDatum :: ReserveDatum
 sampleReserveDatum =
   ReserveDatum
@@ -239,19 +206,16 @@ sampleReserveDatum =
     }
 
 sampleReserveRedeemer1 :: ReserveRedeemer
-sampleReserveRedeemer1 = DepositToReserve 1
+sampleReserveRedeemer1 = DepositToReserve
 
 sampleReserveRedeemer2 :: ReserveRedeemer
 sampleReserveRedeemer2 = TransferToIlliquidCirculationSupply
 
 sampleReserveRedeemer3 :: ReserveRedeemer
-sampleReserveRedeemer3 = UpdateReserve 1
+sampleReserveRedeemer3 = UpdateReserve
 
 sampleReserveRedeemer4 :: ReserveRedeemer
-sampleReserveRedeemer4 = Handover 1
-
-sampleReserveAuthPolicyRedeemer :: ReserveAuthPolicyRedeemer
-sampleReserveAuthPolicyRedeemer = ReserveAuthPolicyRedeemer 1
+sampleReserveRedeemer4 = Handover
 
 sampleIlliquidCirculationSupplyRedeemer1 :: IlliquidCirculationSupplyRedeemer
 sampleIlliquidCirculationSupplyRedeemer1 = DepositMoreToSupply
@@ -269,9 +233,3 @@ sampleMultiSigGovParams =
         ]
     , requiredSignatures = 2
     }
-
-sampleMultiSigGovRedeemer1 :: MultiSigGovRedeemer
-sampleMultiSigGovRedeemer1 = MultiSignatureCheck
-
-sampleMultiSigGovRedeemer2 :: MultiSigGovRedeemer
-sampleMultiSigGovRedeemer2 = MultiSigTokenGC

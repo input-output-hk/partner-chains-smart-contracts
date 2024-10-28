@@ -43,7 +43,6 @@ import TrustlessSidechain.HaskellPrelude (on)
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types (
-  ReserveAuthPolicyRedeemer (..),
   ReserveDatum (mutableSettings, stats),
   ReserveRedeemer (
     DepositToReserve,
@@ -56,9 +55,9 @@ import TrustlessSidechain.Types (
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Utils qualified as Utils
 import TrustlessSidechain.Versioning (
-  VersionOracle (VersionOracle, scriptId, version),
+  VersionOracle (VersionOracle, scriptId),
   VersionOracleConfig,
-  approvedByMultiSigGovernance,
+  approvedByGovernance,
   getVersionedCurrencySymbolUnsafe,
   getVersionedValidatorAddressUnsafe,
  )
@@ -103,13 +102,13 @@ mkReserveValidator ::
   Unsafe.ScriptContext ->
   Bool
 mkReserveValidator voc _ redeemer ctx = case redeemer of
-  DepositToReserve governanceVersion ->
-    traceIfFalse "ERROR-RESERVE-01" (isApprovedByGovernance governanceVersion)
+  DepositToReserve ->
+    traceIfFalse "ERROR-RESERVE-01" isApprovedByGovernance
       && traceIfFalse "ERROR-RESERVE-02" noOtherTokensButGovernanceMinted
       && traceIfFalse "ERROR-RESERVE-03" datumDoesNotChange
       && traceIfFalse "ERROR-RESERVE-04" assetsChangeOnlyByPositiveAmountOfReserveTokens
-  UpdateReserve governanceVersion ->
-    traceIfFalse "ERROR-RESERVE-22" (isApprovedByGovernance governanceVersion)
+  UpdateReserve ->
+    traceIfFalse "ERROR-RESERVE-22" isApprovedByGovernance
       && traceIfFalse "ERROR-RESERVE-23" noOtherTokensButGovernanceMinted
       && traceIfFalse "ERROR-RESERVE-09" datumChangesOnlyByMutableSettings
       && traceIfFalse "ERROR-RESERVE-10" assetsDoNotChange
@@ -119,8 +118,8 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
       && traceIfFalse "ERROR-RESERVE-13" assetsChangeOnlyByCorrectAmountOfReserveTokens
       && traceIfFalse "ERROR-RESERVE-14" datumChangesOnlyByStats
       && traceIfFalse "ERROR-RESERVE-15" correctAmountOfReserveTokensTransferredToICS
-  Handover governanceVersion ->
-    traceIfFalse "ERROR-RESERVE-24" (isApprovedByGovernance governanceVersion)
+  Handover ->
+    traceIfFalse "ERROR-RESERVE-24" isApprovedByGovernance
       && traceIfFalse "ERROR-RESERVE-17" oneReserveAuthTokenBurnt
       && traceIfFalse "ERROR-RESERVE-18" noOtherTokensButReserveAuthBurntAndGovernanceMinted
       && traceIfFalse "ERROR-RESERVE-19" allReserveTokensTransferredToICS
@@ -135,22 +134,14 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
     reserveAuthCurrencySymbol =
       getVersionedCurrencySymbolUnsafe
         voc
-        ( VersionOracle
-            { version = 1
-            , scriptId = ScriptId.reserveAuthPolicyId
-            }
-        )
+        (VersionOracle {scriptId = ScriptId.reserveAuthPolicyId})
         ctx
 
     illiquidCirculationSupplyAddress :: Address
     !illiquidCirculationSupplyAddress =
       getVersionedValidatorAddressUnsafe
         voc
-        ( VersionOracle
-            { version = 1
-            , scriptId = ScriptId.illiquidCirculationSupplyValidatorId
-            }
-        )
+        (VersionOracle {scriptId = ScriptId.illiquidCirculationSupplyValidatorId})
         ctx
 
     carriesAuthToken :: Unsafe.TxOut -> Bool
@@ -215,8 +206,8 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
     outputDatum :: ReserveDatum
     outputDatum = Utils.fromJust "ERROR-RESERVE-08" (extractReserveUtxoDatumUnsafe outputReserveUtxo)
 
-    isApprovedByGovernance :: Integer -> Bool
-    isApprovedByGovernance gv = approvedByMultiSigGovernance voc gv ctx
+    isApprovedByGovernance :: Bool
+    isApprovedByGovernance = approvedByGovernance voc ctx
 
     {-# INLINEABLE kindsOfTokenMinted #-}
     kindsOfTokenMinted :: Integer -> Bool
@@ -363,10 +354,10 @@ extractReserveUtxoDatumUnsafe txOut =
 {-# INLINEABLE mkReserveAuthPolicy #-}
 mkReserveAuthPolicy ::
   VersionOracleConfig ->
-  ReserveAuthPolicyRedeemer ->
+  BuiltinData ->
   Unsafe.ScriptContext ->
   Bool
-mkReserveAuthPolicy voc ReserveAuthPolicyRedeemer {..} ctx =
+mkReserveAuthPolicy voc _ ctx =
   if valueOf minted ownCurrencySymbol reserveAuthTokenTokenName < 0
     then True -- delegating to reserve validator
     else
@@ -389,11 +380,7 @@ mkReserveAuthPolicy voc ReserveAuthPolicyRedeemer {..} ctx =
     reserveAddress =
       getVersionedValidatorAddressUnsafe
         voc
-        ( VersionOracle
-            { version = 1
-            , scriptId = ScriptId.reserveValidatorId
-            }
-        )
+        (VersionOracle {scriptId = ScriptId.reserveValidatorId})
         ctx
 
     reserveUtxo :: TxOut
@@ -412,7 +399,7 @@ mkReserveAuthPolicy voc ReserveAuthPolicyRedeemer {..} ctx =
         Nothing -> traceError "ERROR-RESERVE-AUTH-07"
 
     isApprovedByAdminGovernance :: Bool
-    isApprovedByAdminGovernance = approvedByMultiSigGovernance voc governanceVersion ctx
+    isApprovedByAdminGovernance = approvedByGovernance voc ctx
 
     oneReserveAuthTokenIsMinted :: Bool
     oneReserveAuthTokenIsMinted =

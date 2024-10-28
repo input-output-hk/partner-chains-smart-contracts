@@ -44,6 +44,7 @@ import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.Governance.Admin as Governance
+import TrustlessSidechain.InitSidechain.Governance (initGovernance)
 import TrustlessSidechain.InitSidechain.NativeTokenManagement
   ( initNativeTokenMgmt
   )
@@ -124,7 +125,8 @@ dummyInitialiseSidechain pkh = do
         , governanceAuthority: Governance.mkGovernanceAuthority pkh
         }
 
-  _ <- initNativeTokenMgmt sidechainParams 1
+  _ <- initGovernance sidechainParams pkh
+  _ <- initNativeTokenMgmt sidechainParams
 
   pure sidechainParams
 
@@ -138,8 +140,7 @@ findIlliquidCirculationSupplyUtxos sidechainParams =
   Versioning.getVersionedValidatorAddress
     sidechainParams
     ( VersionOracle
-        { version: BigNum.fromInt 1
-        , scriptId: IlliquidCirculationSupplyValidator
+        { scriptId: IlliquidCirculationSupplyValidator
         }
     )
     >>= utxosAt

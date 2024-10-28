@@ -7,7 +7,6 @@ module TrustlessSidechain.NativeTokenManagement.IlliquidCirculationSupply
 import Contract.Prelude
 
 import Cardano.Types.AssetName (AssetName)
-import Cardano.Types.BigNum as BigNum
 import Cardano.Types.Int as Int
 import Cardano.Types.PlutusData (unit) as PlutusData
 import Cardano.Types.PlutusScript (PlutusScript)
@@ -75,8 +74,7 @@ illiquidCirculationSupplyLookupsAndConstraints sp = do
   (icsRefTxInput /\ icsRefTxOutput) <-
     Versioning.getVersionedScriptRefUtxo sp
       ( VersionOracle
-          { version: BigNum.fromInt 1
-          , scriptId: IlliquidCirculationSupplyWithdrawalPolicy
+          { scriptId: IlliquidCirculationSupplyWithdrawalPolicy
           }
       )
 
@@ -153,8 +151,7 @@ withdrawFromSupply sp mintingPolicyHash withdrawnValue utxo = do
     Versioning.getVersionedScriptRefUtxo
       sp
       ( VersionOracle
-          { version: BigNum.fromInt 1
-          , scriptId: IlliquidCirculationSupplyWithdrawalPolicy
+          { scriptId: IlliquidCirculationSupplyWithdrawalPolicy
           }
       )
 

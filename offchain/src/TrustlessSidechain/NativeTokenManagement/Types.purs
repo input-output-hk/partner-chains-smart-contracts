@@ -5,7 +5,6 @@ module TrustlessSidechain.NativeTokenManagement.Types
   , ReserveRedeemer(..)
   , ReserveStats(..)
   , MutableReserveSettings(..)
-  , ReserveAuthPolicyRedeemer(..)
   ) where
 
 import Contract.Prelude
@@ -172,28 +171,6 @@ instance FromData ReserveRedeemer where
       governanceVersion <- fromData arg
       pure $ Handover { governanceVersion }
     _ -> Nothing
-
-newtype ReserveAuthPolicyRedeemer = ReserveAuthPolicyRedeemer
-  { governanceVersion :: BigInt.BigInt
-  }
-
-derive newtype instance Eq ReserveAuthPolicyRedeemer
-
-derive instance Generic ReserveAuthPolicyRedeemer _
-
-derive instance Newtype ReserveAuthPolicyRedeemer _
-
-instance Show ReserveAuthPolicyRedeemer where
-  show = genericShow
-
-instance ToData ReserveAuthPolicyRedeemer where
-  toData (ReserveAuthPolicyRedeemer { governanceVersion }) = toData
-    governanceVersion
-
-instance FromData ReserveAuthPolicyRedeemer where
-  fromData dat = do
-    governanceVersion <- fromData dat
-    pure $ ReserveAuthPolicyRedeemer { governanceVersion }
 
 data IlliquidCirculationSupplyRedeemer
   = DepositMoreToSupply

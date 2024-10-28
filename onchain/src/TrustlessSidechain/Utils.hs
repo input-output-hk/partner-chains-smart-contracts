@@ -64,9 +64,7 @@ oneTokenMintedUnsafe txInfo cs tn =
 
 -- | Check that exactly one specified asset was burned by a transaction.  Note
 -- that transaction is also allowed to burn tokens of the same 'CurrencySymbol',
--- but with different 'TokenName's.  This is intended for use with 'InitToken's,
--- so that we permit multiple 'InitToken's with different names burned in the
--- same transaction.
+-- but with different 'TokenName's.
 {-# INLINEABLE oneTokenBurned #-}
 oneTokenBurned :: Value -> CurrencySymbol -> TokenName -> Bool
 oneTokenBurned txInfoMint cs tn =

@@ -13,6 +13,16 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 ## Fixed
   * Add missing newline at end of CLI error output
 
+## Removed
+  * Removed InitToken
+
+## Added
+  * Recursive governance system.
+  * `init-governance` command
+
+## Changed
+  * DParameter, PermissionedCandidates now use the recursive governance.
+
 # v6.2.1
 
 ## Fixed

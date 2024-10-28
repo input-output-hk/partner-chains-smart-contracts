@@ -4,11 +4,13 @@ module TrustlessSidechain.Governance.MultiSig
   , multisigGovPolicy
   , multisigGovCurrencyInfo
   , multisigGovTokenName
+  , multisigLookupsAndConstraints
   ) where
 
 import Contract.Prelude
 
 import Cardano.Types.Ed25519KeyHash (Ed25519KeyHash)
+import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash(PaymentPubKeyHash))
 import Cardano.Types.PlutusScript (PlutusScript)
 import Contract.PlutusData
   ( class FromData
@@ -17,8 +19,16 @@ import Contract.PlutusData
   , fromData
   , toData
   )
+import Contract.ScriptLookups (ScriptLookups)
+import Contract.TxConstraints
+  ( TxConstraints
+  )
+import Contract.TxConstraints as Constraints
 import Contract.Value (TokenName)
+import Data.Array as Array
+import Data.Maybe as Maybe
 import JS.BigInt as BigInt
+import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.Error (OffchainError)
@@ -125,3 +135,17 @@ multisigGovCurrencyInfo ::
   Run (EXCEPT OffchainError + r) CurrencyInfo
 multisigGovCurrencyInfo msgp = do
   getCurrencyInfo MultiSigPolicy [ toData msgp ]
+
+-- TODO: proper implementation for multiple signatures collected at later stage
+multisigLookupsAndConstraints ::
+  MultiSigGovParams ->
+  { lookups :: ScriptLookups
+  , constraints :: TxConstraints
+  }
+multisigLookupsAndConstraints
+  (MultiSigGovParams { governanceMembers }) = do
+  let
+    lookups = mempty
+    constraints = Constraints.mustBeSignedBy $ PaymentPubKeyHash $ unsafePartial
+      $ Maybe.fromJust (Array.head governanceMembers)
+  { lookups, constraints }

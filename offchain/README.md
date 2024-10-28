@@ -193,26 +193,23 @@ $SIGNING_KEY`.
 
 | Command                   | Description                                       |
 | ------------------------- | ------------------------------------------------- |
-| `init-tokens-mint`        | Mint all sidechain initialisation tokens          |
+| `init-governance`         | Initialise governance |
 | `init-reserve-management` | Initialise native token reserve management system |
 
-A mandatory first step is to mint the so called "initialization tokens" using
-the `init-tokens-mint` command. These tokens are required to subsequently
-initialize desired components of a partner chain.
+A mandatory first step is to initialize governance using
+the `init-governance` command.
 
-Executing `init-tokens-mint` spends the Genesis Utxo and mints:
-
-- `"Version oracle InitToken"` (multiple tokens)
+Executing `init-governance` spends the Genesis Utxo.
 
 ```
-nix run .#pc-contracts-cli -- init-tokens-mint --version 1
+nix run .#pc-contracts-cli -- init-governance --governance-authority "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
 ```
 
 To be able to use native tokens related scripts must be inserted into versioning
 system first using the `init-reserve-management` command.
 
-- [InitToken smart contract code](../onchain/src/TrustlessSidechain/InitToken.hs)
-- [InitToken off-chain code](./src/TrustlessSidechain/InitSidechain/TokensMint.purs)
+- [Governance smart contract code](../onchain/src/TrustlessSidechain/Governance/MultiSig.hs)
+- [Governance offchain code](./src/TrustlessSidechain/Governance.purs)
 
 ### 2. D parameters
 
