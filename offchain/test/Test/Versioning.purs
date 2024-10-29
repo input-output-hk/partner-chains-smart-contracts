@@ -122,7 +122,7 @@ testInsertAndInvalidateSuccessScenario =
           -- which means that ReserveAuthPolicy and GovernancePolicy policies,
           -- as well as ReserveValidator and IlliquidCirculationSupplyValidator
           -- get inserted.
-          assertNumberOfActualVersionedScripts sidechainParams 3 3
+          assertNumberOfActualVersionedScripts sidechainParams 2 3
 
 -- | We insert the same script (same ScriptId and same version) twice. That
 -- should work.
@@ -175,7 +175,7 @@ testInsertSameScriptTwiceSuccessScenario =
             >>=
               balanceSignAndSubmit "Test: insert the same version of policy"
 
-          assertNumberOfActualVersionedScripts sidechainParams 3 5
+          assertNumberOfActualVersionedScripts sidechainParams 2 5
 
 -- | We insert an script that is not part of the initial versioned scripts.
 testInsertUnversionedScriptSuccessScenario :: TestnetTest
@@ -212,7 +212,7 @@ testInsertUnversionedScriptSuccessScenario =
 
           { dParameterMintingPolicy } <-
             getDParameterMintingPolicyAndCurrencySymbol sidechainParams
-          assertNumberOfActualVersionedScripts sidechainParams 3 3
+          assertNumberOfActualVersionedScripts sidechainParams 2 3
           -- This validator is not part of the versioned scripts hardcoded list,
           -- so it should *not* be inserted.
           void
@@ -221,7 +221,7 @@ testInsertUnversionedScriptSuccessScenario =
                 (DParameterPolicy /\ dParameterMintingPolicy)
             >>=
               balanceSignAndSubmit "Test: insert non-versioned validator version"
-          assertNumberOfActualVersionedScripts sidechainParams 3 3
+          assertNumberOfActualVersionedScripts sidechainParams 2 3
 
 -- | After inserting a versioned script, invalidating it twice should fail in the second
 -- | invalidation call.

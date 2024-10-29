@@ -26,7 +26,7 @@ module TrustlessSidechain.Versioning (
 import PlutusLedgerApi.V1.Address (scriptHashAddress)
 import PlutusLedgerApi.V1.Value (getValue, valueOf)
 import PlutusLedgerApi.V2 (Address, CurrencySymbol (CurrencySymbol), Datum (Datum), OutputDatum (OutputDatum), ScriptContext (ScriptContext), ScriptHash (ScriptHash), SerialisedScript, TokenName (TokenName), TxInInfo (TxInInfo), TxOut (TxOut), Value, serialiseCompiledCode)
-import PlutusLedgerApi.V2.Contexts (txInfoReferenceInputs)
+import PlutusLedgerApi.V2.Contexts (txInfoInputs, txInfoReferenceInputs)
 import PlutusTx qualified
 import PlutusTx.AssocMap (lookup, toList)
 import TrustlessSidechain.Governance.Admin qualified as Governance
@@ -439,7 +439,7 @@ getVersionedScriptHash
               (OutputDatum (Datum datum))
               (Just (ScriptHash hash))
             ) <-
-          txInfoReferenceInputs txInfo
+          txInfoReferenceInputs txInfo ++ txInfoInputs txInfo
         , -- 1. Contains datum that matches desired version and scriptId.
         Just (VersionOracleDatum versionOracle' _) <- [PlutusTx.fromBuiltinData datum]
         , versionOracle' == versionOracle
@@ -470,7 +470,7 @@ getVersionedScriptHashUnsafe
             ) <-
           PlutusTx.unsafeFromBuiltinData
             . Unsafe.unTxInInfo
-            <$> (Unsafe.txInfoReferenceInputs . Unsafe.scriptContextTxInfo $ sc)
+            <$> ((\x -> Unsafe.txInfoReferenceInputs x ++ Unsafe.txInfoInputs x) . Unsafe.scriptContextTxInfo $ sc)
         , -- 1. Contains datum that matches desired version and scriptId.
         Just (VersionOracleDatum versionOracle' _) <- [PlutusTx.fromBuiltinData datum]
         , versionOracle' == versionOracle

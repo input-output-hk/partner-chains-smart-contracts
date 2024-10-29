@@ -2,6 +2,7 @@
 module TrustlessSidechain.Governance
   ( Governance(..)
   , approveByGovernanceLookupsAndConstraints
+  , approveByGovernanceWithoutRefLookupsAndConstraints
   ) where
 
 import Contract.Prelude
@@ -13,7 +14,7 @@ import Cardano.Types.TransactionOutput (TransactionOutput)
 import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(..))
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.TxConstraints
-  ( InputWithScriptRef(RefInput)
+  ( InputWithScriptRef(SpendInput, RefInput)
   , TxConstraints
   )
 import Contract.TxConstraints as Constraints
@@ -56,5 +57,34 @@ approveByGovernanceLookupsAndConstraints
             { input: governanceRefTxInput, output: governanceRefTxOutput }
         )
         <> Constraints.mustReferenceOutput governanceRefTxInput
+        <> msConstraints
+  { lookups, constraints }
+
+approveByGovernanceWithoutRefLookupsAndConstraints ::
+  Governance ->
+  ScriptHash ->
+  TransactionInput ->
+  TransactionOutput ->
+  { lookups :: ScriptLookups
+  , constraints :: TxConstraints
+  }
+approveByGovernanceWithoutRefLookupsAndConstraints
+  (MultiSig params)
+  governancePlutusScriptHash
+  governanceRefTxInput
+  governanceRefTxOutput = do
+  let
+    { lookups: msLookups, constraints: msConstraints } =
+      multisigLookupsAndConstraints params
+  let lookups = msLookups
+  let
+    constraints =
+      Constraints.mustMintCurrencyUsingScriptRef
+        governancePlutusScriptHash
+        emptyAssetName
+        (Int.fromInt 1)
+        ( SpendInput $ TransactionUnspentOutput
+            { input: governanceRefTxInput, output: governanceRefTxOutput }
+        )
         <> msConstraints
   { lookups, constraints }

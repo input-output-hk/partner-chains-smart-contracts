@@ -33,6 +33,7 @@ data EndpointResp
   | CommitteeCandidateDeregResp { transactionId :: ByteArray }
   | GetAddrsResp { sidechainAddresses :: SidechainAddresses }
   | InitGovernanceResp { transactionId :: ByteArray }
+  | UpdateGovernanceResp { transactionId :: ByteArray }
   | InitReserveManagementResp
       { scriptsInitTxIds :: Array ByteArray
       }
@@ -110,6 +111,15 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
         Object.fromFoldable
           [ "endpoint" /\ J.fromString "InitGovernance"
           -- NOTE: Nothing encoded to null
+          , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
+          ]
+
+    UpdateGovernanceResp
+      { transactionId
+      } ->
+      J.fromObject $
+        Object.fromFoldable
+          [ "endpoint" /\ J.fromString "UpdateGovernance"
           , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
           ]
 

@@ -19,6 +19,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 ## Added
   * Recursive governance system.
   * `init-governance` command
+  * `update-governance` command
 
 ## Changed
   * DParameter, PermissionedCandidates now use the recursive governance.

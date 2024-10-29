@@ -24,6 +24,7 @@ import TrustlessSidechain.EndpointResp
       , GetAddrsResp
       , InitReserveManagementResp
       , InitGovernanceResp
+      , UpdateGovernanceResp
       , UpdateVersionResp
       , InvalidateVersionResp
       , InsertDParameterResp
@@ -40,6 +41,7 @@ import TrustlessSidechain.Governance (Governance(MultiSig))
 import TrustlessSidechain.Governance.MultiSig
   ( MultiSigGovParams(MultiSigGovParams)
   )
+import TrustlessSidechain.Governance.Utils (updateGovernance)
 import TrustlessSidechain.InitSidechain.Governance (initGovernance)
 import TrustlessSidechain.InitSidechain.NativeTokenManagement
   ( initNativeTokenMgmt
@@ -63,6 +65,7 @@ import TrustlessSidechain.Options.Types
       , InitReserveManagement
       , UpdateVersion
       , InitGovernance
+      , UpdateGovernance
       , InvalidateVersion
       , InsertDParameter
       , UpdateDParameter
@@ -206,6 +209,14 @@ runTxEndpoint sidechainEndpointParams endpoint =
           transactionId <- initGovernance scParams govPubKeyHash
 
           pure $ InitGovernanceResp
+            { transactionId: txHashToByteArray transactionId
+            }
+
+      UpdateGovernance { governancePubKeyHash } ->
+        do
+          transactionId <- updateGovernance scParams governancePubKeyHash
+
+          pure $ UpdateGovernanceResp
             { transactionId: txHashToByteArray transactionId
             }
 

@@ -19,6 +19,7 @@ import Test.Config (config)
 import Test.ConfigFile as ConfigFile
 import Test.DParameter as DParameter
 import Test.Data as Data
+import Test.Governance as Governance
 import Test.IlliquidCirculationSupply as IlliquidCirculationSupply
 import Test.PermissionedCandidates as PermissionedCandidates
 import Test.Reserve as Reserve
@@ -58,3 +59,4 @@ testnetSuite = do
       CommitteeCandidateValidator.suite
       Versioning.suite
       DParameter.suite
+      Governance.suite

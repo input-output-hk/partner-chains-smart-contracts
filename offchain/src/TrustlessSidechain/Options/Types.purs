@@ -90,6 +90,7 @@ data TxEndpoint
   | CommitteeCandidateDereg { spoPubKey :: Maybe PubKey }
   | GetAddrs
   | InitGovernance { governancePubKeyHash :: Maybe PaymentPubKeyHash }
+  | UpdateGovernance { governancePubKeyHash :: PaymentPubKeyHash }
   | InitReserveManagement
   | UpdateVersion
   | InvalidateVersion

@@ -11,15 +11,19 @@ module TrustlessSidechain.Versioning
 
 import Contract.Prelude
 
+import Cardano.Types.Asset (Asset(Asset))
+import Cardano.Types.BigNum as BigNum
 import Cardano.Types.OutputDatum (OutputDatum(OutputDatum))
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.PlutusScript as PlutusScript
-import Cardano.Types.ScriptHash (ScriptHash)
 import Cardano.Types.ScriptRef (ScriptRef(PlutusScriptRef))
 import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
+import Cardano.Types.Value as Value
+import Contract.PlutusData (fromData)
 import Contract.Transaction
   ( TransactionHash
   )
+import Control.Alternative (guard)
 import Data.Array (fromFoldable) as Array
 import Data.List (List)
 import Data.List as List
@@ -39,7 +43,9 @@ import TrustlessSidechain.Utils.Address (toAddress)
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 import TrustlessSidechain.Versioning.Types as Types
 import TrustlessSidechain.Versioning.Utils
-  ( versionOracleValidator
+  ( getVersionOraclePolicy
+  , versionOracleTokenName
+  , versionOracleValidator
   )
 import TrustlessSidechain.Versioning.Utils as Utils
 import TrustlessSidechain.Versioning.V1 as V1
@@ -281,6 +287,13 @@ getExpectedVersionedPoliciesAndValidators ::
 getExpectedVersionedPoliciesAndValidators sidechainParams =
   V1.getVersionedPoliciesAndValidators sidechainParams
 
+getExpectedVersionedPoliciesAndValidatorsScriptIds ::
+  { versionedPolicies :: List Types.ScriptId
+  , versionedValidators :: List Types.ScriptId
+  }
+getExpectedVersionedPoliciesAndValidatorsScriptIds = do
+  V1.getVersionedPoliciesAndValidatorsScriptIds
+
 getCommitteeSelectionPoliciesAndValidators ::
   forall r.
   SidechainParams ->
@@ -321,36 +334,40 @@ getActualVersionedPoliciesAndValidators sidechainParams =
     -- Get UTxOs located at the version oracle validator script address
     versionOracleValidatorAddr <- toAddress (PlutusScript.hash vValidator)
     scriptUtxos <- Effect.utxosAt versionOracleValidatorAddr
+    { versionOracleCurrencySymbol } <- getVersionOraclePolicy sidechainParams
 
     -- Get scripts that should be versioned
-    { versionedPolicies, versionedValidators } <-
-      getExpectedVersionedPoliciesAndValidators sidechainParams
+    let
+      { versionedPolicies, versionedValidators } =
+        getExpectedVersionedPoliciesAndValidatorsScriptIds
 
     -- Create Map of type 'Map ScriptHash (ScriptId, Script)' for fast retrieval
     -- of versioned scripts based on 'ScriptHash'.
-    let
-      versionedPoliciesIndexedByHash =
-        Map.fromFoldable
-          $ map (\t@(Tuple _ script) -> PlutusScript.hash script /\ t)
-          $ versionedPolicies
-
-      versionedValidatorsIndexedByHash =
-        Map.fromFoldable
-          $ map (\t@(Tuple _ script) -> PlutusScript.hash script /\ t)
-          $ versionedValidators
 
     -- Get script hashes of versioned scripts that are linked to the version
     -- oracle validator.
     let
-      (actualVersionedScriptHashes :: List ScriptHash) =
+      (actualVersionedScripts :: List (Tuple Types.ScriptId PlutusScript)) =
         List.catMaybes
           $ map
-              ( \(TransactionOutput { scriptRef, datum: outputDatum }) ->
-                  case (scriptRef /\ outputDatum) of
-                    ( Just (PlutusScriptRef plutusScript) /\ Just
-                        (OutputDatum _)
-                    ) -> pure $ PlutusScript.hash plutusScript
-                    _ -> Nothing
+              ( \(TransactionOutput { scriptRef, datum: outputDatum, amount }) ->
+                  do
+                    guard
+                      ( Value.valueOf
+                          (Asset versionOracleCurrencySymbol versionOracleTokenName)
+                          amount > BigNum.fromInt 0
+                      )
+                    plutusScript <- case scriptRef of
+                      Just (PlutusScriptRef plutusScript) -> pure plutusScript
+                      _ -> Nothing
+                    datum <- case outputDatum of
+                      Just (OutputDatum d) -> pure d
+                      _ -> Nothing
+                    Types.VersionOracleDatum
+                      { versionOracle: Types.VersionOracle { scriptId } } <- fromData
+                      datum
+                    pure $ Tuple scriptId plutusScript
+
               )
           $ Map.values scriptUtxos
 
@@ -358,16 +375,14 @@ getActualVersionedPoliciesAndValidators sidechainParams =
     -- versioned scripts.
     let
       actualVersionedPolicies =
-        List.catMaybes $
-          map
-            (\scriptHash -> Map.lookup scriptHash versionedPoliciesIndexedByHash)
-            actualVersionedScriptHashes
+        List.filter
+          (\(Tuple scriptId _) -> scriptId `elem` versionedPolicies)
+          actualVersionedScripts
 
       actualVersionedValidators =
-        List.catMaybes $
-          map
-            (\scriptHash -> Map.lookup scriptHash versionedValidatorsIndexedByHash)
-            actualVersionedScriptHashes
+        List.filter
+          (\(Tuple scriptId _) -> scriptId `elem` versionedValidators)
+          actualVersionedScripts
 
     pure
       { versionedPolicies: actualVersionedPolicies

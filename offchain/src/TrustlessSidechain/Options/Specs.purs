@@ -80,6 +80,7 @@ import TrustlessSidechain.Options.Types
   , TxEndpoint
       ( GetAddrs
       , InitGovernance
+      , UpdateGovernance
       , InitReserveManagement
       , CommitteeCandidateReg
       , CommitteeCandidateDereg
@@ -112,6 +113,10 @@ optSpec maybeConfig =
     [ command "init-governance"
         ( info (withCommonOpts maybeConfig initGovernanceSpec)
             (progDesc "Initialize the governance")
+        )
+    , command "update-governance"
+        ( info (withCommonOpts maybeConfig updateGovernanceSpec)
+            (progDesc "Update the governance")
         )
     , command "init-reserve-management"
         ( info (withCommonOpts maybeConfig initReserveManagementSpec)
@@ -471,6 +476,16 @@ initGovernanceSpec =
       , help "Public key hash of governance authority"
       ]
     in InitGovernance { governancePubKeyHash: unwrap <$> governanceAuthority }
+
+updateGovernanceSpec :: Parser TxEndpoint
+updateGovernanceSpec = ado
+  governanceAuthority <- option governanceAuthority $ fold
+    [ short 'g'
+    , long "governance-authority"
+    , metavar "PUB_KEY_HASH"
+    , help "Public key hash of governance authority"
+    ]
+  in UpdateGovernance { governancePubKeyHash: unwrap governanceAuthority }
 
 initReserveManagementSpec :: Parser TxEndpoint
 initReserveManagementSpec = pure InitReserveManagement
