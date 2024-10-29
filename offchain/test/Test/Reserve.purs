@@ -47,7 +47,6 @@ import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain.NativeTokenManagement
   ( initNativeTokenMgmt
   )
-import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
 import TrustlessSidechain.NativeTokenManagement.Reserve
   ( depositToReserve
   , extractReserveDatum
