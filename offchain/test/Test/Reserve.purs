@@ -125,7 +125,6 @@ dummyInitialiseSidechain pkh = do
         , governanceAuthority: Governance.mkGovernanceAuthority pkh
         }
 
-  _ <- initTokensMint sidechainParams 1
   _ <- initNativeTokenMgmt sidechainParams 1
 
   pure sidechainParams

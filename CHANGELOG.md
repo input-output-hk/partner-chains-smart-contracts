@@ -5,6 +5,9 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 # Unreleased
 
+## Changed
+  * NativeTokenManagement can be initialised without spending the genesis utxo.
+
 ## Fixed
   * Add missing newline at end of CLI error output
 
