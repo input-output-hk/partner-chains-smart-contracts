@@ -19,7 +19,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   * Removed `init-token-status` command
 
 ## Added
-  * Recursive governance system.
+  * Updateable governance system.
   * `init-governance` command
   * `update-governance` command
 
