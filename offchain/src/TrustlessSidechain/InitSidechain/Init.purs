@@ -59,7 +59,7 @@ insertScriptsIdempotent f sidechainParams version = do
     ( traverse ::
         forall m a b. Applicative m => (a -> m b) -> Array a -> m (Array b)
     )
-      ( Utils.initializeVersionLookupsAndConstraints sidechainParams version >=>
+      ( Utils.insertVersionLookupsAndConstraints sidechainParams version >=>
           Utils.Transaction.balanceSignAndSubmit
             "Initialize versioned validators"
       )
@@ -68,7 +68,7 @@ insertScriptsIdempotent f sidechainParams version = do
     ( traverse ::
         forall m a b. Applicative m => (a -> m b) -> Array a -> m (Array b)
     )
-      ( Utils.initializeVersionLookupsAndConstraints sidechainParams version >=>
+      ( Utils.insertVersionLookupsAndConstraints sidechainParams version >=>
           Utils.Transaction.balanceSignAndSubmit "Initialize versioned policies"
       )
       $ List.toUnfoldable (toInsert.versionedPolicies)
