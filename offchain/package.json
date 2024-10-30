@@ -1,7 +1,7 @@
 {
   "name": "@partner-chains/pc-contracts-cli",
   "type": "module",
-  "version": "6.2.1",
+  "version": "6.2.2",
   "description": "Partner Chains Smart Contracts CLI",
   "main": "dist/pc-contracts-cli",
   "directories": {
