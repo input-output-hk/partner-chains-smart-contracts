@@ -281,7 +281,7 @@ insertVersionLookupsAndConstraints sp (Tuple scriptId versionedScript) =
     let
       { lookups: governanceAuthorityLookups
       , constraints: governanceAuthorityConstraints
-      } = Governance.approveByGovernanceLookupsAndConstraints
+      } = Governance.approvedByGovernanceLookupsAndConstraints
         ( MultiSig $ MultiSigGovParams
             { governanceMembers: [ unwrap $ governanceAuthority ]
             , requiredSignatures: BigInt.fromInt 1
@@ -407,7 +407,7 @@ invalidateVersionLookupsAndConstraints sp scriptId = do
   let
     { lookups: governanceAuthorityLookups
     , constraints: governanceAuthorityConstraints
-    } = Governance.approveByGovernanceLookupsAndConstraints
+    } = Governance.approvedByGovernanceLookupsAndConstraints
       ( MultiSig $ MultiSigGovParams
           { governanceMembers: [ unwrap $ governanceAuthority ]
           , requiredSignatures: BigInt.fromInt 1
@@ -641,7 +641,7 @@ updateVersionLookupsAndConstraints sp scriptId plutusScript = do
   let
     { lookups: governanceAuthorityLookups
     , constraints: governanceAuthorityConstraints
-    } = Governance.approveByGovernanceWithoutRefLookupsAndConstraints
+    } = Governance.approvedByGovernanceWithoutRefLookupsAndConstraints
       ( MultiSig $ MultiSigGovParams
           { governanceMembers: [ unwrap $ governanceAuthority ]
           , requiredSignatures: BigInt.fromInt 1

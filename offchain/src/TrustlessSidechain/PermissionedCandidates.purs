@@ -117,7 +117,7 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
     ) <$> Effect.utxosAt permissionedCandidatesValidatorAddress
 
   { lookups: governanceLookups, constraints: governanceConstraints } <-
-    Governance.approveByGovernanceLookupsAndConstraints sidechainParams
+    Governance.approvedByGovernanceLookupsAndConstraints sidechainParams
 
   oldCandidates <- case maybePermissionedCandidatesUTxO of
     Nothing -> pure []

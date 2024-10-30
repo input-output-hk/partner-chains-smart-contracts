@@ -73,7 +73,7 @@ mkInsertDParameterLookupsAndConstraints
   let dParameterValidatorHash = PlutusScript.hash dParameterValidator
 
   { lookups: governanceLookups, constraints: governanceConstraints } <-
-    Governance.approveByGovernanceLookupsAndConstraints sidechainParams
+    Governance.approvedByGovernanceLookupsAndConstraints sidechainParams
 
   let
     value :: Value.Value
@@ -125,7 +125,7 @@ mkUpdateDParameterLookupsAndConstraints
   let dParameterValidatorHash = PlutusScript.hash dParameterValidator
 
   { lookups: governanceLookups, constraints: governanceConstraints } <-
-    Governance.approveByGovernanceLookupsAndConstraints sidechainParams
+    Governance.approvedByGovernanceLookupsAndConstraints sidechainParams
 
   -- find one UTxO at DParameterValidator address that contain DParameterToken
 

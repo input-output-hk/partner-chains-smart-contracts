@@ -1,8 +1,8 @@
 -- | Module for common governance definitions.
 module TrustlessSidechain.Governance
   ( Governance(..)
-  , approveByGovernanceLookupsAndConstraints
-  , approveByGovernanceWithoutRefLookupsAndConstraints
+  , approvedByGovernanceLookupsAndConstraints
+  , approvedByGovernanceWithoutRefLookupsAndConstraints
   ) where
 
 import Contract.Prelude
@@ -30,7 +30,7 @@ data Governance = MultiSig MultiSigGovParams
 instance Show Governance where
   show (MultiSig params) = "MultiSig " <> show params
 
-approveByGovernanceLookupsAndConstraints ::
+approvedByGovernanceLookupsAndConstraints ::
   Governance ->
   ScriptHash ->
   TransactionInput ->
@@ -38,7 +38,7 @@ approveByGovernanceLookupsAndConstraints ::
   { lookups :: ScriptLookups
   , constraints :: TxConstraints
   }
-approveByGovernanceLookupsAndConstraints
+approvedByGovernanceLookupsAndConstraints
   (MultiSig params)
   governancePlutusScriptHash
   governanceRefTxInput
@@ -60,7 +60,7 @@ approveByGovernanceLookupsAndConstraints
         <> msConstraints
   { lookups, constraints }
 
-approveByGovernanceWithoutRefLookupsAndConstraints ::
+approvedByGovernanceWithoutRefLookupsAndConstraints ::
   Governance ->
   ScriptHash ->
   TransactionInput ->
@@ -68,7 +68,7 @@ approveByGovernanceWithoutRefLookupsAndConstraints ::
   { lookups :: ScriptLookups
   , constraints :: TxConstraints
   }
-approveByGovernanceWithoutRefLookupsAndConstraints
+approvedByGovernanceWithoutRefLookupsAndConstraints
   (MultiSig params)
   governancePlutusScriptHash
   governanceRefTxInput

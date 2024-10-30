@@ -1,5 +1,5 @@
 module TrustlessSidechain.Governance.Utils
-  ( approveByGovernanceLookupsAndConstraints
+  ( approvedByGovernanceLookupsAndConstraints
   , updateGovernance
   ) where
 
@@ -34,14 +34,14 @@ import TrustlessSidechain.Versioning.Types (VersionOracle(VersionOracle))
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
 
-approveByGovernanceLookupsAndConstraints ::
+approvedByGovernanceLookupsAndConstraints ::
   forall r.
   SidechainParams ->
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     { lookups :: ScriptLookups
     , constraints :: TxConstraints
     }
-approveByGovernanceLookupsAndConstraints sidechainParams = do
+approvedByGovernanceLookupsAndConstraints sidechainParams = do
   ownPaymentPubKeyHash <- getOwnPaymentPubKeyHash
 
   governancePlutusScriptHash <- Versioning.getVersionedScriptHash
@@ -53,7 +53,7 @@ approveByGovernanceLookupsAndConstraints sidechainParams = do
       sidechainParams
       (VersionOracle { scriptId: GovernancePolicy })
 
-  pure $ Governance.approveByGovernanceLookupsAndConstraints
+  pure $ Governance.approvedByGovernanceLookupsAndConstraints
     ( MultiSig $ MultiSigGovParams
         { governanceMembers: [ unwrap ownPaymentPubKeyHash ]
         , requiredSignatures: BigInt.fromInt 1

@@ -244,7 +244,7 @@ initialiseReserveUtxo
   do
     { lookups: governanceLookups
     , constraints: governanceConstraints
-    } <- Governance.approveByGovernanceLookupsAndConstraints sidechainParams
+    } <- Governance.approvedByGovernanceLookupsAndConstraints sidechainParams
 
     { reserveLookups
     , reserveConstraints
@@ -340,7 +340,7 @@ depositToReserve sp asset amount = do
 
   { lookups: governanceLookups
   , constraints: governanceConstraints
-  } <- Governance.approveByGovernanceLookupsAndConstraints sp
+  } <- Governance.approvedByGovernanceLookupsAndConstraints sp
 
   { reserveAuthLookups
   , reserveAuthConstraints
@@ -402,7 +402,7 @@ updateReserveUtxo ::
 updateReserveUtxo sp updatedMutableSettings utxo = do
   { lookups: governanceLookups
   , constraints: governanceConstraints
-  } <- Governance.approveByGovernanceLookupsAndConstraints sp
+  } <- Governance.approvedByGovernanceLookupsAndConstraints sp
 
   { reserveAuthLookups
   , reserveAuthConstraints
@@ -606,7 +606,7 @@ handover
 
   { lookups: governanceLookups
   , constraints: governanceConstraints
-  } <- Governance.approveByGovernanceLookupsAndConstraints sp
+  } <- Governance.approvedByGovernanceLookupsAndConstraints sp
 
   { reserveLookups
   , reserveConstraints
