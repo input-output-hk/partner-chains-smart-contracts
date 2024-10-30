@@ -29,11 +29,12 @@
     export IN_NIX_SHELL='pure'
 
     # Acquire temporary files..
-    TMP=$(mktemp)
+    TMP_PURS=$(mktemp)
+    TMP_RS=$(mktemp)
 
     # Setup temporary files cleanup
     function cleanup() {
-    rm -rf $TMP
+    rm -rf $TMP_PURS
     }
     trap cleanup EXIT
 
@@ -41,16 +42,32 @@
     ${
       self.packages."trustless-sidechain:exe:trustless-sidechain-serialise"
     }/bin/trustless-sidechain-serialise \
-    --purescript-plutus-scripts="$TMP"
+    --purescript-plutus-scripts="$TMP_PURS"
+    ${
+      self.packages."trustless-sidechain:exe:trustless-sidechain-serialise"
+    }/bin/trustless-sidechain-serialise \
+    --rust-plutus-scripts="$TMP_RS"
     popd > /dev/null
 
     pushd ${self}/offchain > /dev/null
 
     # Compare the generated file and the file provided in the repo.
-    cmp $TMP src/TrustlessSidechain/RawScripts.purs || {
+    cmp $TMP_PURS src/TrustlessSidechain/RawScripts.purs || {
     exitCode=$? ;
     echo "Plutus scripts out of date." ;
     echo 'See `offchain/src/TrustlessSidechain/RawScripts.purs` for instructions to resolve this' ;
+    exit $exitCode ;
+    }
+
+    popd > /dev/null
+
+    pushd ${self}/raw-scripts > /dev/null
+
+    # Compare the generated file and the file provided in the repo.
+    cmp $TMP_RS src/lib.rs || {
+    exitCode=$? ;
+    echo "Plutus scripts out of date." ;
+    echo 'See `raw-scripts/src/lib.rs` for instructions to resolve this' ;
     exit $exitCode ;
     }
 
