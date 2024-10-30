@@ -24,7 +24,7 @@ Changelog](https://keepachangelog.com/en/1.1.0).
   * `update-governance` command
 
 ## Changed
-  * `DParameter`, `PermissionedCandidates` now use the recursive governance.
+  * `DParameter`, `PermissionedCandidates` now use the updateable governance.
   * Dropped `--version` parameter from all commands.
   * Dropped `--old-version` and `--new-version` parameters from `update-version` command.
 
