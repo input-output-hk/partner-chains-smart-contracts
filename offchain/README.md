@@ -385,14 +385,12 @@ Example: `a03ebf281ed96549f74d0e724841fcf928194c44f6ff9a8056d1829598042c62#0`
 | ------------------------ | -------------------------------------------------------------------------------- |
 | `list-versioned-scripts` | Get scripts (validators and minting policies) that are currently being versioned |
 | `addresses`              | Get the script addresses for a given sidechain                                   |
-| `init-token-status`      | List the number of each init token the wallet still holds                        |
 | `cli-version`            | Display semantic version of the CLI and its git hash                             |
 
 #### List currently versioned scripts
 
 ```
-nix run .#pc-contracts-cli -- list-versioned-scripts \
-  --version 1
+nix run .#pc-contracts-cli -- list-versioned-scripts
 ```
 
 Returns the list of currently versioned scripts.
@@ -409,8 +407,7 @@ addresses for different parameters. To get the script addresses for a given
 sidechain, you can use the following command:
 
 ```
-nix run .#pc-contracts-cli -- addresses \
-  --version 1
+nix run .#pc-contracts-cli -- addresses
 ```
 
 ### 6. Versioning
@@ -423,16 +420,13 @@ nix run .#pc-contracts-cli -- addresses \
 #### Update existing protocol version
 
 ```
-nix run .#pc-contracts-cli -- update-version \
-  --old-version 1 \
-  --new-version 2
+nix run .#pc-contracts-cli -- update-version
 ```
 
 #### Invalidate protocol version
 
 ```
-nix run .#pc-contracts-cli -- invalidate-version \
-  --version 1
+nix run .#pc-contracts-cli -- invalidate-version
 ```
 
 - [Version oracle smart contract code](../onchain/src/TrustlessSidechain/)
