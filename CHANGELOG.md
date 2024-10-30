@@ -5,6 +5,8 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 # Unreleased
 
+# v6.2.2
+
 ## Changed
   * NativeTokenManagement can be initialised without spending the genesis utxo.
 
