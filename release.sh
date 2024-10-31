@@ -71,6 +71,9 @@ fi
 echo "Making release changes for new release $next_version (last version: $current_version)"
 
 cat $packagejson | jq ".version=\"$next_version\"" | sponge $packagejson
+pushd offchain > /dev/null || exit
+npm install --package-lock-only
+popd > /dev/null || exit
 sed -i "s/# Unreleased/# Unreleased\n\n# v$next_version/" $changelog
 # shellcheck disable=SC2086
 sed -i -r "s/^version:(\s*)\S+$/version:\1$next_version/" $cabalfile
