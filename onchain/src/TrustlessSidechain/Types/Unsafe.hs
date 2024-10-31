@@ -19,11 +19,8 @@ module TrustlessSidechain.Types.Unsafe (
   stakeOwnership,
   GovernanceAuthority (..),
   SidechainParams (..),
-  chainId,
   genesisUtxo,
   governanceAuthority,
-  thresholdDenominator,
-  thresholdNumerator,
   Signature (..),
   StakeOwnership (..),
   -- | From Plutus.V2.Ledger.Api

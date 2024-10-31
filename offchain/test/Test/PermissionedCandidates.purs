@@ -6,7 +6,6 @@ import Cardano.Types.BigNum as BigNum
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Test.Testnet (withWallets)
 import Contract.Wallet (withKeyWallet)
-import JS.BigInt as BigInt
 import Mote.Monad (group, test)
 import Test.Utils (TestnetTest, fails, getOwnTransactionInput)
 import TrustlessSidechain.Effects.Env (emptyEnv)
@@ -43,10 +42,7 @@ testScenario =
         let
           sidechainParams =
             SidechainParams
-              { chainId: BigInt.fromInt 1
-              , genesisUtxo
-              , thresholdNumerator: BigInt.fromInt 2
-              , thresholdDenominator: BigInt.fromInt 3
+              { genesisUtxo
               , governanceAuthority: Governance.mkGovernanceAuthority pkh
               }
         Effect.logInfo' $ "sidechainParams: " <> show sidechainParams

@@ -5,6 +5,9 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 
 # Unreleased
 
+## Removed
+  * Removed `--chainId`, `--threshold-numerator` and `--threshold-denominator`
+
 # v6.2.2
 
 ## Changed

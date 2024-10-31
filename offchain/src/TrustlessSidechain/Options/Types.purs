@@ -57,13 +57,7 @@ type Config =
   { -- | Sidechain parameters (defining the sidechain which we will interact with)
     sidechainParameters ::
       Maybe
-        { chainId :: Maybe Int
-        , genesisUtxo :: Maybe TransactionInput
-        , threshold ::
-            Maybe
-              { numerator :: Int
-              , denominator :: Int
-              }
+        { genesisUtxo :: Maybe TransactionInput
         -- governanceAuthority should really be a PubKeyHash but there's no
         -- (easy) way of pulling a dummy PubKeyHash value out of thin air in
         -- TrustlessSidechain.ConfigFile.optExample

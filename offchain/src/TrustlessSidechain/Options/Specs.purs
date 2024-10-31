@@ -63,10 +63,8 @@ import TrustlessSidechain.NativeTokenManagement.Types
   )
 import TrustlessSidechain.Options.Parsers
   ( byteArray
-  , denominator
   , governanceAuthority
   , networkId
-  , numerator
   , permissionedCandidateKeys
   , registrationSidechainKeys
   , uint
@@ -308,15 +306,6 @@ serverConfigSpec
 
 sidechainParamsSpec :: Maybe Config -> Parser SidechainParams
 sidechainParamsSpec maybeConfig = ado
-  chainId <- option int $ fold
-    [ short 'i'
-    , long "sidechain-id"
-    , metavar "1"
-    , help "Sidechain ID"
-    , maybe mempty value
-        (maybeConfig >>= _.sidechainParameters >>= _.chainId)
-    ]
-
   genesisUtxo <- option Parsers.transactionInput $ fold
     [ short 'c'
     , long "genesis-committee-hash-utxo"
@@ -340,40 +329,10 @@ sidechainParamsSpec maybeConfig = ado
             )
         )
     ]
-
-  { thresholdNumerator, thresholdDenominator } <-
-    let
-      thresholdNumeratorDenominatorOption = ado
-        thresholdNumerator <- option numerator $ fold
-          [ long "threshold-numerator"
-          , metavar "INT"
-          , help "The numerator for the ratio of the threshold"
-          , maybe mempty value
-              $ map (BigInt.fromInt <<< _.numerator)
-                  ( maybeConfig >>= _.sidechainParameters >>=
-                      _.threshold
-                  )
-          ]
-        thresholdDenominator <- option denominator $ fold
-          [ long "threshold-denominator"
-          , metavar "INT"
-          , help "The denominator for the ratio of the threshold"
-          , maybe mempty value
-              $ map (BigInt.fromInt <<< _.denominator)
-                  ( maybeConfig >>= _.sidechainParameters >>=
-                      _.threshold
-                  )
-          ]
-        in { thresholdNumerator, thresholdDenominator }
-    in
-      thresholdNumeratorDenominatorOption
   in
     SidechainParams
-      { chainId: BigInt.fromInt chainId
-      , genesisUtxo
+      { genesisUtxo
       , governanceAuthority
-      , thresholdNumerator
-      , thresholdDenominator
       }
 
 -- | SidechainParams CLI parser

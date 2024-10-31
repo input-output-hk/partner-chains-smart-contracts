@@ -70,11 +70,8 @@ import TrustlessSidechain.Types (
   ReserveStats (ReserveStats),
   SidechainParams (
     SidechainParams,
-    chainId,
     genesisUtxo,
-    governanceAuthority,
-    thresholdDenominator,
-    thresholdNumerator
+    governanceAuthority
   ),
   StakeOwnership (AdaBasedStaking, TokenBasedStaking),
   VersionedGenericDatum (..),
@@ -119,11 +116,8 @@ sampleTxOutRef = TxOutRef "e41c9b57841e582c207bb68d5e9736fb48c7af5f1ec29ade00692
 sampleSidechainParams :: SidechainParams
 sampleSidechainParams =
   SidechainParams
-    { chainId = 11
-    , genesisUtxo = sampleTxOutRef
+    { genesisUtxo = sampleTxOutRef
     , governanceAuthority = mkGovernanceAuthority "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
-    , thresholdNumerator = 2
-    , thresholdDenominator = 3
     }
 
 sampleBlockProducerRegistration1 :: VersionedGenericDatum PubKeyHash

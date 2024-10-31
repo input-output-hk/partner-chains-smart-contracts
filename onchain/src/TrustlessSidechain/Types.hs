@@ -65,16 +65,9 @@ PlutusTx.makeLift ''GovernanceAuthority
 --
 -- The 'Data' serializations for this type /cannot/ change.
 data SidechainParams = SidechainParams
-  { chainId :: Integer
-  , genesisUtxo :: TxOutRef
+  { genesisUtxo :: TxOutRef
   -- ^ 'genesisUtxo' is a 'TxOutRef' used to initialize the internal
   -- policies in the side chain (e.g. for the 'UpdateCommitteeHash' endpoint)
-  , thresholdNumerator :: Integer
-  -- ^ 'thresholdNumerator' is the numerator for the ratio of the committee
-  -- needed to sign off committee handovers / merkle roots
-  , thresholdDenominator :: Integer
-  -- ^ 'thresholdDenominator' is the denominator for the ratio of the
-  -- committee needed to sign off committee handovers / merkle roots
   , governanceAuthority :: GovernanceAuthority
   -- ^ 'governanceAuthority' stores credentials of a governing body allowed to
   -- make updates to versioned scripts.  For now we just use a master public

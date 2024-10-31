@@ -6,7 +6,6 @@ import Cardano.Types.BigNum as BigNum
 import Contract.Test.Testnet (withWallets)
 import Contract.Wallet (withKeyWallet)
 import Data.List as List
-import JS.BigInt as BigInt
 import Mote.Monad (group, test)
 import Run (AFF, EFFECT, Run)
 import Run.Except (EXCEPT)
@@ -72,10 +71,7 @@ testInsertAndInvalidateSuccessScenario =
           let
             sidechainParams =
               SidechainParams
-                { chainId: BigInt.fromInt 1
-                , genesisUtxo
-                , thresholdNumerator: BigInt.fromInt 2
-                , thresholdDenominator: BigInt.fromInt 3
+                { genesisUtxo
                 , governanceAuthority: Governance.mkGovernanceAuthority pkh
                 }
 
@@ -146,10 +142,7 @@ testInsertSameScriptTwiceSuccessScenario =
           let
             sidechainParams =
               SidechainParams
-                { chainId: BigInt.fromInt 1
-                , genesisUtxo
-                , thresholdNumerator: BigInt.fromInt 2
-                , thresholdDenominator: BigInt.fromInt 3
+                { genesisUtxo
                 , governanceAuthority: Governance.mkGovernanceAuthority pkh
                 }
 
@@ -198,10 +191,7 @@ testInsertUnversionedScriptSuccessScenario =
           let
             sidechainParams =
               SidechainParams
-                { chainId: BigInt.fromInt 1
-                , genesisUtxo
-                , thresholdNumerator: BigInt.fromInt 2
-                , thresholdDenominator: BigInt.fromInt 3
+                { genesisUtxo
                 , governanceAuthority: Governance.mkGovernanceAuthority pkh
                 }
 
@@ -245,10 +235,7 @@ testRemovingTwiceSameScriptFailScenario =
           let
             sidechainParams =
               SidechainParams
-                { chainId: BigInt.fromInt 1
-                , genesisUtxo
-                , thresholdNumerator: BigInt.fromInt 2
-                , thresholdDenominator: BigInt.fromInt 3
+                { genesisUtxo
                 , governanceAuthority: Governance.mkGovernanceAuthority pkh
                 }
 
