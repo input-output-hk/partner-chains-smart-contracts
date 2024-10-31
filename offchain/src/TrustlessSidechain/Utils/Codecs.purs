@@ -1,7 +1,6 @@
 module TrustlessSidechain.Utils.Codecs
   ( byteArrayCodec
   , transactionInputCodec
-  , thresholdCodec
   , scParamsCodec
   , pubKeyHashCodec
   ) where
@@ -25,24 +24,12 @@ import Data.Codec.Argonaut.Record as CAR
 import Data.Profunctor (wrapIso)
 import Data.String (Pattern(Pattern), split)
 import Data.UInt as UInt
-import JS.BigInt (BigInt)
-import JS.BigInt as BigInt
 import Partial.Unsafe (unsafePartial)
 import TrustlessSidechain.Governance.Admin
   ( GovernanceAuthority
   , mkGovernanceAuthority
   )
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
-
--- Note [BigInt values and JSON]
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
--- `BigInt` values are not supported in JSON and coercing them to
--- `Number` can lead to loss of information. `Argonaut.Json` does not
--- support `BigInt` encoding or decoding. Therefore conversions of
--- `BigInt` values to JSON must compensate, for example by being partial
--- or by first converting values to strings. See the `BigInt` documentation at
--- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/
 
 -- | JSON codec converting between a bytestring and its hexadecimal representation
 byteArrayCodec :: CA.JsonCodec ByteArray
@@ -76,16 +63,6 @@ transactionInputCodec =
     indexStr = UInt.toString txIn.index
     txHashStr = byteArrayToHex $ unwrap $ encodeCbor $ txIn.transactionId
 
--- | `thresholdCodec` is the codec for the threshold in `Options.Types.Config`.
--- | Note that this codec has no relation to the `thresholdNumerator` and
--- | `thresholdDenominator` fields in `SidechainParams`.
-thresholdCodec :: CA.JsonCodec { numerator :: Int, denominator :: Int }
-thresholdCodec = CA.object "threshold" $
-  CAR.record
-    { numerator: CA.int
-    , denominator: CA.int
-    }
-
 -- | JSON codec for PubKeyHash.
 governanceAuthorityCodec :: CA.JsonCodec GovernanceAuthority
 governanceAuthorityCodec = CA.prismaticCodec "GovernanceAuthority"
@@ -93,23 +70,11 @@ governanceAuthorityCodec = CA.prismaticCodec "GovernanceAuthority"
   unwrap
   pubKeyHashCodec
 
--- | See Note [BigInt values and JSON]
 scParamsCodec :: CA.JsonCodec SidechainParams
 scParamsCodec =
   wrapIso SidechainParams $
     ( CAR.object "sidechainParameters"
-        { chainId: bigIntCodec
-        , genesisUtxo: transactionInputCodec
-        , thresholdNumerator:
-            CA.prismaticCodec "thresholdNumerator"
-              (Just <<< BigInt.fromInt)
-              unsafeToInt
-              CA.int
-        , thresholdDenominator:
-            CA.prismaticCodec "thresholdDenominator"
-              (Just <<< BigInt.fromInt)
-              unsafeToInt
-              CA.int
+        { genesisUtxo: transactionInputCodec
         , governanceAuthority: governanceAuthorityCodec
         }
     )
@@ -126,14 +91,3 @@ ed25519KeyHashCodec = CA.prismaticCodec "Ed25519KeyHash"
   (CborBytes >>> decodeCbor)
   (unwrap <<< encodeCbor)
   byteArrayCodec
-
--- | JSON codec for `BigInt`.
--- | See Note [BigInt values and JSON]
-bigIntCodec :: CA.JsonCodec BigInt
-bigIntCodec = CA.prismaticCodec "BigInt"
-  (Just <<< BigInt.fromInt)
-  unsafeToInt
-  CA.int
-
-unsafeToInt :: BigInt -> Int
-unsafeToInt x = unsafePartial $ fromJust $ BigInt.toInt x

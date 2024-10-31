@@ -99,22 +99,6 @@ main = do
 
       -- Do some validation on the CLI options
       -----------------------
-      let numerator = (unwrap scParams).thresholdNumerator
-      let denominator = (unwrap scParams).thresholdDenominator
-      unless (gcd numerator denominator == one) $ failWith
-        $ "Threshold numerator and denominator are not coprime.\n"
-        <> "Numerator: "
-        <> BigInt.toString numerator
-        <> "\nDenominator: "
-        <> BigInt.toString denominator
-
-      unless (numerator <= denominator) $ failWith
-        $ "Threshold numerator is greater than denominator.\n"
-        <> "Numerator: "
-        <> BigInt.toString numerator
-        <> "\nDenominator: "
-        <> BigInt.toString denominator
-
       let
         governance = Just $ MultiSig $ MultiSigGovParams
           { governanceMembers:

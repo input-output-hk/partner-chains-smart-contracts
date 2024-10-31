@@ -8,30 +8,28 @@ module TrustlessSidechain.Options.Parsers
   , byteArray
   , cborEncodedAddressParser
   , currencySymbolParser
-  , denominator
+  , depositAmount
   , epoch
   , governanceAuthority
   , mkCurrencySymbol
-  , numerator
-  , parsePubKeyBytesAndSignatureBytes
+  , networkId
   , parseAssetName
+  , parsePubKeyBytesAndSignatureBytes
   , parseTokenName
-  , posixTime
-  , positiveAmount
-  , registrationSidechainKeys
   , permissionedCandidateKeys
   , permissionedCandidatesCount
   , plutusDataParser
+  , positiveAmount
+  , posixTime
   , pubKeyBytesAndSignatureBytes
   , pubKeyHash
   , registeredCandidatesCount
+  , registrationSidechainKeys
   , sidechainAddress
   , tokenAmount
-  , depositAmount
   , transactionInput
   , uint
   , validatorHashParser
-  , networkId
   ) where
 
 import Contract.Prelude
@@ -210,26 +208,6 @@ registeredCandidatesCount = eitherReader
         | i >= zero -> pure i
         | otherwise -> Left "registered-candidates-count must be non-negative"
       Nothing -> Left "failed to parse int registered-candidates-count"
-  )
-
--- | Parse a numerator in the threshold.
-numerator :: ReadM BigInt
-numerator = eitherReader
-  ( \str -> case BigInt.fromString str of
-      Just i
-        | i >= zero -> pure i
-        | otherwise -> Left "numerator must be non-negative"
-      Nothing -> Left "failed to parse int numerator"
-  )
-
--- | Parse a denominator in the threshold.
-denominator :: ReadM BigInt
-denominator = eitherReader
-  ( \str -> case BigInt.fromString str of
-      Just i
-        | i > zero -> pure i
-        | otherwise -> Left "denominator must be positive"
-      Nothing -> Left "failed to parse int denominator"
   )
 
 -- | Parse an epoch.

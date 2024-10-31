@@ -27,8 +27,6 @@ import Test.Utils.QuickCheck
   , ArbitraryScriptHash(ArbitraryScriptHash)
   , ArbitrarySignature(ArbitrarySignature)
   , ArbitraryTransactionInput(ArbitraryTransactionInput)
-  , NonNegative(NonNegative)
-  , Positive(Positive)
   )
 import TrustlessSidechain.CommitteeCandidateValidator
   ( BlockProducerRegistration(BlockProducerRegistration)
@@ -228,16 +226,10 @@ genBPR = do
 
 genSP :: Gen SidechainParams
 genSP = do
-  NonNegative (ArbitraryBigInt chainId) <- arbitrary
   ArbitraryTransactionInput genesisUtxo <- arbitrary
-  Positive (ArbitraryBigInt thresholdNumerator) <- arbitrary
-  Positive (ArbitraryBigInt thresholdDenominator) <- arbitrary
   governanceAuthority <- genGA
   pure $ SidechainParams
-    { chainId
-    , genesisUtxo
-    , thresholdNumerator
-    , thresholdDenominator
+    { genesisUtxo
     , governanceAuthority
     }
 

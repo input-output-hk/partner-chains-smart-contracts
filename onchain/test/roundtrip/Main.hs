@@ -14,8 +14,6 @@ import System.IO.Unsafe (unsafePerformIO)
 import Test.QuickCheck (
   Arbitrary (arbitrary, shrink),
   Gen,
-  NonNegative (NonNegative),
-  Positive (Positive),
   arbitrary,
   chooseInteger,
   liftArbitrary,
@@ -70,11 +68,8 @@ import TrustlessSidechain.Types (
   ReserveStats (ReserveStats),
   SidechainParams (
     SidechainParams,
-    chainId,
     genesisUtxo,
-    governanceAuthority,
-    thresholdDenominator,
-    thresholdNumerator
+    governanceAuthority
   ),
   Signature (Signature),
   StakeOwnership (AdaBasedStaking, TokenBasedStaking),
@@ -255,12 +250,9 @@ genGA = do
 
 genSP :: Gen SidechainParams
 genSP = do
-  NonNegative cid <- arbitrary
   ArbitraryTxOutRef gu <- arbitrary
-  Positive n <- arbitrary
-  Positive d <- arbitrary
   ga <- genGA
-  pure . SidechainParams cid gu n d $ ga
+  pure . SidechainParams gu $ ga
 
 -- Shrinkers
 
@@ -355,12 +347,10 @@ shrinkGA (GovernanceAuthority pkh) = do
 
 shrinkSP :: SidechainParams -> [SidechainParams]
 shrinkSP (SidechainParams {..}) = do
-  NonNegative cid' <- shrink . NonNegative $ chainId
   ArbitraryTxOutRef gu' <- shrink . ArbitraryTxOutRef $ genesisUtxo
-  Positive n' <- shrink . Positive $ thresholdNumerator
   ga <- shrinkGA governanceAuthority
   -- We don't shrink the denominator, as this could make the result _bigger_.
-  pure . SidechainParams cid' gu' n' thresholdDenominator $ ga
+  pure . SidechainParams gu' $ ga
 
 -- | Wrapper for 'PubKey' to provide QuickCheck instances.
 --

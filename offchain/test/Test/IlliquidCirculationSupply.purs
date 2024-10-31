@@ -88,10 +88,7 @@ dummyInitialiseSidechain pkh = do
   let
     sidechainParams =
       SidechainParams
-        { chainId: BigInt.fromInt 69_420
-        , genesisUtxo
-        , thresholdNumerator: BigInt.fromInt 2
-        , thresholdDenominator: BigInt.fromInt 3
+        { genesisUtxo
         , governanceAuthority: Governance.mkGovernanceAuthority pkh
         }
 

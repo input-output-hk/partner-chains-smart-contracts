@@ -36,8 +36,7 @@ import Type.Row (type (+))
 optExample :: Config
 optExample =
   { sidechainParameters: Just
-      { chainId: Just 1
-      , genesisUtxo: Just $ TransactionInput
+      { genesisUtxo: Just $ TransactionInput
           { transactionId:
               ( wrap $ unsafePartial $ fromJust $ fromBytes
                   ( hexToByteArrayUnsafe
@@ -45,10 +44,6 @@ optExample =
                   )
               )
           , index: UInt.fromInt 2
-          }
-      , threshold: Just
-          { numerator: 2
-          , denominator: 3
           }
       , governanceAuthority: Just $ hexToByteArrayUnsafe "123456789abcdef0"
       }

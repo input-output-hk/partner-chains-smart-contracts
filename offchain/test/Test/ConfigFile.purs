@@ -51,8 +51,7 @@ test1 =
                   )
               , sidechainParameters:
                   ( Just
-                      { chainId: (Just 123)
-                      , genesisUtxo:
+                      { genesisUtxo:
                           ( Just
                               ( TransactionInput
                                   { index: UInt.fromInt 1
@@ -65,7 +64,6 @@ test1 =
                                   }
                               )
                           )
-                      , threshold: (Just { denominator: 3, numerator: 2 })
                       , governanceAuthority: hexToByteArray
                           "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
                       }

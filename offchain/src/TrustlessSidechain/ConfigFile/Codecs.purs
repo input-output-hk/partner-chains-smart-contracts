@@ -20,7 +20,6 @@ import Data.UInt as UInt
 import TrustlessSidechain.Options.Types (Config)
 import TrustlessSidechain.Utils.Codecs
   ( byteArrayCodec
-  , thresholdCodec
   , transactionInputCodec
   )
 
@@ -37,20 +36,12 @@ configCodec =
   where
   scParamsCodec ::
     CA.JsonCodec
-      { chainId :: Maybe Int
-      , genesisUtxo :: Maybe TransactionInput
-      , threshold ::
-          Maybe
-            { denominator :: Int
-            , numerator :: Int
-            }
+      { genesisUtxo :: Maybe TransactionInput
       , governanceAuthority :: Maybe ByteArray
       }
   scParamsCodec =
     ( CAR.object "sidechainParameters"
-        { chainId: CAC.maybe CA.int
-        , genesisUtxo: CAC.maybe transactionInputCodec
-        , threshold: CAC.maybe thresholdCodec
+        { genesisUtxo: CAC.maybe transactionInputCodec
         , governanceAuthority: CAC.maybe byteArrayCodec
         }
     )
