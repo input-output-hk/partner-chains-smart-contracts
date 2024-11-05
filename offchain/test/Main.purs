@@ -31,7 +31,7 @@ import Test.Versioning as Versioning
 
 main :: Effect Unit
 main = do
-  -- pureSuite
+  pureSuite
   interruptOnSignal SIGINT =<< launchAff do
     flip cancelWith (effectCanceler (exitCode 1)) do
       interpretWithConfig
