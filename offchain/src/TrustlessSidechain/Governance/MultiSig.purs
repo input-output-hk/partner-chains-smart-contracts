@@ -14,7 +14,7 @@ import Cardano.Types.PlutusScript (PlutusScript)
 import Contract.PlutusData
   ( class FromData
   , class ToData
-  , PlutusData(Integer, List)
+  , PlutusData(List)
   , fromData
   , toData
   )
