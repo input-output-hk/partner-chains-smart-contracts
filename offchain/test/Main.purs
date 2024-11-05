@@ -53,10 +53,10 @@ testnetSuite :: TestPlanM (Aff Unit) Unit
 testnetSuite = do
   testTestnetContracts config do
     group "Testnet integration tests" do
-      -- PermissionedCandidates.suite
-      -- IlliquidCirculationSupply.suite
+      PermissionedCandidates.suite
+      IlliquidCirculationSupply.suite
       Reserve.suite
--- CommitteeCandidateValidator.suite
--- Versioning.suite
--- DParameter.suite
--- Governance.suite
+      CommitteeCandidateValidator.suite
+      Versioning.suite
+      DParameter.suite
+      Governance.suite
