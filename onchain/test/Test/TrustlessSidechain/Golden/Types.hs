@@ -218,19 +218,6 @@ samplePermissionedCandidatesValidatorRedeemer1 = UpdatePermissionedCandidates
 samplePermissionedCandidatesValidatorRedeemer2 :: PermissionedCandidatesValidatorRedeemer
 samplePermissionedCandidatesValidatorRedeemer2 = RemovePermissionedCandidates
 
-sampleInitTokenRedeemer1 :: InitTokenRedeemer
-sampleInitTokenRedeemer1 = MintInitToken
-
-sampleInitTokenRedeemer2 :: InitTokenRedeemer
-sampleInitTokenRedeemer2 = BurnInitToken
-
-sampleInitTokenAssetClass :: InitTokenAssetClass
-sampleInitTokenAssetClass =
-  InitTokenAssetClass
-    { initTokenCurrencySymbol = "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
-    , initTokenName = "foo bar"
-    }
-
 sampleReserveDatum :: VersionedGenericDatum ReserveDatum
 sampleReserveDatum =
   VersionedGenericDatum
