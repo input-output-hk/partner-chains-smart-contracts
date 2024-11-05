@@ -193,26 +193,23 @@ $SIGNING_KEY`.
 
 | Command                   | Description                                       |
 | ------------------------- | ------------------------------------------------- |
-| `init-tokens-mint`        | Mint all sidechain initialisation tokens          |
+| `init-governance`         | Initialise governance |
 | `init-reserve-management` | Initialise native token reserve management system |
 
-A mandatory first step is to mint the so called "initialization tokens" using
-the `init-tokens-mint` command. These tokens are required to subsequently
-initialize desired components of a partner chain.
+A mandatory first step is to initialize governance using
+the `init-governance` command.
 
-Executing `init-tokens-mint` spends the Genesis Utxo and mints:
-
-- `"Version oracle InitToken"` (multiple tokens)
+Executing `init-governance` spends the Genesis Utxo.
 
 ```
-nix run .#pc-contracts-cli -- init-tokens-mint --version 1
+nix run .#pc-contracts-cli -- init-governance --governance-authority "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
 ```
 
 To be able to use native tokens related scripts must be inserted into versioning
 system first using the `init-reserve-management` command.
 
-- [InitToken smart contract code](../onchain/src/TrustlessSidechain/InitToken.hs)
-- [InitToken off-chain code](./src/TrustlessSidechain/InitSidechain/TokensMint.purs)
+- [Governance smart contract code](../onchain/src/TrustlessSidechain/Governance/MultiSig.hs)
+- [Governance offchain code](./src/TrustlessSidechain/Governance.purs)
 
 ### 2. D parameters
 
@@ -388,14 +385,12 @@ Example: `a03ebf281ed96549f74d0e724841fcf928194c44f6ff9a8056d1829598042c62#0`
 | ------------------------ | -------------------------------------------------------------------------------- |
 | `list-versioned-scripts` | Get scripts (validators and minting policies) that are currently being versioned |
 | `addresses`              | Get the script addresses for a given sidechain                                   |
-| `init-token-status`      | List the number of each init token the wallet still holds                        |
 | `cli-version`            | Display semantic version of the CLI and its git hash                             |
 
 #### List currently versioned scripts
 
 ```
-nix run .#pc-contracts-cli -- list-versioned-scripts \
-  --version 1
+nix run .#pc-contracts-cli -- list-versioned-scripts
 ```
 
 Returns the list of currently versioned scripts.
@@ -412,8 +407,7 @@ addresses for different parameters. To get the script addresses for a given
 sidechain, you can use the following command:
 
 ```
-nix run .#pc-contracts-cli -- addresses \
-  --version 1
+nix run .#pc-contracts-cli -- addresses
 ```
 
 ### 6. Versioning
@@ -426,16 +420,13 @@ nix run .#pc-contracts-cli -- addresses \
 #### Update existing protocol version
 
 ```
-nix run .#pc-contracts-cli -- update-version \
-  --old-version 1 \
-  --new-version 2
+nix run .#pc-contracts-cli -- update-version
 ```
 
 #### Invalidate protocol version
 
 ```
-nix run .#pc-contracts-cli -- invalidate-version \
-  --version 1
+nix run .#pc-contracts-cli -- invalidate-version
 ```
 
 - [Version oracle smart contract code](../onchain/src/TrustlessSidechain/)

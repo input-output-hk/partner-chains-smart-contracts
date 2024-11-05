@@ -29,7 +29,7 @@ import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.Governance.Admin as Governance
-import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
+import TrustlessSidechain.InitSidechain.Governance (initGovernance)
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
@@ -54,7 +54,7 @@ suite = group "Minting and burning versioning tokens" $ do
 -- | We insert a new version of a script, and invalidate the old one.
 testInsertAndInvalidateSuccessScenario :: TestnetTest
 testInsertAndInvalidateSuccessScenario =
-  test "Inserting new version, then invalidate the old one" do
+  test "Inserting new version, then invalidate the it" do
     let
       initialDistribution =
         [ BigNum.fromInt 50_000_000
@@ -81,12 +81,11 @@ testInsertAndInvalidateSuccessScenario =
 
           -- No versioned scripts are inserted.
           -- Assert that the actual versioned scripts set is empty
-          assertNumberOfActualVersionedScripts sidechainParams 1 0 0
-          assertNumberOfActualVersionedScripts sidechainParams 2 0 0
+          assertNumberOfActualVersionedScripts sidechainParams 0 0
 
           -- Insert all initial versioned scripts
-          void $ initTokensMint sidechainParams 1
-          void $ Versioning.initializeVersion sidechainParams 1
+          void $ initGovernance sidechainParams pkh
+          void $ Versioning.initializeVersion sidechainParams
           -- void $ initNativeTokenMgmt sidechainParams 1
           -- This policy was already inserted by 'initSidechain'.
 
@@ -96,7 +95,6 @@ testInsertAndInvalidateSuccessScenario =
           void
             $ Versioning.insertVersionLookupsAndConstraints
                 sidechainParams
-                2
                 (CommitteeCandidateValidator /\ committeeCandidateValidator)
             >>=
               balanceSignAndSubmit "Test: insert new version of policy"
@@ -104,7 +102,6 @@ testInsertAndInvalidateSuccessScenario =
           void
             $ Versioning.invalidateVersionLookupsAndConstraints
                 sidechainParams
-                1
                 CommitteeCandidateValidator
             >>=
               balanceSignAndSubmit "Test: invalidate old version of policy"
@@ -125,8 +122,7 @@ testInsertAndInvalidateSuccessScenario =
           -- which means that ReserveAuthPolicy and GovernancePolicy policies,
           -- as well as ReserveValidator and IlliquidCirculationSupplyValidator
           -- get inserted.
-          assertNumberOfActualVersionedScripts sidechainParams 1 2 2
-          assertNumberOfActualVersionedScripts sidechainParams 2 0 0
+          assertNumberOfActualVersionedScripts sidechainParams 2 3
 
 -- | We insert the same script (same ScriptId and same version) twice. That
 -- should work.
@@ -157,11 +153,10 @@ testInsertSameScriptTwiceSuccessScenario =
                 , governanceAuthority: Governance.mkGovernanceAuthority pkh
                 }
 
-          assertNumberOfActualVersionedScripts sidechainParams 1 0 0
-          assertNumberOfActualVersionedScripts sidechainParams 2 0 0
+          assertNumberOfActualVersionedScripts sidechainParams 0 0
 
-          void $ initTokensMint sidechainParams 1
-          void $ Versioning.initializeVersion sidechainParams 1
+          void $ initGovernance sidechainParams pkh
+          void $ Versioning.initializeVersion sidechainParams
 
           committeeCandidateValidator <-
             getCommitteeCandidateValidator sidechainParams
@@ -169,7 +164,6 @@ testInsertSameScriptTwiceSuccessScenario =
           void
             $ Versioning.insertVersionLookupsAndConstraints
                 sidechainParams
-                1
                 (CommitteeCandidateValidator /\ committeeCandidateValidator)
             >>=
               balanceSignAndSubmit "Test: insert versioned policy"
@@ -177,13 +171,11 @@ testInsertSameScriptTwiceSuccessScenario =
           void
             $ Versioning.insertVersionLookupsAndConstraints
                 sidechainParams
-                1
                 (CommitteeCandidateValidator /\ committeeCandidateValidator)
             >>=
               balanceSignAndSubmit "Test: insert the same version of policy"
 
-          assertNumberOfActualVersionedScripts sidechainParams 1 2 5
-          assertNumberOfActualVersionedScripts sidechainParams 2 0 0
+          assertNumberOfActualVersionedScripts sidechainParams 2 5
 
 -- | We insert an script that is not part of the initial versioned scripts.
 testInsertUnversionedScriptSuccessScenario :: TestnetTest
@@ -213,27 +205,23 @@ testInsertUnversionedScriptSuccessScenario =
                 , governanceAuthority: Governance.mkGovernanceAuthority pkh
                 }
 
-          assertNumberOfActualVersionedScripts sidechainParams 1 0 0
-          assertNumberOfActualVersionedScripts sidechainParams 2 0 0
+          assertNumberOfActualVersionedScripts sidechainParams 0 0
 
-          void $ initTokensMint sidechainParams 1
-          void $ Versioning.initializeVersion sidechainParams 1
+          void $ initGovernance sidechainParams pkh
+          void $ Versioning.initializeVersion sidechainParams
 
           { dParameterMintingPolicy } <-
             getDParameterMintingPolicyAndCurrencySymbol sidechainParams
-          assertNumberOfActualVersionedScripts sidechainParams 1 2 3
-          assertNumberOfActualVersionedScripts sidechainParams 2 0 0
+          assertNumberOfActualVersionedScripts sidechainParams 2 3
           -- This validator is not part of the versioned scripts hardcoded list,
           -- so it should *not* be inserted.
           void
             $ Versioning.insertVersionLookupsAndConstraints
                 sidechainParams
-                1
                 (DParameterPolicy /\ dParameterMintingPolicy)
             >>=
               balanceSignAndSubmit "Test: insert non-versioned validator version"
-          assertNumberOfActualVersionedScripts sidechainParams 1 2 3
-          assertNumberOfActualVersionedScripts sidechainParams 2 0 0
+          assertNumberOfActualVersionedScripts sidechainParams 2 3
 
 -- | After inserting a versioned script, invalidating it twice should fail in the second
 -- | invalidation call.
@@ -264,13 +252,12 @@ testRemovingTwiceSameScriptFailScenario =
                 , governanceAuthority: Governance.mkGovernanceAuthority pkh
                 }
 
-          void $ initTokensMint sidechainParams 1
-          void $ Versioning.initializeVersion sidechainParams 1
+          void $ initGovernance sidechainParams pkh
+          void $ Versioning.initializeVersion sidechainParams
 
           void
             $ Versioning.invalidateVersionLookupsAndConstraints
                 sidechainParams
-                1
                 CommitteeCandidateValidator
             >>=
               balanceSignAndSubmit "Test: insert the same version of policy"
@@ -278,7 +265,6 @@ testRemovingTwiceSameScriptFailScenario =
           ( void
               $ Versioning.invalidateVersionLookupsAndConstraints
                   sidechainParams
-                  1
                   CommitteeCandidateValidator
               >>=
                 balanceSignAndSubmit "Test: insert the same version of policy"
@@ -288,8 +274,6 @@ testRemovingTwiceSameScriptFailScenario =
 assertNumberOfActualVersionedScripts ::
   forall r.
   SidechainParams ->
-  -- | Version number
-  Int ->
   -- | Number of expected versionned minting policy scripts
   Int ->
   -- | Number of expected versionned validator scripts
@@ -299,25 +283,24 @@ assertNumberOfActualVersionedScripts ::
     Unit
 assertNumberOfActualVersionedScripts
   sidechainParams
-  version
   numExpectedVersionedPolicies
   numExpectedVersionedValidators = do
   Versioning.getActualVersionedPoliciesAndValidators sidechainParams
-    version >>=
-    \{ versionedPolicies, versionedValidators } -> do
-      liftAff
-        $ assert
-            ( "`Expected to return `"
-                <> show numExpectedVersionedPolicies
-                <> "` versioned policies, and `"
-                <> show numExpectedVersionedValidators
-                <> "` versioned validators, but got `"
-                <> show (List.length versionedPolicies)
-                <> "` versioned policies and `"
-                <> show (List.length versionedValidators)
-                <> "` versioned validators`."
-            )
-            ( List.length versionedPolicies == numExpectedVersionedPolicies
-                && List.length versionedValidators
-                == numExpectedVersionedValidators
-            )
+    >>=
+      \{ versionedPolicies, versionedValidators } -> do
+        liftAff
+          $ assert
+              ( "`Expected to return `"
+                  <> show numExpectedVersionedPolicies
+                  <> "` versioned policies, and `"
+                  <> show numExpectedVersionedValidators
+                  <> "` versioned validators, but got `"
+                  <> show (List.length versionedPolicies)
+                  <> "` versioned policies and `"
+                  <> show (List.length versionedValidators)
+                  <> "` versioned validators`."
+              )
+              ( List.length versionedPolicies == numExpectedVersionedPolicies
+                  && List.length versionedValidators
+                  == numExpectedVersionedValidators
+              )

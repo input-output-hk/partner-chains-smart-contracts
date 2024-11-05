@@ -29,6 +29,7 @@ import TrustlessSidechain.Versioning.ScriptId
       , DParameterPolicy
       )
   )
+import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
 
 -- | Get the OnlyMintMintingPolicy by applying `SidechainParams` to the dummy
@@ -40,21 +41,28 @@ decodeDParameterMintingPolicy ::
 decodeDParameterMintingPolicy sidechainParams = do
   { dParameterValidatorAddress } <- getDParameterValidatorAndAddress
     sidechainParams
+
   plutusAddressData <-
     note
       ( InvalidAddress "Couldn't map address to PlutusData"
           dParameterValidatorAddress
       )
       $ fromCardano dParameterValidatorAddress
+  versionOracleConfig <- Versioning.getVersionOracleConfig sidechainParams
   mkMintingPolicyWithParams DParameterPolicy $
-    [ toData sidechainParams, toData plutusAddressData ]
+    [ toData sidechainParams
+    , toData versionOracleConfig
+    , toData plutusAddressData
+    ]
 
 decodeDParameterValidator ::
   forall r.
   SidechainParams ->
-  Run (EXCEPT OffchainError + r) PlutusScript
+  Run (EXCEPT OffchainError + WALLET + r) PlutusScript
 decodeDParameterValidator sidechainParams = do
-  mkValidatorWithParams DParameterValidator [ toData sidechainParams ]
+  versionOracleConfig <- Versioning.getVersionOracleConfig sidechainParams
+  mkValidatorWithParams DParameterValidator
+    [ toData sidechainParams, toData versionOracleConfig ]
 
 getDParameterValidatorAndAddress ::
   forall r.

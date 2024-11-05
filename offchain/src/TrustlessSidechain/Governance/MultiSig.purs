@@ -1,24 +1,33 @@
 module TrustlessSidechain.Governance.MultiSig
   ( MultiSigGovParams(MultiSigGovParams)
-  , MultiSigGovRedeemer(..)
   , multisigGovPolicy
   , multisigGovCurrencyInfo
   , multisigGovTokenName
+  , multisigLookupsAndConstraints
   ) where
 
 import Contract.Prelude
 
 import Cardano.Types.Ed25519KeyHash (Ed25519KeyHash)
+import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash(PaymentPubKeyHash))
 import Cardano.Types.PlutusScript (PlutusScript)
 import Contract.PlutusData
   ( class FromData
   , class ToData
-  , PlutusData(Integer, List)
+  , PlutusData(List)
   , fromData
   , toData
   )
+import Contract.ScriptLookups (ScriptLookups)
+import Contract.TxConstraints
+  ( TxConstraints
+  )
+import Contract.TxConstraints as Constraints
 import Contract.Value (TokenName)
+import Data.Array as Array
+import Data.Maybe as Maybe
 import JS.BigInt as BigInt
+import Partial.Unsafe (unsafePartial)
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.Error (OffchainError)
@@ -82,30 +91,6 @@ instance FromData MultiSigGovParams where
 instance Show MultiSigGovParams where
   show = genericShow
 
--- | Redemeer for the multi-sig governance policy that tells whether we are
--- checking for approval from the governance or just burning unused tokens
--- generated during signature checks.
---
--- @since v6.1.0
-data MultiSigGovRedeemer = MultiSignatureCheck | MultiSigTokenGC
-
-derive instance Generic MultiSigGovRedeemer _
-
-derive instance Eq MultiSigGovRedeemer
-
-instance ToData MultiSigGovRedeemer where
-  toData MultiSignatureCheck = Integer (BigInt.fromInt 0)
-  toData MultiSigTokenGC = Integer (BigInt.fromInt 1)
-
-instance FromData MultiSigGovRedeemer where
-  fromData = case _ of
-    Integer tag | tag == BigInt.fromInt 0 -> pure MultiSignatureCheck
-    Integer tag | tag == BigInt.fromInt 1 -> pure MultiSigTokenGC
-    _ -> Nothing
-
-instance Show MultiSigGovRedeemer where
-  show = genericShow
-
 -- | A name for the multiSigGov initialization token.  Must be unique among
 -- | initialization tokens.
 multisigGovTokenName :: TokenName
@@ -125,3 +110,17 @@ multisigGovCurrencyInfo ::
   Run (EXCEPT OffchainError + r) CurrencyInfo
 multisigGovCurrencyInfo msgp = do
   getCurrencyInfo MultiSigPolicy [ toData msgp ]
+
+-- TODO: proper implementation for multiple signatures collected at later stage
+multisigLookupsAndConstraints ::
+  MultiSigGovParams ->
+  { lookups :: ScriptLookups
+  , constraints :: TxConstraints
+  }
+multisigLookupsAndConstraints
+  (MultiSigGovParams { governanceMembers }) = do
+  let
+    lookups = mempty
+    constraints = Constraints.mustBeSignedBy $ PaymentPubKeyHash $ unsafePartial
+      $ Maybe.fromJust (Array.head governanceMembers)
+  { lookups, constraints }

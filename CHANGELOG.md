@@ -13,6 +13,21 @@ Changelog](https://keepachangelog.com/en/1.1.0).
 ## Fixed
   * Add missing newline at end of CLI error output
 
+## Removed
+  * Removed `InitToken`
+  * Removed `init-tokens-mint` command
+  * Removed `init-token-status` command
+
+## Added
+  * Updateable governance system.
+  * `init-governance` command
+  * `update-governance` command
+
+## Changed
+  * `DParameter`, `PermissionedCandidates` now use the updateable governance.
+  * Dropped `--version` parameter from all commands.
+  * Dropped `--old-version` and `--new-version` parameters from `update-version` command.
+
 # v6.2.1
 
 ## Fixed

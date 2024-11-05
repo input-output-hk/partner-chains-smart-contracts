@@ -41,7 +41,6 @@ data ScriptId
   | PermissionedCandidatesPolicy
   | PermissionedCandidatesValidator
   | ScriptCache
-  | InitTokenPolicy
   | ReserveValidator
   | ReserveAuthPolicy
   | IlliquidCirculationSupplyValidator
@@ -75,8 +74,6 @@ instance FromData ScriptId where
     Just PermissionedCandidatesValidator
   fromData (Integer i) | i == BigInt.fromInt 26 =
     Just ScriptCache
-  fromData (Integer i) | i == BigInt.fromInt 27 =
-    Just InitTokenPolicy
   fromData (Integer i) | i == BigInt.fromInt 28 =
     Just ReserveValidator
   fromData (Integer i) | i == BigInt.fromInt 29 =
@@ -106,7 +103,6 @@ instance ToData ScriptId where
   toData PermissionedCandidatesPolicy = Integer (BigInt.fromInt 24)
   toData PermissionedCandidatesValidator = Integer (BigInt.fromInt 25)
   toData ScriptCache = Integer (BigInt.fromInt 26)
-  toData InitTokenPolicy = Integer (BigInt.fromInt 27)
   toData ReserveValidator = Integer (BigInt.fromInt 28)
   toData ReserveAuthPolicy = Integer (BigInt.fromInt 29)
   toData IlliquidCirculationSupplyValidator = Integer (BigInt.fromInt 30)

@@ -10,8 +10,6 @@ module TrustlessSidechain.Types (
   DParameterValidatorDatum (..),
   EcdsaSecp256k1PubKey (..),
   GovernanceAuthority (GovernanceAuthority),
-  InitTokenAssetClass (..),
-  InitTokenRedeemer (..),
   PermissionedCandidateKeys (..),
   PermissionedCandidatesPolicyRedeemer (..),
   PermissionedCandidatesValidatorDatum (..),
@@ -25,7 +23,6 @@ module TrustlessSidechain.Types (
   ReserveStats (..),
   ReserveDatum (..),
   ReserveRedeemer (..),
-  ReserveAuthPolicyRedeemer (..),
   IlliquidCirculationSupplyRedeemer (..),
 ) where
 
@@ -36,7 +33,6 @@ import PlutusLedgerApi.V2 (
   CurrencySymbol,
   LedgerBytes (LedgerBytes),
   POSIXTime,
-  TokenName,
   TxOutRef,
  )
 import PlutusTx (makeIsDataIndexed)
@@ -428,75 +424,6 @@ instance UnsafeFromData PermissionedCandidatesValidatorRedeemer where
           1 -> RemovePermissionedCandidates
           _ -> error ()
 
--- | 'InitTokenRedeemer' signals whether the init tokens should be minted
--- (possible only in transaction that initializes the sidechain) or burned.
-data InitTokenRedeemer
-  = -- | @since v6.0.0
-    MintInitToken
-  | -- | @since v6.0.0
-    BurnInitToken
-  deriving stock
-    ( TSPrelude.Eq
-    , TSPrelude.Show
-    )
-
--- | @since v6.0.0
-instance ToData InitTokenRedeemer where
-  {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData MintInitToken = BuiltinData $ PlutusTx.I 0
-  toBuiltinData BurnInitToken = BuiltinData $ PlutusTx.I 1
-
--- | @since v6.0.0
-instance FromData InitTokenRedeemer where
-  {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData x = do
-    integerValue <- fromBuiltinData x
-    case integerValue :: Integer of
-      0 -> Just MintInitToken
-      1 -> Just BurnInitToken
-      _ -> Nothing
-
--- | @since v6.0.0
-instance UnsafeFromData InitTokenRedeemer where
-  {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData x =
-    let integerValue = unsafeFromBuiltinData x
-     in case integerValue :: Integer of
-          0 -> MintInitToken
-          1 -> BurnInitToken
-          _ -> error ()
-
--- | 'InitTokenAssetClass' stores a currency symbol and a token name for an init
--- token.  This data type is used to parameterize minting policies that require
--- burning of an init token in order to mint their corresponding token.
-data InitTokenAssetClass = InitTokenAssetClass
-  { initTokenCurrencySymbol :: CurrencySymbol
-  , initTokenName :: TokenName
-  }
-  deriving stock
-    ( TSPrelude.Show
-    , TSPrelude.Eq
-    )
-
-PlutusTx.makeLift ''InitTokenAssetClass
-makeHasField ''InitTokenAssetClass
-
--- | @since v6.0.0
-instance ToData InitTokenAssetClass where
-  {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData (InitTokenAssetClass {..}) =
-    productToData2 initTokenCurrencySymbol initTokenName
-
--- | @since v6.0.0
-instance FromData InitTokenAssetClass where
-  {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData2 InitTokenAssetClass
-
--- | @since v6.0.0
-instance UnsafeFromData InitTokenAssetClass where
-  {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData = productUnsafeFromData2 InitTokenAssetClass
-
 data ImmutableReserveSettings = ImmutableReserveSettings
   { t0 :: POSIXTime
   -- ^ `t0` is a POSIX time of a reserve UTxO initialization
@@ -594,10 +521,10 @@ instance UnsafeFromData ReserveDatum where
 makeHasField ''ReserveDatum
 
 data ReserveRedeemer
-  = DepositToReserve Integer
+  = DepositToReserve
   | TransferToIlliquidCirculationSupply
-  | UpdateReserve Integer
-  | Handover Integer
+  | UpdateReserve
+  | Handover
   deriving stock
     ( TSPrelude.Eq
     , TSPrelude.Show
@@ -610,17 +537,6 @@ PlutusTx.makeIsDataIndexed
   , ('UpdateReserve, 2)
   , ('Handover, 3)
   ]
-
-newtype ReserveAuthPolicyRedeemer = ReserveAuthPolicyRedeemer
-  { governanceVersion :: Integer
-  }
-  deriving stock
-    ( TSPrelude.Eq
-    , TSPrelude.Show
-    )
-  deriving newtype (ToData, FromData, UnsafeFromData, Eq)
-
-makeHasField ''ReserveAuthPolicyRedeemer
 
 data IlliquidCirculationSupplyRedeemer
   = DepositMoreToSupply

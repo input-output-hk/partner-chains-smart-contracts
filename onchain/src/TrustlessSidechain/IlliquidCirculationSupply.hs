@@ -28,7 +28,7 @@ import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Utils (oneTokenMinted)
 import TrustlessSidechain.Utils qualified as Utils
 import TrustlessSidechain.Versioning (
-  VersionOracle (VersionOracle, scriptId, version),
+  VersionOracle (VersionOracle, scriptId),
   VersionOracleConfig,
   getVersionedCurrencySymbolUnsafe,
  )
@@ -72,7 +72,7 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
     icsWithdrawalPolicyCurrencySymbol =
       getVersionedCurrencySymbolUnsafe
         voc
-        (VersionOracle {version = 1, scriptId = ScriptId.illiquidCirculationSupplyWithdrawalPolicyId})
+        (VersionOracle {scriptId = ScriptId.illiquidCirculationSupplyWithdrawalPolicyId})
         ctx
 
     minted :: Value

@@ -9,7 +9,10 @@ import Contract.Prelude
 import Cardano.AsCbor (encodeCbor)
 import Contract.BalanceTxConstraints (mustNotSpendUtxoWithOutRef)
 import Contract.ScriptLookups (ScriptLookups)
-import Contract.Transaction (TransactionHash, TransactionInput)
+import Contract.Transaction
+  ( TransactionHash
+  , TransactionInput
+  )
 import Contract.TxConstraints (TxConstraints)
 import Data.ByteArray (ByteArray)
 import Run (Run)

@@ -22,34 +22,30 @@ import TrustlessSidechain.EndpointResp
       ( CommitteeCandidateRegResp
       , CommitteeCandidateDeregResp
       , GetAddrsResp
-      , InitTokensMintResp
       , InitReserveManagementResp
-      , InsertVersionResp
+      , InitGovernanceResp
+      , UpdateGovernanceResp
       , UpdateVersionResp
       , InvalidateVersionResp
       , InsertDParameterResp
       , UpdateDParameterResp
       , UpdatePermissionedCandidatesResp
-      , InitTokenStatusResp
       , ListVersionedScriptsResp
       , ReserveResp
       )
   , stringifyEndpointResp
   )
 import TrustlessSidechain.Error (OffchainError(NotFoundUtxo))
-import TrustlessSidechain.GetSidechainAddresses
-  ( SidechainAddressesEndpointParams(SidechainAddressesEndpointParams)
-  )
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.Governance (Governance(MultiSig))
 import TrustlessSidechain.Governance.MultiSig
   ( MultiSigGovParams(MultiSigGovParams)
   )
-import TrustlessSidechain.InitSidechain.Init (getInitTokenStatus)
+import TrustlessSidechain.Governance.Utils (updateGovernance)
+import TrustlessSidechain.InitSidechain.Governance (initGovernance)
 import TrustlessSidechain.InitSidechain.NativeTokenManagement
   ( initNativeTokenMgmt
   )
-import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
 import TrustlessSidechain.NativeTokenManagement.Reserve
   ( depositToReserve
   , findOneReserveUtxo
@@ -66,15 +62,14 @@ import TrustlessSidechain.Options.Types
       ( GetAddrs
       , CommitteeCandidateReg
       , CommitteeCandidateDereg
-      , InitTokensMint
       , InitReserveManagement
-      , InsertVersion2
       , UpdateVersion
+      , InitGovernance
+      , UpdateGovernance
       , InvalidateVersion
       , InsertDParameter
       , UpdateDParameter
       , UpdatePermissionedCandidates
-      , InitTokenStatus
       , ListVersionedScripts
       , CreateReserve
       , UpdateReserveSettings
@@ -198,61 +193,48 @@ runTxEndpoint sidechainEndpointParams endpoint =
             <#> txHashToByteArray
             >>> { transactionId: _ }
             >>> CommitteeCandidateDeregResp
-      GetAddrs extraInfo -> do
+
+      GetAddrs -> do
         sidechainAddresses <- GetSidechainAddresses.getSidechainAddresses
-          $ SidechainAddressesEndpointParams
-              { sidechainParams: scParams
-              , version: extraInfo.version
-              }
+          scParams
         pure $ GetAddrsResp { sidechainAddresses }
 
-      InitTokensMint
-        { version } ->
+      InitGovernance { governancePubKeyHash } ->
         do
-          { transactionId
-          , sidechainParams
-          , sidechainAddresses
-          } <-
-            initTokensMint scParams version
+          let
+            govPubKeyHash = case governancePubKeyHash of
+              Just pubKeyHash -> pubKeyHash
+              Nothing -> unwrap (unwrap scParams).governanceAuthority
 
-          pure $ InitTokensMintResp
-            { transactionId: map txHashToByteArray transactionId
-            , sidechainParams
-            , sidechainAddresses
+          transactionId <- initGovernance scParams govPubKeyHash
+
+          pure $ InitGovernanceResp
+            { transactionId: txHashToByteArray transactionId
             }
 
-      InitReserveManagement { version } -> do
-        resp <- initNativeTokenMgmt scParams version
+      UpdateGovernance { governancePubKeyHash } ->
+        do
+          transactionId <- updateGovernance scParams governancePubKeyHash
+
+          pure $ UpdateGovernanceResp
+            { transactionId: txHashToByteArray transactionId
+            }
+
+      InitReserveManagement -> do
+        resp <- initNativeTokenMgmt scParams
 
         pure $ InitReserveManagementResp
           { scriptsInitTxIds: map txHashToByteArray resp.scriptsInitTxIds
           }
 
-      -- TODO: sanitize version arguments here, making sure they are not negative
-      -- (or perhaps come from a known range of versions?).  See Issue #9
-      -- Version hardcoded to 2 here, since that is the only valid choice currently.
-      -- See Note [Supporting version insertion beyond version 2]
-      InsertVersion2 -> do
-        txIds <- Versioning.insertVersion scParams 2
-        let versioningTransactionIds = map txHashToByteArray txIds
-        pure $ InsertVersionResp { versioningTransactionIds }
-
-      UpdateVersion
-        { oldVersion
-        , newVersion
-        } -> do
+      UpdateVersion -> do
         txIds <- Versioning.updateVersion scParams
-          oldVersion
-          newVersion
         let versioningTransactionIds = map txHashToByteArray txIds
         pure $ UpdateVersionResp { versioningTransactionIds }
 
-      InvalidateVersion
-        { version
-        } -> do
+      InvalidateVersion -> do
         txIds <- Versioning.invalidateVersion
           scParams
-          version
         let versioningTransactionIds = map txHashToByteArray txIds
         pure $ InvalidateVersionResp { versioningTransactionIds }
 
@@ -294,14 +276,10 @@ runTxEndpoint sidechainEndpointParams endpoint =
           >>> { transactionId: _ }
           >>> UpdatePermissionedCandidatesResp
 
-      InitTokenStatus -> map InitTokenStatusResp (getInitTokenStatus scParams)
-
-      ListVersionedScripts
-        { version } ->
+      ListVersionedScripts ->
         map ListVersionedScriptsResp
           ( Versioning.getActualVersionedPoliciesAndValidators
               scParams
-              version
           )
 
       CreateReserve

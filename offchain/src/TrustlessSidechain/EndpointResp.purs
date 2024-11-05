@@ -10,8 +10,6 @@ import Aeson
   ( encodeAeson
   , toStringifiedNumbersJson
   )
-import Cardano.Types.AssetName (AssetName)
-import Cardano.Types.BigNum (BigNum)
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.ScriptHash (ScriptHash)
@@ -23,16 +21,9 @@ import Data.Argonaut (Json)
 import Data.Argonaut.Core as J
 import Data.Bifunctor (rmap)
 import Data.Codec.Argonaut as CA
-import Data.Codec.Argonaut.Compat as CAC
 import Data.List (List)
-import Data.Map (Map)
 import Foreign.Object as Object
 import TrustlessSidechain.GetSidechainAddresses (SidechainAddresses)
-import TrustlessSidechain.SidechainParams (SidechainParams)
-import TrustlessSidechain.Utils.Codecs
-  ( encodeInitTokenStatusData
-  , scParamsCodec
-  )
 import TrustlessSidechain.Versioning.ScriptId (ScriptId)
 import TrustlessSidechain.Versioning.Types as Types
 
@@ -41,11 +32,8 @@ data EndpointResp
   = CommitteeCandidateRegResp { transactionId :: ByteArray }
   | CommitteeCandidateDeregResp { transactionId :: ByteArray }
   | GetAddrsResp { sidechainAddresses :: SidechainAddresses }
-  | InitTokensMintResp
-      { transactionId :: Maybe ByteArray
-      , sidechainParams :: SidechainParams
-      , sidechainAddresses :: SidechainAddresses
-      }
+  | InitGovernanceResp { transactionId :: ByteArray }
+  | UpdateGovernanceResp { transactionId :: ByteArray }
   | InitReserveManagementResp
       { scriptsInitTxIds :: Array ByteArray
       }
@@ -58,8 +46,6 @@ data EndpointResp
       { transactionId :: ByteArray }
   | UpdatePermissionedCandidatesResp
       { transactionId :: ByteArray }
-  | InitTokenStatusResp
-      { initTokenStatusData :: Map AssetName BigNum }
   | ListVersionedScriptsResp
       { versionedPolicies :: List (Tuple Types.ScriptId PlutusScript)
       , versionedValidators :: List (Tuple Types.ScriptId PlutusScript)
@@ -118,37 +104,23 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
                 )
             )
         ]
-    InitTokensMintResp
+    InitGovernanceResp
       { transactionId
-      , sidechainParams
-      , sidechainAddresses
       } ->
       J.fromObject $
         Object.fromFoldable
-          [ "endpoint" /\ J.fromString "InitTokensMint"
+          [ "endpoint" /\ J.fromString "InitGovernance"
           -- NOTE: Nothing encoded to null
-          , "transactionId" /\ CA.encode
-              (CAC.maybe CA.string)
-              (map byteArrayToHex transactionId)
-          , "sidechainParams" /\ CA.encode scParamsCodec sidechainParams
-          , "addresses" /\ J.fromObject
-              ( Object.fromFoldable
-                  ( map ((\(a /\ b) -> show a /\ b) >>> rmap J.fromString)
-                      sidechainAddresses.addresses
-                  )
-              )
-          , "validatorHashes" /\ J.fromObject
-              ( Object.fromFoldable
-                  ( map ((\(a /\ b) -> show a /\ b) >>> rmap J.fromString)
-                      sidechainAddresses.validatorHashes
-                  )
-              )
-          , "mintingPolicies" /\ J.fromObject
-              ( Object.fromFoldable
-                  ( map ((\(a /\ b) -> show a /\ b) >>> rmap J.fromString)
-                      sidechainAddresses.mintingPolicies
-                  )
-              )
+          , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
+          ]
+
+    UpdateGovernanceResp
+      { transactionId
+      } ->
+      J.fromObject $
+        Object.fromFoldable
+          [ "endpoint" /\ J.fromString "UpdateGovernance"
+          , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
           ]
 
     InitReserveManagementResp
@@ -198,13 +170,6 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
       J.fromObject $ Object.fromFoldable
         [ "endpoint" /\ J.fromString "UpdatePermissionedCandidates"
         , "transactionId" /\ J.fromString (byteArrayToHex transactionId)
-        ]
-
-    InitTokenStatusResp
-      { initTokenStatusData } ->
-      J.fromObject $ Object.fromFoldable
-        [ "endpoint" /\ J.fromString "InitTokenStatus"
-        , "initTokenStatusData" /\ encodeInitTokenStatusData initTokenStatusData
         ]
 
     ListVersionedScriptsResp

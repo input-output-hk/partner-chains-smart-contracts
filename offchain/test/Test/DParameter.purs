@@ -12,6 +12,7 @@ import TrustlessSidechain.DParameter as DParameter
 import TrustlessSidechain.Effects.Env (emptyEnv)
 import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
 import TrustlessSidechain.Governance.Admin as Governance
+import TrustlessSidechain.InitSidechain.Governance (initGovernance)
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Transaction
@@ -37,6 +38,7 @@ testScenario =
 
         pkh <- getOwnPaymentPubKeyHash
         genesisUtxo <- getOwnTransactionInput
+
         let
           sidechainParams =
             SidechainParams
@@ -46,7 +48,7 @@ testScenario =
               , thresholdDenominator: BigInt.fromInt 3
               , governanceAuthority: Governance.mkGovernanceAuthority pkh
               }
-
+        void $ initGovernance sidechainParams pkh
         void
           $
             ( DParameter.mkInsertDParameterLookupsAndConstraints

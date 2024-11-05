@@ -20,8 +20,7 @@ tests =
 sampleVersionOracle :: VersionOracle
 sampleVersionOracle =
   VersionOracle
-    { version = 15
-    , scriptId = 1567894
+    { scriptId = 1567894
     }
 
 sampleVersionOracleConfig :: VersionOracleConfig

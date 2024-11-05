@@ -10,9 +10,10 @@ import JS.BigInt as BigInt
 import Mote.Monad (group, test)
 import Test.Utils (TestnetTest, fails, getOwnTransactionInput)
 import TrustlessSidechain.Effects.Env (emptyEnv)
+import TrustlessSidechain.Effects.Log as Effect
 import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
 import TrustlessSidechain.Governance.Admin as Governance
-import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
+import TrustlessSidechain.InitSidechain.Governance (initGovernance)
 import TrustlessSidechain.PermissionedCandidates as PermissionedCandidates
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
@@ -37,7 +38,6 @@ testScenario =
         ]
     withWallets initialDistribution \alice -> do
       withKeyWallet alice $ unliftApp emptyEnv do
-
         pkh <- getOwnPaymentPubKeyHash
         genesisUtxo <- getOwnTransactionInput
         let
@@ -49,7 +49,8 @@ testScenario =
               , thresholdDenominator: BigInt.fromInt 3
               , governanceAuthority: Governance.mkGovernanceAuthority pkh
               }
-
+        Effect.logInfo' $ "sidechainParams: " <> show sidechainParams
+        void $ initGovernance sidechainParams pkh
         void
           $
             ( PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
@@ -131,5 +132,4 @@ testScenario =
                     "Test: remove permissioned candidates"
             )
 
-        _ <- initTokensMint sidechainParams 1
         pure unit

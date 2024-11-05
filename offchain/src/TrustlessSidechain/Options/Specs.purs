@@ -79,17 +79,16 @@ import TrustlessSidechain.Options.Types
   , SidechainEndpointParams(SidechainEndpointParams)
   , TxEndpoint
       ( GetAddrs
-      , InitTokensMint
+      , InitGovernance
+      , UpdateGovernance
       , InitReserveManagement
       , CommitteeCandidateReg
       , CommitteeCandidateDereg
-      , InsertVersion2
       , UpdateVersion
       , InvalidateVersion
       , InsertDParameter
       , UpdateDParameter
       , UpdatePermissionedCandidates
-      , InitTokenStatus
       , ListVersionedScripts
       , CreateReserve
       , DepositReserve
@@ -111,9 +110,13 @@ options maybeConfig = info (helper <*> optSpec maybeConfig)
 optSpec :: Maybe Config -> Parser Options
 optSpec maybeConfig =
   hsubparser $ fold
-    [ command "init-tokens-mint"
-        ( info (withCommonOpts maybeConfig initTokensMintSpec)
-            (progDesc "Mint all sidechain initialisation tokens")
+    [ command "init-governance"
+        ( info (withCommonOpts maybeConfig initGovernanceSpec)
+            (progDesc "Initialize the governance")
+        )
+    , command "update-governance"
+        ( info (withCommonOpts maybeConfig updateGovernanceSpec)
+            (progDesc "Update the governance")
         )
     , command "init-reserve-management"
         ( info (withCommonOpts maybeConfig initReserveManagementSpec)
@@ -147,11 +150,6 @@ optSpec maybeConfig =
         ( info (withCommonOpts maybeConfig releaseReserveFundsSpec)
             (progDesc "Release currently available funds from an existing reserve")
         )
-
-    , command "insert-version-2"
-        ( info (withCommonOpts maybeConfig insertVersionSpec)
-            (progDesc "Initialize version 2 of a protocol")
-        )
     , command "update-version"
         ( info (withCommonOpts maybeConfig updateVersionSpec)
             (progDesc "Update an existing protocol version")
@@ -178,10 +176,6 @@ optSpec maybeConfig =
     , command "update-permissioned-candidates"
         ( info (withCommonOpts maybeConfig updatePermissionedCandidatesSpec)
             (progDesc "Update a Permissioned Candidates list")
-        )
-    , command "init-token-status"
-        ( info (withCommonOpts maybeConfig initTokenStatusSpec)
-            (progDesc "List the number of each init token the wallet still holds")
         )
 
     , command "cli-version"
@@ -471,72 +465,39 @@ parseSpoPubKey = option byteArray $ fold
   , help "SPO cold verification key value"
   ]
 
-parseVersion :: Parser Int
-parseVersion =
-  option
-    int
-    ( fold
-        [ long "version"
-        , metavar "INT"
-        , help "Protocol version"
-        ]
-    )
-
 -- | Parser for the `init-tokens-mint` endpoint.
-initTokensMintSpec :: Parser TxEndpoint
-initTokensMintSpec = ado
-  version <- parseVersion
-  in
-    InitTokensMint { version }
+initGovernanceSpec :: Parser TxEndpoint
+initGovernanceSpec =
+  ado
+    governanceAuthority <- optional $ option governanceAuthority $ fold
+      [ short 'g'
+      , long "governance-authority"
+      , metavar "PUB_KEY_HASH"
+      , help "Public key hash of governance authority"
+      ]
+    in InitGovernance { governancePubKeyHash: unwrap <$> governanceAuthority }
+
+updateGovernanceSpec :: Parser TxEndpoint
+updateGovernanceSpec = ado
+  governanceAuthority <- option governanceAuthority $ fold
+    [ short 'g'
+    , long "governance-authority"
+    , metavar "PUB_KEY_HASH"
+    , help "Public key hash of governance authority"
+    ]
+  in UpdateGovernance { governancePubKeyHash: unwrap governanceAuthority }
 
 initReserveManagementSpec :: Parser TxEndpoint
-initReserveManagementSpec = ado
-  version <- parseVersion
-  in
-    InitReserveManagement
-      { version
-      }
-
-insertVersionSpec :: Parser TxEndpoint
-insertVersionSpec = pure InsertVersion2
-
-parseOldVersion :: Parser Int
-parseOldVersion =
-  option
-    int
-    ( fold
-        [ long "old-version"
-        , metavar "INT"
-        , help "Old protocol version"
-        ]
-    )
-
-parseNewVersion :: Parser Int
-parseNewVersion =
-  option
-    int
-    ( fold
-        [ long "new-version"
-        , metavar "INT"
-        , help "New protocol version"
-        ]
-    )
+initReserveManagementSpec = pure InitReserveManagement
 
 updateVersionSpec :: Parser TxEndpoint
-updateVersionSpec = ado
-  newVersion <- parseNewVersion
-  oldVersion <- parseOldVersion
-  in UpdateVersion { newVersion, oldVersion }
+updateVersionSpec = pure UpdateVersion
 
 invalidateVersionSpec :: Parser TxEndpoint
-invalidateVersionSpec = ado
-  version <- parseVersion
-  in InvalidateVersion { version }
+invalidateVersionSpec = pure InvalidateVersion
 
 listVersionedScriptsSpec :: Parser TxEndpoint
-listVersionedScriptsSpec = ado
-  version <- parseVersion
-  in ListVersionedScripts { version }
+listVersionedScriptsSpec = pure ListVersionedScripts
 
 parseDParameterPermissionedCandidatesCount :: Parser BigInt
 parseDParameterPermissionedCandidatesCount =
@@ -648,18 +609,10 @@ updatePermissionedCandidatesSpec = ado
     UpdatePermissionedCandidates
       { permissionedCandidatesToAdd, permissionedCandidatesToRemove }
 
-initTokenStatusSpec :: Parser TxEndpoint
-initTokenStatusSpec = pure InitTokenStatus
-
 -- | `getAddrSpec` provides a parser for getting the required information for
 -- | the `addresses` endpoint
 getAddrSpec :: Parser TxEndpoint
-getAddrSpec = ado
-  version <- parseVersion
-  in
-    GetAddrs
-      { version
-      }
+getAddrSpec = pure GetAddrs
 
 parseDepositAmount :: Parser BigNum
 parseDepositAmount = option Parsers.tokenAmount

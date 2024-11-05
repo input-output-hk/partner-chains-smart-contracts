@@ -19,8 +19,8 @@ import Test.Config (config)
 import Test.ConfigFile as ConfigFile
 import Test.DParameter as DParameter
 import Test.Data as Data
+import Test.Governance as Governance
 import Test.IlliquidCirculationSupply as IlliquidCirculationSupply
-import Test.InitSidechain.TokensMint as InitMint
 import Test.PermissionedCandidates as PermissionedCandidates
 import Test.Reserve as Reserve
 import Test.Spec.Runner (defaultConfig)
@@ -56,7 +56,7 @@ testnetSuite = do
       PermissionedCandidates.suite
       IlliquidCirculationSupply.suite
       Reserve.suite
-      InitMint.suite
       CommitteeCandidateValidator.suite
       Versioning.suite
       DParameter.suite
+      Governance.suite

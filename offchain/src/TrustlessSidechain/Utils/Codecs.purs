@@ -4,16 +4,11 @@ module TrustlessSidechain.Utils.Codecs
   , thresholdCodec
   , scParamsCodec
   , pubKeyHashCodec
-  , encodeInitTokenStatusData
   ) where
 
 import Contract.Prelude
 
-import Aeson as Aeson
 import Cardano.AsCbor (decodeCbor, encodeCbor)
-import Cardano.Types.AssetName (AssetName)
-import Cardano.Types.BigNum (BigNum)
-import Cardano.Types.BigNum as BigNum
 import Cardano.Types.CborBytes (CborBytes(CborBytes))
 import Cardano.Types.Ed25519KeyHash (Ed25519KeyHash)
 import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash)
@@ -25,17 +20,11 @@ import Contract.Prim.ByteArray
 import Contract.Transaction
   ( TransactionInput(TransactionInput)
   )
-import Data.Argonaut (Json)
-import Data.Argonaut.Core as J
-import Data.Array as Array
 import Data.Codec.Argonaut as CA
 import Data.Codec.Argonaut.Record as CAR
-import Data.Map (Map)
-import Data.Map as Map
 import Data.Profunctor (wrapIso)
 import Data.String (Pattern(Pattern), split)
 import Data.UInt as UInt
-import Foreign.Object as Object
 import JS.BigInt (BigInt)
 import JS.BigInt as BigInt
 import Partial.Unsafe (unsafePartial)
@@ -138,37 +127,12 @@ ed25519KeyHashCodec = CA.prismaticCodec "Ed25519KeyHash"
   (unwrap <<< encodeCbor)
   byteArrayCodec
 
--- | Json encoder for InitTokenStatusResp
--- | See Note [BigInt values and JSON]
--- | This function chooses to use unsafeToInt before converting to Number
--- | since the BigInt values in all reasonable cases should be within the
--- | range of Int.
--- | AssetName is encoded as the defined in the EncodeAeson instance
--- | provided in cardano-transaction-lib.
-encodeInitTokenStatusData :: Map AssetName BigNum -> Json
-encodeInitTokenStatusData = J.fromObject <<< Object.fromFoldable <<< toKvs
-  where
-  toKvs m = Array.zipWith
-    ( \k v -> (Aeson.stringifyAeson $ Aeson.encodeAeson k) /\
-        CA.encode bigNumCodec v
-    )
-    (Array.fromFoldable $ Map.keys m)
-    (Array.fromFoldable $ Map.values m)
-
 -- | JSON codec for `BigInt`.
 -- | See Note [BigInt values and JSON]
 bigIntCodec :: CA.JsonCodec BigInt
 bigIntCodec = CA.prismaticCodec "BigInt"
   (Just <<< BigInt.fromInt)
   unsafeToInt
-  CA.int
-
--- | JSON codec for `BigInt`.
--- | See Note [BigInt values and JSON]
-bigNumCodec :: CA.JsonCodec BigNum
-bigNumCodec = CA.prismaticCodec "BigInt"
-  (Just <<< BigNum.fromInt)
-  (BigNum.toInt >>> unsafePartial fromJust)
   CA.int
 
 unsafeToInt :: BigInt -> Int

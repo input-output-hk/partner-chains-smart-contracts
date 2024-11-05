@@ -38,7 +38,7 @@ import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
   ( OffchainError(InvalidData, InvalidCLIParams)
   )
-import TrustlessSidechain.Governance.Admin as Governance
+import TrustlessSidechain.Governance.Utils as Governance
 import TrustlessSidechain.PermissionedCandidates.Types
   ( PermissionedCandidateKeys(PermissionedCandidateKeys)
   , PermissionedCandidatesPolicyRedeemer
@@ -116,10 +116,8 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
         <<< Map.toUnfoldable
     ) <$> Effect.utxosAt permissionedCandidatesValidatorAddress
 
-  let
-    { lookups: governanceLookups, constraints: governanceConstraints } =
-      Governance.governanceAuthorityLookupsAndConstraints
-        (unwrap sidechainParams).governanceAuthority
+  { lookups: governanceLookups, constraints: governanceConstraints } <-
+    Governance.approvedByGovernanceLookupsAndConstraints sidechainParams
 
   oldCandidates <- case maybePermissionedCandidatesUTxO of
     Nothing -> pure []
@@ -205,4 +203,4 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
         <> mintTokenConstraint
         <> governanceConstraints
 
-  pure { lookups, constraints }
+  pure $ { lookups, constraints }

@@ -8,7 +8,6 @@ import Cardano.Plutus.Types.PaymentPubKeyHash
   ( PaymentPubKeyHash(PaymentPubKeyHash)
   )
 import Cardano.Types.Asset (Asset(Asset))
-import Contract.Numeric.BigNum as BigNum
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromIntArrayUnsafe)
 import Control.Alt ((<|>))
 import Ctl.Internal.Types.Interval (POSIXTime(..))
@@ -41,9 +40,6 @@ import TrustlessSidechain.DParameter.Types
   )
 import TrustlessSidechain.Governance.Admin
   ( GovernanceAuthority(GovernanceAuthority)
-  )
-import TrustlessSidechain.InitSidechain.Types
-  ( InitTokenAssetClass(InitTokenAssetClass)
   )
 import TrustlessSidechain.NativeTokenManagement.Types
   ( IlliquidCirculationSupplyRedeemer(..)
@@ -82,8 +78,6 @@ tests = group "Data roundtrip tests" $ do
     genBPRM
   -- BlockProducerRegistrationMsg?
   -- FUELRedeemer not exported
-  test "InitTokenAssetClass" $ liftEffect $ toDataLaws testCount
-    genInitTokenAssetClass
   test "DParameterValidatorDatum" $ liftEffect $ toDataLaws testCount
     genDParameterValidatorDatum
   test "ScriptId" $ liftEffect $ toDataLaws testCount genScriptId
@@ -115,12 +109,6 @@ genBPRM = do
     , bprmInputUtxo
     }
 
-genInitTokenAssetClass :: Gen InitTokenAssetClass
-genInitTokenAssetClass = do
-  ArbitraryScriptHash initTokenCurrencySymbol <- arbitrary
-  ArbitraryAssetName initTokenName <- arbitrary
-  pure $ InitTokenAssetClass { initTokenCurrencySymbol, initTokenName }
-
 genDParameterValidatorDatum :: Gen DParameterValidatorDatum
 genDParameterValidatorDatum = do
   permissionedCandidatesCount <- BigInt.fromInt <$> arbitrary
@@ -145,11 +133,9 @@ genScriptId = QGen.oneOf $ NE.cons' (pure CommitteeCandidateValidator) $ pure
 
 genVersionOracle :: Gen VersionOracle
 genVersionOracle = do
-  version <- BigNum.fromInt <$> arbitrary
   scriptId <- genScriptId
   pure $ VersionOracle
-    { version
-    , scriptId
+    { scriptId
     }
 
 genVersionOracleConfig :: Gen VersionOracleConfig

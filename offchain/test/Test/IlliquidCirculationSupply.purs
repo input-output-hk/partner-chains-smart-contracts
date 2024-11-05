@@ -45,10 +45,10 @@ import TrustlessSidechain.Effects.Util (fromMaybeThrow)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError(..))
 import TrustlessSidechain.Governance.Admin as Governance
+import TrustlessSidechain.InitSidechain.Governance (initGovernance)
 import TrustlessSidechain.InitSidechain.NativeTokenManagement
   ( initNativeTokenMgmt
   )
-import TrustlessSidechain.InitSidechain.TokensMint (initTokensMint)
 import TrustlessSidechain.NativeTokenManagement.IlliquidCirculationSupply
   ( depositMoreToSupply
   , illiquidCirculationSupplyValidator
@@ -92,8 +92,8 @@ dummyInitialiseSidechain pkh = do
         , governanceAuthority: Governance.mkGovernanceAuthority pkh
         }
 
-  _ <- initTokensMint sidechainParams 1
-  _ <- initNativeTokenMgmt sidechainParams 1
+  _ <- initGovernance sidechainParams pkh
+  _ <- initNativeTokenMgmt sidechainParams
 
   pure sidechainParams
 
@@ -180,7 +180,7 @@ insertFakeIcsWithdrawalPolicy sidechainParams =
 
     void
       $
-        insertVersionLookupsAndConstraints sidechainParams 1
+        insertVersionLookupsAndConstraints sidechainParams
           (IlliquidCirculationSupplyWithdrawalPolicy /\ icsFakePolicy)
       >>= balanceSignAndSubmit
         "Insert illiquid circulation withdrawal minting policy"
@@ -197,8 +197,7 @@ findIlliquidCirculationSupplyUtxos sidechainParams =
   Versioning.getVersionedValidatorAddress
     sidechainParams
     ( VersionOracle
-        { version: BigNum.fromInt 1
-        , scriptId: IlliquidCirculationSupplyValidator
+        { scriptId: IlliquidCirculationSupplyValidator
         }
     )
     >>= utxosAt

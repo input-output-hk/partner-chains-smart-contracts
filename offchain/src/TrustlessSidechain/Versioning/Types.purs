@@ -8,7 +8,6 @@ module TrustlessSidechain.Versioning.Types
 
 import Contract.Prelude
 
-import Cardano.Types.BigNum (BigNum)
 import Cardano.Types.ScriptHash (ScriptHash)
 import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData
@@ -50,8 +49,7 @@ instance ToData VersionOracleDatum where
 
 -- VersionOracle uniquiely identifies a versioned script.
 newtype VersionOracle = VersionOracle
-  { version :: BigNum -- ^ version of the protocol
-  , scriptId :: ScriptId.ScriptId -- ^ unique identifier of the validator
+  { scriptId :: ScriptId.ScriptId -- ^ unique identifier of the validator
   }
 
 derive instance Eq VersionOracle
@@ -60,10 +58,10 @@ instance Show VersionOracle where
   show = genericShow
 
 instance FromData VersionOracle where
-  fromData = productFromData2 (\v s -> VersionOracle { version: v, scriptId: s })
+  fromData x = (\scriptId -> VersionOracle { scriptId }) <$> fromData x
 
 instance ToData VersionOracle where
-  toData (VersionOracle { version, scriptId }) = productToData2 version scriptId
+  toData (VersionOracle { scriptId }) = toData scriptId
 
 -- | Redeemer for the version oracle minting policy that instructs the script
 -- | whether to mint or burn version tokens.

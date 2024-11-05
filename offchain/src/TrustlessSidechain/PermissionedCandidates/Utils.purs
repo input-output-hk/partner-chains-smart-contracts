@@ -18,6 +18,7 @@ import Contract.PlutusData
 import Run (Run)
 import Run.Except (EXCEPT)
 import Run.Except as Run
+import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError(InvalidAddress))
 import TrustlessSidechain.SidechainParams (SidechainParams)
@@ -32,6 +33,7 @@ import TrustlessSidechain.Versioning.ScriptId
       , PermissionedCandidatesPolicy
       )
   )
+import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
 
 -- | Get the OnlyMintMintingPolicy by applying `SidechainParams` to the dummy
@@ -39,7 +41,7 @@ import Type.Row (type (+))
 decodePermissionedCandidatesMintingPolicy ::
   forall r.
   SidechainParams ->
-  Run (EXCEPT OffchainError + WALLET + r) PlutusScript
+  Run (EXCEPT OffchainError + TRANSACTION + WALLET + r) PlutusScript
 decodePermissionedCandidatesMintingPolicy sidechainParams = do
   { permissionedCandidatesValidatorAddress } <-
     getPermissionedCandidatesValidatorAndAddress sidechainParams
@@ -49,21 +51,23 @@ decodePermissionedCandidatesMintingPolicy sidechainParams = do
           permissionedCandidatesValidatorAddress
       )
       $ fromCardano permissionedCandidatesValidatorAddress
+  versionOracleConfig <- Versioning.getVersionOracleConfig sidechainParams
   mkMintingPolicyWithParams PermissionedCandidatesPolicy
-    [ toData sidechainParams, toData plutusAddress ]
+    [ toData sidechainParams, toData versionOracleConfig, toData plutusAddress ]
 
 decodePermissionedCandidatesValidator ::
   forall r.
   SidechainParams ->
-  Run (EXCEPT OffchainError + r) PlutusScript
+  Run (EXCEPT OffchainError + WALLET + r) PlutusScript
 decodePermissionedCandidatesValidator sidechainParams = do
+  versionOracleConfig <- Versioning.getVersionOracleConfig sidechainParams
   mkValidatorWithParams PermissionedCandidatesValidator
-    [ toData sidechainParams ]
+    [ toData sidechainParams, toData versionOracleConfig ]
 
 getPermissionedCandidatesValidatorAndAddress ::
   forall r.
   SidechainParams ->
-  Run (EXCEPT OffchainError + WALLET + r)
+  Run (EXCEPT OffchainError + TRANSACTION + WALLET + r)
     { permissionedCandidatesValidator :: PlutusScript
     , permissionedCandidatesValidatorAddress :: Address
     }
@@ -79,7 +83,7 @@ getPermissionedCandidatesValidatorAndAddress sidechainParams = do
 getPermissionedCandidatesMintingPolicyAndCurrencySymbol ::
   forall r.
   SidechainParams ->
-  Run (EXCEPT OffchainError + WALLET + r)
+  Run (EXCEPT OffchainError + TRANSACTION + WALLET + r)
     { permissionedCandidatesMintingPolicy :: PlutusScript
     , permissionedCandidatesCurrencySymbol :: ScriptHash
     }

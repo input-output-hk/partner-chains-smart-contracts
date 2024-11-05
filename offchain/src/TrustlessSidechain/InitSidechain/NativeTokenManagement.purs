@@ -20,16 +20,14 @@ import Type.Row (type (+))
 initNativeTokenMgmt ::
   forall r.
   SidechainParams ->
-  Int ->
   Run (APP + r)
     { scriptsInitTxIds :: Array TransactionHash
     }
-initNativeTokenMgmt sidechainParams version = do
+initNativeTokenMgmt sidechainParams = do
   -- Attempt to insert scripts into the versioning system
   logDebug' "Attempting to initialize Native Token Management versioning scripts"
   scriptsInitTxIds <- insertScriptsIdempotent
     getNativeTokenManagementPoliciesAndValidators
     sidechainParams
-    version
 
   pure { scriptsInitTxIds }

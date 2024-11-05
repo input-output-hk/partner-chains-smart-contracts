@@ -1,22 +1,12 @@
 module Test.InitSidechain.Utils
-  ( expectedInitTokens
-  , failMsg
+  ( failMsg
   , unorderedEq
   ) where
 
 import Prelude
 
-import Cardano.Types.AssetName (AssetName)
-import Cardano.Types.BigNum (BigNum)
-import Cardano.Types.BigNum as BigNum
-import Cardano.Types.PlutusScript (PlutusScript)
-import Contract.Prelude (Tuple, foldr, (/\))
 import Data.Array as Array
-import Data.List (List)
-import Data.List as List
 import Data.Map as Map
-import TrustlessSidechain.Versioning.ScriptId as Types
-import TrustlessSidechain.Versioning.Utils as Versioning
 
 -- | Testing utility to check ordered equality of
 -- | Map.Map, whose Eq instance is derived from the Array Eq instance
@@ -41,29 +31,3 @@ failMsg exp act = "Expected: "
   <> show exp
   <> "\nBut got: "
   <> show act
-
--- | Collection of init tokens expected to be minted by
--- | `initTokensMint`. It does not care about the particular version,
--- | just the token name and quantity. Requires the number of version
--- | oracle init tokens to be passed.
-expectedInitTokens ::
-  Int -> -- How many version init tokens should have been burned at this point?
-  List (Tuple Types.ScriptId PlutusScript) ->
-  List (Tuple Types.ScriptId PlutusScript) ->
-  Array AssetName ->
-  Map.Map AssetName BigNum
-expectedInitTokens tokensUsed versionedPolicies versionedValidators tokens =
-  let
-    -- See `Versioning.mintVersionInitTokens` for where this comes from
-    nversion = List.length versionedPolicies
-      + List.length versionedValidators
-  in
-    foldr (\(k /\ v) -> Map.insert k v) Map.empty
-      $ Array.(:)
-          ( Versioning.versionOracleInitTokenName /\
-              (BigNum.fromInt (nversion - tokensUsed))
-          )
-      $
-        map
-          (_ /\ BigNum.fromInt 1)
-          tokens

@@ -31,7 +31,6 @@ import TrustlessSidechain.DParameter qualified as DParameter
 import TrustlessSidechain.Governance.MultiSig qualified as MultiSig
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.IlliquidCirculationSupply qualified as IlliquidCirculationSupply
-import TrustlessSidechain.InitToken qualified as InitToken
 import TrustlessSidechain.OnlyMintMintingPolicy as OnlyMintMintingPolicy
 import TrustlessSidechain.PermissionedCandidates qualified as PermissionedCandidates
 import TrustlessSidechain.Reserve qualified as Reserve
@@ -137,7 +136,6 @@ main =
         ( CommitteeCandidateValidator
         , CommitteeCandidateValidator.serialisableValidator
         )
-      , (InitTokenPolicy, InitToken.serialisableInitTokenPolicy)
       , (ScriptCache, ScriptCache.serialisableScriptCache)
       , -- Versioning System
         (VersionOraclePolicy, Versioning.serialisableVersionOraclePolicy)

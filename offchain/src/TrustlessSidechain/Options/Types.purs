@@ -12,6 +12,7 @@ import Contract.Prelude
 import Cardano.Types.Asset (Asset)
 import Cardano.Types.BigNum (BigNum)
 import Cardano.Types.NetworkId (NetworkId)
+import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash)
 import Contract.Config (ContractParams, ServerConfig)
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Transaction (TransactionInput)
@@ -21,7 +22,6 @@ import Node.Path (FilePath)
 import TrustlessSidechain.CommitteeCandidateValidator
   ( StakeOwnership
   )
-import TrustlessSidechain.GetSidechainAddresses (SidechainAddressesExtra)
 import TrustlessSidechain.NativeTokenManagement.Types
   ( ImmutableReserveSettings
   , MutableReserveSettings
@@ -89,25 +89,12 @@ data TxEndpoint
       }
   | CommitteeCandidateDereg { spoPubKey :: Maybe PubKey }
   | GetAddrs
-      SidechainAddressesExtra
-  | InitTokensMint
-      { version :: Int }
+  | InitGovernance { governancePubKeyHash :: Maybe PaymentPubKeyHash }
+  | UpdateGovernance { governancePubKeyHash :: PaymentPubKeyHash }
   | InitReserveManagement
-      { version :: Int
-      }
-
-  -- See Note [Supporting version insertion beyond version 2]
-  | InsertVersion2
   | UpdateVersion
-      { oldVersion :: Int
-      , newVersion :: Int
-      }
   | InvalidateVersion
-      { version :: Int
-      }
   | ListVersionedScripts
-      { version :: Int
-      }
   | InsertDParameter
       { permissionedCandidatesCount :: BigInt
       , registeredCandidatesCount :: BigInt
@@ -132,9 +119,6 @@ data TxEndpoint
                 }
             )
       }
-
-  -- | reserve initialization for an asset class
-  | InitTokenStatus
 
   -- | CLI entpoints for reserve initialization for an asset class
   | CreateReserve

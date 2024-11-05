@@ -38,12 +38,13 @@ import Test.Utils as Test.Utils
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
 import TrustlessSidechain.Effects.Env (emptyEnv)
-import TrustlessSidechain.Effects.Log (LOG)
+import TrustlessSidechain.Effects.Log (LOG, logInfo')
 import TrustlessSidechain.Effects.Run (unliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.Governance.Admin as Governance
+import TrustlessSidechain.InitSidechain.Governance (initGovernance)
 import TrustlessSidechain.InitSidechain.NativeTokenManagement
   ( initNativeTokenMgmt
   )
@@ -124,7 +125,8 @@ dummyInitialiseSidechain pkh = do
         , governanceAuthority: Governance.mkGovernanceAuthority pkh
         }
 
-  _ <- initNativeTokenMgmt sidechainParams 1
+  _ <- initGovernance sidechainParams pkh
+  _ <- initNativeTokenMgmt sidechainParams
 
   pure sidechainParams
 
@@ -138,8 +140,7 @@ findIlliquidCirculationSupplyUtxos sidechainParams =
   Versioning.getVersionedValidatorAddress
     sidechainParams
     ( VersionOracle
-        { version: BigNum.fromInt 1
-        , scriptId: IlliquidCirculationSupplyValidator
+        { scriptId: IlliquidCirculationSupplyValidator
         }
     )
     >>= utxosAt
@@ -202,12 +203,13 @@ testScenario3 =
               , tokenKind: fromAssetClass tokenKind
               }
 
+          logInfo' "aaaa initialized"
           void $ initialiseReserveUtxo
             sidechainParams
             immutableSettings
             invalidMutableSettings
             (BigNum.fromInt initialAmountOfNonAdaTokens)
-
+          logInfo' "Reserve initialized"
           void $ depositToReserve
             sidechainParams
             (fromAssetClass tokenKind)

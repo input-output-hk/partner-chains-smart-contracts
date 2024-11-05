@@ -28,7 +28,6 @@ import Test.QuickCheck.Extra (
   ArbitraryBytes (ArbitraryBytes),
   ArbitraryCurrencySymbol (ArbitraryCurrencySymbol),
   ArbitraryPubKeyHash (ArbitraryPubKeyHash),
-  ArbitraryTokenName (ArbitraryTokenName),
   ArbitraryTxOutRef (ArbitraryTxOutRef),
  )
 import Test.Tasty (adjustOption, defaultMain, testGroup)
@@ -36,7 +35,6 @@ import Test.Tasty.QuickCheck (QuickCheckTests (QuickCheckTests), testProperty)
 import TrustlessSidechain.Governance.Admin (GovernanceAuthority (GovernanceAuthority))
 import TrustlessSidechain.Governance.MultiSig (
   MultiSigGovParams (MultiSigGovParams),
-  MultiSigGovRedeemer (MultiSigTokenGC, MultiSignatureCheck),
  )
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.PlutusPrelude qualified as PTPrelude
@@ -61,20 +59,12 @@ import TrustlessSidechain.Types (
   EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey),
   IlliquidCirculationSupplyRedeemer (DepositMoreToSupply, WithdrawFromSupply),
   ImmutableReserveSettings (ImmutableReserveSettings),
-  InitTokenAssetClass (
-    InitTokenAssetClass
-  ),
-  InitTokenRedeemer (
-    BurnInitToken,
-    MintInitToken
-  ),
   MutableReserveSettings (MutableReserveSettings),
   PermissionedCandidateKeys (PermissionedCandidateKeys),
   PermissionedCandidatesPolicyRedeemer (PermissionedCandidatesBurn, PermissionedCandidatesMint),
   PermissionedCandidatesValidatorDatum (PermissionedCandidatesValidatorDatum),
   PermissionedCandidatesValidatorRedeemer (RemovePermissionedCandidates, UpdatePermissionedCandidates),
   PubKey (PubKey),
-  ReserveAuthPolicyRedeemer (ReserveAuthPolicyRedeemer),
   ReserveDatum (ReserveDatum),
   ReserveRedeemer (DepositToReserve, Handover, TransferToIlliquidCirculationSupply, UpdateReserve),
   ReserveStats (ReserveStats),
@@ -111,10 +101,6 @@ main =
       , testProperty "VersionOracle (unsafe)" . toDataUnsafeLaws' genVO shrinkVO $ show
       , testProperty "VersionOracleConfig (safe)" . toDataSafeLaws' genVOC shrinkVOC $ show
       , testProperty "VersionOracleConfig (unsafe)" . toDataUnsafeLaws' genVOC shrinkVOC $ show
-      , testProperty "InitTokenRedeemer (safe)" . toDataSafeLaws' genITR shrinkITR $ show
-      , testProperty "InitTokenRedeemer (unsafe)" . toDataUnsafeLaws' genITR shrinkITR $ show
-      , testProperty "InitTokenAssetClass (safe)" . toDataSafeLaws' genITAC shrinkITAC $ show
-      , testProperty "InitTokenAssetClass (unsafe)" . toDataUnsafeLaws' genITAC shrinkITAC $ show
       , testProperty "DParameterValidatorDatum (safe)" . toDataSafeLaws' genDPVD shrinkDPVD $ show
       , testProperty "DParameterValidatorDatum (unsafe)" . toDataUnsafeLaws' genDPVD shrinkDPVD $ show
       , testProperty "PermissionedCandidateKeys (safe)" . toDataSafeLaws' genPCK shrinkPCK $ show
@@ -129,14 +115,10 @@ main =
       , testProperty "ReserveDatum (unsafe)" . toDataUnsafeLaws' genRD shrinkRD $ show
       , testProperty "ReserveRedeemer (safe)" . toDataSafeLaws' genRR shrinkRR $ show
       , testProperty "ReserveRedeemer (unsafe)" . toDataUnsafeLaws' genRR shrinkRR $ show
-      , testProperty "ReserveAuthPolicyRedeemer (safe)" . toDataSafeLaws' genRAPR shrinkRAPR $ show
-      , testProperty "ReserveAuthPolicyRedeemer (unsafe)" . toDataUnsafeLaws' genRAPR shrinkRAPR $ show
       , testProperty "IlliquidCirculationSupplyRedeemer (safe)" . toDataSafeLaws' genICSR shrinkICSR $ show
       , testProperty "IlliquidCirculationSupplyRedeemer (unsafe)" . toDataUnsafeLaws' genICSR shrinkICSR $ show
       , testProperty "MultiSigGovParams (safe)" . toDataSafeLaws' genMSGP shrinkMSGP $ show
       , testProperty "MultiSigGovParams (unsafe)" . toDataUnsafeLaws' genMSGP shrinkMSGP $ show
-      , testProperty "MultiSigGovRedeemer (safe)" . toDataSafeLaws' genMSGR shrinkMSGR $ show
-      , testProperty "MultiSigGovRedeemer (unsafe)" . toDataUnsafeLaws' genMSGR shrinkMSGR $ show
       ]
   where
     go :: QuickCheckTests -> QuickCheckTests
@@ -145,11 +127,6 @@ main =
 -- Helpers
 
 -- Generators
-genITAC :: Gen InitTokenAssetClass
-genITAC = do
-  ArbitraryCurrencySymbol itcs <- arbitrary
-  ArbitraryTokenName itn <- arbitrary
-  pure $ InitTokenAssetClass itcs itn
 
 genDPVD :: Gen DParameterValidatorDatum
 genDPVD = DParameterValidatorDatum <$> arbitrary <*> arbitrary
@@ -186,18 +163,12 @@ genRD = do
 
 genRR :: Gen ReserveRedeemer
 genRR = do
-  v <- arbitrary
   oneof
-    [ pure (DepositToReserve v)
+    [ pure DepositToReserve
     , pure TransferToIlliquidCirculationSupply
-    , pure (UpdateReserve v)
-    , pure (Handover v)
+    , pure UpdateReserve
+    , pure Handover
     ]
-
-genRAPR :: Gen ReserveAuthPolicyRedeemer
-genRAPR = do
-  version <- arbitrary
-  pure $ ReserveAuthPolicyRedeemer version
 
 genICSR :: Gen IlliquidCirculationSupplyRedeemer
 genICSR =
@@ -214,16 +185,9 @@ genMSGP = do
   a <- chooseInteger (1, fromIntegral $ length pkhs)
   pure $ MultiSigGovParams pkhs a
 
-genMSGR :: Gen MultiSigGovRedeemer
-genMSGR =
-  oneof
-    [ pure MultiSignatureCheck
-    , pure MultiSigTokenGC
-    ]
-
 -- Generates arbitrary bytes
 genVO :: Gen VersionOracle
-genVO = VersionOracle <$> arbitrary <*> arbitrary
+genVO = VersionOracle <$> arbitrary
 
 genVOC :: Gen VersionOracleConfig
 genVOC =
@@ -298,16 +262,7 @@ genSP = do
   ga <- genGA
   pure . SidechainParams cid gu n d $ ga
 
-genITR :: Gen InitTokenRedeemer
-genITR = oneof [pure MintInitToken, pure BurnInitToken]
-
 -- Shrinkers
-
-shrinkITAC :: InitTokenAssetClass -> [InitTokenAssetClass]
-shrinkITAC (InitTokenAssetClass itcs itn) = do
-  ArbitraryCurrencySymbol itcs' <- shrink $ ArbitraryCurrencySymbol itcs
-  ArbitraryTokenName itn' <- shrink $ ArbitraryTokenName itn
-  pure $ InitTokenAssetClass itcs' itn'
 
 shrinkDPVD :: DParameterValidatorDatum -> [DParameterValidatorDatum]
 shrinkDPVD (DParameterValidatorDatum pcc rcc) = DParameterValidatorDatum <$> shrink pcc <*> shrink rcc
@@ -334,9 +289,6 @@ shrinkRD = const []
 shrinkRR :: ReserveRedeemer -> [ReserveRedeemer]
 shrinkRR = const []
 
-shrinkRAPR :: ReserveAuthPolicyRedeemer -> [ReserveAuthPolicyRedeemer]
-shrinkRAPR = const []
-
 shrinkICSR :: IlliquidCirculationSupplyRedeemer -> [IlliquidCirculationSupplyRedeemer]
 shrinkICSR = const []
 
@@ -348,14 +300,10 @@ shrinkMSGP (MultiSigGovParams pkhs a) = do
   a' <- shrink a
   pure $ MultiSigGovParams pkhs' a'
 
-shrinkMSGR :: MultiSigGovRedeemer -> [MultiSigGovRedeemer]
-shrinkMSGR = const []
-
 shrinkVO :: VersionOracle -> [VersionOracle]
-shrinkVO (VersionOracle version scriptID) = do
-  v <- shrink version
+shrinkVO (VersionOracle scriptID) = do
   sid <- shrink scriptID
-  pure $ VersionOracle v sid
+  pure $ VersionOracle sid
 
 shrinkVOC :: VersionOracleConfig -> [VersionOracleConfig]
 shrinkVOC (VersionOracleConfig versionOracleCurrencySymbol) = do
@@ -413,9 +361,6 @@ shrinkSP (SidechainParams {..}) = do
   ga <- shrinkGA governanceAuthority
   -- We don't shrink the denominator, as this could make the result _bigger_.
   pure . SidechainParams cid' gu' n' thresholdDenominator $ ga
-
-shrinkITR :: InitTokenRedeemer -> [InitTokenRedeemer]
-shrinkITR = const []
 
 -- | Wrapper for 'PubKey' to provide QuickCheck instances.
 --

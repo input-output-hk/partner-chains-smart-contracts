@@ -17,7 +17,6 @@ import PlutusLedgerApi.V2 (
   serialiseCompiledCode,
  )
 import PlutusTx qualified
-import TrustlessSidechain.Governance.Admin qualified as Governance
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (
   PermissionedCandidatesPolicyRedeemer (
@@ -28,10 +27,10 @@ import TrustlessSidechain.Types (
     RemovePermissionedCandidates,
     UpdatePermissionedCandidates
   ),
-  SidechainParams,
  )
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Utils (currencySymbolValueOf)
+import TrustlessSidechain.Versioning (VersionOracleConfig, approvedByGovernance)
 
 -- OnChain error descriptions:
 --
@@ -50,13 +49,15 @@ import TrustlessSidechain.Utils (currencySymbolValueOf)
 --   ERROR-PERMISSIONED-CANDIDATES-POLICY-05: Wrong ScriptContext - this should
 --   never happen
 mkMintingPolicy ::
-  SidechainParams ->
+  BuiltinData ->
+  VersionOracleConfig ->
   Address ->
   PermissionedCandidatesPolicyRedeemer ->
   Unsafe.ScriptContext ->
   Bool
 mkMintingPolicy
-  sp
+  _
+  vc
   permissionedCandidatesValidatorAddress
   PermissionedCandidatesMint
   ctx
@@ -66,7 +67,7 @@ mkMintingPolicy
             -- Check that transaction was approved by governance authority
             signedByGovernanceAuthority :: Bool
             signedByGovernanceAuthority =
-              txInfo `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
+              approvedByGovernance vc ctx
 
             -- Amount of PermissionedCandidatesToken sent to the
             -- PermissionedCandidatesValidator address
@@ -89,12 +90,13 @@ mkMintingPolicy
             -- sent to the PermissionedCandidatesValidator address
             allTokensSentToPermissionedCandidatesValidator :: Bool
             allTokensSentToPermissionedCandidatesValidator = mintAmount == outAmount
-         in traceIfFalse "ERROR-DPARAMETER-POLICY-01" signedByGovernanceAuthority
+         in traceIfFalse "ERROR-PERMISSIONED-CANDIDATES-POLICY-01" signedByGovernanceAuthority
               && traceIfFalse
                 "ERROR-PERMISSIONED-CANDIDATES-POLICY-02"
                 allTokensSentToPermissionedCandidatesValidator
 mkMintingPolicy
-  sp
+  _
+  vc
   _
   PermissionedCandidatesBurn
   ctx
@@ -104,7 +106,7 @@ mkMintingPolicy
             -- Check that transaction was approved by governance authority
             signedByGovernanceAuthority :: Bool
             signedByGovernanceAuthority =
-              txInfo `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
+              approvedByGovernance vc ctx
 
             -- Amount of PermissionedCandidatesToken sent output by this transaction
             outAmount :: Integer
@@ -124,7 +126,7 @@ mkMintingPolicy
               && traceIfFalse
                 "ERROR-PERMISSIONED-CANDIDATES-POLICY-04"
                 noOutputsWithPermissionedCandidatesToken
-mkMintingPolicy _ _ _ _ = traceError "ERROR-PERMISSIONED-CANDIDATES-POLICY-05"
+mkMintingPolicy _ _ _ _ _ = traceError "ERROR-PERMISSIONED-CANDIDATES-POLICY-05"
 
 -- OnChain error descriptions:
 --
@@ -135,7 +137,8 @@ mkMintingPolicy _ _ _ _ = traceError "ERROR-PERMISSIONED-CANDIDATES-POLICY-05"
 --   governance authority
 {-# INLINEABLE permissionedCandidatesValidator #-}
 permissionedCandidatesValidator ::
-  SidechainParams ->
+  BuiltinData ->
+  VersionOracleConfig ->
   -- Here raw BuiltinData is passed instead of
   -- 'PermissionedCandidatesValidatorDatum' to allow to spend from this
   -- validator even if UTxO contains invalid datum
@@ -144,7 +147,8 @@ permissionedCandidatesValidator ::
   Unsafe.ScriptContext ->
   Bool
 permissionedCandidatesValidator
-  sp
+  _
+  vc
   _
   UpdatePermissionedCandidates
   ctx =
@@ -155,9 +159,10 @@ permissionedCandidatesValidator
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority =
-        Unsafe.scriptContextTxInfo ctx `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
+        approvedByGovernance vc ctx
 permissionedCandidatesValidator
-  sp
+  _
+  vc
   _
   RemovePermissionedCandidates
   ctx =
@@ -168,14 +173,15 @@ permissionedCandidatesValidator
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
       signedByGovernanceAuthority =
-        Unsafe.scriptContextTxInfo ctx `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
+        approvedByGovernance vc ctx
 
 mkMintingPolicyUntyped ::
-  BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkMintingPolicyUntyped sp validatorAddress redeemer ctx =
+  BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkMintingPolicyUntyped sp vc validatorAddress redeemer ctx =
   check
     $ mkMintingPolicy
-      (unsafeFromBuiltinData sp)
+      sp
+      (unsafeFromBuiltinData vc)
       (unsafeFromBuiltinData validatorAddress)
       (unsafeFromBuiltinData redeemer)
       (Unsafe.wrap ctx)
@@ -185,11 +191,12 @@ serialisableMintingPolicy =
   serialiseCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
 
 mkValidatorUntyped ::
-  BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkValidatorUntyped sp address redeemer ctx =
+  BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkValidatorUntyped sp vc address redeemer ctx =
   check
     $ permissionedCandidatesValidator
-      (unsafeFromBuiltinData sp)
+      sp
+      (unsafeFromBuiltinData vc)
       address
       (unsafeFromBuiltinData redeemer)
       (Unsafe.wrap ctx)

@@ -13,13 +13,10 @@ import PlutusLedgerApi.V2 (
   serialiseCompiledCode,
  )
 import PlutusTx qualified
-import TrustlessSidechain.Governance.Admin qualified as Governance
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.Types (
-  SidechainParams,
- )
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Utils (currencySymbolValueOf)
+import TrustlessSidechain.Versioning (VersionOracleConfig, approvedByGovernance)
 
 -- OnChain error descriptions:
 --
@@ -31,13 +28,15 @@ import TrustlessSidechain.Utils (currencySymbolValueOf)
 --
 --   ERROR-DPARAMETER-POLICY-03: Wrong ScriptContext - this should never happen
 mkMintingPolicy ::
-  SidechainParams ->
+  BuiltinData ->
+  VersionOracleConfig ->
   Unsafe.Address ->
   BuiltinData ->
   Unsafe.ScriptContext ->
   Bool
 mkMintingPolicy
-  sp
+  _sp
+  vc
   dParameterValidatorAddress
   _redeemer
   ctx
@@ -48,7 +47,7 @@ mkMintingPolicy
             -- Check that transaction was approved by governance authority
             signedByGovernanceAuthority :: Bool
             signedByGovernanceAuthority =
-              txInfo `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
+              approvedByGovernance vc ctx
 
             -- Amount of DParameterToken sent to the DParameterValidator address
             outAmount :: Integer
@@ -74,7 +73,7 @@ mkMintingPolicy
               && traceIfFalse
                 "ERROR-DPARAMETER-POLICY-02"
                 allTokensSentToDParameterValidator
-mkMintingPolicy _ _ _ _ = traceError "ERROR-DPARAMETER-POLICY-03"
+mkMintingPolicy _ _ _ _ _ = traceError "ERROR-DPARAMETER-POLICY-03"
 
 -- OnChain error descriptions:
 --
@@ -84,32 +83,35 @@ mkMintingPolicy _ _ _ _ = traceError "ERROR-DPARAMETER-POLICY-03"
 
 {-# INLINEABLE dParameterValidator #-}
 dParameterValidator ::
-  SidechainParams ->
+  BuiltinData ->
   -- Here raw BuiltinData is passed instead of 'DParameterValidatorDatum'
   -- to allow to spend from this validator even if UTxO contains invalid
   -- datum
+  VersionOracleConfig ->
   BuiltinData ->
   BuiltinData ->
   Unsafe.ScriptContext ->
   Bool
-dParameterValidator sp _dat _redeemer ctx =
+dParameterValidator _sp vc _dat _redeemer ctx =
   traceIfFalse "ERROR-DPARAMETER-VALIDATOR-01" signedByGovernanceAuthority
   where
     -- Check that transaction was approved by governance authority
     signedByGovernanceAuthority :: Bool
     signedByGovernanceAuthority =
-      Unsafe.scriptContextTxInfo ctx `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
+      approvedByGovernance vc ctx
 
 mkValidatorUntyped ::
   BuiltinData ->
   BuiltinData ->
   BuiltinData ->
   BuiltinData ->
+  BuiltinData ->
   ()
-mkValidatorUntyped sp dat redeemer ctx =
+mkValidatorUntyped sp vc dat redeemer ctx =
   check
     $ dParameterValidator
-      (unsafeFromBuiltinData sp)
+      sp
+      (unsafeFromBuiltinData vc)
       dat
       redeemer
       (Unsafe.wrap ctx)
@@ -123,11 +125,13 @@ mkMintingPolicyUntyped ::
   BuiltinData ->
   BuiltinData ->
   BuiltinData ->
+  BuiltinData ->
   ()
-mkMintingPolicyUntyped sp validatorAddress redeemer ctx =
+mkMintingPolicyUntyped sp vc validatorAddress redeemer ctx =
   check
     $ mkMintingPolicy
-      (unsafeFromBuiltinData sp)
+      sp
+      (unsafeFromBuiltinData vc)
       (Unsafe.wrap validatorAddress)
       redeemer
       (Unsafe.wrap ctx)

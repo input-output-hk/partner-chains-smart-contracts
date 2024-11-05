@@ -40,7 +40,7 @@ import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
   ( OffchainError(NotFoundUtxo, InvalidCLIParams, GenericInternalError)
   )
-import TrustlessSidechain.Governance.Admin as Governance
+import TrustlessSidechain.Governance.Utils as Governance
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Asset (emptyAssetName)
 import Type.Row (type (+))
@@ -54,7 +54,7 @@ mkInsertDParameterLookupsAndConstraints ::
   { permissionedCandidatesCount :: BigInt
   , registeredCandidatesCount :: BigInt
   } ->
-  Run (EXCEPT OffchainError + WALLET + r)
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     { lookups :: ScriptLookups
     , constraints :: TxConstraints
     }
@@ -72,10 +72,8 @@ mkInsertDParameterLookupsAndConstraints
 
   let dParameterValidatorHash = PlutusScript.hash dParameterValidator
 
-  let
-    { lookups: governanceLookups, constraints: governanceConstraints } =
-      Governance.governanceAuthorityLookupsAndConstraints
-        (unwrap sidechainParams).governanceAuthority
+  { lookups: governanceLookups, constraints: governanceConstraints } <-
+    Governance.approvedByGovernanceLookupsAndConstraints sidechainParams
 
   let
     value :: Value.Value
@@ -126,6 +124,9 @@ mkUpdateDParameterLookupsAndConstraints
 
   let dParameterValidatorHash = PlutusScript.hash dParameterValidator
 
+  { lookups: governanceLookups, constraints: governanceConstraints } <-
+    Governance.approvedByGovernanceLookupsAndConstraints sidechainParams
+
   -- find one UTxO at DParameterValidator address that contain DParameterToken
 
   mOldDParameter <-
@@ -169,11 +170,6 @@ mkUpdateDParameterLookupsAndConstraints
     $ throw
     $ GenericInternalError
         "No previous DParameter tokens were found. Please insert a new DParameter before trying to update."
-
-  let
-    { lookups: governanceLookups, constraints: governanceConstraints } =
-      Governance.governanceAuthorityLookupsAndConstraints
-        (unwrap sidechainParams).governanceAuthority
 
   let
     value :: Value.Value

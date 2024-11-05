@@ -2,6 +2,7 @@ module TrustlessSidechain.Versioning.V1
   ( getCommitteeSelectionPoliciesAndValidators
   , getVersionedPoliciesAndValidators
   , getNativeTokenManagementPoliciesAndValidators
+  , getVersionedPoliciesAndValidatorsScriptIds
   ) where
 
 import Contract.Prelude
@@ -14,13 +15,9 @@ import Run.Except (EXCEPT)
 import TrustlessSidechain.CommitteeCandidateValidator
   ( getCommitteeCandidateValidator
   )
-import TrustlessSidechain.Effects.Env (Env, READER, ask)
+import TrustlessSidechain.Effects.Env (Env, READER)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
-import TrustlessSidechain.Governance (Governance(MultiSig))
-import TrustlessSidechain.Governance.MultiSig
-  ( multisigGovPolicy
-  )
 import TrustlessSidechain.NativeTokenManagement.IlliquidCirculationSupply
   ( illiquidCirculationSupplyValidator
   )
@@ -55,6 +52,23 @@ getVersionedPoliciesAndValidators sidechainParams = do
 
   pure $ committeeScripts
     <> nativeTokenManagementScripts
+
+getVersionedPoliciesAndValidatorsScriptIds ::
+  { versionedPolicies :: List ScriptId
+  , versionedValidators :: List ScriptId
+  }
+getVersionedPoliciesAndValidatorsScriptIds = do
+  let
+    versionedPolicies = List.fromFoldable
+      [ ReserveAuthPolicy
+      , GovernancePolicy
+      ]
+    versionedValidators = List.fromFoldable
+      [ ReserveValidator
+      , IlliquidCirculationSupplyValidator
+      , CommitteeCandidateValidator
+      ]
+  { versionedPolicies, versionedValidators }
 
 getCommitteeSelectionPoliciesAndValidators ::
   forall r.
@@ -93,28 +107,20 @@ getNativeTokenManagementPoliciesAndValidators ::
     , versionedValidators :: List (Tuple ScriptId PlutusScript)
     }
 getNativeTokenManagementPoliciesAndValidators sp = do
-  governance <- (_.governance) <$> ask
-  case governance of
-    -- The native token management system can only be used if the user specified
-    -- parameters for the governance (currently only multisignature governance)
-    Just (MultiSig msgp) -> do
-      versionOracleConfig <- Versioning.getVersionOracleConfig sp
-      reserveAuthPolicy' <- reserveAuthPolicy versionOracleConfig
-      reserveValidator' <- reserveValidator versionOracleConfig
-      illiquidCirculationSupplyValidator' <-
-        illiquidCirculationSupplyValidator versionOracleConfig
-      governancePolicy <- multisigGovPolicy msgp
+  versionOracleConfig <- Versioning.getVersionOracleConfig sp
+  reserveAuthPolicy' <- reserveAuthPolicy versionOracleConfig
+  reserveValidator' <- reserveValidator versionOracleConfig
+  illiquidCirculationSupplyValidator' <-
+    illiquidCirculationSupplyValidator versionOracleConfig
 
-      let
-        versionedPolicies = List.fromFoldable
-          [ ReserveAuthPolicy /\ reserveAuthPolicy'
-          , GovernancePolicy /\ governancePolicy
-          ]
-        versionedValidators = List.fromFoldable
-          [ ReserveValidator /\ reserveValidator'
-          , IlliquidCirculationSupplyValidator /\
-              illiquidCirculationSupplyValidator'
-          ]
+  let
+    versionedPolicies = List.fromFoldable
+      [ ReserveAuthPolicy /\ reserveAuthPolicy'
+      ]
+    versionedValidators = List.fromFoldable
+      [ ReserveValidator /\ reserveValidator'
+      , IlliquidCirculationSupplyValidator /\
+          illiquidCirculationSupplyValidator'
+      ]
 
-      pure $ { versionedPolicies, versionedValidators }
-    _ -> pure { versionedPolicies: mempty, versionedValidators: mempty }
+  pure $ { versionedPolicies, versionedValidators }

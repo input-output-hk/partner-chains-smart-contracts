@@ -8,7 +8,6 @@ import TrustlessSidechain.CommitteeCandidateValidator qualified as CCV
 import TrustlessSidechain.DParameter qualified as DParameter
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.IlliquidCirculationSupply qualified as IlliquidCirculationSupply
-import TrustlessSidechain.InitToken qualified as InitToken
 import TrustlessSidechain.PermissionedCandidates qualified as PermissionedCandidates
 import TrustlessSidechain.Reserve qualified as Reserve
 import TrustlessSidechain.Versioning qualified as Versioning
@@ -52,39 +51,35 @@ main =
           , scriptFitsInto
               "mkDParameterValidatorCode (DParameter) serialized"
               DParameter.serialisableValidator
-              498
+              1_531
           , scriptFitsInto
               "mkDParameterPolicyCode (DParameter) serialized"
               DParameter.serialisableMintingPolicy
-              984
+              1_974
           , scriptFitsInto
               "mkPermissionedCandidatesValidatorCode (PermissionedCandidates) serialized"
               PermissionedCandidates.serialisableValidator
-              565
+              1_587
           , scriptFitsInto
               "mkVersionOraclePolicyCode (Versioning) serialized"
               Versioning.serialisableVersionOraclePolicy
-              3_125
+              3_182
           , scriptFitsInto
               "mkVersionOracleValidatorCode (Versioning) serialized"
               Versioning.serialisableVersionOracleValidator
-              927
-          , scriptFitsInto
-              "mkInitTokenPolicy (InitToken) serialized"
-              InitToken.serialisableInitTokenPolicy
-              803
+              1_087
           , scriptFitsInto
               "mkReserveValidator (Reserve) serialized"
               Reserve.serialisableReserveValidator
-              6_013
+              5_936
           , scriptFitsInto
               "mkReserveAuthPolicy (Reserve) serialized"
               Reserve.serialisableReserveAuthPolicy
-              2_692
+              2_640
           , scriptFitsInto
               "mkIlliquidCirculationSupplyValidator (IlliquidCirculationSupply) serialized"
               IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyValidator
-              3_279
+              3_254
           ]
       , testGroup
           "Data rep"
