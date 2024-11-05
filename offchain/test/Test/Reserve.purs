@@ -38,7 +38,7 @@ import Test.Utils as Test.Utils
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
 import TrustlessSidechain.Effects.Env (emptyEnv)
-import TrustlessSidechain.Effects.Log (LOG)
+import TrustlessSidechain.Effects.Log (LOG, logInfo')
 import TrustlessSidechain.Effects.Run (unliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
 import TrustlessSidechain.Effects.Wallet (WALLET)
@@ -203,12 +203,13 @@ testScenario3 =
               , tokenKind: fromAssetClass tokenKind
               }
 
+          logInfo' "aaaa initialized"
           void $ initialiseReserveUtxo
             sidechainParams
             immutableSettings
             invalidMutableSettings
             (BigNum.fromInt initialAmountOfNonAdaTokens)
-
+          logInfo' "Reserve initialized"
           void $ depositToReserve
             sidechainParams
             (fromAssetClass tokenKind)

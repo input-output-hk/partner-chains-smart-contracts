@@ -246,10 +246,6 @@ initialiseReserveUtxo
     , constraints: governanceConstraints
     } <- Governance.approvedByGovernanceLookupsAndConstraints sidechainParams
 
-    { reserveLookups
-    , reserveConstraints
-    } <- reserveLookupsAndConstraints sidechainParams
-
     reserveAuthCurrencySymbol <-
       Versioning.getVersionedScriptHash
         sidechainParams
@@ -258,11 +254,27 @@ initialiseReserveUtxo
             }
         )
 
+    { reserveAuthLookups
+    , reserveAuthConstraints
+    } <- reserveAuthLookupsAndConstraints sidechainParams
+
+    { reserveLookups
+    , reserveConstraints
+    } <- reserveLookupsAndConstraints sidechainParams
+
     versionOracleConfig <- Versioning.getVersionOracleConfig sidechainParams
 
     reserveValidator' <- PlutusScript.hash <$> reserveValidator
       versionOracleConfig
     reserveAuthPolicy' <- reserveAuthPolicy versionOracleConfig
+
+    (reserveRefTxInput /\ reserveRefTxOutput) <-
+      Versioning.getVersionedScriptRefUtxo
+        sidechainParams
+        ( VersionOracle
+            { scriptId: ReserveAuthPolicy
+            }
+        )
 
     let
       valueToPay = singletonFromAsset (unwrap immutableSettings).tokenKind
@@ -282,15 +294,24 @@ initialiseReserveUtxo
       lookups :: Lookups.ScriptLookups
       lookups =
         governanceLookups
+          <> reserveAuthLookups
           <> reserveLookups
           <> Lookups.plutusMintingPolicy reserveAuthPolicy'
 
       constraints =
         governanceConstraints
+          <> reserveAuthConstraints
           <> reserveConstraints
-          <> TxConstraints.mustMintValueWithRedeemer
+          <> TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
+            reserveAuthCurrencySymbol
             (RedeemerDatum $ toData unit)
-            (Mint.fromMultiAsset $ Value.getMultiAsset reserveAuthTokenValue)
+            reserveAuthTokenName
+            (Int.fromInt 1)
+            ( RefInput $ TransactionUnspentOutput
+                { input: reserveRefTxInput
+                , output: reserveRefTxOutput
+                }
+            )
           <> TxConstraints.mustPayToScript
             reserveValidator'
             (toData initialReserveDatum)
@@ -346,6 +367,18 @@ depositToReserve sp asset amount = do
   , reserveAuthConstraints
   } <- reserveAuthLookupsAndConstraints sp
 
+  { reserveLookups
+  , reserveConstraints
+  } <- reserveLookupsAndConstraints sp
+
+  (reserveValidatorTxInput /\ reserveValidatorTxOutput) <-
+    Versioning.getVersionedScriptRefUtxo
+      sp
+      ( VersionOracle
+          { scriptId: ReserveValidator
+          }
+      )
+
   { icsLookups
   , icsConstraints
   } <- illiquidCirculationSupplyLookupsAndConstraints sp
@@ -368,6 +401,7 @@ depositToReserve sp asset amount = do
     lookups :: Lookups.ScriptLookups
     lookups =
       reserveAuthLookups
+        <> reserveLookups
         <> icsLookups
         <> governanceLookups
         <> Lookups.unspentOutputs (uncurry Map.singleton utxo)
@@ -377,14 +411,20 @@ depositToReserve sp asset amount = do
       governanceConstraints
         <> icsConstraints
         <> reserveAuthConstraints
+        <> reserveConstraints
         <> TxConstraints.mustPayToScript
           (PlutusScript.hash reserveValidator')
           datum
           DatumInline
           newValue
-        <> TxConstraints.mustSpendScriptOutput (fst utxo)
+        <> TxConstraints.mustSpendScriptOutputUsingScriptRef (fst utxo)
           ( RedeemerDatum $ toData $ DepositToReserve
               { governanceVersion: BigInt.fromInt 1 }
+          )
+          ( RefInput $ TransactionUnspentOutput
+              { input: reserveValidatorTxInput
+              , output: reserveValidatorTxOutput
+              }
           )
 
   balanceSignAndSubmit
@@ -412,6 +452,18 @@ updateReserveUtxo sp updatedMutableSettings utxo = do
   , icsConstraints
   } <- illiquidCirculationSupplyLookupsAndConstraints sp
 
+  { reserveLookups
+  , reserveConstraints
+  } <- reserveLookupsAndConstraints sp
+
+  (reserveValidatorTxInput /\ reserveValidatorTxOutput) <-
+    Versioning.getVersionedScriptRefUtxo
+      sp
+      ( VersionOracle
+          { scriptId: ReserveValidator
+          }
+      )
+
   versionOracleConfig <- Versioning.getVersionOracleConfig sp
   reserveValidator' <- reserveValidator versionOracleConfig
 
@@ -431,6 +483,7 @@ updateReserveUtxo sp updatedMutableSettings utxo = do
       reserveAuthLookups
         <> icsLookups
         <> governanceLookups
+        <> reserveLookups
         <> Lookups.unspentOutputs (uncurry Map.singleton utxo)
         <> Lookups.validator reserveValidator'
 
@@ -438,14 +491,20 @@ updateReserveUtxo sp updatedMutableSettings utxo = do
       governanceConstraints
         <> icsConstraints
         <> reserveAuthConstraints
+        <> reserveConstraints
         <> TxConstraints.mustPayToScript
           (PlutusScript.hash reserveValidator')
           (toData updatedDatum)
           DatumInline
           value
-        <> TxConstraints.mustSpendScriptOutput (fst utxo)
+        <> TxConstraints.mustSpendScriptOutputUsingScriptRef (fst utxo)
           ( RedeemerDatum $ toData $ UpdateReserve
               { governanceVersion: BigInt.fromInt 1 }
+          )
+          ( RefInput $ TransactionUnspentOutput
+              { input: reserveValidatorTxInput
+              , output: reserveValidatorTxOutput
+              }
           )
 
   balanceSignAndSubmit
@@ -471,6 +530,18 @@ transferToIlliquidCirculationSupply
   { icsLookups
   , icsConstraints
   } <- illiquidCirculationSupplyLookupsAndConstraints sp
+
+  { reserveLookups
+  , reserveConstraints
+  } <- reserveLookupsAndConstraints sp
+
+  (reserveValidatorTxInput /\ reserveValidatorTxOutput) <-
+    Versioning.getVersionedScriptRefUtxo
+      sp
+      ( VersionOracle
+          { scriptId: ReserveValidator
+          }
+      )
 
   versionOracleConfig <- Versioning.getVersionOracleConfig sp
   reserveValidator' <- reserveValidator versionOracleConfig
@@ -561,6 +632,7 @@ transferToIlliquidCirculationSupply
     lookups :: Lookups.ScriptLookups
     lookups =
       reserveAuthLookups
+        <> reserveLookups
         <> icsLookups
         <> Lookups.unspentOutputs (uncurry Map.singleton utxo)
         <> Lookups.validator reserveValidator'
@@ -568,14 +640,20 @@ transferToIlliquidCirculationSupply
 
     constraints =
       reserveAuthConstraints
+        <> reserveConstraints
         <> icsConstraints
         <> TxConstraints.mustPayToScript
           (PlutusScript.hash reserveValidator')
           (toData updatedDatum)
           DatumInline
           newValue
-        <> TxConstraints.mustSpendScriptOutput (fst utxo)
+        <> TxConstraints.mustSpendScriptOutputUsingScriptRef (fst utxo)
           (RedeemerDatum $ toData TransferToIlliquidCirculationSupply)
+          ( RefInput $ TransactionUnspentOutput
+              { input: reserveValidatorTxInput
+              , output: reserveValidatorTxOutput
+              }
+          )
         <> TxConstraints.mustMintValue
           (Mint.fromMultiAsset $ Value.getMultiAsset vtTokensAsValue)
         <> TxConstraints.mustPayToScript

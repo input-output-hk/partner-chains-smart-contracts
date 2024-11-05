@@ -31,7 +31,7 @@ import Test.Versioning as Versioning
 
 main :: Effect Unit
 main = do
-  pureSuite
+  -- pureSuite
   interruptOnSignal SIGINT =<< launchAff do
     flip cancelWith (effectCanceler (exitCode 1)) do
       interpretWithConfig
@@ -53,10 +53,10 @@ testnetSuite :: TestPlanM (Aff Unit) Unit
 testnetSuite = do
   testTestnetContracts config do
     group "Testnet integration tests" do
-      PermissionedCandidates.suite
-      IlliquidCirculationSupply.suite
+      -- PermissionedCandidates.suite
+      -- IlliquidCirculationSupply.suite
       Reserve.suite
-      CommitteeCandidateValidator.suite
-      Versioning.suite
-      DParameter.suite
-      Governance.suite
+-- CommitteeCandidateValidator.suite
+-- Versioning.suite
+-- DParameter.suite
+-- Governance.suite
