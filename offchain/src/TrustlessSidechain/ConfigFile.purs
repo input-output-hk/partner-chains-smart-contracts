@@ -35,17 +35,17 @@ import Type.Row (type (+))
 
 optExample :: Config
 optExample =
-  { sidechainParameters: Just
-      { genesisUtxo: Just $ TransactionInput
-          { transactionId:
-              ( wrap $ unsafePartial $ fromJust $ fromBytes
-                  ( hexToByteArrayUnsafe
-                      "ea092fb8d592f7533021598178182ba9db2ef5f8c233db802ca1728994df1193"
-                  )
+  { genesisUtxo: Just $ TransactionInput
+      { transactionId:
+          ( wrap $ unsafePartial $ fromJust $ fromBytes
+              ( hexToByteArrayUnsafe
+                  "ea092fb8d592f7533021598178182ba9db2ef5f8c233db802ca1728994df1193"
               )
-          , index: UInt.fromInt 2
-          }
+          )
+      , index: UInt.fromInt 2
       }
+  , governanceAuthority: Just $ hexToByteArrayUnsafe "123456789abcdef0"
+
   , paymentSigningKeyFile: Just "/absolute/path/to/payment.skey"
   , stakeSigningKeyFile: Nothing
   , runtimeConfig: Nothing

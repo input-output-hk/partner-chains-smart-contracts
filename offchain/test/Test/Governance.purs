@@ -18,7 +18,6 @@ import TrustlessSidechain.InitSidechain.Governance (initGovernance)
 import TrustlessSidechain.InitSidechain.NativeTokenManagement
   ( initNativeTokenMgmt
   )
-import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 
 suite :: TestnetTest
@@ -44,22 +43,17 @@ testScenarioSuccess =
             bobPkh <- withUnliftApp (Wallet.withKeyWallet bob)
               getOwnPaymentPubKeyHash
 
-            sidechainParams <- withUnliftApp (Wallet.withKeyWallet alice) do
+            genesisUtxo <- withUnliftApp (Wallet.withKeyWallet alice) do
               pkh <- getOwnPaymentPubKeyHash
               genesisUtxo <- getOwnTransactionInput
-              let
-                sidechainParams =
-                  SidechainParams
-                    { genesisUtxo
-                    }
 
-              void $ initGovernance sidechainParams pkh
-              void $ updateGovernance sidechainParams bobPkh
+              void $ initGovernance genesisUtxo pkh
+              void $ updateGovernance genesisUtxo bobPkh
 
-              pure sidechainParams
+              pure genesisUtxo
 
             withUnliftApp (Wallet.withKeyWallet bob) do
-              void $ initNativeTokenMgmt sidechainParams
+              void $ initNativeTokenMgmt genesisUtxo
 
 testScenarioFailure :: TestnetTest
 testScenarioFailure =
@@ -76,16 +70,11 @@ testScenarioFailure =
         do
           unliftApp emptyEnv do
 
-            sidechainParams <- withUnliftApp (Wallet.withKeyWallet alice) do
+            genesisUtxo <- withUnliftApp (Wallet.withKeyWallet alice) do
               pkh <- getOwnPaymentPubKeyHash
               genesisUtxo <- getOwnTransactionInput
-              let
-                sidechainParams =
-                  SidechainParams
-                    { genesisUtxo
-                    }
-              void $ initGovernance sidechainParams pkh
-              pure sidechainParams
+              void $ initGovernance genesisUtxo pkh
+              pure genesisUtxo
 
             withUnliftApp (Wallet.withKeyWallet bob) do
-              (void $ initNativeTokenMgmt sidechainParams) # withUnliftApp fails
+              (void $ initNativeTokenMgmt genesisUtxo) # withUnliftApp fails

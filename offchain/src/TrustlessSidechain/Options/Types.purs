@@ -3,7 +3,6 @@ module TrustlessSidechain.Options.Types
   , InputArgOrFile(..)
   , Options(..)
   , RuntimeConfig(..)
-  , SidechainEndpointParams(..)
   , TxEndpoint(..)
   ) where
 
@@ -22,21 +21,12 @@ import Node.Path (FilePath)
 import TrustlessSidechain.CommitteeCandidateValidator
   ( StakeOwnership
   )
+import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.NativeTokenManagement.Types
   ( ImmutableReserveSettings
   , MutableReserveSettings
   )
-import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey)
-
--- | `SidechainEndpointParams` is an offchain type for grabbing information
--- | related to the sidechain.
--- | This is essentially `SidechainParams` with a little bit more information.
-newtype SidechainEndpointParams = SidechainEndpointParams
-  { sidechainParams :: SidechainParams
-  }
-
-derive instance Newtype SidechainEndpointParams _
 
 -- | CLI arguments providing an interface to contract endpoints
 data Options
@@ -45,7 +35,8 @@ data Options
     -- | transaction to the blockchain.
     -- | In particular, these endpoints need to be in the `Contract` monad
     TxOptions
-      { sidechainEndpointParams :: SidechainEndpointParams
+      { genesisUtxo :: TransactionInput
+      , governanceAuthority :: Governance.GovernanceAuthority
       , endpoint :: TxEndpoint
       , contractParams :: ContractParams
       }
@@ -55,10 +46,11 @@ data Options
 -- Any parameter can be set `null` requiring a CLI argument instead
 type Config =
   { -- | Sidechain parameters (defining the sidechain which we will interact with)
-    sidechainParameters ::
-      Maybe
-        { genesisUtxo :: Maybe TransactionInput
-        }
+    genesisUtxo :: Maybe TransactionInput
+  -- governanceAuthority should really be a PubKeyHash but there's no
+  -- (easy) way of pulling a dummy PubKeyHash value out of thin air in
+  -- TrustlessSidechain.ConfigFile.optExample
+  , governanceAuthority :: Maybe ByteArray
   , -- | Filepath of the payment signing key of the wallet owner
     paymentSigningKeyFile :: Maybe FilePath
   , -- | Filepath of the stake signing key of the wallet owner

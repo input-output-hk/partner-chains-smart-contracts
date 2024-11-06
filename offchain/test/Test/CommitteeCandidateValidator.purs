@@ -13,7 +13,7 @@ import Contract.Prim.ByteArray
   , hexToByteArrayUnsafe
   )
 import Contract.Test.Testnet (withWallets)
-import Contract.Transaction (TransactionHash)
+import Contract.Transaction (TransactionHash, TransactionInput)
 import Contract.Utxos (utxosAt)
 import Contract.Wallet (withKeyWallet)
 import Contract.Wallet as Wallet
@@ -27,7 +27,7 @@ import Run (EFFECT, Run)
 import Run (liftEffect) as Run
 import Run.Except (EXCEPT)
 import Run.Except (note) as Run
-import Test.Utils (TestnetTest, dummySidechainParams, fails)
+import Test.Utils (TestnetTest, dummyGenesisUtxo, fails)
 import TrustlessSidechain.CommitteeCandidateValidator
   ( DeregisterParams(DeregisterParams)
   , RegisterParams(RegisterParams)
@@ -42,7 +42,6 @@ import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
-import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (getOwnWalletAddress)
 import Type.Row (type (+))
 
@@ -59,7 +58,7 @@ suite = group "Committe candidate registration/deregistration" $ do
 -- | information.
 runRegister ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run
     ( READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT
         + EFFECT
@@ -70,7 +69,7 @@ runRegister = runRegisterWithCandidatePermissionInfo
 
 runRegisterWithFixedKeys ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run
     ( READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT +
         r
@@ -85,7 +84,7 @@ runRegisterWithFixedKeys scParams =
         $ Set.findMin
         $ Map.keys ownUtxos
     register $ RegisterParams
-      { sidechainParams: scParams
+      { genesisUtxo: scParams
       , stakeOwnership: AdaBasedStaking mockSpoPubKey (hexToByteArrayUnsafe "")
       , sidechainPubKey: hexToByteArrayUnsafe
           "02a4ee86ede04284ca75be10e08536d8772e66a80f654c3880659fb4143f716fc6"
@@ -100,7 +99,7 @@ runRegisterWithFixedKeys scParams =
 
 runRegisterWithCandidatePermissionInfo ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run
     ( READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT
         + EFFECT
@@ -125,7 +124,7 @@ runRegisterWithCandidatePermissionInfo scParams = do
   grandpaKey <- Run.liftEffect generateKey
 
   register $ RegisterParams
-    { sidechainParams: scParams
+    { genesisUtxo: scParams
     , stakeOwnership: AdaBasedStaking mockSpoPubKey (hexToByteArrayUnsafe "")
     , sidechainPubKey: hexToByteArrayUnsafe
         "02a4ee86ede04284ca75be10e08536d8772e66a80f654c3880659fb4143f716fc6"
@@ -138,11 +137,11 @@ runRegisterWithCandidatePermissionInfo scParams = do
 
 runDeregister ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (READER Env + EXCEPT OffchainError + WALLET + TRANSACTION + LOG + r) Unit
 runDeregister scParams =
   void $ deregister $ DeregisterParams
-    { sidechainParams: scParams, spoPubKey: Just mockSpoPubKey }
+    { genesisUtxo: scParams, spoPubKey: Just mockSpoPubKey }
 
 -- Register multipe times then Deregister
 testScenarioSuccess1 :: TestnetTest
@@ -157,8 +156,8 @@ testScenarioSuccess1 =
         ]
     withWallets initialDistribution \alice -> do
       withKeyWallet alice $ unliftApp emptyEnv do
-        sequence_ $ replicate 10 $ runRegister dummySidechainParams
-        runDeregister dummySidechainParams
+        sequence_ $ replicate 10 $ runRegister dummyGenesisUtxo
+        runDeregister dummyGenesisUtxo
 
 -- alice registers, bob deregisters. not allowed & should fail
 -- also, alice tries to register again with the same set of keys. not allowed & should fail
@@ -173,11 +172,11 @@ testScenarioFailure1 =
         do
           unliftApp emptyEnv do
             withUnliftApp (Wallet.withKeyWallet alice) do
-              void $ runRegisterWithFixedKeys dummySidechainParams
+              void $ runRegisterWithFixedKeys dummyGenesisUtxo
 
               -- alice tries to register again with the same set of keys. not allowed & should fail
-              (void $ runRegisterWithFixedKeys dummySidechainParams) #
+              (void $ runRegisterWithFixedKeys dummyGenesisUtxo) #
                 withUnliftApp fails
 
             withUnliftApp (Wallet.withKeyWallet bob) do
-              (void $ runDeregister dummySidechainParams) # withUnliftApp fails
+              (void $ runDeregister dummyGenesisUtxo) # withUnliftApp fails

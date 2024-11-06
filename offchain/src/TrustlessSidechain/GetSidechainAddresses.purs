@@ -13,6 +13,7 @@ import Cardano.Types.Address
   )
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.PlutusScript as PlutusScript
+import Contract.Transaction (TransactionInput)
 import Data.Array as Array
 import Data.ByteArray (byteArrayToHex)
 import Data.Functor (map)
@@ -26,7 +27,6 @@ import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
-import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address
   ( toAddress
   )
@@ -72,43 +72,43 @@ type SidechainAddresses =
 -- | given.
 getSidechainAddresses ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + READER Env + r)
     SidechainAddresses
 getSidechainAddresses
-  sidechainParams = do
+  genesisUtxo = do
 
   -- Minting policies
 
-  { versionOracleCurrencySymbol } <- getVersionOraclePolicy sidechainParams
+  { versionOracleCurrencySymbol } <- getVersionOraclePolicy genesisUtxo
   let
     versionOraclePolicyId = currencySymbolToHex
       versionOracleCurrencySymbol
 
   { permissionedCandidatesCurrencySymbol } <-
     PermissionedCandidates.getPermissionedCandidatesMintingPolicyAndCurrencySymbol
-      sidechainParams
+      genesisUtxo
   let
     permissionedCandidatesPolicyId =
       currencySymbolToHex permissionedCandidatesCurrencySymbol
 
   { dParameterCurrencySymbol } <-
     DParameter.getDParameterMintingPolicyAndCurrencySymbol
-      sidechainParams
+      genesisUtxo
   let
     dParameterPolicyId = currencySymbolToHex
       dParameterCurrencySymbol
 
   -- Validators
   committeeCandidateValidator <-
-    CommitteeCandidateValidator.getCommitteeCandidateValidator sidechainParams
+    CommitteeCandidateValidator.getCommitteeCandidateValidator genesisUtxo
 
   versionOracleValidator <-
-    versionOracleValidator sidechainParams
+    versionOracleValidator genesisUtxo
 
   { versionedPolicies, versionedValidators } <-
     Versioning.getExpectedVersionedPoliciesAndValidators
-      sidechainParams
+      genesisUtxo
 
   let
     versionedCurrencySymbols = Array.fromFoldable $ map
@@ -119,10 +119,10 @@ getSidechainAddresses
 
   { permissionedCandidatesValidator } <-
     PermissionedCandidates.getPermissionedCandidatesValidatorAndAddress
-      sidechainParams
+      genesisUtxo
 
   { dParameterValidator } <-
-    DParameter.getDParameterValidatorAndAddress sidechainParams
+    DParameter.getDParameterValidatorAndAddress genesisUtxo
 
   let
     mintingPolicies :: Array (Tuple ScriptId String)

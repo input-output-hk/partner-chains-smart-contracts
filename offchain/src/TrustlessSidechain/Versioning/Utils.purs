@@ -28,7 +28,6 @@ import Cardano.Types.OutputDatum (OutputDatum(OutputDatum))
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.ScriptHash (ScriptHash)
-import Cardano.Types.TransactionInput (TransactionInput(TransactionInput))
 import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
 import Cardano.Types.TransactionUnspentOutput
   ( TransactionUnspentOutput(TransactionUnspentOutput)
@@ -42,6 +41,7 @@ import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
 import Contract.Transaction
   ( ScriptRef(PlutusScriptRef)
+  , TransactionInput(TransactionInput)
   )
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
@@ -74,7 +74,6 @@ import TrustlessSidechain.Governance.MultiSig
   ( MultiSigGovParams(MultiSigGovParams)
   )
 import TrustlessSidechain.ScriptCache as ScriptCache
-import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash, toAddress)
 import TrustlessSidechain.Utils.Asset (getScriptHash) as Asset
 import TrustlessSidechain.Utils.Asset (unsafeMkAssetName)
@@ -107,12 +106,12 @@ versionOracleTokenName = unsafeMkAssetName "Version oracle"
 -- | required parameters.
 versionOraclePolicy ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (EXCEPT OffchainError + WALLET + r) PlutusScript
-versionOraclePolicy sp = do
+versionOraclePolicy genesisUtxo = do
   validatorAddress <- (toAddress <<< PlutusScript.hash) =<<
     versionOracleValidator
-      sp
+      genesisUtxo
   validatorAddressData <- toData
     <$>
       ( Run.note
@@ -121,7 +120,7 @@ versionOraclePolicy sp = do
       )
 
   mkMintingPolicyWithParams VersionOraclePolicy
-    [ toData sp
+    [ toData genesisUtxo
     , validatorAddressData
     ]
 
@@ -129,14 +128,14 @@ versionOraclePolicy sp = do
 -- | required parameters.
 versionOracleValidator ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (EXCEPT OffchainError + r) PlutusScript
-versionOracleValidator sp =
-  mkValidatorWithParams VersionOracleValidator [ toData sp ]
+versionOracleValidator genesisUtxo =
+  mkValidatorWithParams VersionOracleValidator [ toData genesisUtxo ]
 
 getVersionOraclePolicy ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (EXCEPT OffchainError + WALLET + r)
     { versionOracleMintingPolicy :: PlutusScript
     , versionOracleCurrencySymbol :: ScriptHash
@@ -150,10 +149,10 @@ getVersionOraclePolicy gscp = do
 -- | script address and VersionOraclePolicy currency symbol.
 getVersionOracleConfig ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (EXCEPT OffchainError + WALLET + r) VersionOracleConfig
-getVersionOracleConfig sp = do
-  { versionOracleCurrencySymbol } <- getVersionOraclePolicy sp
+getVersionOracleConfig genesisUtxo = do
+  { versionOracleCurrencySymbol } <- getVersionOraclePolicy genesisUtxo
   pure $ VersionOracleConfig { versionOracleCurrencySymbol }
 
 -- | Take a versionable script (either a validator or a minting policy) with its
@@ -163,26 +162,27 @@ getVersionOracleConfig sp = do
 -- | datum.  Requires burning one init token.
 initializeVersionLookupsAndConstraints ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Tuple ScriptId PlutusScript -> -- ^ Script ID and the script itself
   Run (APP + r)
     { lookups :: ScriptLookups
     , constraints :: TxConstraints
     }
-initializeVersionLookupsAndConstraints sp (Tuple scriptId versionedScript) =
+initializeVersionLookupsAndConstraints
+  genesisUtxo
+  (Tuple scriptId versionedScript) =
   do
-    let genesisUtxoTxIn = (unwrap sp).genesisUtxo
     genesisUtxoTxOut <- Effect.fromMaybeThrow
       ( NoGenesisUTxO
           "Provided genesis utxo does not exist or was already spent."
       )
-      (Effect.getUtxo genesisUtxoTxIn)
+      (Effect.getUtxo genesisUtxo)
 
     -- Preparing versioning scripts and tokens
     -----------------------------------
     { versionOracleMintingPolicy, versionOracleCurrencySymbol } <-
-      getVersionOraclePolicy sp
-    vValidator <- versionOracleValidator sp
+      getVersionOraclePolicy genesisUtxo
+    vValidator <- versionOracleValidator genesisUtxo
     -- Prepare datum and other boilerplate
     -----------------------------------
     let
@@ -197,7 +197,7 @@ initializeVersionLookupsAndConstraints sp (Tuple scriptId versionedScript) =
         (BigNum.fromInt 1)
 
     scriptReftxInput /\ scriptReftxOutput <- ScriptCache.getScriptRefUtxo
-      sp
+      genesisUtxo
       (PlutusScriptRef versionOracleMintingPolicy)
 
     let
@@ -217,7 +217,7 @@ initializeVersionLookupsAndConstraints sp (Tuple scriptId versionedScript) =
       lookups :: ScriptLookups
       lookups = Lookups.plutusMintingPolicy versionOracleMintingPolicy
         <> Lookups.validator vValidator
-        <> Lookups.unspentOutputs (Map.singleton genesisUtxoTxIn genesisUtxoTxOut)
+        <> Lookups.unspentOutputs (Map.singleton genesisUtxo genesisUtxoTxOut)
 
       constraints :: TxConstraints
       constraints =
@@ -230,7 +230,7 @@ initializeVersionLookupsAndConstraints sp (Tuple scriptId versionedScript) =
           (PlutusScriptRef versionedScript)
           oneVersionOracleAsset
           <> initializeVersioningTokensConstraints
-          <> Constraints.mustSpendPubKeyOutput genesisUtxoTxIn
+          <> Constraints.mustSpendPubKeyOutput genesisUtxo
 
     pure $ { lookups, constraints }
 
@@ -241,19 +241,19 @@ initializeVersionLookupsAndConstraints sp (Tuple scriptId versionedScript) =
 -- | datum.  Requires governance approval
 insertVersionLookupsAndConstraints ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Tuple ScriptId PlutusScript -> -- ^ Script ID and the script itself
   Run (APP + r)
     { lookups :: ScriptLookups
     , constraints :: TxConstraints
     }
-insertVersionLookupsAndConstraints sp (Tuple scriptId versionedScript) =
+insertVersionLookupsAndConstraints genesisUtxo (Tuple scriptId versionedScript) =
   do
     -- Preparing versioning scripts and tokens
     -----------------------------------
     { versionOracleMintingPolicy, versionOracleCurrencySymbol } <-
-      getVersionOraclePolicy sp
-    vValidator <- versionOracleValidator sp
+      getVersionOraclePolicy genesisUtxo
+    vValidator <- versionOracleValidator genesisUtxo
 
     -- Prepare datum and other boilerplate
     -----------------------------------
@@ -270,12 +270,12 @@ insertVersionLookupsAndConstraints sp (Tuple scriptId versionedScript) =
     governanceAuthority <- getOwnPaymentPubKeyHash
 
     governancePlutusScriptHash <- getVersionedScriptHash
-      sp
+      genesisUtxo
       (VersionOracle { scriptId: GovernancePolicy })
 
     (governanceRefTxInput /\ governanceRefTxOutput) <-
       getVersionedScriptRefUtxo
-        sp
+        genesisUtxo
         (VersionOracle { scriptId: GovernancePolicy })
 
     let
@@ -292,7 +292,7 @@ insertVersionLookupsAndConstraints sp (Tuple scriptId versionedScript) =
         governanceRefTxOutput
 
     scriptReftxInput /\ scriptReftxOutput <- ScriptCache.getScriptRefUtxo
-      sp
+      genesisUtxo
       (PlutusScriptRef versionOracleMintingPolicy)
 
     let
@@ -334,7 +334,7 @@ insertVersionLookupsAndConstraints sp (Tuple scriptId versionedScript) =
 -- | system.
 invalidateVersionLookupsAndConstraints ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   ScriptId -> -- ^ Script ID
   Run
     ( EXCEPT OffchainError
@@ -345,12 +345,12 @@ invalidateVersionLookupsAndConstraints ::
     { lookups :: ScriptLookups
     , constraints :: TxConstraints
     }
-invalidateVersionLookupsAndConstraints sp scriptId = do
+invalidateVersionLookupsAndConstraints genesisUtxo scriptId = do
   -- Prepare versioning scripts and tokens
   -----------------------------------
   { versionOracleMintingPolicy, versionOracleCurrencySymbol } <-
-    getVersionOraclePolicy sp
-  vValidator <- versionOracleValidator sp
+    getVersionOraclePolicy genesisUtxo
+  vValidator <- versionOracleValidator genesisUtxo
 
   -- Get UTxOs located at the version oracle validator script address
   -----------------------------------
@@ -396,12 +396,12 @@ invalidateVersionLookupsAndConstraints sp scriptId = do
       )
 
   governancePlutusScriptHash <- getVersionedScriptHash
-    sp
+    genesisUtxo
     (VersionOracle { scriptId: GovernancePolicy })
 
   (governanceRefTxInput /\ governanceRefTxOutput) <-
     getVersionedScriptRefUtxo
-      sp
+      genesisUtxo
       (VersionOracle { scriptId: GovernancePolicy })
 
   let
@@ -442,14 +442,14 @@ invalidateVersionLookupsAndConstraints sp scriptId = do
 -- | Find UTxO that stores a versioned reference script
 getVersionedScriptRefUtxo ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   VersionOracle ->
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     (TransactionInput /\ TransactionOutput)
-getVersionedScriptRefUtxo sp versionOracle = do
-  { versionOracleCurrencySymbol } <- getVersionOraclePolicy sp
+getVersionedScriptRefUtxo genesisUtxo versionOracle = do
+  { versionOracleCurrencySymbol } <- getVersionOraclePolicy genesisUtxo
   versionOracleValidatorHash <-
-    PlutusScript.hash <$> versionOracleValidator sp
+    PlutusScript.hash <$> versionOracleValidator genesisUtxo
   valAddr <- toAddress versionOracleValidatorHash
 
   versionOracleUtxos <- Effect.utxosAt valAddr
@@ -496,11 +496,11 @@ getVersionedScriptRefUtxo sp versionOracle = do
 
 getVersionedPlutusScript ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   VersionOracle ->
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r) PlutusScript
-getVersionedPlutusScript sp versionOracle = do
-  _ /\ TransactionOutput { scriptRef } <- getVersionedScriptRefUtxo sp
+getVersionedPlutusScript genesisUtxo versionOracle = do
+  _ /\ TransactionOutput { scriptRef } <- getVersionedScriptRefUtxo genesisUtxo
     versionOracle
 
   case scriptRef of
@@ -518,11 +518,11 @@ getVersionedPlutusScript sp versionOracle = do
 
 getVersionedScriptHash ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   VersionOracle ->
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r) ScriptHash
-getVersionedScriptHash sp versionOracle = do
-  _ /\ TransactionOutput { scriptRef } <- getVersionedScriptRefUtxo sp
+getVersionedScriptHash genesisUtxo versionOracle = do
+  _ /\ TransactionOutput { scriptRef } <- getVersionedScriptRefUtxo genesisUtxo
     versionOracle
 
   case scriptRef of
@@ -541,11 +541,11 @@ getVersionedScriptHash sp versionOracle = do
 
 getVersionedValidatorAddress ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   VersionOracle ->
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r) Address
-getVersionedValidatorAddress sp versionOracle = do
-  _ /\ TransactionOutput { scriptRef } <- getVersionedScriptRefUtxo sp
+getVersionedValidatorAddress genesisUtxo versionOracle = do
+  _ /\ TransactionOutput { scriptRef } <- getVersionedScriptRefUtxo genesisUtxo
     versionOracle
 
   case scriptRef of
@@ -567,7 +567,7 @@ getVersionedValidatorAddress sp versionOracle = do
 -- | system, and inserting the new one.
 updateVersionLookupsAndConstraints ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   ScriptId -> -- ^ Script ID
   PlutusScript ->
   Run
@@ -576,12 +576,12 @@ updateVersionLookupsAndConstraints ::
     { lookups :: ScriptLookups
     , constraints :: TxConstraints
     }
-updateVersionLookupsAndConstraints sp scriptId plutusScript = do
+updateVersionLookupsAndConstraints genesisUtxo scriptId plutusScript = do
   -- Prepare versioning scripts and tokens
   -----------------------------------
   { versionOracleMintingPolicy, versionOracleCurrencySymbol } <-
-    getVersionOraclePolicy sp
-  vValidator <- versionOracleValidator sp
+    getVersionOraclePolicy genesisUtxo
+  vValidator <- versionOracleValidator genesisUtxo
 
   -- Get UTxOs located at the version oracle validator script address
   -----------------------------------
@@ -630,12 +630,12 @@ updateVersionLookupsAndConstraints sp scriptId plutusScript = do
       )
 
   governancePlutusScriptHash <- getVersionedScriptHash
-    sp
+    genesisUtxo
     (VersionOracle { scriptId: GovernancePolicy })
 
   (governanceRefTxInput /\ governanceRefTxOutput) <-
     getVersionedScriptRefUtxo
-      sp
+      genesisUtxo
       (VersionOracle { scriptId: GovernancePolicy })
 
   let

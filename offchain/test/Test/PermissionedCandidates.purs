@@ -13,7 +13,6 @@ import TrustlessSidechain.Effects.Log as Effect
 import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
 import TrustlessSidechain.InitSidechain.Governance (initGovernance)
 import TrustlessSidechain.PermissionedCandidates as PermissionedCandidates
-import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Transaction
   ( balanceSignAndSubmitWithoutSpendingUtxo
@@ -38,17 +37,12 @@ testScenario =
       withKeyWallet alice $ unliftApp emptyEnv do
         pkh <- getOwnPaymentPubKeyHash
         genesisUtxo <- getOwnTransactionInput
-        let
-          sidechainParams =
-            SidechainParams
-              { genesisUtxo
-              }
-        Effect.logInfo' $ "sidechainParams: " <> show sidechainParams
-        void $ initGovernance sidechainParams pkh
+        Effect.logInfo' $ "genesisUtxo: " <> show genesisUtxo
+        void $ initGovernance genesisUtxo pkh
         void
           $
             ( PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
-                sidechainParams
+                genesisUtxo
                 { permissionedCandidatesToAdd:
                     [ { sidechainKey: hexToByteArrayUnsafe "bb11"
                       , auraKey: hexToByteArrayUnsafe "cc11"
@@ -63,14 +57,14 @@ testScenario =
                 }
                 >>=
                   balanceSignAndSubmitWithoutSpendingUtxo
-                    (unwrap sidechainParams).genesisUtxo
+                    genesisUtxo
                     "Test: insert permissioned candidates"
             )
 
         void
           $
             ( PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
-                sidechainParams
+                genesisUtxo
                 { permissionedCandidatesToAdd:
                     [ { sidechainKey: hexToByteArrayUnsafe "bb33"
                       , auraKey: hexToByteArrayUnsafe "cc33"
@@ -86,13 +80,13 @@ testScenario =
                 }
                 >>=
                   balanceSignAndSubmitWithoutSpendingUtxo
-                    (unwrap sidechainParams).genesisUtxo
+                    genesisUtxo
                     "Test: update permissioned candidates"
             )
 
         ( void
             ( PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
-                sidechainParams
+                genesisUtxo
                 { permissionedCandidatesToAdd:
                     [ { sidechainKey: hexToByteArrayUnsafe "bb33"
                       , auraKey: hexToByteArrayUnsafe "cc33"
@@ -108,7 +102,7 @@ testScenario =
                 }
                 >>=
                   balanceSignAndSubmitWithoutSpendingUtxo
-                    (unwrap sidechainParams).genesisUtxo
+                    genesisUtxo
                     "Test: update permissioned candidates to the same value again (should fail)"
             )
         ) # withUnliftApp fails
@@ -116,13 +110,13 @@ testScenario =
         void
           $
             ( PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
-                sidechainParams
+                genesisUtxo
                 { permissionedCandidatesToAdd: []
                 , permissionedCandidatesToRemove: Nothing
                 }
                 >>=
                   balanceSignAndSubmitWithoutSpendingUtxo
-                    (unwrap sidechainParams).genesisUtxo
+                    genesisUtxo
                     "Test: remove permissioned candidates"
             )
 

@@ -4,7 +4,7 @@ import Contract.Prelude
 
 import Cardano.AsCbor (decodeCbor)
 import Cardano.Types.NetworkId (NetworkId(TestnetId))
-import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
+import Contract.Prim.ByteArray (hexToByteArray, hexToByteArrayUnsafe)
 import Contract.Transaction
   ( TransactionInput(TransactionInput)
   )
@@ -49,24 +49,23 @@ test1 =
                           )
                       }
                   )
-              , sidechainParameters:
+              , genesisUtxo:
                   ( Just
-                      { genesisUtxo:
-                          ( Just
-                              ( TransactionInput
-                                  { index: UInt.fromInt 1
-                                  , transactionId:
-                                      ( unsafePartial $ fromJust $ decodeCbor $ wrap
-                                          ( hexToByteArrayUnsafe
-                                              "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60"
-                                          )
-                                      )
-                                  }
+                      ( TransactionInput
+                          { index: UInt.fromInt 1
+                          , transactionId:
+                              ( unsafePartial $ fromJust $ decodeCbor $ wrap
+                                  ( hexToByteArrayUnsafe
+                                      "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60"
+                                  )
                               )
-                          )
-                      }
-
+                          }
+                      )
                   )
+
+              , governanceAuthority: hexToByteArray
+                  "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
+
               , stakeSigningKeyFile: Nothing
               }
 

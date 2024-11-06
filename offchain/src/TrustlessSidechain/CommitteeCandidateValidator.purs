@@ -15,7 +15,6 @@ import Cardano.Types.BigInt as BigInt
 import Cardano.Types.OutputDatum (outputDatumDatum)
 import Cardano.Types.PlutusData (unit)
 import Cardano.Types.PlutusScript as PlutusScript
-import Cardano.Types.TransactionInput (TransactionInput)
 import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
 import Cardano.Types.Value as Value
 import Contract.Address
@@ -32,9 +31,7 @@ import Contract.PlutusData
   )
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups as Lookups
-import Contract.Transaction
-  ( TransactionHash
-  )
+import Contract.Transaction (TransactionHash, TransactionInput)
 import Contract.TxConstraints as Constraints
 import Contract.Utxos (UtxoMap)
 import Control.Alternative (guard)
@@ -47,7 +44,6 @@ import TrustlessSidechain.Effects.Transaction (utxosAt) as Effect
 import TrustlessSidechain.Error
   ( OffchainError(InvalidCLIParams, NotFoundInputUtxo)
   )
-import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Types (PubKey, Signature)
 import TrustlessSidechain.Utils.Address
   ( getOwnPaymentPubKeyHash
@@ -67,7 +63,7 @@ import TrustlessSidechain.Versioning.ScriptId
 import Type.Row (type (+))
 
 newtype RegisterParams = RegisterParams
-  { sidechainParams :: SidechainParams
+  { genesisUtxo :: TransactionInput
   , stakeOwnership :: StakeOwnership
   , sidechainPubKey :: ByteArray
   , sidechainSig :: ByteArray
@@ -77,16 +73,16 @@ newtype RegisterParams = RegisterParams
   }
 
 newtype DeregisterParams = DeregisterParams
-  { sidechainParams :: SidechainParams
+  { genesisUtxo :: TransactionInput
   , spoPubKey :: Maybe PubKey
   }
 
 getCommitteeCandidateValidator ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (EXCEPT OffchainError + r) PlutusScript.PlutusScript
-getCommitteeCandidateValidator sp = do
-  mkValidatorWithParams CommitteeCandidateValidator [ toData sp ]
+getCommitteeCandidateValidator gu = do
+  mkValidatorWithParams CommitteeCandidateValidator [ toData gu ]
 
 data StakeOwnership
   = -- | Ada stake based configuration comprises the SPO public key and signature
@@ -181,7 +177,7 @@ instance FromData BlockProducerRegistration where
     _ -> Nothing
 
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
-  { bprmSidechainParams :: SidechainParams
+  { bprmGenesisUtxo :: TransactionInput
   , bprmSidechainPubKey :: ByteArray
   , bprmInputUtxo :: TransactionInput -- A UTxO that must be spent by the transaction
   }
@@ -196,25 +192,25 @@ instance Show BlockProducerRegistrationMsg where
 instance ToData BlockProducerRegistrationMsg where
   toData
     ( BlockProducerRegistrationMsg
-        { bprmSidechainParams
+        { bprmGenesisUtxo
         , bprmSidechainPubKey
         , bprmInputUtxo
         }
     ) = Constr (BigNum.fromInt 0)
-    [ toData bprmSidechainParams
+    [ toData bprmGenesisUtxo
     , toData bprmSidechainPubKey
     , toData bprmInputUtxo
     ]
 
 instance FromData BlockProducerRegistrationMsg where
   fromData = case _ of
-    Constr ix [ sp, spk, iu ] -> do
+    Constr ix [ gu, spk, iu ] -> do
       guard (BigNum.fromInt 0 == ix)
-      bprmSidechainParams <- fromData sp
+      bprmGenesisUtxo <- fromData gu
       bprmSidechainPubKey <- fromData spk
       bprmInputUtxo <- fromData iu
       pure $ BlockProducerRegistrationMsg
-        { bprmSidechainParams
+        { bprmGenesisUtxo
         , bprmSidechainPubKey
         , bprmInputUtxo
         }
@@ -226,7 +222,7 @@ register ::
   Run (APP + r) TransactionHash
 register
   ( RegisterParams
-      { sidechainParams
+      { genesisUtxo
       , stakeOwnership
       , sidechainPubKey
       , sidechainSig
@@ -238,7 +234,7 @@ register
   ownPkh <- getOwnPaymentPubKeyHash
   ownAddr <- getOwnWalletAddress
 
-  validator <- getCommitteeCandidateValidator sidechainParams
+  validator <- getCommitteeCandidateValidator genesisUtxo
   let valHash = PlutusScript.hash validator
   valAddr <- toAddress valHash
 
@@ -307,10 +303,10 @@ deregister ::
   forall r.
   DeregisterParams ->
   Run (APP + r) TransactionHash
-deregister (DeregisterParams { sidechainParams, spoPubKey }) = do
+deregister (DeregisterParams { genesisUtxo, spoPubKey }) = do
   ownPkh <- getOwnPaymentPubKeyHash
   ownAddr <- getOwnWalletAddress
-  validator <- getCommitteeCandidateValidator sidechainParams
+  validator <- getCommitteeCandidateValidator genesisUtxo
   valAddr <- toAddress (PlutusScript.hash validator)
   ownUtxos <- Effect.utxosAt ownAddr
   valUtxos <- Effect.utxosAt valAddr

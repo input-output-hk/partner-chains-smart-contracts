@@ -9,10 +9,10 @@ import Contract.Prelude
 
 import Cardano.Types.Int as Int
 import Cardano.Types.ScriptHash (ScriptHash)
-import Cardano.Types.TransactionInput (TransactionInput)
 import Cardano.Types.TransactionOutput (TransactionOutput)
 import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(..))
 import Contract.ScriptLookups (ScriptLookups)
+import Contract.Transaction (TransactionInput)
 import Contract.TxConstraints
   ( InputWithScriptRef(SpendInput, RefInput)
   , TxConstraints

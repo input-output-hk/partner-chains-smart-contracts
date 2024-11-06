@@ -9,7 +9,6 @@ import Contract.Prelude
 import Cardano.Types.NetworkId (NetworkId(MainnetId, TestnetId))
 import Contract.Config (ServerConfig)
 import Contract.Prim.ByteArray (ByteArray)
-import Contract.Transaction (TransactionInput)
 import Data.Codec.Argonaut as CA
 import Data.Codec.Argonaut.Common as CAM
 import Data.Codec.Argonaut.Compat as CAC
@@ -27,23 +26,14 @@ configCodec :: CA.JsonCodec Config
 configCodec =
   CA.object "Config file"
     ( CAR.record
-        { sidechainParameters: CAC.maybe scParamsCodec
+        { genesisUtxo: CAC.maybe transactionInputCodec
+        , governanceAuthority: CAC.maybe byteArrayCodec
         , paymentSigningKeyFile: CAC.maybe CA.string
         , stakeSigningKeyFile: CAC.maybe CA.string
         , runtimeConfig: CAC.maybe runtimeConfigCodec
         }
     )
   where
-  scParamsCodec ::
-    CA.JsonCodec
-      { genesisUtxo :: Maybe TransactionInput
-      }
-  scParamsCodec =
-    ( CAR.object "sidechainParameters"
-        { genesisUtxo: CAC.maybe transactionInputCodec
-        }
-    )
-
   runtimeConfigCodec ::
     CA.JsonCodec
       { kupo :: Maybe ServerConfig

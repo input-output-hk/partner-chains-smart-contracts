@@ -3,14 +3,13 @@ module Main (main) where
 import Contract.Prelude
 
 import Contract.Monad (launchAff_)
+import Contract.Transaction (TransactionInput)
 import Data.Array as Array
 import JS.BigInt as BigInt
 import Node.Encoding (Encoding(UTF8))
 import Node.Process (exit, stderr)
 import Node.Stream (writeString)
 import Options.Applicative (execParser)
-import Partial (crashWith)
-import Partial.Unsafe (unsafePartial)
 import Run (EFFECT, Run)
 import TrustlessSidechain.CLIVersion (versionString)
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
@@ -40,6 +39,7 @@ import TrustlessSidechain.EndpointResp
 import TrustlessSidechain.Error (OffchainError(NotFoundUtxo))
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.Governance (Governance(MultiSig))
+import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.Governance.MultiSig
   ( MultiSigGovParams(MultiSigGovParams)
   )
@@ -59,7 +59,6 @@ import TrustlessSidechain.NativeTokenManagement.Reserve
 import TrustlessSidechain.Options.Specs (options)
 import TrustlessSidechain.Options.Types
   ( Options(TxOptions, CLIVersion)
-  , SidechainEndpointParams
   , TxEndpoint
       ( GetAddrs
       , CommitteeCandidateReg
@@ -102,7 +101,7 @@ main = do
       let
         governance = Just $ MultiSig $ MultiSigGovParams
           { governanceMembers:
-              [] -- TODO put 1 sig in here
+              [ unwrap $ unwrap $ opts.governanceAuthority ]
           , requiredSignatures: BigInt.fromInt 1
           }
 
@@ -111,7 +110,8 @@ main = do
       launchAff_ $ do
         endpointResp <- runAppLive opts.contractParams { governance }
           $ runTxEndpoint
-              opts.sidechainEndpointParams
+              opts.genesisUtxo
+              opts.governanceAuthority
               opts.endpoint
 
         liftEffect $ case endpointResp of
@@ -134,178 +134,176 @@ getOptions = do
 -- | Executes an transaction endpoint and returns a response object
 runTxEndpoint ::
   forall r.
-  SidechainEndpointParams ->
+  TransactionInput ->
+  Governance.GovernanceAuthority ->
   TxEndpoint ->
   Run (APP + EFFECT + r) EndpointResp
-runTxEndpoint sidechainEndpointParams endpoint =
-  let
-    scParams = (unwrap sidechainEndpointParams).sidechainParams
-  in
-    case endpoint of
-      CommitteeCandidateReg
-        { stakeOwnership
-        , sidechainPubKey
-        , sidechainSig
-        , inputUtxo
-        , auraKey
-        , grandpaKey
-        } ->
+runTxEndpoint genesisUtxo governanceAuthority endpoint =
+  case endpoint of
+    CommitteeCandidateReg
+      { stakeOwnership
+      , sidechainPubKey
+      , sidechainSig
+      , inputUtxo
+      , auraKey
+      , grandpaKey
+      } ->
+      let
+        params = CommitteeCandidateValidator.RegisterParams
+          { genesisUtxo
+          , stakeOwnership
+          , sidechainPubKey
+          , sidechainSig
+          , inputUtxo
+          , auraKey
+          , grandpaKey
+          }
+      in
+        CommitteeCandidateValidator.register params
+          <#> txHashToByteArray
+          >>> { transactionId: _ }
+          >>> CommitteeCandidateRegResp
+
+    CommitteeCandidateDereg { spoPubKey } ->
+      let
+        params = CommitteeCandidateValidator.DeregisterParams
+          { genesisUtxo
+          , spoPubKey
+          }
+      in
+        CommitteeCandidateValidator.deregister params
+          <#> txHashToByteArray
+          >>> { transactionId: _ }
+          >>> CommitteeCandidateDeregResp
+
+    GetAddrs -> do
+      sidechainAddresses <- GetSidechainAddresses.getSidechainAddresses
+        genesisUtxo
+      pure $ GetAddrsResp { sidechainAddresses }
+
+    InitGovernance { governancePubKeyHash } ->
+      do
         let
-          params = CommitteeCandidateValidator.RegisterParams
-            { sidechainParams: scParams
-            , stakeOwnership
-            , sidechainPubKey
-            , sidechainSig
-            , inputUtxo
-            , auraKey
-            , grandpaKey
-            }
-        in
-          CommitteeCandidateValidator.register params
-            <#> txHashToByteArray
-            >>> { transactionId: _ }
-            >>> CommitteeCandidateRegResp
+          govPubKeyHash = case governancePubKeyHash of
+            Just pubKeyHash -> pubKeyHash
+            Nothing -> unwrap governanceAuthority
 
-      CommitteeCandidateDereg { spoPubKey } ->
-        let
-          params = CommitteeCandidateValidator.DeregisterParams
-            { sidechainParams: scParams
-            , spoPubKey
-            }
-        in
-          CommitteeCandidateValidator.deregister params
-            <#> txHashToByteArray
-            >>> { transactionId: _ }
-            >>> CommitteeCandidateDeregResp
+        transactionId <- initGovernance genesisUtxo govPubKeyHash
 
-      GetAddrs -> do
-        sidechainAddresses <- GetSidechainAddresses.getSidechainAddresses
-          scParams
-        pure $ GetAddrsResp { sidechainAddresses }
-
-      InitGovernance { governancePubKeyHash } ->
-        do
-          let
-            govPubKeyHash = case governancePubKeyHash of
-              Just pubKeyHash -> pubKeyHash
-              Nothing -> unsafePartial $ crashWith "put 1 pkh in here" -- TODO
-
-          transactionId <- initGovernance scParams govPubKeyHash
-
-          pure $ InitGovernanceResp
-            { transactionId: txHashToByteArray transactionId
-            }
-
-      UpdateGovernance { governancePubKeyHash } ->
-        do
-          transactionId <- updateGovernance scParams governancePubKeyHash
-
-          pure $ UpdateGovernanceResp
-            { transactionId: txHashToByteArray transactionId
-            }
-
-      InitReserveManagement -> do
-        resp <- initNativeTokenMgmt scParams
-
-        pure $ InitReserveManagementResp
-          { scriptsInitTxIds: map txHashToByteArray resp.scriptsInitTxIds
+        pure $ InitGovernanceResp
+          { transactionId: txHashToByteArray transactionId
           }
 
-      UpdateVersion -> do
-        txIds <- Versioning.updateVersion scParams
-        let versioningTransactionIds = map txHashToByteArray txIds
-        pure $ UpdateVersionResp { versioningTransactionIds }
+    UpdateGovernance { governancePubKeyHash } ->
+      do
+        transactionId <- updateGovernance genesisUtxo governancePubKeyHash
 
-      InvalidateVersion -> do
-        txIds <- Versioning.invalidateVersion
-          scParams
-        let versioningTransactionIds = map txHashToByteArray txIds
-        pure $ InvalidateVersionResp { versioningTransactionIds }
-
-      InsertDParameter
-        { permissionedCandidatesCount, registeredCandidatesCount } ->
-        DParameter.mkInsertDParameterLookupsAndConstraints scParams
-          { permissionedCandidatesCount, registeredCandidatesCount }
-          >>= balanceSignAndSubmitWithoutSpendingUtxo
-            (unwrap scParams).genesisUtxo
-            "InsertDParameter"
-          <#> txHashToByteArray
-          >>> { transactionId: _ }
-          >>> InsertDParameterResp
-
-      UpdateDParameter
-        { permissionedCandidatesCount, registeredCandidatesCount } ->
-        DParameter.mkUpdateDParameterLookupsAndConstraints scParams
-          { permissionedCandidatesCount, registeredCandidatesCount }
-          >>= balanceSignAndSubmitWithoutSpendingUtxo
-            (unwrap scParams).genesisUtxo
-            "UpdateDParameter"
-          <#> txHashToByteArray
-          >>> { transactionId: _ }
-          >>> UpdateDParameterResp
-
-      UpdatePermissionedCandidates
-        { permissionedCandidatesToAdd, permissionedCandidatesToRemove } ->
-        PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
-          scParams
-          { permissionedCandidatesToAdd: Array.fromFoldable
-              permissionedCandidatesToAdd
-          , permissionedCandidatesToRemove: Array.fromFoldable <$>
-              permissionedCandidatesToRemove
+        pure $ UpdateGovernanceResp
+          { transactionId: txHashToByteArray transactionId
           }
-          >>= balanceSignAndSubmitWithoutSpendingUtxo
-            (unwrap scParams).genesisUtxo
-            "UpdatePermissionedCandidates"
-          <#> txHashToByteArray
-          >>> { transactionId: _ }
-          >>> UpdatePermissionedCandidatesResp
 
-      ListVersionedScripts ->
-        map ListVersionedScriptsResp
-          ( Versioning.getActualVersionedPoliciesAndValidators
-              scParams
-          )
+    InitReserveManagement -> do
+      resp <- initNativeTokenMgmt genesisUtxo
 
-      CreateReserve
-        { mutableReserveSettings
-        , immutableReserveSettings
-        , depositAmount
-        } -> do
-        txHash <- initialiseReserveUtxo
-          scParams
-          immutableReserveSettings
-          mutableReserveSettings
-          depositAmount
-        pure $ ReserveResp { transactionHash: txHashToByteArray txHash }
+      pure $ InitReserveManagementResp
+        { scriptsInitTxIds: map txHashToByteArray resp.scriptsInitTxIds
+        }
 
-      UpdateReserveSettings { mutableReserveSettings } -> do
-        utxo <- findOneReserveUtxo scParams
-        txHash <- updateReserveUtxo scParams mutableReserveSettings utxo
-        pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
+    UpdateVersion -> do
+      txIds <- Versioning.updateVersion genesisUtxo
+      let versioningTransactionIds = map txHashToByteArray txIds
+      pure $ UpdateVersionResp { versioningTransactionIds }
 
-      DepositReserve { asset, depositAmount } -> do
-        txHash <- depositToReserve scParams asset depositAmount
-        pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
+    InvalidateVersion -> do
+      txIds <- Versioning.invalidateVersion
+        genesisUtxo
+      let versioningTransactionIds = map txHashToByteArray txIds
+      pure $ InvalidateVersionResp { versioningTransactionIds }
 
-      ReleaseReserveFunds
-        { totalAccruedTillNow
-        , transactionInput
-        } -> do
-        utxo <- findOneReserveUtxo scParams
-        plutusScript <- Effect.fromMaybeThrow
-          (NotFoundUtxo "No Reserved UTxO exists for the given asset")
-          (plutusScriptFromTxIn transactionInput)
-        txHash <- transferToIlliquidCirculationSupply
-          scParams
-          totalAccruedTillNow
-          plutusScript
-          utxo
-        pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
+    InsertDParameter
+      { permissionedCandidatesCount, registeredCandidatesCount } ->
+      DParameter.mkInsertDParameterLookupsAndConstraints genesisUtxo
+        { permissionedCandidatesCount, registeredCandidatesCount }
+        >>= balanceSignAndSubmitWithoutSpendingUtxo
+          genesisUtxo
+          "InsertDParameter"
+        <#> txHashToByteArray
+        >>> { transactionId: _ }
+        >>> InsertDParameterResp
 
-      HandoverReserve -> do
-        utxo <- findOneReserveUtxo scParams
-        txHash <- handover scParams utxo
-        pure $ ReserveResp { transactionHash: txHashToByteArray txHash }
+    UpdateDParameter
+      { permissionedCandidatesCount, registeredCandidatesCount } ->
+      DParameter.mkUpdateDParameterLookupsAndConstraints genesisUtxo
+        { permissionedCandidatesCount, registeredCandidatesCount }
+        >>= balanceSignAndSubmitWithoutSpendingUtxo
+          genesisUtxo
+          "UpdateDParameter"
+        <#> txHashToByteArray
+        >>> { transactionId: _ }
+        >>> UpdateDParameterResp
+
+    UpdatePermissionedCandidates
+      { permissionedCandidatesToAdd, permissionedCandidatesToRemove } ->
+      PermissionedCandidates.mkUpdatePermissionedCandidatesLookupsAndConstraints
+        genesisUtxo
+        { permissionedCandidatesToAdd: Array.fromFoldable
+            permissionedCandidatesToAdd
+        , permissionedCandidatesToRemove: Array.fromFoldable <$>
+            permissionedCandidatesToRemove
+        }
+        >>= balanceSignAndSubmitWithoutSpendingUtxo
+          genesisUtxo
+          "UpdatePermissionedCandidates"
+        <#> txHashToByteArray
+        >>> { transactionId: _ }
+        >>> UpdatePermissionedCandidatesResp
+
+    ListVersionedScripts ->
+      map ListVersionedScriptsResp
+        ( Versioning.getActualVersionedPoliciesAndValidators
+            genesisUtxo
+        )
+
+    CreateReserve
+      { mutableReserveSettings
+      , immutableReserveSettings
+      , depositAmount
+      } -> do
+      txHash <- initialiseReserveUtxo
+        genesisUtxo
+        immutableReserveSettings
+        mutableReserveSettings
+        depositAmount
+      pure $ ReserveResp { transactionHash: txHashToByteArray txHash }
+
+    UpdateReserveSettings { mutableReserveSettings } -> do
+      utxo <- findOneReserveUtxo genesisUtxo
+      txHash <- updateReserveUtxo genesisUtxo mutableReserveSettings utxo
+      pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
+
+    DepositReserve { asset, depositAmount } -> do
+      txHash <- depositToReserve genesisUtxo asset depositAmount
+      pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
+
+    ReleaseReserveFunds
+      { totalAccruedTillNow
+      , transactionInput
+      } -> do
+      utxo <- findOneReserveUtxo genesisUtxo
+      plutusScript <- Effect.fromMaybeThrow
+        (NotFoundUtxo "No Reserved UTxO exists for the given asset")
+        (plutusScriptFromTxIn transactionInput)
+      txHash <- transferToIlliquidCirculationSupply
+        genesisUtxo
+        totalAccruedTillNow
+        plutusScript
+        utxo
+      pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
+
+    HandoverReserve -> do
+      utxo <- findOneReserveUtxo genesisUtxo
+      txHash <- handover genesisUtxo utxo
+      pure $ ReserveResp { transactionHash: txHashToByteArray txHash }
 
 printEndpointResp :: EndpointResp -> Effect Unit
 printEndpointResp =

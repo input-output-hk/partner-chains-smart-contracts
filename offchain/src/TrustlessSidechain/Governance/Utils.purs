@@ -9,6 +9,7 @@ import Cardano.Types.BigInt as BigInt
 import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash)
 import Cardano.Types.TransactionHash (TransactionHash)
 import Contract.ScriptLookups (ScriptLookups)
+import Contract.Transaction (TransactionInput)
 import Contract.TxConstraints
   ( TxConstraints
   )
@@ -26,7 +27,6 @@ import TrustlessSidechain.Governance.MultiSig
   ( MultiSigGovParams(MultiSigGovParams)
   , multisigGovPolicy
   )
-import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.ScriptId (ScriptId(GovernancePolicy))
@@ -36,21 +36,21 @@ import Type.Row (type (+))
 
 approvedByGovernanceLookupsAndConstraints ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     { lookups :: ScriptLookups
     , constraints :: TxConstraints
     }
-approvedByGovernanceLookupsAndConstraints sidechainParams = do
+approvedByGovernanceLookupsAndConstraints genesisUtxo = do
   ownPaymentPubKeyHash <- getOwnPaymentPubKeyHash
 
   governancePlutusScriptHash <- Versioning.getVersionedScriptHash
-    sidechainParams
+    genesisUtxo
     (VersionOracle { scriptId: GovernancePolicy })
 
   (governanceRefTxInput /\ governanceRefTxOutput) <-
     Versioning.getVersionedScriptRefUtxo
-      sidechainParams
+      genesisUtxo
       (VersionOracle { scriptId: GovernancePolicy })
 
   pure $ Governance.approvedByGovernanceLookupsAndConstraints
@@ -65,18 +65,18 @@ approvedByGovernanceLookupsAndConstraints sidechainParams = do
 
 updateGovernance ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   PaymentPubKeyHash ->
   Run (APP + r)
     TransactionHash
-updateGovernance sidechainParams newGovernancePubKeyHash = do
+updateGovernance genesisUtxo newGovernancePubKeyHash = do
   plutusScript <- multisigGovPolicy $ MultiSigGovParams
     { requiredSignatures: BigInt.fromInt 1
     , governanceMembers: [ unwrap newGovernancePubKeyHash ]
     }
 
   lookupsAndConstraints <- Versioning.updateVersionLookupsAndConstraints
-    sidechainParams
+    genesisUtxo
     GovernancePolicy
     plutusScript
   balanceSignAndSubmit "Update Governance" lookupsAndConstraints

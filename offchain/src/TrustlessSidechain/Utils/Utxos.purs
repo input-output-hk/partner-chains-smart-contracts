@@ -11,10 +11,10 @@ import Contract.Prelude
 import Cardano.Types.Address (Address)
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.ScriptRef (ScriptRef(PlutusScriptRef))
-import Cardano.Types.TransactionInput (TransactionInput)
 import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
 import Cardano.Types.Value (Value)
 import Cardano.Types.Value (sum) as Value
+import Contract.Transaction (TransactionInput)
 import Contract.Utxos (UtxoMap)
 import Data.Array as Array
 import Data.FoldableWithIndex as FoldableWithIndex

@@ -13,7 +13,6 @@ import Cardano.Types.PlutusData (unit) as PlutusData
 import Cardano.Types.PlutusScript (PlutusScript)
 import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.ScriptHash (ScriptHash)
-import Cardano.Types.TransactionInput (TransactionInput)
 import Cardano.Types.TransactionOutput (TransactionOutput)
 import Cardano.Types.TransactionUnspentOutput (TransactionUnspentOutput(..))
 import Cardano.Types.Value (Value)
@@ -23,6 +22,7 @@ import Contract.PlutusData
   , toData
   )
 import Contract.ScriptLookups as Lookups
+import Contract.Transaction (TransactionInput)
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
   , InputWithScriptRef(RefInput)
@@ -39,7 +39,6 @@ import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.NativeTokenManagement.Types
   ( IlliquidCirculationSupplyRedeemer(DepositMoreToSupply, WithdrawFromSupply)
   )
-import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Asset (emptyAssetName)
 import TrustlessSidechain.Utils.Data
   ( VersionedGenericDatum(VersionedGenericDatum)
@@ -68,7 +67,7 @@ icsWithdrawalTokenName = emptyAssetName
 
 illiquidCirculationSupplyLookupsAndConstraints ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run
     (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
     { icsLookups :: Lookups.ScriptLookups
@@ -91,7 +90,7 @@ illiquidCirculationSupplyLookupsAndConstraints sp = do
 
 depositMoreToSupply ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Value ->
   (TransactionInput /\ TransactionOutput) ->
   Run
@@ -140,7 +139,7 @@ depositMoreToSupply sp depositedValue utxo = do
 
 withdrawFromSupply ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   ScriptHash ->
   Value ->
   (TransactionInput /\ TransactionOutput) ->

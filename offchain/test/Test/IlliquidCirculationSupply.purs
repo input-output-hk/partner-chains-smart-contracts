@@ -53,7 +53,6 @@ import TrustlessSidechain.NativeTokenManagement.IlliquidCirculationSupply
   , illiquidCirculationSupplyValidator
   , withdrawFromSupply
   )
-import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Asset (emptyAssetName, singletonFromAsset)
 import TrustlessSidechain.Utils.Data
@@ -80,20 +79,14 @@ dummyInitialiseSidechain ::
   PaymentPubKeyHash ->
   Run
     (APP + EFFECT + CONTRACT + r)
-    SidechainParams
+    TransactionInput
 dummyInitialiseSidechain pkh = do
   genesisUtxo <- Test.Utils.getOwnTransactionInput
 
-  let
-    sidechainParams =
-      SidechainParams
-        { genesisUtxo
-        }
+  _ <- initGovernance genesisUtxo pkh
+  _ <- initNativeTokenMgmt genesisUtxo
 
-  _ <- initGovernance sidechainParams pkh
-  _ <- initNativeTokenMgmt sidechainParams
-
-  pure sidechainParams
+  pure genesisUtxo
 
 mintNonAdaTokens ::
   forall r.
@@ -130,14 +123,14 @@ initialDistribution =
 
 initialiseICSUtxo ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run
     (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
     Unit
 initialiseICSUtxo
-  sidechainParams =
+  genesisUtxo =
   do
-    versionOracleConfig <- Versioning.getVersionOracleConfig sidechainParams
+    versionOracleConfig <- Versioning.getVersionOracleConfig genesisUtxo
 
     illiquidCirculationSupplyValidator' <- PlutusScript.hash <$>
       illiquidCirculationSupplyValidator
@@ -174,17 +167,17 @@ mkIcsFakePolicy = alwaysPassingPolicy $ BigInt.fromInt 43
 
 insertFakeIcsWithdrawalPolicy ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run
     (READER Env + EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
     ScriptHash
-insertFakeIcsWithdrawalPolicy sidechainParams =
+insertFakeIcsWithdrawalPolicy genesisUtxo =
   do
     icsFakePolicy <- mkIcsFakePolicy
 
     void
       $
-        insertVersionLookupsAndConstraints sidechainParams
+        insertVersionLookupsAndConstraints genesisUtxo
           (IlliquidCirculationSupplyWithdrawalPolicy /\ icsFakePolicy)
       >>= balanceSignAndSubmit
         "Insert illiquid circulation withdrawal minting policy"
@@ -193,13 +186,13 @@ insertFakeIcsWithdrawalPolicy sidechainParams =
 
 findIlliquidCirculationSupplyUtxos ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run
     (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
     UtxoMap
-findIlliquidCirculationSupplyUtxos sidechainParams =
+findIlliquidCirculationSupplyUtxos genesisUtxo =
   Versioning.getVersionedValidatorAddress
-    sidechainParams
+    genesisUtxo
     ( VersionOracle
         { scriptId: IlliquidCirculationSupplyValidator
         }
@@ -208,16 +201,16 @@ findIlliquidCirculationSupplyUtxos sidechainParams =
 
 findICSUtxo ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run
     (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
     (TransactionInput /\ TransactionOutput)
 findICSUtxo
-  sidechainParams =
+  genesisUtxo =
   fromMaybeThrow
     (NotFoundUtxo "IlliquidCirculationSupply UTxO not found")
     $
-      ( Map.toUnfoldable <$> findIlliquidCirculationSupplyUtxos sidechainParams
+      ( Map.toUnfoldable <$> findIlliquidCirculationSupplyUtxos genesisUtxo
       )
 
 testScenario :: TestnetTest
@@ -228,11 +221,11 @@ testScenario =
         pkh <- getOwnPaymentPubKeyHash
         Test.Utils.withSingleMultiSig (unwrap pkh) $ do
 
-          sidechainParams <- dummyInitialiseSidechain pkh
-          mintingPolicyHash <- insertFakeIcsWithdrawalPolicy sidechainParams
+          genesisUtxo <- dummyInitialiseSidechain pkh
+          mintingPolicyHash <- insertFakeIcsWithdrawalPolicy genesisUtxo
 
-          initialiseICSUtxo sidechainParams
-          utxo1 <- findICSUtxo sidechainParams
+          initialiseICSUtxo genesisUtxo
+          utxo1 <- findICSUtxo genesisUtxo
 
           let
             depositAmountOfNonAdaTokens = 51
@@ -247,24 +240,24 @@ testScenario =
               $ BigNum.fromInt depositAmountOfNonAdaTokens
 
           depositMoreToSupply
-            sidechainParams
+            genesisUtxo
             addedValue
             utxo1
 
-          utxo2 <- findICSUtxo sidechainParams
+          utxo2 <- findICSUtxo genesisUtxo
 
           let
             withdrawnValue = singletonFromAsset (fromAssetClass tokenKind)
               $ BigNum.fromInt withdrawAmountOfNonAdaTokens
 
           withdrawFromSupply
-            sidechainParams
+            genesisUtxo
             mintingPolicyHash
             withdrawnValue
             utxo2
 
           maybeUtxo <- Map.toUnfoldable
-            <$> findIlliquidCirculationSupplyUtxos sidechainParams
+            <$> findIlliquidCirculationSupplyUtxos genesisUtxo
 
           let
             extractValue = snd >>> unwrap >>> _.amount

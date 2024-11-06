@@ -10,7 +10,7 @@ module Test.Utils
   , TestnetTest
   , assertHasOutputWithAsset
   , assertIHaveOutputWithAsset
-  , dummySidechainParams
+  , dummyGenesisUtxo
   , fromMaybeTestError
   , withSingleMultiSig
   ) where
@@ -71,7 +71,6 @@ import TrustlessSidechain.Governance (Governance(MultiSig))
 import TrustlessSidechain.Governance.MultiSig
   ( MultiSigGovParams(MultiSigGovParams)
   )
-import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import Type.Row (type (+))
 
 type TestnetTest = TestPlanM ContractTest Unit
@@ -233,14 +232,13 @@ assertHasOutputWithAsset txId addr cs tn = do
     transactionId == txId
       && (Value.valueOf (Asset cs tn) amount > BigNum.zero)
 
--- | `dummySidechainParams` is some default sidechain parameters which may be
+-- | `dummyGenesisUtxo` is some default sidechain parameters which may be
 -- | helpful when creating tests.
-dummySidechainParams :: SidechainParams
-dummySidechainParams = SidechainParams
-  { genesisUtxo: toTxIn
-      "211307be24c471d42012c5ebd7d98c83f349c612023ce365f9fb5e3e758d0779"
-      1
-  }
+dummyGenesisUtxo :: TransactionInput
+dummyGenesisUtxo =
+  toTxIn
+    "211307be24c471d42012c5ebd7d98c83f349c612023ce365f9fb5e3e758d0779"
+    1
 
 fromMaybeTestError ::
   forall r a.
