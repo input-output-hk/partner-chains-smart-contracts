@@ -21,8 +21,12 @@ haskell-scripts := $(shell find $(onchain-dir)/src -type f -name "*.hs") \
 	                 $(shell find $(onchain-dir)/prelude -type f -name "*.hs") \
                    $(shell find $(onchain-dir)/app/serialise -type f -name "*.hs")
 # Output files with serialized scripts
+
 raw-scripts-purs := src/TrustlessSidechain/RawScripts.purs
 raw-scripts-rs := ../raw-scripts/src/lib.rs
+
+PURS_RAW_SCRIPTS_OUT ?= ${CURDIR}/${raw-scripts-purs}
+RS_RAW_SCRIPTS_OUT ?= ${CURDIR}/${raw-scripts-rs}
 
 ### Bundler setup
 
@@ -52,12 +56,12 @@ update-scripts: ${raw-scripts-purs} ${raw-scripts-rs}
 # structure
 ${raw-scripts-purs}: ${haskell-scripts}
 	@echo 'Generating `$@`...'
-	cd $(onchain-dir) && ${trustless-sidechain-serialise} --purescript-plutus-scripts=${CURDIR}/${raw-scripts-purs}
+	cd $(onchain-dir) && ${trustless-sidechain-serialise} --purescript-plutus-scripts=${PURS_RAW_SCRIPTS_OUT}
 	@echo 'Updated `$@`.'
 
 ${raw-scripts-rs}: ${haskell-scripts}
 	@echo 'Generating `$@`...'
-	cd $(onchain-dir) && ${trustless-sidechain-serialise} --rust-plutus-scripts=${CURDIR}/${raw-scripts-rs}
+	cd $(onchain-dir) && ${trustless-sidechain-serialise} --rust-plutus-scripts=${RS_RAW_SCRIPTS_OUT}
 	@echo 'Updated `$@`.'
 
 create-bundle-entrypoint:
