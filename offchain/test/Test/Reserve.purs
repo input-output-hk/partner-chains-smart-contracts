@@ -274,7 +274,7 @@ testScenario4 =
                 <$> findReserveUtxos sidechainParams
 
             let
-              unwrappedDatum =
+              getReserveDatum =
                 snd
                   >>> extractReserveDatum
 
@@ -288,12 +288,10 @@ testScenario4 =
                   }
 
             unless
-              ( (withUpdatedMutableSettings <$> unwrappedDatum utxoBefore)
-                  == unwrappedDatum utxoAfter
+              ( (withUpdatedMutableSettings <$> getReserveDatum utxoBefore)
+                  == getReserveDatum utxoAfter
               )
               (liftContract $ throwError $ error "Update not sucessful")
-
-            pure unit
 
 testScenario5 :: TestnetTest
 testScenario5 =

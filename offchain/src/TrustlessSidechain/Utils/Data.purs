@@ -261,7 +261,7 @@ productFromData6' f = case _ of
     f x1' x2' x3' x4' x5' x6'
   _ -> Nothing
 
-data VersionedGenericDatum a = VersionedGenericDatum
+newtype VersionedGenericDatum a = VersionedGenericDatum
   { datum :: a
   , builtinData :: PlutusData
   , version :: BigInt
@@ -276,7 +276,7 @@ instance FromData a => FromData (VersionedGenericDatum a) where
     (\d b v -> VersionedGenericDatum { datum: d, builtinData: b, version: v })
 
 instance Eq a => Eq (VersionedGenericDatum a) where
-  eq a b = getDatum a == getDatum b
+  eq (VersionedGenericDatum a) (VersionedGenericDatum b) = a == b
 
 getDatum :: forall a. VersionedGenericDatum a -> a
 getDatum (VersionedGenericDatum { datum }) = datum
