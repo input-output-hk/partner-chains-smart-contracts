@@ -57,6 +57,6 @@ jobs:
       - name: Run tests
         run: |
           nix-build -A check.x86_64-linux.pre-commit-check
-          nix-build -A check.x86_64-linux.upToDatePlutusScriptCheck
-          nix-build  -A check.x86_64-linux.upToDatePlutusScriptCheck
           nix-build -A check.x86_64-linux.partner-chains-smart-contracts
+          cd offchain
+          nix-shell --run ./check-raw-scripts.sh
