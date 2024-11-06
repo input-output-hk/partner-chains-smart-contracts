@@ -1,7 +1,6 @@
 module TrustlessSidechain.Utils.Codecs
   ( byteArrayCodec
   , transactionInputCodec
-  , scParamsCodec
   , pubKeyHashCodec
   ) where
 
@@ -20,11 +19,8 @@ import Contract.Transaction
   ( TransactionInput(TransactionInput)
   )
 import Data.Codec.Argonaut as CA
-import Data.Codec.Argonaut.Record as CAR
-import Data.Profunctor (wrapIso)
 import Data.String (Pattern(Pattern), split)
 import Data.UInt as UInt
-import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 
 -- | JSON codec converting between a bytestring and its hexadecimal representation
 byteArrayCodec :: CA.JsonCodec ByteArray
@@ -57,14 +53,6 @@ transactionInputCodec =
     where
     indexStr = UInt.toString txIn.index
     txHashStr = byteArrayToHex $ unwrap $ encodeCbor $ txIn.transactionId
-
-scParamsCodec :: CA.JsonCodec SidechainParams
-scParamsCodec =
-  wrapIso SidechainParams $
-    ( CAR.object "sidechainParameters"
-        { genesisUtxo: transactionInputCodec
-        }
-    )
 
 pubKeyHashCodec :: CA.JsonCodec PaymentPubKeyHash
 pubKeyHashCodec = CA.prismaticCodec "PaymentPubKeyHash"

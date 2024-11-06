@@ -7,19 +7,19 @@ module TrustlessSidechain.Versioning.V2
 import Contract.Prelude
 
 import Cardano.Types.PlutusScript (PlutusScript)
+import Contract.Transaction (TransactionInput)
 import Data.List (List)
 import Data.List as List
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.Error (OffchainError)
-import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Versioning.Types as Types
 import Type.Row (type (+))
 
 -- | Validators and policies to store in the versioning system.
 getVersionedPoliciesAndValidators ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (EXCEPT OffchainError + r)
     { versionedPolicies :: (List (Tuple Types.ScriptId PlutusScript))
     , versionedValidators :: (List (Tuple Types.ScriptId PlutusScript))
@@ -31,7 +31,7 @@ getVersionedPoliciesAndValidators sp = do
 
 getCommitteeSelectionPoliciesAndValidators ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (EXCEPT OffchainError + r)
     { versionedPolicies :: (List (Tuple Types.ScriptId PlutusScript))
     , versionedValidators :: (List (Tuple Types.ScriptId PlutusScript))
@@ -45,7 +45,7 @@ getCommitteeSelectionPoliciesAndValidators _ =
 
 getNativeTokenManagementPoliciesAndValidators ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (EXCEPT OffchainError + r)
     { versionedPolicies :: (List (Tuple Types.ScriptId PlutusScript))
     , versionedValidators :: (List (Tuple Types.ScriptId PlutusScript))

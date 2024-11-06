@@ -63,7 +63,6 @@ import TrustlessSidechain.NativeTokenManagement.Types
   , ReserveRedeemer(..)
   , ReserveStats(..)
   )
-import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Asset (emptyAssetName, singletonFromAsset)
 import TrustlessSidechain.Utils.Data (VersionedGenericDatum(..), getDatum)
 import TrustlessSidechain.Utils.Scripts
@@ -107,14 +106,14 @@ vFunctionTotalAccruedTokenName = emptyAssetName
 
 getIlliquidCirculationSupplyValidator ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run
     (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     PlutusScript
-getIlliquidCirculationSupplyValidator sidechainParams = do
+getIlliquidCirculationSupplyValidator genesisUtxo = do
   (_ /\ refTxOutput) <-
     Versioning.getVersionedScriptRefUtxo
-      sidechainParams
+      genesisUtxo
       ( VersionOracle
           { scriptId: IlliquidCirculationSupplyValidator
           }
@@ -127,12 +126,12 @@ getIlliquidCirculationSupplyValidator sidechainParams = do
 
 findReserveUtxos ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (APP r) UtxoMap
-findReserveUtxos sidechainParams = do
+findReserveUtxos genesisUtxo = do
   reserveAuthCurrencySymbol <-
     Versioning.getVersionedScriptHash
-      sidechainParams
+      genesisUtxo
       ( VersionOracle
           { scriptId: ReserveAuthPolicy
           }
@@ -140,7 +139,7 @@ findReserveUtxos sidechainParams = do
 
   reserveAddress <-
     Versioning.getVersionedValidatorAddress
-      sidechainParams
+      genesisUtxo
       ( VersionOracle
           { scriptId: ReserveValidator
           }
@@ -154,7 +153,7 @@ findReserveUtxos sidechainParams = do
 
 findOneReserveUtxo ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (APP r) (TransactionInput /\ TransactionOutput)
 findOneReserveUtxo scParams =
   fromMaybeThrow (NotFoundUtxo "No Reserved UTxO exists for the given asset")
@@ -163,7 +162,7 @@ findOneReserveUtxo scParams =
 
 reserveAuthLookupsAndConstraints ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (APP r)
     { reserveAuthLookups :: Lookups.ScriptLookups
     , reserveAuthConstraints :: TxConstraints.TxConstraints
@@ -186,7 +185,7 @@ reserveAuthLookupsAndConstraints sp = do
 
 illiquidCirculationSupplyLookupsAndConstraints ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (APP r)
     { icsLookups :: Lookups.ScriptLookups
     , icsConstraints :: TxConstraints.TxConstraints
@@ -209,7 +208,7 @@ illiquidCirculationSupplyLookupsAndConstraints sp = do
 
 reserveLookupsAndConstraints ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (APP r)
     { reserveLookups :: Lookups.ScriptLookups
     , reserveConstraints :: TxConstraints.TxConstraints
@@ -232,24 +231,24 @@ reserveLookupsAndConstraints sp = do
 
 initialiseReserveUtxo ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   ImmutableReserveSettings ->
   MutableReserveSettings ->
   BigNum ->
   Run (APP r) TransactionHash
 initialiseReserveUtxo
-  sidechainParams
+  genesisUtxo
   immutableSettings
   mutableSettings
   numOfTokens =
   do
     { lookups: governanceLookups
     , constraints: governanceConstraints
-    } <- Governance.approvedByGovernanceLookupsAndConstraints sidechainParams
+    } <- Governance.approvedByGovernanceLookupsAndConstraints genesisUtxo
 
     reserveAuthCurrencySymbol <-
       Versioning.getVersionedScriptHash
-        sidechainParams
+        genesisUtxo
         ( VersionOracle
             { scriptId: ReserveAuthPolicy
             }
@@ -257,13 +256,13 @@ initialiseReserveUtxo
 
     { reserveAuthLookups
     , reserveAuthConstraints
-    } <- reserveAuthLookupsAndConstraints sidechainParams
+    } <- reserveAuthLookupsAndConstraints genesisUtxo
 
     { reserveLookups
     , reserveConstraints
-    } <- reserveLookupsAndConstraints sidechainParams
+    } <- reserveLookupsAndConstraints genesisUtxo
 
-    versionOracleConfig <- Versioning.getVersionOracleConfig sidechainParams
+    versionOracleConfig <- Versioning.getVersionOracleConfig genesisUtxo
 
     reserveValidator' <- PlutusScript.hash <$> reserveValidator
       versionOracleConfig
@@ -271,7 +270,7 @@ initialiseReserveUtxo
 
     (reserveRefTxInput /\ reserveRefTxOutput) <-
       Versioning.getVersionedScriptRefUtxo
-        sidechainParams
+        genesisUtxo
         ( VersionOracle
             { scriptId: ReserveAuthPolicy
             }
@@ -346,7 +345,7 @@ extractReserveDatum txOut =
 
 findReserveUtxoForAssetClass ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Asset ->
   Run (APP r) UtxoMap
 findReserveUtxoForAssetClass sp ac = do
@@ -359,7 +358,7 @@ findReserveUtxoForAssetClass sp ac = do
 
 depositToReserve ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Asset ->
   BigNum ->
   Run (APP r) TransactionHash
@@ -443,7 +442,7 @@ depositToReserve sp asset amount = do
 -- use `findReserveUtxos` and `extractReserveDatum` to find utxos of interest
 updateReserveUtxo ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   MutableReserveSettings ->
   (TransactionInput /\ TransactionOutput) ->
   Run (APP r) TransactionHash
@@ -533,7 +532,7 @@ updateReserveUtxo sp updatedMutableSettings utxo = do
 
 transferToIlliquidCirculationSupply ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Int -> -- total amount of assets paid out until now
   PlutusScript ->
   (TransactionInput /\ TransactionOutput) ->
@@ -698,7 +697,7 @@ transferToIlliquidCirculationSupply
 
 handover ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   (TransactionInput /\ TransactionOutput) ->
   Run (APP r) TransactionHash
 handover

@@ -20,6 +20,7 @@ import Contract.Numeric.BigNum as BigNum
 import Contract.PlutusData (RedeemerDatum(RedeemerDatum))
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
+import Contract.Transaction (TransactionInput)
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
   , TxConstraints
@@ -42,7 +43,6 @@ import TrustlessSidechain.Error
   ( OffchainError(NotFoundUtxo, InvalidCLIParams, GenericInternalError)
   )
 import TrustlessSidechain.Governance.Utils as Governance
-import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Asset (emptyAssetName)
 import TrustlessSidechain.Utils.Data
   ( VersionedGenericDatum(VersionedGenericDatum)
@@ -54,7 +54,7 @@ dParameterTokenName = emptyAssetName
 
 mkInsertDParameterLookupsAndConstraints ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   { permissionedCandidatesCount :: BigInt
   , registeredCandidatesCount :: BigInt
   } ->
@@ -63,21 +63,21 @@ mkInsertDParameterLookupsAndConstraints ::
     , constraints :: TxConstraints
     }
 mkInsertDParameterLookupsAndConstraints
-  sidechainParams
+  genesisUtxo
   { permissionedCandidatesCount, registeredCandidatesCount } = do
   { dParameterCurrencySymbol, dParameterMintingPolicy } <-
-    DParameter.getDParameterMintingPolicyAndCurrencySymbol sidechainParams
+    DParameter.getDParameterMintingPolicyAndCurrencySymbol genesisUtxo
 
   let
     dParameterMintingPolicyHash = dParameterCurrencySymbol
 
   { dParameterValidator } <-
-    DParameter.getDParameterValidatorAndAddress sidechainParams
+    DParameter.getDParameterValidatorAndAddress genesisUtxo
 
   let dParameterValidatorHash = PlutusScript.hash dParameterValidator
 
   { lookups: governanceLookups, constraints: governanceConstraints } <-
-    Governance.approvedByGovernanceLookupsAndConstraints sidechainParams
+    Governance.approvedByGovernanceLookupsAndConstraints genesisUtxo
 
   let
     value :: Value.Value
@@ -115,7 +115,7 @@ mkInsertDParameterLookupsAndConstraints
 
 mkUpdateDParameterLookupsAndConstraints ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   { permissionedCandidatesCount :: BigInt
   , registeredCandidatesCount :: BigInt
   } ->
@@ -124,18 +124,18 @@ mkUpdateDParameterLookupsAndConstraints ::
     , constraints :: TxConstraints
     }
 mkUpdateDParameterLookupsAndConstraints
-  sidechainParams
+  genesisUtxo
   { permissionedCandidatesCount, registeredCandidatesCount } = do
   { dParameterCurrencySymbol } <-
-    DParameter.getDParameterMintingPolicyAndCurrencySymbol sidechainParams
+    DParameter.getDParameterMintingPolicyAndCurrencySymbol genesisUtxo
 
   { dParameterValidatorAddress, dParameterValidator } <-
-    DParameter.getDParameterValidatorAndAddress sidechainParams
+    DParameter.getDParameterValidatorAndAddress genesisUtxo
 
   let dParameterValidatorHash = PlutusScript.hash dParameterValidator
 
   { lookups: governanceLookups, constraints: governanceConstraints } <-
-    Governance.approvedByGovernanceLookupsAndConstraints sidechainParams
+    Governance.approvedByGovernanceLookupsAndConstraints genesisUtxo
 
   -- find one UTxO at DParameterValidator address that contain DParameterToken
 

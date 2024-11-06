@@ -44,7 +44,6 @@ import TrustlessSidechain.NativeTokenManagement.Types
   , ReserveRedeemer(..)
   , ReserveStats(..)
   )
-import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Versioning.Types
   ( ScriptId
       ( CommitteeCandidateValidator
@@ -67,7 +66,6 @@ import TrustlessSidechain.Versioning.Types
 
 tests :: PureTest
 tests = group "Data roundtrip tests" $ do
-  test "SidechainParams" $ liftEffect $ toDataLaws testCount genSP
   test "BlockProducerRegistration" $ liftEffect $ toDataLaws testCount genBPR
   test "BlockProducerRegistrationMsg" $ liftEffect $ toDataLaws testCount
     genBPRM
@@ -95,11 +93,11 @@ tests = group "Data roundtrip tests" $ do
 
 genBPRM :: Gen BlockProducerRegistrationMsg
 genBPRM = do
-  bprmSidechainParams <- genSP
+  ArbitraryTransactionInput bprmGenesisUtxo <- arbitrary
   bprmSidechainPubKey <- genGH
   ArbitraryTransactionInput bprmInputUtxo <- arbitrary
   pure $ BlockProducerRegistrationMsg
-    { bprmSidechainParams
+    { bprmGenesisUtxo
     , bprmSidechainPubKey
     , bprmInputUtxo
     }
@@ -214,13 +212,6 @@ genBPR = do
     , inputUtxo
     , auraKey
     , grandpaKey
-    }
-
-genSP :: Gen SidechainParams
-genSP = do
-  ArbitraryTransactionInput genesisUtxo <- arbitrary
-  pure $ SidechainParams
-    { genesisUtxo
     }
 
 genGH :: Gen ByteArray

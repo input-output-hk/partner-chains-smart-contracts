@@ -2,10 +2,10 @@ module TrustlessSidechain.Options.Specs (options) where
 
 import Contract.Prelude
 
+import Cardano.AsCbor (decodeCbor)
 import Cardano.Types.Asset (Asset(..))
 import Cardano.Types.BigNum (BigNum)
 import Cardano.Types.NetworkId (NetworkId(MainnetId))
-import Cardano.Types.TransactionInput (TransactionInput)
 import Contract.Config
   ( PrivateStakeKeySource(PrivateStakeKeyFile)
   , ServerConfig
@@ -16,6 +16,7 @@ import Contract.Config
   )
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.Time (POSIXTime)
+import Contract.Transaction (TransactionInput)
 import Contract.Value (AssetName)
 import Contract.Wallet
   ( PrivatePaymentKeySource(PrivatePaymentKeyFile)
@@ -54,6 +55,7 @@ import Options.Applicative
 import TrustlessSidechain.CommitteeCandidateValidator
   ( StakeOwnership(AdaBasedStaking, TokenBasedStaking)
   )
+import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.NativeTokenManagement.Types
   ( ImmutableReserveSettings(ImmutableReserveSettings)
   , MutableReserveSettings(MutableReserveSettings)
@@ -71,7 +73,6 @@ import TrustlessSidechain.Options.Parsers as Parsers
 import TrustlessSidechain.Options.Types
   ( Config
   , Options(TxOptions, CLIVersion)
-  , SidechainEndpointParams(SidechainEndpointParams)
   , TxEndpoint
       ( GetAddrs
       , InitGovernance
@@ -91,7 +92,6 @@ import TrustlessSidechain.Options.Types
       , HandoverReserve
       )
   )
-import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Logging (environment, fileLogger)
 
 -- | Argument option parser for pc-contracts-cli
@@ -188,7 +188,8 @@ withCommonOpts :: Maybe Config -> Parser TxEndpoint -> Parser Options
 withCommonOpts maybeConfig endpointParser = ado
   pSkey <- pSkeySpec maybeConfig
   stSkey <- stSKeySpec maybeConfig
-  sidechainEndpointParams <- sidechainEndpointParamsSpec maybeConfig
+  genesisUtxo <- genesisUtxoSpec maybeConfig
+  governanceAuthority <- governanceAuthoritySpec maybeConfig
   endpoint <- endpointParser
 
   ogmiosConfig <- serverConfigSpec "ogmios" $
@@ -214,7 +215,8 @@ withCommonOpts maybeConfig endpointParser = ado
 
   in
     TxOptions
-      { sidechainEndpointParams
+      { genesisUtxo
+      , governanceAuthority
       , endpoint
       , contractParams: config
           { logLevel = environment.logLevel
@@ -301,29 +303,33 @@ serverConfigSpec
     ]
   in { host, path, port, secure: secure || defSecure }
 
-sidechainParamsSpec :: Maybe Config -> Parser SidechainParams
-sidechainParamsSpec maybeConfig = ado
-  genesisUtxo <- option Parsers.transactionInput $ fold
+genesisUtxoSpec :: Maybe Config -> Parser TransactionInput
+genesisUtxoSpec maybeConfig =
+  option Parsers.transactionInput $ fold
     [ short 'c'
     , long "genesis-committee-hash-utxo"
     , metavar "TX_ID#TX_IDX"
     , help "Input UTxO to be spent with the first committee hash setup"
     , maybe mempty value
-        (maybeConfig >>= _.sidechainParameters >>= _.genesisUtxo)
+        (maybeConfig >>= _.genesisUtxo)
     ]
-  in
-    SidechainParams
-      { genesisUtxo
-      }
 
--- | SidechainParams CLI parser
-sidechainEndpointParamsSpec :: Maybe Config -> Parser SidechainEndpointParams
-sidechainEndpointParamsSpec maybeConfig = ado
-  sidechainParams <- sidechainParamsSpec maybeConfig
-  in
-    SidechainEndpointParams
-      { sidechainParams
-      }
+governanceAuthoritySpec :: Maybe Config -> Parser Governance.GovernanceAuthority
+governanceAuthoritySpec maybeConfig =
+  option governanceAuthority $ fold
+    [ short 'g'
+    , long "governance-authority"
+    , metavar "PUB_KEY_HASH"
+    , help "Public key hash of governance authority"
+    , maybe mempty value
+        ( maybeConfig >>= _.governanceAuthority >>=
+            -- parse ByteArray stored in Config into a PubKeyHash
+            ( wrap >>> decodeCbor >=> wrap
+                >>> Governance.mkGovernanceAuthority
+                >>> pure
+            )
+        )
+    ]
 
 -- | Parse required data for a stake ownership variant
 stakeOwnershipSpec :: Parser StakeOwnership

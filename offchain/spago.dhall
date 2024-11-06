@@ -40,7 +40,6 @@
   , "plutus-types"
   , "posix-types"
   , "prelude"
-  , "profunctor"
   , "quickcheck"
   , "random"
   , "run"

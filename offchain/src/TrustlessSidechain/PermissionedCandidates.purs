@@ -20,6 +20,7 @@ import Contract.PlutusData
 import Contract.Prim.ByteArray (ByteArray)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.ScriptLookups as Lookups
+import Contract.Transaction (TransactionInput)
 import Contract.TxConstraints
   ( DatumPresence(DatumInline)
   , TxConstraints
@@ -51,7 +52,6 @@ import TrustlessSidechain.PermissionedCandidates.Types
       )
   )
 import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
-import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Asset (emptyAssetName)
 import TrustlessSidechain.Utils.Data
   ( VersionedGenericDatum(VersionedGenericDatum)
@@ -63,7 +63,7 @@ permissionedCandidatesTokenName = emptyAssetName
 
 mkUpdatePermissionedCandidatesLookupsAndConstraints ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   { permissionedCandidatesToAdd ::
       Array
         { sidechainKey :: ByteArray
@@ -84,15 +84,15 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints ::
     , constraints :: TxConstraints
     }
 mkUpdatePermissionedCandidatesLookupsAndConstraints
-  sidechainParams
+  genesisUtxo
   { permissionedCandidatesToAdd, permissionedCandidatesToRemove } = do
   { permissionedCandidatesCurrencySymbol, permissionedCandidatesMintingPolicy } <-
     PermissionedCandidates.getPermissionedCandidatesMintingPolicyAndCurrencySymbol
-      sidechainParams
+      genesisUtxo
 
   { permissionedCandidatesValidatorAddress, permissionedCandidatesValidator } <-
     PermissionedCandidates.getPermissionedCandidatesValidatorAndAddress
-      sidechainParams
+      genesisUtxo
 
   let
     permissionedCandidatesValidatorHash = PlutusScript.hash
@@ -123,7 +123,7 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
     ) <$> Effect.utxosAt permissionedCandidatesValidatorAddress
 
   { lookups: governanceLookups, constraints: governanceConstraints } <-
-    Governance.approvedByGovernanceLookupsAndConstraints sidechainParams
+    Governance.approvedByGovernanceLookupsAndConstraints genesisUtxo
 
   oldCandidates <- case maybePermissionedCandidatesUTxO of
     Nothing -> pure []

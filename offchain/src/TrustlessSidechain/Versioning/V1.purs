@@ -8,6 +8,7 @@ module TrustlessSidechain.Versioning.V1
 import Contract.Prelude
 
 import Cardano.Types.PlutusScript (PlutusScript)
+import Contract.Transaction (TransactionInput)
 import Data.List (List)
 import Data.List as List
 import Run (Run)
@@ -25,7 +26,6 @@ import TrustlessSidechain.NativeTokenManagement.Reserve
   ( reserveAuthPolicy
   , reserveValidator
   )
-import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Versioning.Types
   ( ScriptId
       ( GovernancePolicy
@@ -40,15 +40,15 @@ import Type.Row (type (+))
 
 getVersionedPoliciesAndValidators ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (READER Env + EXCEPT OffchainError + WALLET + r)
     { versionedPolicies :: List (Tuple ScriptId PlutusScript)
     , versionedValidators :: List (Tuple ScriptId PlutusScript)
     }
-getVersionedPoliciesAndValidators sidechainParams = do
-  committeeScripts <- getCommitteeSelectionPoliciesAndValidators sidechainParams
+getVersionedPoliciesAndValidators genesisUtxo = do
+  committeeScripts <- getCommitteeSelectionPoliciesAndValidators genesisUtxo
   nativeTokenManagementScripts <- getNativeTokenManagementPoliciesAndValidators
-    sidechainParams
+    genesisUtxo
 
   pure $ committeeScripts
     <> nativeTokenManagementScripts
@@ -72,7 +72,7 @@ getVersionedPoliciesAndValidatorsScriptIds = do
 
 getCommitteeSelectionPoliciesAndValidators ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (EXCEPT OffchainError + WALLET + r)
     { versionedPolicies :: List (Tuple ScriptId PlutusScript)
     , versionedValidators :: List (Tuple ScriptId PlutusScript)
@@ -101,7 +101,7 @@ getCommitteeSelectionPoliciesAndValidators sp =
 
 getNativeTokenManagementPoliciesAndValidators ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (READER Env + EXCEPT OffchainError + WALLET + r)
     { versionedPolicies :: List (Tuple ScriptId PlutusScript)
     , versionedValidators :: List (Tuple ScriptId PlutusScript)

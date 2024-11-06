@@ -47,7 +47,6 @@ import TrustlessSidechain.Effects.Util (mapError)
 import TrustlessSidechain.Error
   ( OffchainError(GenericInternalError, BuildTxError, BalanceTxError)
   )
-import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address
   ( getOwnPaymentPubKeyHash
   , toAddress
@@ -69,10 +68,10 @@ getScriptCacheValidator (PaymentPubKeyHash pkh) =
 
 getScriptRefUtxo ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   ScriptRef ->
   Run (APP + r) (TransactionInput /\ TransactionOutput)
-getScriptRefUtxo (SidechainParams sp) scriptRef = do
+getScriptRefUtxo genesisUtxo scriptRef = do
   pkh <- getOwnPaymentPubKeyHash
   scriptCacheValidatorHash <- PlutusScript.hash <$> getScriptCacheValidator pkh
 
@@ -89,14 +88,14 @@ getScriptRefUtxo (SidechainParams sp) scriptRef = do
 
   case find correctOutput (Map.toUnfoldable scriptCacheUtxos :: Array _) of
     Just scriptRefUtxo -> pure scriptRefUtxo
-    Nothing -> createScriptRefUtxo (SidechainParams sp) scriptRef
+    Nothing -> createScriptRefUtxo genesisUtxo scriptRef
 
 createScriptRefUtxo ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   ScriptRef ->
   Run (APP + r) (TransactionInput /\ TransactionOutput)
-createScriptRefUtxo (SidechainParams sp) scriptRef = do
+createScriptRefUtxo genesisUtxo scriptRef = do
   pkh <- getOwnPaymentPubKeyHash
   scriptCacheValidatorHash <- PlutusScript.hash <$> getScriptCacheValidator pkh
 
@@ -114,7 +113,7 @@ createScriptRefUtxo (SidechainParams sp) scriptRef = do
 
     balanceTxConstraints :: BalanceTxConstraints.BalanceTxConstraintsBuilder
     balanceTxConstraints =
-      BalanceTxConstraints.mustNotSpendUtxoWithOutRef sp.genesisUtxo
+      BalanceTxConstraints.mustNotSpendUtxoWithOutRef genesisUtxo
 
   ubTx <- mapError BuildTxError $ Effect.mkUnbalancedTx lookups constraints
   bsTx <- mapError BalanceTxError $ Effect.balanceTxWithConstraints ubTx

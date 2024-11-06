@@ -15,13 +15,13 @@ import Contract.Address
 import Contract.PlutusData
   ( toData
   )
+import Contract.Transaction (TransactionInput)
 import Run (Run)
 import Run.Except (EXCEPT)
 import Run.Except as Run
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError(InvalidAddress))
-import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (toAddress)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
@@ -40,40 +40,40 @@ import Type.Row (type (+))
 -- | minting policy.
 decodePermissionedCandidatesMintingPolicy ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (EXCEPT OffchainError + TRANSACTION + WALLET + r) PlutusScript
-decodePermissionedCandidatesMintingPolicy sidechainParams = do
+decodePermissionedCandidatesMintingPolicy genesisUtxo = do
   { permissionedCandidatesValidatorAddress } <-
-    getPermissionedCandidatesValidatorAndAddress sidechainParams
+    getPermissionedCandidatesValidatorAndAddress genesisUtxo
   plutusAddress <-
     Run.note
       ( InvalidAddress "Invalid permissioned candidates validator address."
           permissionedCandidatesValidatorAddress
       )
       $ fromCardano permissionedCandidatesValidatorAddress
-  versionOracleConfig <- Versioning.getVersionOracleConfig sidechainParams
+  versionOracleConfig <- Versioning.getVersionOracleConfig genesisUtxo
   mkMintingPolicyWithParams PermissionedCandidatesPolicy
-    [ toData sidechainParams, toData versionOracleConfig, toData plutusAddress ]
+    [ toData genesisUtxo, toData versionOracleConfig, toData plutusAddress ]
 
 decodePermissionedCandidatesValidator ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (EXCEPT OffchainError + WALLET + r) PlutusScript
-decodePermissionedCandidatesValidator sidechainParams = do
-  versionOracleConfig <- Versioning.getVersionOracleConfig sidechainParams
+decodePermissionedCandidatesValidator genesisUtxo = do
+  versionOracleConfig <- Versioning.getVersionOracleConfig genesisUtxo
   mkValidatorWithParams PermissionedCandidatesValidator
-    [ toData sidechainParams, toData versionOracleConfig ]
+    [ toData genesisUtxo, toData versionOracleConfig ]
 
 getPermissionedCandidatesValidatorAndAddress ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (EXCEPT OffchainError + TRANSACTION + WALLET + r)
     { permissionedCandidatesValidator :: PlutusScript
     , permissionedCandidatesValidatorAddress :: Address
     }
-getPermissionedCandidatesValidatorAndAddress sidechainParams = do
+getPermissionedCandidatesValidatorAndAddress genesisUtxo = do
   permissionedCandidatesValidator <- decodePermissionedCandidatesValidator
-    sidechainParams
+    genesisUtxo
   permissionedCandidatesValidatorAddress <-
     toAddress (PlutusScript.hash permissionedCandidatesValidator)
 
@@ -82,15 +82,15 @@ getPermissionedCandidatesValidatorAndAddress sidechainParams = do
 
 getPermissionedCandidatesMintingPolicyAndCurrencySymbol ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (EXCEPT OffchainError + TRANSACTION + WALLET + r)
     { permissionedCandidatesMintingPolicy :: PlutusScript
     , permissionedCandidatesCurrencySymbol :: ScriptHash
     }
-getPermissionedCandidatesMintingPolicyAndCurrencySymbol sidechainParams = do
+getPermissionedCandidatesMintingPolicyAndCurrencySymbol genesisUtxo = do
   permissionedCandidatesMintingPolicy <-
     decodePermissionedCandidatesMintingPolicy
-      sidechainParams
+      genesisUtxo
   let
     permissionedCandidatesCurrencySymbol = PlutusScript.hash
       permissionedCandidatesMintingPolicy

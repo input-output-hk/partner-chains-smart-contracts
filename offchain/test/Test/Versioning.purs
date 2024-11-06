@@ -4,6 +4,7 @@ import Contract.Prelude
 
 import Cardano.Types.BigNum as BigNum
 import Contract.Test.Testnet (withWallets)
+import Contract.Transaction (TransactionInput)
 import Contract.Wallet (withKeyWallet)
 import Data.List as List
 import Mote.Monad (group, test)
@@ -28,7 +29,6 @@ import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.InitSidechain.Governance (initGovernance)
-import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning
@@ -67,35 +67,30 @@ testInsertAndInvalidateSuccessScenario =
         pkh <- getOwnPaymentPubKeyHash
         withSingleMultiSig (unwrap pkh) $ do
           genesisUtxo <- getOwnTransactionInput
-          let
-            sidechainParams =
-              SidechainParams
-                { genesisUtxo
-                }
 
           -- No versioned scripts are inserted.
           -- Assert that the actual versioned scripts set is empty
-          assertNumberOfActualVersionedScripts sidechainParams 0 0
+          assertNumberOfActualVersionedScripts genesisUtxo 0 0
 
           -- Insert all initial versioned scripts
-          void $ initGovernance sidechainParams pkh
-          void $ Versioning.initializeVersion sidechainParams
-          -- void $ initNativeTokenMgmt sidechainParams 1
+          void $ initGovernance genesisUtxo pkh
+          void $ Versioning.initializeVersion genesisUtxo
+          -- void $ initNativeTokenMgmt genesisUtxo 1
           -- This policy was already inserted by 'initSidechain'.
 
           committeeCandidateValidator <-
-            getCommitteeCandidateValidator sidechainParams
+            getCommitteeCandidateValidator genesisUtxo
 
           void
             $ Versioning.insertVersionLookupsAndConstraints
-                sidechainParams
+                genesisUtxo
                 (CommitteeCandidateValidator /\ committeeCandidateValidator)
             >>=
               balanceSignAndSubmit "Test: insert new version of policy"
 
           void
             $ Versioning.invalidateVersionLookupsAndConstraints
-                sidechainParams
+                genesisUtxo
                 CommitteeCandidateValidator
             >>=
               balanceSignAndSubmit "Test: invalidate old version of policy"
@@ -116,7 +111,7 @@ testInsertAndInvalidateSuccessScenario =
           -- which means that ReserveAuthPolicy and GovernancePolicy policies,
           -- as well as ReserveValidator and IlliquidCirculationSupplyValidator
           -- get inserted.
-          assertNumberOfActualVersionedScripts sidechainParams 2 3
+          assertNumberOfActualVersionedScripts genesisUtxo 2 3
 
 -- | We insert the same script (same ScriptId and same version) twice. That
 -- should work.
@@ -137,35 +132,30 @@ testInsertSameScriptTwiceSuccessScenario =
         pkh <- getOwnPaymentPubKeyHash
         withSingleMultiSig (unwrap pkh) $ do
           genesisUtxo <- getOwnTransactionInput
-          let
-            sidechainParams =
-              SidechainParams
-                { genesisUtxo
-                }
 
-          assertNumberOfActualVersionedScripts sidechainParams 0 0
+          assertNumberOfActualVersionedScripts genesisUtxo 0 0
 
-          void $ initGovernance sidechainParams pkh
-          void $ Versioning.initializeVersion sidechainParams
+          void $ initGovernance genesisUtxo pkh
+          void $ Versioning.initializeVersion genesisUtxo
 
           committeeCandidateValidator <-
-            getCommitteeCandidateValidator sidechainParams
+            getCommitteeCandidateValidator genesisUtxo
 
           void
             $ Versioning.insertVersionLookupsAndConstraints
-                sidechainParams
+                genesisUtxo
                 (CommitteeCandidateValidator /\ committeeCandidateValidator)
             >>=
               balanceSignAndSubmit "Test: insert versioned policy"
 
           void
             $ Versioning.insertVersionLookupsAndConstraints
-                sidechainParams
+                genesisUtxo
                 (CommitteeCandidateValidator /\ committeeCandidateValidator)
             >>=
               balanceSignAndSubmit "Test: insert the same version of policy"
 
-          assertNumberOfActualVersionedScripts sidechainParams 2 5
+          assertNumberOfActualVersionedScripts genesisUtxo 2 5
 
 -- | We insert an script that is not part of the initial versioned scripts.
 testInsertUnversionedScriptSuccessScenario :: TestnetTest
@@ -185,29 +175,24 @@ testInsertUnversionedScriptSuccessScenario =
         pkh <- getOwnPaymentPubKeyHash
         withSingleMultiSig (unwrap pkh) $ do
           genesisUtxo <- getOwnTransactionInput
-          let
-            sidechainParams =
-              SidechainParams
-                { genesisUtxo
-                }
 
-          assertNumberOfActualVersionedScripts sidechainParams 0 0
+          assertNumberOfActualVersionedScripts genesisUtxo 0 0
 
-          void $ initGovernance sidechainParams pkh
-          void $ Versioning.initializeVersion sidechainParams
+          void $ initGovernance genesisUtxo pkh
+          void $ Versioning.initializeVersion genesisUtxo
 
           { dParameterMintingPolicy } <-
-            getDParameterMintingPolicyAndCurrencySymbol sidechainParams
-          assertNumberOfActualVersionedScripts sidechainParams 2 3
+            getDParameterMintingPolicyAndCurrencySymbol genesisUtxo
+          assertNumberOfActualVersionedScripts genesisUtxo 2 3
           -- This validator is not part of the versioned scripts hardcoded list,
           -- so it should *not* be inserted.
           void
             $ Versioning.insertVersionLookupsAndConstraints
-                sidechainParams
+                genesisUtxo
                 (DParameterPolicy /\ dParameterMintingPolicy)
             >>=
               balanceSignAndSubmit "Test: insert non-versioned validator version"
-          assertNumberOfActualVersionedScripts sidechainParams 2 3
+          assertNumberOfActualVersionedScripts genesisUtxo 2 3
 
 -- | After inserting a versioned script, invalidating it twice should fail in the second
 -- | invalidation call.
@@ -228,25 +213,20 @@ testRemovingTwiceSameScriptFailScenario =
         pkh <- getOwnPaymentPubKeyHash
         withSingleMultiSig (unwrap pkh) $ do
           genesisUtxo <- getOwnTransactionInput
-          let
-            sidechainParams =
-              SidechainParams
-                { genesisUtxo
-                }
 
-          void $ initGovernance sidechainParams pkh
-          void $ Versioning.initializeVersion sidechainParams
+          void $ initGovernance genesisUtxo pkh
+          void $ Versioning.initializeVersion genesisUtxo
 
           void
             $ Versioning.invalidateVersionLookupsAndConstraints
-                sidechainParams
+                genesisUtxo
                 CommitteeCandidateValidator
             >>=
               balanceSignAndSubmit "Test: insert the same version of policy"
 
           ( void
               $ Versioning.invalidateVersionLookupsAndConstraints
-                  sidechainParams
+                  genesisUtxo
                   CommitteeCandidateValidator
               >>=
                 balanceSignAndSubmit "Test: insert the same version of policy"
@@ -255,7 +235,7 @@ testRemovingTwiceSameScriptFailScenario =
 
 assertNumberOfActualVersionedScripts ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   -- | Number of expected versionned minting policy scripts
   Int ->
   -- | Number of expected versionned validator scripts
@@ -264,10 +244,10 @@ assertNumberOfActualVersionedScripts ::
     (EXCEPT OffchainError + TRANSACTION + WALLET + READER Env + AFF + EFFECT + r)
     Unit
 assertNumberOfActualVersionedScripts
-  sidechainParams
+  genesisUtxo
   numExpectedVersionedPolicies
   numExpectedVersionedValidators = do
-  Versioning.getActualVersionedPoliciesAndValidators sidechainParams
+  Versioning.getActualVersionedPoliciesAndValidators genesisUtxo
     >>=
       \{ versionedPolicies, versionedValidators } -> do
         liftAff

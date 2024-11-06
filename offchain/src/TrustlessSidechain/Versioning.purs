@@ -22,6 +22,7 @@ import Cardano.Types.Value as Value
 import Contract.PlutusData (fromData)
 import Contract.Transaction
   ( TransactionHash
+  , TransactionInput
   )
 import Control.Alternative (guard)
 import Data.Array (fromFoldable) as Array
@@ -38,7 +39,6 @@ import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Transaction as Effect
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
-import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Address (toAddress)
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 import TrustlessSidechain.Versioning.Types as Types
@@ -53,22 +53,22 @@ import Type.Row (type (+))
 
 initializeVersion ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (APP + r)
     (Array TransactionHash)
-initializeVersion sidechainParams = do
+initializeVersion genesisUtxo = do
   { versionedPolicies, versionedValidators } <-
-    getExpectedVersionedPoliciesAndValidators sidechainParams
+    getExpectedVersionedPoliciesAndValidators genesisUtxo
 
   validatorsTxIds <-
     traverse
-      ( Utils.insertVersionLookupsAndConstraints sidechainParams >=>
+      ( Utils.insertVersionLookupsAndConstraints genesisUtxo >=>
           Utils.Transaction.balanceSignAndSubmit "Initialize versioned validators"
       )
       $ List.toUnfoldable versionedValidators
   policiesTxIds <-
     traverse
-      ( Utils.insertVersionLookupsAndConstraints sidechainParams >=>
+      ( Utils.insertVersionLookupsAndConstraints genesisUtxo >=>
           Utils.Transaction.balanceSignAndSubmit "Initialize versioned policies"
       )
       $ List.toUnfoldable versionedPolicies
@@ -106,10 +106,10 @@ initializeVersion sidechainParams = do
 -- | If a script is already present for `version`, do not try to re-insert it.
 insertVersion ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (APP + r)
     (Array TransactionHash)
-insertVersion sidechainParams = do
+insertVersion genesisUtxo = do
   let
 
     -- Filter expected, a list of ScriptId /\ a, to the ScriptId
@@ -137,13 +137,13 @@ insertVersion sidechainParams = do
   , versionedValidators: actualVersionedValidators
   } <-
     getActualVersionedPoliciesAndValidators
-      sidechainParams
+      genesisUtxo
 
   { versionedPolicies: expectedVersionedPolicies
   , versionedValidators: expectedVersionedValidators
   } <-
     getExpectedVersionedPoliciesAndValidators
-      sidechainParams
+      genesisUtxo
 
   -- Compute sets of policies / validators to insert.
   -- Should insert ones whose ScriptIds are such that they
@@ -166,7 +166,7 @@ insertVersion sidechainParams = do
 
   validatorsTxIds <-
     traverse
-      ( Utils.insertVersionLookupsAndConstraints sidechainParams >=>
+      ( Utils.insertVersionLookupsAndConstraints genesisUtxo >=>
           Utils.Transaction.balanceSignAndSubmit "Insert versioned validators"
       )
       $ List.toUnfoldable versionedValidators
@@ -176,7 +176,7 @@ insertVersion sidechainParams = do
 
   policiesTxIds <-
     traverse
-      ( Utils.insertVersionLookupsAndConstraints sidechainParams >=>
+      ( Utils.insertVersionLookupsAndConstraints genesisUtxo >=>
           Utils.Transaction.balanceSignAndSubmit "Insert versioned policies"
       )
       $ List.toUnfoldable versionedPolicies
@@ -185,16 +185,16 @@ insertVersion sidechainParams = do
 
 invalidateVersion ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (APP + r) (Array TransactionHash)
-invalidateVersion sidechainParams = do
+invalidateVersion genesisUtxo = do
   { versionedPolicies, versionedValidators } <-
     getExpectedVersionedPoliciesAndValidators
-      sidechainParams
+      genesisUtxo
 
   validatorsTxIds <-
     traverse
-      ( Utils.invalidateVersionLookupsAndConstraints sidechainParams >=>
+      ( Utils.invalidateVersionLookupsAndConstraints genesisUtxo >=>
           Utils.Transaction.balanceSignAndSubmit "Invalidate versioned validators"
       )
       $ Array.fromFoldable
@@ -202,7 +202,7 @@ invalidateVersion sidechainParams = do
       $ map fst versionedValidators
   policiesTxIds <-
     traverse
-      ( Utils.invalidateVersionLookupsAndConstraints sidechainParams >=>
+      ( Utils.invalidateVersionLookupsAndConstraints genesisUtxo >=>
           Utils.Transaction.balanceSignAndSubmit "Invalidate versioned policies"
       )
       $ Array.fromFoldable
@@ -213,20 +213,20 @@ invalidateVersion sidechainParams = do
 
 updateVersion ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (APP + r) (Array TransactionHash)
-updateVersion sidechainParams = do
+updateVersion genesisUtxo = do
   { versionedPolicies: newVersionedPolicies
   , versionedValidators: newVersionedValidators
-  } <- getExpectedVersionedPoliciesAndValidators sidechainParams
+  } <- getExpectedVersionedPoliciesAndValidators genesisUtxo
 
   { versionedPolicies: oldVersionedPolicies
   , versionedValidators: oldVersionedValidators
-  } <- getActualVersionedPoliciesAndValidators sidechainParams
+  } <- getActualVersionedPoliciesAndValidators genesisUtxo
 
   oldValidatorsTxIds <-
     traverse
-      ( Utils.invalidateVersionLookupsAndConstraints sidechainParams
+      ( Utils.invalidateVersionLookupsAndConstraints genesisUtxo
           >=>
             Utils.Transaction.balanceSignAndSubmit
               "Update old versioned validators"
@@ -239,7 +239,7 @@ updateVersion sidechainParams = do
 
   oldPoliciesTxIds <-
     traverse
-      ( Utils.invalidateVersionLookupsAndConstraints sidechainParams
+      ( Utils.invalidateVersionLookupsAndConstraints genesisUtxo
           >=>
             Utils.Transaction.balanceSignAndSubmit "Update old versioned policies"
       )
@@ -252,7 +252,7 @@ updateVersion sidechainParams = do
   newValidatorsTxIds <-
     traverse
       ( ( \(Tuple scriptId plutusScript) ->
-            Utils.updateVersionLookupsAndConstraints sidechainParams scriptId
+            Utils.updateVersionLookupsAndConstraints genesisUtxo scriptId
               plutusScript
         ) >=>
           Utils.Transaction.balanceSignAndSubmit "Update new versioned validators"
@@ -262,7 +262,7 @@ updateVersion sidechainParams = do
   newPoliciesTxIds <-
     traverse
       ( ( \(Tuple scriptId plutusScript) ->
-            Utils.updateVersionLookupsAndConstraints sidechainParams scriptId
+            Utils.updateVersionLookupsAndConstraints genesisUtxo scriptId
               plutusScript
         ) >=>
           Utils.Transaction.balanceSignAndSubmit "Update new versioned policies"
@@ -279,13 +279,13 @@ updateVersion sidechainParams = do
 -- See Note [Expected vs actual versioned policies and validators]
 getExpectedVersionedPoliciesAndValidators ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (READER Env + EXCEPT OffchainError + WALLET + r)
     { versionedPolicies :: List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators :: List (Tuple Types.ScriptId PlutusScript)
     }
-getExpectedVersionedPoliciesAndValidators sidechainParams =
-  V1.getVersionedPoliciesAndValidators sidechainParams
+getExpectedVersionedPoliciesAndValidators genesisUtxo =
+  V1.getVersionedPoliciesAndValidators genesisUtxo
 
 getExpectedVersionedPoliciesAndValidatorsScriptIds ::
   { versionedPolicies :: List Types.ScriptId
@@ -296,23 +296,23 @@ getExpectedVersionedPoliciesAndValidatorsScriptIds = do
 
 getCommitteeSelectionPoliciesAndValidators ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (EXCEPT OffchainError + WALLET + r)
     { versionedPolicies :: List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators :: List (Tuple Types.ScriptId PlutusScript)
     }
-getCommitteeSelectionPoliciesAndValidators sidechainParams = do
-  V1.getCommitteeSelectionPoliciesAndValidators sidechainParams
+getCommitteeSelectionPoliciesAndValidators genesisUtxo = do
+  V1.getCommitteeSelectionPoliciesAndValidators genesisUtxo
 
 getNativeTokenManagementPoliciesAndValidators ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (READER Env + EXCEPT OffchainError + WALLET + r)
     { versionedPolicies :: List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators :: List (Tuple Types.ScriptId PlutusScript)
     }
-getNativeTokenManagementPoliciesAndValidators sidechainParams = do
-  V1.getNativeTokenManagementPoliciesAndValidators sidechainParams
+getNativeTokenManagementPoliciesAndValidators genesisUtxo = do
+  V1.getNativeTokenManagementPoliciesAndValidators genesisUtxo
 
 -- | Get the list of "actual" validators and minting policies that should be versioned.
 --
@@ -321,20 +321,20 @@ getNativeTokenManagementPoliciesAndValidators sidechainParams = do
 -- Used in the 'ListVersionedScripts' endpoint.
 getActualVersionedPoliciesAndValidators ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run (READER Env + EXCEPT OffchainError + TRANSACTION + WALLET + r)
     { versionedPolicies :: List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators :: List (Tuple Types.ScriptId PlutusScript)
     }
 
-getActualVersionedPoliciesAndValidators sidechainParams =
+getActualVersionedPoliciesAndValidators genesisUtxo =
   do
-    vValidator <- versionOracleValidator sidechainParams
+    vValidator <- versionOracleValidator genesisUtxo
 
     -- Get UTxOs located at the version oracle validator script address
     versionOracleValidatorAddr <- toAddress (PlutusScript.hash vValidator)
     scriptUtxos <- Effect.utxosAt versionOracleValidatorAddr
-    { versionOracleCurrencySymbol } <- getVersionOraclePolicy sidechainParams
+    { versionOracleCurrencySymbol } <- getVersionOraclePolicy genesisUtxo
 
     -- Get scripts that should be versioned
     let

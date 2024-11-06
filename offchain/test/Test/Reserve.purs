@@ -19,7 +19,7 @@ import Cardano.Types.Value as Value
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.ScriptLookups as Lookups
 import Contract.Test.Testnet (withWallets)
-import Contract.Transaction (TransactionOutput)
+import Contract.Transaction (TransactionInput, TransactionOutput)
 import Contract.TxConstraints as TxConstraints
 import Contract.Utxos (UtxoMap)
 import Contract.Wallet (withKeyWallet)
@@ -60,7 +60,6 @@ import TrustlessSidechain.NativeTokenManagement.Types
   ( ImmutableReserveSettings(ImmutableReserveSettings)
   , MutableReserveSettings(MutableReserveSettings)
   )
-import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Asset (emptyAssetName)
 import TrustlessSidechain.Utils.Data
@@ -113,30 +112,24 @@ dummyInitialiseSidechain ::
   PaymentPubKeyHash ->
   Run
     (APP + EFFECT + CONTRACT + r)
-    SidechainParams
+    TransactionInput
 dummyInitialiseSidechain pkh = do
   genesisUtxo <- Test.Utils.getOwnTransactionInput
 
-  let
-    sidechainParams =
-      SidechainParams
-        { genesisUtxo
-        }
+  _ <- initGovernance genesisUtxo pkh
+  _ <- initNativeTokenMgmt genesisUtxo
 
-  _ <- initGovernance sidechainParams pkh
-  _ <- initNativeTokenMgmt sidechainParams
-
-  pure sidechainParams
+  pure genesisUtxo
 
 findIlliquidCirculationSupplyUtxos ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   Run
     (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
     UtxoMap
-findIlliquidCirculationSupplyUtxos sidechainParams =
+findIlliquidCirculationSupplyUtxos genesisUtxo =
   Versioning.getVersionedValidatorAddress
-    sidechainParams
+    genesisUtxo
     ( VersionOracle
         { scriptId: IlliquidCirculationSupplyValidator
         }
@@ -184,7 +177,7 @@ testScenario3 =
         pkh <- getOwnPaymentPubKeyHash
         Test.Utils.withSingleMultiSig (unwrap pkh) $ do
 
-          sidechainParams <- dummyInitialiseSidechain pkh
+          genesisUtxo <- dummyInitialiseSidechain pkh
 
           let
             initialAmountOfNonAdaTokens = 50
@@ -203,18 +196,18 @@ testScenario3 =
 
           logInfo' "aaaa initialized"
           void $ initialiseReserveUtxo
-            sidechainParams
+            genesisUtxo
             immutableSettings
             invalidMutableSettings
             (BigNum.fromInt initialAmountOfNonAdaTokens)
           logInfo' "Reserve initialized"
           void $ depositToReserve
-            sidechainParams
+            genesisUtxo
             (fromAssetClass tokenKind)
             (BigNum.fromInt depositAmountOfNonAdaTokens)
 
           maybeUtxo <- Map.toUnfoldable
-            <$> findReserveUtxos sidechainParams
+            <$> findReserveUtxos genesisUtxo
 
           let
             extractValue = snd >>> unwrap >>> _.amount
@@ -236,17 +229,17 @@ testScenario4 =
           pkh <- getOwnPaymentPubKeyHash
           Test.Utils.withSingleMultiSig (unwrap pkh) $ do
 
-            sidechainParams <- dummyInitialiseSidechain pkh
+            genesisUtxo <- dummyInitialiseSidechain pkh
 
             void $ initialiseReserveUtxo
-              sidechainParams
+              genesisUtxo
               immutableAdaSettings
               invalidMutableSettings
               (BigNum.fromInt 2_000_000)
 
             utxoBefore <-
               Test.Utils.fromMaybeTestError "Utxo after initialization not found" $
-                (Map.toUnfoldable <$> findReserveUtxos sidechainParams)
+                (Map.toUnfoldable <$> findReserveUtxos genesisUtxo)
 
             let
               updatedMutableSettings = MutableReserveSettings
@@ -259,14 +252,14 @@ testScenario4 =
                 }
 
             void $ updateReserveUtxo
-              sidechainParams
+              genesisUtxo
               updatedMutableSettings
               utxoBefore
 
             utxoAfter <-
               Test.Utils.fromMaybeTestError "Utxo after update not found"
                 $ Map.toUnfoldable
-                <$> findReserveUtxos sidechainParams
+                <$> findReserveUtxos genesisUtxo
 
             let
               getReserveDatum =
@@ -297,7 +290,7 @@ testScenario5 =
         withKeyWallet alice $ unliftApp emptyEnv do
           pkh <- getOwnPaymentPubKeyHash
           Test.Utils.withSingleMultiSig (unwrap pkh) $ do
-            sidechainParams <- dummyInitialiseSidechain pkh
+            genesisUtxo <- dummyInitialiseSidechain pkh
 
             let
               numOfNonAdaTokens = 101
@@ -320,7 +313,7 @@ testScenario5 =
                 }
 
             void $ initialiseReserveUtxo
-              sidechainParams
+              genesisUtxo
               immutableSettings
               mutableSettings
               (BigNum.fromInt numOfNonAdaTokens)
@@ -328,19 +321,19 @@ testScenario5 =
             utxo <-
               Test.Utils.fromMaybeTestError "Utxo after initialization not found"
                 $ Map.toUnfoldable
-                <$> findReserveUtxos sidechainParams
+                <$> findReserveUtxos genesisUtxo
 
             void $ transferToIlliquidCirculationSupply
-              sidechainParams
+              genesisUtxo
               numOfTransferTokens
               fakeVt
               utxo
 
             reserveAfterTransfer <- totalAssets <$> findReserveUtxos
-              sidechainParams
+              genesisUtxo
             icsAfterTransfer <- map totalAssets $
               findIlliquidCirculationSupplyUtxos
-                sidechainParams
+                genesisUtxo
 
             let amountOfReserveTokens t = valueOf (fromAssetClass tokenKind) t
             unless
@@ -373,7 +366,7 @@ testScenario8 =
           pkh <- getOwnPaymentPubKeyHash
           Test.Utils.withSingleMultiSig (unwrap pkh) $ do
 
-            sidechainParams <- dummyInitialiseSidechain pkh
+            genesisUtxo <- dummyInitialiseSidechain pkh
 
             fakeVt <- alwaysPassingPolicy $ BigInt.fromInt 11
 
@@ -389,7 +382,7 @@ testScenario8 =
                 }
 
             void $ initialiseReserveUtxo
-              sidechainParams
+              genesisUtxo
               immutableAdaSettings
               mutableSettings
               (BigNum.fromInt numOfAda)
@@ -397,10 +390,10 @@ testScenario8 =
             utxo <-
               Test.Utils.fromMaybeTestError "Utxo after initialization not found"
                 $ Map.toUnfoldable
-                <$> findReserveUtxos sidechainParams
+                <$> findReserveUtxos genesisUtxo
 
             void $ transferToIlliquidCirculationSupply
-              sidechainParams
+              genesisUtxo
               numOfTransferred
               fakeVt
               utxo
@@ -408,10 +401,10 @@ testScenario8 =
             let amountOfReserveTokens t = unwrap $ getCoin t
 
             reserveAfterTransfer <- totalAssets <$> findReserveUtxos
-              sidechainParams
+              genesisUtxo
             icsAfterTransfer <- map totalAssets $
               findIlliquidCirculationSupplyUtxos
-                sidechainParams
+                genesisUtxo
 
             unless
               ( amountOfReserveTokens reserveAfterTransfer ==
@@ -441,7 +434,7 @@ testScenario6 =
 
           pkh <- getOwnPaymentPubKeyHash
           Test.Utils.withSingleMultiSig (unwrap pkh) $ do
-            sidechainParams <- dummyInitialiseSidechain pkh
+            genesisUtxo <- dummyInitialiseSidechain pkh
 
             let numOfNonAdaTokens = 101
 
@@ -454,7 +447,7 @@ testScenario6 =
                 }
 
             void $ initialiseReserveUtxo
-              sidechainParams
+              genesisUtxo
               immutableSettings
               invalidMutableSettings
               (BigNum.fromInt numOfNonAdaTokens)
@@ -462,16 +455,16 @@ testScenario6 =
             utxo <-
               Test.Utils.fromMaybeTestError "Utxo after initialization not found"
                 $ Map.toUnfoldable
-                <$> findReserveUtxos sidechainParams
+                <$> findReserveUtxos genesisUtxo
 
             void $ handover
-              sidechainParams
+              genesisUtxo
               utxo
 
-            reserveUtxosAfterHandover <- findReserveUtxos sidechainParams
+            reserveUtxosAfterHandover <- findReserveUtxos genesisUtxo
             icsAfterTransfer <- map totalAssets $
               findIlliquidCirculationSupplyUtxos
-                sidechainParams
+                genesisUtxo
 
             unless (Map.isEmpty reserveUtxosAfterHandover)
               ( liftContract $ throwError $ error
@@ -495,12 +488,12 @@ testScenario7 =
         withKeyWallet alice $ unliftApp emptyEnv do
           pkh <- getOwnPaymentPubKeyHash
           Test.Utils.withSingleMultiSig (unwrap pkh) $ do
-            sidechainParams <- dummyInitialiseSidechain pkh
+            genesisUtxo <- dummyInitialiseSidechain pkh
 
             let numOfAda = 3_000_000
 
             void $ initialiseReserveUtxo
-              sidechainParams
+              genesisUtxo
               immutableAdaSettings
               invalidMutableSettings
               (BigNum.fromInt numOfAda)
@@ -508,16 +501,16 @@ testScenario7 =
             utxo <-
               Test.Utils.fromMaybeTestError "Utxo after initialization not found"
                 $ Map.toUnfoldable
-                <$> findReserveUtxos sidechainParams
+                <$> findReserveUtxos genesisUtxo
 
             void $ handover
-              sidechainParams
+              genesisUtxo
               utxo
 
-            reserveUtxosAfterHandover <- findReserveUtxos sidechainParams
+            reserveUtxosAfterHandover <- findReserveUtxos genesisUtxo
             icsAfterTransfer <- map totalAssets $
               findIlliquidCirculationSupplyUtxos
-                sidechainParams
+                genesisUtxo
 
             unless (Map.isEmpty reserveUtxosAfterHandover)
               ( liftContract $ throwError $ error

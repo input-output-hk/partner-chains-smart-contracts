@@ -12,7 +12,6 @@ import TrustlessSidechain.DParameter as DParameter
 import TrustlessSidechain.Effects.Env (emptyEnv)
 import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
 import TrustlessSidechain.InitSidechain.Governance (initGovernance)
-import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Transaction
   ( balanceSignAndSubmitWithoutSpendingUtxo
@@ -38,48 +37,43 @@ testScenario =
         pkh <- getOwnPaymentPubKeyHash
         genesisUtxo <- getOwnTransactionInput
 
-        let
-          sidechainParams =
-            SidechainParams
-              { genesisUtxo
-              }
-        void $ initGovernance sidechainParams pkh
+        void $ initGovernance genesisUtxo pkh
         void
           $
             ( DParameter.mkInsertDParameterLookupsAndConstraints
-                sidechainParams
+                genesisUtxo
                 { permissionedCandidatesCount: BigInt.fromInt 2
                 , registeredCandidatesCount: BigInt.fromInt 3
                 }
                 >>=
                   balanceSignAndSubmitWithoutSpendingUtxo
-                    (unwrap sidechainParams).genesisUtxo
+                    genesisUtxo
                     "Test: insert D param"
             )
 
         void
           $
             ( DParameter.mkUpdateDParameterLookupsAndConstraints
-                sidechainParams
+                genesisUtxo
                 { permissionedCandidatesCount: BigInt.fromInt 3
                 , registeredCandidatesCount: BigInt.fromInt 4
                 }
                 >>=
                   balanceSignAndSubmitWithoutSpendingUtxo
-                    (unwrap sidechainParams).genesisUtxo
+                    genesisUtxo
                     "Test: update D param"
             )
 
         ( void
             $
               ( DParameter.mkUpdateDParameterLookupsAndConstraints
-                  sidechainParams
+                  genesisUtxo
                   { permissionedCandidatesCount: BigInt.fromInt 3
                   , registeredCandidatesCount: BigInt.fromInt 4
                   }
                   >>=
                     balanceSignAndSubmitWithoutSpendingUtxo
-                      (unwrap sidechainParams).genesisUtxo
+                      genesisUtxo
                       "Test: update removed D param"
               )
         ) # withUnliftApp fails

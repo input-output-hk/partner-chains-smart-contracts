@@ -6,12 +6,11 @@ module TrustlessSidechain.InitSidechain.Init
 import Contract.Prelude
 
 import Cardano.Types.PlutusScript (PlutusScript)
-import Contract.Transaction (TransactionHash)
+import Contract.Transaction (TransactionHash, TransactionInput)
 import Data.List (List, filter)
 import Data.List as List
 import Run (Run)
 import TrustlessSidechain.Effects.App (APP)
-import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Transaction as Utils.Transaction
 import TrustlessSidechain.Versioning (getActualVersionedPoliciesAndValidators)
 import TrustlessSidechain.Versioning.ScriptId as Types
@@ -21,28 +20,28 @@ import Type.Row (type (+))
 
 insertScriptsIdempotent ::
   forall r.
-  ( SidechainParams ->
+  ( TransactionInput ->
     Run (APP + r)
       { versionedPolicies :: List (Tuple ScriptId PlutusScript)
       , versionedValidators :: List (Tuple ScriptId PlutusScript)
       }
   ) ->
-  SidechainParams ->
+  TransactionInput ->
   Run (APP + r)
     (Array TransactionHash)
-insertScriptsIdempotent f sidechainParams = do
-  scripts <- f sidechainParams
+insertScriptsIdempotent f genesisUtxo = do
+  scripts <- f genesisUtxo
 
   toInsert ::
     { versionedPolicies :: List (Tuple ScriptId PlutusScript)
     , versionedValidators :: List (Tuple ScriptId PlutusScript)
-    } <- getScriptsToInsert sidechainParams scripts
+    } <- getScriptsToInsert genesisUtxo scripts
 
   validatorsTxIds <-
     ( traverse ::
         forall m a b. Applicative m => (a -> m b) -> Array a -> m (Array b)
     )
-      ( Utils.insertVersionLookupsAndConstraints sidechainParams >=>
+      ( Utils.insertVersionLookupsAndConstraints genesisUtxo >=>
           Utils.Transaction.balanceSignAndSubmit
             "Initialize versioned validators"
       )
@@ -51,7 +50,7 @@ insertScriptsIdempotent f sidechainParams = do
     ( traverse ::
         forall m a b. Applicative m => (a -> m b) -> Array a -> m (Array b)
     )
-      ( Utils.insertVersionLookupsAndConstraints sidechainParams >=>
+      ( Utils.insertVersionLookupsAndConstraints genesisUtxo >=>
           Utils.Transaction.balanceSignAndSubmit "Initialize versioned policies"
       )
       $ List.toUnfoldable (toInsert.versionedPolicies)
@@ -60,7 +59,7 @@ insertScriptsIdempotent f sidechainParams = do
 
 getScriptsToInsert ::
   forall r.
-  SidechainParams ->
+  TransactionInput ->
   { versionedPolicies :: List (Tuple Types.ScriptId PlutusScript)
   , versionedValidators :: List (Tuple Types.ScriptId PlutusScript)
   } ->
@@ -69,12 +68,12 @@ getScriptsToInsert ::
     , versionedValidators :: List (Tuple Types.ScriptId PlutusScript)
     }
 getScriptsToInsert
-  sidechainParams
+  genesisUtxo
   toFilterScripts = do
 
   comparisonScripts <-
     getActualVersionedPoliciesAndValidators
-      sidechainParams
+      genesisUtxo
 
   let
     filterScripts :: forall a. Eq a => List a -> List a -> List a
