@@ -43,7 +43,6 @@ import TrustlessSidechain.Effects.Run (unliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
-import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain.Governance (initGovernance)
 import TrustlessSidechain.InitSidechain.NativeTokenManagement
   ( initNativeTokenMgmt
@@ -122,7 +121,6 @@ dummyInitialiseSidechain pkh = do
     sidechainParams =
       SidechainParams
         { genesisUtxo
-        , governanceAuthority: Governance.mkGovernanceAuthority pkh
         }
 
   _ <- initGovernance sidechainParams pkh

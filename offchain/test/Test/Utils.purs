@@ -28,7 +28,6 @@ import Contract.Address (Address)
 import Contract.Log as Log
 import Contract.Monad (Contract)
 import Contract.Monad as Monad
-import Contract.PlutusData (PlutusData(..), fromData)
 import Contract.Prim.ByteArray (ByteArray, hexToByteArrayUnsafe)
 import Contract.Test (ContractTest)
 import Contract.Transaction
@@ -241,9 +240,6 @@ dummySidechainParams = SidechainParams
   { genesisUtxo: toTxIn
       "211307be24c471d42012c5ebd7d98c83f349c612023ce365f9fb5e3e758d0779"
       1
-  , governanceAuthority: Unsafe.unsafePartial $ fromJust $ fromData $ Bytes $
-      hexToByteArrayUnsafe
-        "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
   }
 
 fromMaybeTestError ::

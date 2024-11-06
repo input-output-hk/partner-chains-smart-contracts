@@ -9,6 +9,8 @@ import Node.Encoding (Encoding(UTF8))
 import Node.Process (exit, stderr)
 import Node.Stream (writeString)
 import Options.Applicative (execParser)
+import Partial (crashWith)
+import Partial.Unsafe (unsafePartial)
 import Run (EFFECT, Run)
 import TrustlessSidechain.CLIVersion (versionString)
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
@@ -95,14 +97,12 @@ main = do
   allOpts <- getOptions
   case allOpts of
     TxOptions opts -> do
-      let scParams = (unwrap opts.sidechainEndpointParams).sidechainParams
-
       -- Do some validation on the CLI options
       -----------------------
       let
         governance = Just $ MultiSig $ MultiSigGovParams
           { governanceMembers:
-              [ unwrap $ unwrap $ (unwrap scParams).governanceAuthority ]
+              [] -- TODO put 1 sig in here
           , requiredSignatures: BigInt.fromInt 1
           }
 
@@ -188,7 +188,7 @@ runTxEndpoint sidechainEndpointParams endpoint =
           let
             govPubKeyHash = case governancePubKeyHash of
               Just pubKeyHash -> pubKeyHash
-              Nothing -> unwrap (unwrap scParams).governanceAuthority
+              Nothing -> unsafePartial $ crashWith "put 1 pkh in here" -- TODO
 
           transactionId <- initGovernance scParams govPubKeyHash
 

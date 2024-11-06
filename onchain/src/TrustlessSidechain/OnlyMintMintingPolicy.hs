@@ -14,7 +14,6 @@ import PlutusLedgerApi.V2.Contexts (
  )
 import PlutusTx (compile)
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.Types (SidechainParams)
 import TrustlessSidechain.Utils (currencySymbolValueOf, mkUntypedMintingPolicy)
 
 -- | Dummy FUEL minting policy for testing purposes.  Allows minting a single
@@ -23,7 +22,7 @@ import TrustlessSidechain.Utils (currencySymbolValueOf, mkUntypedMintingPolicy)
 -- Note: this policy does not allow to burn transaction tokens, but we might
 -- wish to do so in order to allow recovering minAda.
 mkOnlyMintMintingPolicy ::
-  SidechainParams ->
+  BuiltinData ->
   () -> -- no redeemer
   ScriptContext ->
   Bool
@@ -36,15 +35,15 @@ mkOnlyMintMintingPolicy _ _ _ =
 
 {-# INLINEABLE mkOnlyMintMintingPolicyUntyped #-}
 mkOnlyMintMintingPolicyUntyped ::
-  -- | Sidechain parameters
+  -- | Genesis UTXO
   BuiltinData ->
   -- | Redeemer
   BuiltinData ->
   -- | ScriptContext
   BuiltinData ->
   ()
-mkOnlyMintMintingPolicyUntyped params =
-  mkUntypedMintingPolicy $ mkOnlyMintMintingPolicy (unsafeFromBuiltinData params)
+mkOnlyMintMintingPolicyUntyped genesisUtxo =
+  mkUntypedMintingPolicy $ mkOnlyMintMintingPolicy (unsafeFromBuiltinData genesisUtxo)
 
 serialisableOnlyMintMintingPolicy :: SerialisedScript
 serialisableOnlyMintMintingPolicy =

@@ -63,11 +63,11 @@ main =
           , scriptFitsInto
               "mkVersionOraclePolicyCode (Versioning) serialized"
               Versioning.serialisableVersionOraclePolicy
-              3_182
+              3_173
           , scriptFitsInto
               "mkVersionOracleValidatorCode (Versioning) serialized"
               Versioning.serialisableVersionOracleValidator
-              1_087
+              2_073
           , scriptFitsInto
               "mkReserveValidator (Reserve) serialized"
               Reserve.serialisableReserveValidator

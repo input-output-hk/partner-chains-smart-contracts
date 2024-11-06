@@ -177,10 +177,10 @@ permissionedCandidatesValidator
 
 mkMintingPolicyUntyped ::
   BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkMintingPolicyUntyped sp vc validatorAddress redeemer ctx =
+mkMintingPolicyUntyped genesisUtxo vc validatorAddress redeemer ctx =
   check
     $ mkMintingPolicy
-      sp
+      genesisUtxo
       (unsafeFromBuiltinData vc)
       (unsafeFromBuiltinData validatorAddress)
       (unsafeFromBuiltinData redeemer)
@@ -192,10 +192,10 @@ serialisableMintingPolicy =
 
 mkValidatorUntyped ::
   BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkValidatorUntyped sp vc datum redeemer ctx =
+mkValidatorUntyped genesisUtxo vc datum redeemer ctx =
   check
     $ permissionedCandidatesValidator
-      sp
+      genesisUtxo
       (unsafeFromBuiltinData vc)
       datum
       (unsafeFromBuiltinData redeemer)

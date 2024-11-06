@@ -29,13 +29,9 @@ import PlutusLedgerApi.V2 (Address, CurrencySymbol (CurrencySymbol), Datum (Datu
 import PlutusLedgerApi.V2.Contexts (txInfoInputs, txInfoReferenceInputs)
 import PlutusTx qualified
 import PlutusTx.AssocMap (lookup, toList)
-import TrustlessSidechain.Governance.Admin qualified as Governance
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.ScriptId qualified as ScriptId
-import TrustlessSidechain.Types (
-  SidechainParams,
- )
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Utils (
   fromJust,
@@ -193,12 +189,12 @@ PlutusTx.makeIsDataIndexed
 --
 --   ERROR-VERSION-POLICY-10: Script purpose is not Minting.
 mkVersionOraclePolicy ::
-  Unsafe.SidechainParams ->
+  Unsafe.TxOutRef ->
   Address ->
   VersionOraclePolicyRedeemer ->
   Unsafe.ScriptContext ->
   Bool
-mkVersionOraclePolicy sp validatorAddress redeemer ctx =
+mkVersionOraclePolicy genesisUtxo validatorAddress redeemer ctx =
   case redeemer of
     InitializeVersionOracle versionOracle scriptHash ->
       traceIfFalse "ERROR-VERSION-POLICY-01" isGenesisUtxoUsed
@@ -215,7 +211,7 @@ mkVersionOraclePolicy sp validatorAddress redeemer ctx =
   where
     isGenesisUtxoUsed :: Bool
     isGenesisUtxoUsed =
-      Unsafe.genesisUtxo sp `elem` map Unsafe.txInInfoOutRef (Unsafe.txInfoInputs $ Unsafe.scriptContextTxInfo ctx)
+      genesisUtxo `elem` map Unsafe.txInInfoOutRef (Unsafe.txInfoInputs $ Unsafe.scriptContextTxInfo ctx)
 
     txInfo = Unsafe.scriptContextTxInfo ctx
 
@@ -280,7 +276,7 @@ mkVersionOraclePolicy sp validatorAddress redeemer ctx =
 
 {-# INLINEABLE mkVersionOraclePolicyUntyped #-}
 mkVersionOraclePolicyUntyped ::
-  -- | Sidechain parameters
+  -- | Genesis Utxo
   BuiltinData ->
   -- | Validator address
   BuiltinData ->
@@ -289,10 +285,10 @@ mkVersionOraclePolicyUntyped ::
   -- | ScriptContext
   BuiltinData ->
   ()
-mkVersionOraclePolicyUntyped sp validatorAddress redeemer ctx =
+mkVersionOraclePolicyUntyped genesisUtxo validatorAddress redeemer ctx =
   check
     $ mkVersionOraclePolicy
-      (Unsafe.wrap sp)
+      (Unsafe.wrap genesisUtxo)
       (unsafeFromBuiltinData validatorAddress)
       (unsafeFromBuiltinData redeemer)
       (Unsafe.wrap ctx)
@@ -309,13 +305,15 @@ serialisableVersionOraclePolicy =
 -- minted and burned correctly.
 {-# INLINEABLE mkVersionOracleValidator #-}
 mkVersionOracleValidator ::
-  SidechainParams ->
+  BuiltinData ->
+  VersionOracleConfig ->
   VersionOracleDatum ->
   VersionOracle ->
   Unsafe.ScriptContext ->
   Bool
 mkVersionOracleValidator
-  sp
+  _genesisUtxo
+  vc
   (VersionOracleDatum versionOracle currencySymbol)
   versionOracle'
   ctx =
@@ -326,10 +324,9 @@ mkVersionOracleValidator
     where
       isSpending = isJust $ Unsafe.getSpending $ Unsafe.scriptContextPurpose ctx
 
-      txInfo = Unsafe.scriptContextTxInfo ctx
-      -- Check that transaction was approved by governance authority
+      txInfo = Unsafe.scriptContextTxInfo ctx -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority =
-        txInfo `Governance.isApprovedByAdminUnsafe` get @"governanceAuthority" sp
+        approvedByGovernance vc ctx
 
       -- Check that version oracle in the datum matches the redeemer
       versionOraclesMatch = versionOracle == versionOracle'
@@ -346,7 +343,9 @@ mkVersionOracleValidator
 
 {-# INLINEABLE mkVersionOracleValidatorUntyped #-}
 mkVersionOracleValidatorUntyped ::
-  -- | Sidechain parameters
+  -- | Genesis UTXO
+  BuiltinData ->
+  -- | VersionOracleConfig
   BuiltinData ->
   -- | Datum
   BuiltinData ->
@@ -355,10 +354,11 @@ mkVersionOracleValidatorUntyped ::
   -- | ScriptContext
   BuiltinData ->
   ()
-mkVersionOracleValidatorUntyped params datum redeemer ctx =
+mkVersionOracleValidatorUntyped genesisUtxo vc datum redeemer ctx =
   check
     $ mkVersionOracleValidator
-      (PlutusTx.unsafeFromBuiltinData params)
+      genesisUtxo
+      (unsafeFromBuiltinData vc)
       (PlutusTx.unsafeFromBuiltinData datum)
       (PlutusTx.unsafeFromBuiltinData redeemer)
       (Unsafe.wrap ctx)

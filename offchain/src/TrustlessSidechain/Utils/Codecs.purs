@@ -24,11 +24,6 @@ import Data.Codec.Argonaut.Record as CAR
 import Data.Profunctor (wrapIso)
 import Data.String (Pattern(Pattern), split)
 import Data.UInt as UInt
-import Partial.Unsafe (unsafePartial)
-import TrustlessSidechain.Governance.Admin
-  ( GovernanceAuthority
-  , mkGovernanceAuthority
-  )
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 
 -- | JSON codec converting between a bytestring and its hexadecimal representation
@@ -63,19 +58,11 @@ transactionInputCodec =
     indexStr = UInt.toString txIn.index
     txHashStr = byteArrayToHex $ unwrap $ encodeCbor $ txIn.transactionId
 
--- | JSON codec for PubKeyHash.
-governanceAuthorityCodec :: CA.JsonCodec GovernanceAuthority
-governanceAuthorityCodec = CA.prismaticCodec "GovernanceAuthority"
-  (Just <<< mkGovernanceAuthority)
-  unwrap
-  pubKeyHashCodec
-
 scParamsCodec :: CA.JsonCodec SidechainParams
 scParamsCodec =
   wrapIso SidechainParams $
     ( CAR.object "sidechainParameters"
         { genesisUtxo: transactionInputCodec
-        , governanceAuthority: governanceAuthorityCodec
         }
     )
 

@@ -9,13 +9,11 @@ module TrustlessSidechain.Types (
   BlockProducerRegistrationMsg (..),
   DParameterValidatorDatum (..),
   EcdsaSecp256k1PubKey (..),
-  GovernanceAuthority (GovernanceAuthority),
   PermissionedCandidateKeys (..),
   PermissionedCandidatesPolicyRedeemer (..),
   PermissionedCandidatesValidatorDatum (..),
   PermissionedCandidatesValidatorRedeemer (..),
   PubKey (..),
-  SidechainParams (..),
   Signature (..),
   StakeOwnership (..),
   ImmutableReserveSettings (..),
@@ -51,42 +49,6 @@ import TrustlessSidechain.PlutusPrelude
 -- using `ToData` and `FromData` instances.  Importantly, same tests are
 -- performed in the substrate-node to ensure interoperability with
 -- trustless-sidechain.
-
--- * Sidechain Parametrization and general data
-
-newtype GovernanceAuthority = GovernanceAuthority PubKeyHash
-  deriving newtype (TSPrelude.Eq, TSPrelude.Ord, TSPrelude.Show, ToData, FromData, UnsafeFromData)
-
-PlutusTx.makeLift ''GovernanceAuthority
-
--- | Parameters uniquely identifying a sidechain
---
--- = Note
---
--- The 'Data' serializations for this type /cannot/ change.
-data SidechainParams = SidechainParams
-  { genesisUtxo :: TxOutRef
-  -- ^ 'genesisUtxo' is a 'TxOutRef' used to initialize the internal
-  -- policies in the side chain (e.g. for the 'UpdateCommitteeHash' endpoint)
-  , governanceAuthority :: GovernanceAuthority
-  -- ^ 'governanceAuthority' stores credentials of a governing body allowed to
-  -- make updates to versioned scripts.  For now we just use a master public
-  -- key, whose owner is allowed to make any decisions about script versions.
-  --
-  -- @since v5.0.0
-  }
-  deriving stock
-    ( -- | @since v4.0.0
-      TSPrelude.Eq
-    , -- | @since v4.0.0
-      TSPrelude.Show
-    )
-
-PlutusTx.makeLift ''SidechainParams
-PlutusTx.makeIsDataIndexed ''SidechainParams [('SidechainParams, 0)]
-
--- | @since v4.0.0
-makeHasField ''SidechainParams
 
 -- | Compressed DER SECP256k1 public key.
 -- = Important note
@@ -229,7 +191,7 @@ makeHasField ''BlockProducerRegistration
 --
 -- The 'Data' serializations for this type /cannot/ change.
 data BlockProducerRegistrationMsg = BlockProducerRegistrationMsg
-  { sidechainParams :: SidechainParams
+  { genesisUtxo :: TxOutRef
   , sidechainPubKey :: LedgerBytes
   , inputUtxo :: TxOutRef
   -- ^ A UTxO that must be spent by the transaction

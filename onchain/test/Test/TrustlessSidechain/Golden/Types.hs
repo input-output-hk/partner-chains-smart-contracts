@@ -8,7 +8,6 @@ import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusLedgerApi.V2 (POSIXTime (..), PubKeyHash, TxOutRef (TxOutRef), toBuiltinData)
 import Test.Tasty (TestTree, testGroup)
 import Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest)
-import TrustlessSidechain.Governance.Admin (mkGovernanceAuthority)
 import TrustlessSidechain.Governance.MultiSig (
   MultiSigGovParams (..),
  )
@@ -25,8 +24,8 @@ import TrustlessSidechain.Types (
   ),
   BlockProducerRegistrationMsg (
     BlockProducerRegistrationMsg,
+    genesisUtxo,
     inputUtxo,
-    sidechainParams,
     sidechainPubKey
   ),
   DParameterValidatorDatum (
@@ -68,11 +67,6 @@ import TrustlessSidechain.Types (
     UpdateReserve
   ),
   ReserveStats (ReserveStats),
-  SidechainParams (
-    SidechainParams,
-    genesisUtxo,
-    governanceAuthority
-  ),
   StakeOwnership (AdaBasedStaking, TokenBasedStaking),
   VersionedGenericDatum (..),
  )
@@ -85,8 +79,7 @@ tests :: TestTree
 tests =
   testGroup
     "Golden tests for Types module"
-    [ dataEncoderGoldenTest "SidechainParams" sampleSidechainParams
-    , dataEncoderGoldenTest "BlockProducerRegistration1" sampleBlockProducerRegistration1
+    [ dataEncoderGoldenTest "BlockProducerRegistration1" sampleBlockProducerRegistration1
     , dataEncoderGoldenTest "BlockProducerRegistration2" sampleBlockProducerRegistration2
     , dataEncoderGoldenTest "BlockProducerRegistrationMsg" sampleBlockProducerRegistrationMsg
     , dataEncoderGoldenTest "DParameterValidatorDatum" sampleDParameterValidatorDatum
@@ -112,13 +105,6 @@ sampleTxOutRef :: TxOutRef
 sampleTxOutRef = TxOutRef "e41c9b57841e582c207bb68d5e9736fb48c7af5f1ec29ade00692fa5e0e47efa" 4
 
 -- * Sample data - test subjects
-
-sampleSidechainParams :: SidechainParams
-sampleSidechainParams =
-  SidechainParams
-    { genesisUtxo = sampleTxOutRef
-    , governanceAuthority = mkGovernanceAuthority "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
-    }
 
 sampleBlockProducerRegistration1 :: VersionedGenericDatum PubKeyHash
 sampleBlockProducerRegistration1 =
@@ -159,7 +145,7 @@ sampleBlockProducerRegistration2 =
 sampleBlockProducerRegistrationMsg :: BlockProducerRegistrationMsg
 sampleBlockProducerRegistrationMsg =
   BlockProducerRegistrationMsg
-    { sidechainParams = sampleSidechainParams
+    { genesisUtxo = sampleTxOutRef
     , sidechainPubKey = "02dbfc8b66c22f931a6647fd86db2fc073dd564b99837226a1bdfe7a99578854ec"
     , inputUtxo = sampleTxOutRef
     }
