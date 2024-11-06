@@ -2,7 +2,6 @@ module TrustlessSidechain.Options.Specs (options) where
 
 import Contract.Prelude
 
-import Cardano.AsCbor (decodeCbor)
 import Cardano.Types.Asset (Asset(..))
 import Cardano.Types.BigNum (BigNum)
 import Cardano.Types.NetworkId (NetworkId(MainnetId))
@@ -42,7 +41,6 @@ import Options.Applicative
   , helper
   , hsubparser
   , info
-  , int
   , long
   , many
   , metavar
@@ -56,7 +54,6 @@ import Options.Applicative
 import TrustlessSidechain.CommitteeCandidateValidator
   ( StakeOwnership(AdaBasedStaking, TokenBasedStaking)
   )
-import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.NativeTokenManagement.Types
   ( ImmutableReserveSettings(ImmutableReserveSettings)
   , MutableReserveSettings(MutableReserveSettings)
@@ -314,25 +311,9 @@ sidechainParamsSpec maybeConfig = ado
     , maybe mempty value
         (maybeConfig >>= _.sidechainParameters >>= _.genesisUtxo)
     ]
-
-  governanceAuthority <- option governanceAuthority $ fold
-    [ short 'g'
-    , long "governance-authority"
-    , metavar "PUB_KEY_HASH"
-    , help "Public key hash of governance authority"
-    , maybe mempty value
-        ( maybeConfig >>= _.sidechainParameters >>= _.governanceAuthority >>=
-            -- parse ByteArray stored in Config into a PubKeyHash
-            ( wrap >>> decodeCbor >=> wrap
-                >>> Governance.mkGovernanceAuthority
-                >>> pure
-            )
-        )
-    ]
   in
     SidechainParams
       { genesisUtxo
-      , governanceAuthority
       }
 
 -- | SidechainParams CLI parser

@@ -2,7 +2,6 @@ module Test.Governance (suite) where
 
 import Contract.Prelude
 
-import Cardano.Types.BigInt as BigInt
 import Cardano.Types.BigNum as BigNum
 import Contract.Test.Testnet (withWallets)
 import Contract.Wallet (withKeyWallet) as Wallet
@@ -14,7 +13,6 @@ import Test.Utils
   )
 import TrustlessSidechain.Effects.Env (emptyEnv)
 import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
-import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.Governance.Utils (updateGovernance)
 import TrustlessSidechain.InitSidechain.Governance (initGovernance)
 import TrustlessSidechain.InitSidechain.NativeTokenManagement
@@ -52,11 +50,7 @@ testScenarioSuccess =
               let
                 sidechainParams =
                   SidechainParams
-                    { chainId: BigInt.fromInt 1
-                    , genesisUtxo
-                    , thresholdNumerator: BigInt.fromInt 2
-                    , thresholdDenominator: BigInt.fromInt 3
-                    , governanceAuthority: Governance.mkGovernanceAuthority pkh
+                    { genesisUtxo
                     }
 
               void $ initGovernance sidechainParams pkh
@@ -88,11 +82,7 @@ testScenarioFailure =
               let
                 sidechainParams =
                   SidechainParams
-                    { chainId: BigInt.fromInt 1
-                    , genesisUtxo
-                    , thresholdNumerator: BigInt.fromInt 2
-                    , thresholdDenominator: BigInt.fromInt 3
-                    , governanceAuthority: Governance.mkGovernanceAuthority pkh
+                    { genesisUtxo
                     }
               void $ initGovernance sidechainParams pkh
               pure sidechainParams

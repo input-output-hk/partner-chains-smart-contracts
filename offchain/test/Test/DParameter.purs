@@ -11,7 +11,6 @@ import Test.Utils (TestnetTest, fails, getOwnTransactionInput)
 import TrustlessSidechain.DParameter as DParameter
 import TrustlessSidechain.Effects.Env (emptyEnv)
 import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
-import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain.Governance (initGovernance)
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
@@ -43,7 +42,6 @@ testScenario =
           sidechainParams =
             SidechainParams
               { genesisUtxo
-              , governanceAuthority: Governance.mkGovernanceAuthority pkh
               }
         void $ initGovernance sidechainParams pkh
         void

@@ -37,12 +37,10 @@ configCodec =
   scParamsCodec ::
     CA.JsonCodec
       { genesisUtxo :: Maybe TransactionInput
-      , governanceAuthority :: Maybe ByteArray
       }
   scParamsCodec =
     ( CAR.object "sidechainParameters"
         { genesisUtxo: CAC.maybe transactionInputCodec
-        , governanceAuthority: CAC.maybe byteArrayCodec
         }
     )
 

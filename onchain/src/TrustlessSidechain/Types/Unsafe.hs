@@ -17,10 +17,6 @@ module TrustlessSidechain.Types.Unsafe (
   sidechainPubKey,
   sidechainSignature,
   stakeOwnership,
-  GovernanceAuthority (..),
-  SidechainParams (..),
-  genesisUtxo,
-  governanceAuthority,
   Signature (..),
   StakeOwnership (..),
   -- | From Plutus.V2.Ledger.Api
@@ -136,8 +132,6 @@ unsafeDataAsMaybe bd = case Builtins.unsafeDataAsConstr bd of
 
 makeUnsafeNewtypes ''V2.StakingCredential
 makeUnsafeNewtypes ''Types.BlockProducerRegistration
-makeUnsafeNewtypes ''Types.GovernanceAuthority
-makeUnsafeNewtypes ''Types.SidechainParams
 makeUnsafeNewtypes ''Types.Signature
 makeUnsafeNewtypes ''Types.StakeOwnership
 makeUnsafeNewtypes ''V2.Address
@@ -163,7 +157,6 @@ makeUnsafeNewtypes ''V2.Redeemer
 makeUnsafeNewtypes ''PTPrelude.Integer
 
 makeUnsafeGetters ''Types.BlockProducerRegistration
-makeUnsafeGetters ''Types.SidechainParams
 makeUnsafeGetters ''V2.Address
 makeUnsafeGetters ''V2.Credential
 makeUnsafeGetters ''V2.OutputDatum

@@ -19,6 +19,7 @@ import Data.Wrappers (
   directProductUnsafeFromData3,
  )
 import PlutusLedgerApi.V1.Value (CurrencySymbol)
+import PlutusLedgerApi.V2 (TxOutRef)
 import PlutusTx.Builtins (matchList)
 import PlutusTx.Builtins.Internal (
   BuiltinList,
@@ -31,11 +32,10 @@ import PlutusTx.Builtins.Internal (
  )
 import PlutusTx.Builtins.Internal qualified as Unsafe
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.Types (SidechainParams)
 
 data Foo = Foo
   { tcs :: CurrencySymbol
-  , sp :: SidechainParams
+  , genesisUtxo :: TxOutRef
   , kcs :: CurrencySymbol
   }
 
@@ -46,7 +46,7 @@ instance ToData Foo where
       ( mkCons
           (toBuiltinData tcs)
           ( mkCons
-              (toBuiltinData sp)
+              (toBuiltinData genesisUtxo)
               ( mkCons
                   (toBuiltinData kcs)
                   (mkNilData unitval)
@@ -64,16 +64,16 @@ instance FromData Foo where
          in matchList ell Nothing $ \tcs ell' ->
               case fromBuiltinData tcs of
                 Nothing -> Nothing
-                Just tcs' -> matchList ell' Nothing $ \sp ell'' ->
-                  case fromBuiltinData sp of
+                Just tcs' -> matchList ell' Nothing $ \genesisUtxo ell'' ->
+                  case fromBuiltinData genesisUtxo of
                     Nothing -> Nothing
-                    Just sp' -> matchList ell'' Nothing $ \kcs ell''' ->
+                    Just genesisUtxo' -> matchList ell'' Nothing $ \kcs ell''' ->
                       case fromBuiltinData kcs of
                         Nothing -> Nothing
                         Just kcs' ->
                           matchList
                             ell'''
-                            (Just (Foo tcs' sp' kcs'))
+                            (Just (Foo tcs' genesisUtxo' kcs'))
                             (\_ _ -> Nothing)
 
 instance UnsafeFromData Foo where
@@ -82,10 +82,10 @@ instance UnsafeFromData Foo where
     let ell = unsafeDataAsList dat
         tcs = unsafeFromBuiltinData (Unsafe.head ell)
         ell' = Unsafe.tail ell
-        sp = unsafeFromBuiltinData (Unsafe.head ell')
+        genesisUtxo = unsafeFromBuiltinData (Unsafe.head ell')
         ell'' = Unsafe.tail ell'
         kcs = unsafeFromBuiltinData (Unsafe.head ell'')
-     in Foo tcs sp kcs
+     in Foo tcs genesisUtxo kcs
 
 {-# INLINE pairToData #-}
 pairToData ::

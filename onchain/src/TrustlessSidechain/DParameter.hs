@@ -35,7 +35,7 @@ mkMintingPolicy ::
   Unsafe.ScriptContext ->
   Bool
 mkMintingPolicy
-  _sp
+  _genesisUtxo
   vc
   dParameterValidatorAddress
   _redeemer
@@ -92,7 +92,7 @@ dParameterValidator ::
   BuiltinData ->
   Unsafe.ScriptContext ->
   Bool
-dParameterValidator _sp vc _dat _redeemer ctx =
+dParameterValidator _genesisUtxo vc _dat _redeemer ctx =
   traceIfFalse "ERROR-DPARAMETER-VALIDATOR-01" signedByGovernanceAuthority
   where
     -- Check that transaction was approved by governance authority
@@ -107,10 +107,10 @@ mkValidatorUntyped ::
   BuiltinData ->
   BuiltinData ->
   ()
-mkValidatorUntyped sp vc dat redeemer ctx =
+mkValidatorUntyped genesisUtxo vc dat redeemer ctx =
   check
     $ dParameterValidator
-      sp
+      genesisUtxo
       (unsafeFromBuiltinData vc)
       dat
       redeemer
@@ -127,10 +127,10 @@ mkMintingPolicyUntyped ::
   BuiltinData ->
   BuiltinData ->
   ()
-mkMintingPolicyUntyped sp vc validatorAddress redeemer ctx =
+mkMintingPolicyUntyped genesisUtxo vc validatorAddress redeemer ctx =
   check
     $ mkMintingPolicy
-      sp
+      genesisUtxo
       (unsafeFromBuiltinData vc)
       (Unsafe.wrap validatorAddress)
       redeemer

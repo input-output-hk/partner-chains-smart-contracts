@@ -45,7 +45,6 @@ optExample =
               )
           , index: UInt.fromInt 2
           }
-      , governanceAuthority: Just $ hexToByteArrayUnsafe "123456789abcdef0"
       }
   , paymentSigningKeyFile: Just "/absolute/path/to/payment.skey"
   , stakeSigningKeyFile: Nothing

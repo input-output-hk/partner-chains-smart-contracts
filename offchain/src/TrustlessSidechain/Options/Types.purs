@@ -58,10 +58,6 @@ type Config =
     sidechainParameters ::
       Maybe
         { genesisUtxo :: Maybe TransactionInput
-        -- governanceAuthority should really be a PubKeyHash but there's no
-        -- (easy) way of pulling a dummy PubKeyHash value out of thin air in
-        -- TrustlessSidechain.ConfigFile.optExample
-        , governanceAuthority :: Maybe ByteArray
         }
   , -- | Filepath of the payment signing key of the wallet owner
     paymentSigningKeyFile :: Maybe FilePath

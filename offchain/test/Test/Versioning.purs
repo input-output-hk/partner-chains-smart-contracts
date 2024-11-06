@@ -27,7 +27,6 @@ import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
-import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain.Governance (initGovernance)
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
@@ -72,7 +71,6 @@ testInsertAndInvalidateSuccessScenario =
             sidechainParams =
               SidechainParams
                 { genesisUtxo
-                , governanceAuthority: Governance.mkGovernanceAuthority pkh
                 }
 
           -- No versioned scripts are inserted.
@@ -143,7 +141,6 @@ testInsertSameScriptTwiceSuccessScenario =
             sidechainParams =
               SidechainParams
                 { genesisUtxo
-                , governanceAuthority: Governance.mkGovernanceAuthority pkh
                 }
 
           assertNumberOfActualVersionedScripts sidechainParams 0 0
@@ -192,7 +189,6 @@ testInsertUnversionedScriptSuccessScenario =
             sidechainParams =
               SidechainParams
                 { genesisUtxo
-                , governanceAuthority: Governance.mkGovernanceAuthority pkh
                 }
 
           assertNumberOfActualVersionedScripts sidechainParams 0 0
@@ -236,7 +232,6 @@ testRemovingTwiceSameScriptFailScenario =
             sidechainParams =
               SidechainParams
                 { genesisUtxo
-                , governanceAuthority: Governance.mkGovernanceAuthority pkh
                 }
 
           void $ initGovernance sidechainParams pkh

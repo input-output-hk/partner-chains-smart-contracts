@@ -12,14 +12,9 @@ import Contract.PlutusData
   )
 import Contract.Transaction (TransactionInput)
 import Control.Alternative (guard)
-import TrustlessSidechain.Governance.Admin as Governance
 
 newtype SidechainParams = SidechainParams
   { genesisUtxo :: TransactionInput
-  , -- Governance mechanism.  We temporarily rely on using a single master key
-    -- that can authorize any action requiring permission from the governing
-    -- committee.
-    governanceAuthority :: Governance.GovernanceAuthority
   }
 
 derive instance Generic SidechainParams _
@@ -32,23 +27,19 @@ instance ToData SidechainParams where
   toData
     ( SidechainParams
         { genesisUtxo
-        , governanceAuthority
         }
     ) =
     Constr (BigNum.fromInt 0)
       [ toData genesisUtxo
-      , toData governanceAuthority
       ]
 
 instance FromData SidechainParams where
   fromData = case _ of
-    Constr ix [ gu, ga ] -> do
+    Constr ix [ gu ] -> do
       guard (ix == BigNum.fromInt 0)
       genesisUtxo <- fromData gu
-      governanceAuthority <- fromData ga
       pure $ SidechainParams
         { genesisUtxo
-        , governanceAuthority
         }
     _ -> Nothing
 

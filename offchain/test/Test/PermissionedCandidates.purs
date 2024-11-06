@@ -11,7 +11,6 @@ import Test.Utils (TestnetTest, fails, getOwnTransactionInput)
 import TrustlessSidechain.Effects.Env (emptyEnv)
 import TrustlessSidechain.Effects.Log as Effect
 import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
-import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.InitSidechain.Governance (initGovernance)
 import TrustlessSidechain.PermissionedCandidates as PermissionedCandidates
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
@@ -43,7 +42,6 @@ testScenario =
           sidechainParams =
             SidechainParams
               { genesisUtxo
-              , governanceAuthority: Governance.mkGovernanceAuthority pkh
               }
         Effect.logInfo' $ "sidechainParams: " <> show sidechainParams
         void $ initGovernance sidechainParams pkh

@@ -15,17 +15,17 @@ import Data.Wrappers (
   productUnsafeFromData2,
  )
 import PlutusLedgerApi.V1.Value (CurrencySymbol)
+import PlutusLedgerApi.V2 (TxOutRef)
 import PlutusTx (makeIsDataIndexed)
 import TrustlessSidechain.PlutusPrelude hiding (
   productFromData2,
   productToData2,
   productUnsafeFromData2,
  )
-import TrustlessSidechain.Types (SidechainParams)
 
 data Foo = Foo
   { tcs :: CurrencySymbol
-  , sp :: SidechainParams
+  , genesisUtxo :: TxOutRef
   , kcs :: CurrencySymbol
   }
 

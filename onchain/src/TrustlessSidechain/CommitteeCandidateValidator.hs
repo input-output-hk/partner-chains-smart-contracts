@@ -28,7 +28,7 @@ mkCommitteeCandidateValidator ::
   BuiltinData ->
   Unsafe.ScriptContext ->
   Bool
-mkCommitteeCandidateValidator _sidechainParams (VersionedGenericDatum {datum = pkh}) _redeemer ctx =
+mkCommitteeCandidateValidator _genesisUtxo (VersionedGenericDatum {datum = pkh}) _redeemer ctx =
   traceIfFalse "ERROR-COMMITTEE-CANDIDATE-VALIDATOR-01" isSigned
   where
     info :: Unsafe.TxInfo

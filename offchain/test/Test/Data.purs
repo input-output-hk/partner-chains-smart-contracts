@@ -36,9 +36,6 @@ import TrustlessSidechain.CommitteeCandidateValidator
 import TrustlessSidechain.DParameter.Types
   ( DParameterValidatorDatum(DParameterValidatorDatum)
   )
-import TrustlessSidechain.Governance.Admin
-  ( GovernanceAuthority(GovernanceAuthority)
-  )
 import TrustlessSidechain.NativeTokenManagement.Types
   ( IlliquidCirculationSupplyRedeemer(..)
   , ImmutableReserveSettings(..)
@@ -193,11 +190,6 @@ genIlliquidCirculationSupplyRedeemer = QGen.oneOf $ NE.cons'
   [ pure WithdrawFromSupply
   ]
 
-genGA :: Gen GovernanceAuthority
-genGA = do
-  ArbitraryPaymentPubKeyHash (PaymentPubKeyHash pkh) <- arbitrary
-  pure $ GovernanceAuthority (wrap $ unwrap pkh)
-
 genSO :: Gen StakeOwnership
 genSO =
   ( ado
@@ -227,10 +219,8 @@ genBPR = do
 genSP :: Gen SidechainParams
 genSP = do
   ArbitraryTransactionInput genesisUtxo <- arbitrary
-  governanceAuthority <- genGA
   pure $ SidechainParams
     { genesisUtxo
-    , governanceAuthority
     }
 
 genGH :: Gen ByteArray

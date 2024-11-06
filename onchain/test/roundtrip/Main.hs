@@ -30,7 +30,6 @@ import Test.QuickCheck.Extra (
  )
 import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (QuickCheckTests (QuickCheckTests), testProperty)
-import TrustlessSidechain.Governance.Admin (GovernanceAuthority (GovernanceAuthority))
 import TrustlessSidechain.Governance.MultiSig (
   MultiSigGovParams (MultiSigGovParams),
  )
@@ -49,8 +48,8 @@ import TrustlessSidechain.Types (
   ),
   BlockProducerRegistrationMsg (
     BlockProducerRegistrationMsg,
+    genesisUtxo,
     inputUtxo,
-    sidechainParams,
     sidechainPubKey
   ),
   DParameterValidatorDatum (DParameterValidatorDatum),
@@ -66,11 +65,6 @@ import TrustlessSidechain.Types (
   ReserveDatum (ReserveDatum),
   ReserveRedeemer (DepositToReserve, Handover, TransferToIlliquidCirculationSupply, UpdateReserve),
   ReserveStats (ReserveStats),
-  SidechainParams (
-    SidechainParams,
-    genesisUtxo,
-    governanceAuthority
-  ),
   Signature (Signature),
   StakeOwnership (AdaBasedStaking, TokenBasedStaking),
  )
@@ -84,9 +78,7 @@ main =
   defaultMain
     . adjustOption go
     . testGroup "Roundtrip"
-    $ [ testProperty "SidechainParams (safe)" . toDataSafeLaws' genSP shrinkSP $ show
-      , testProperty "SidechainParams (unsafe)" . toDataUnsafeLaws' genSP shrinkSP $ show
-      , testProperty "EcdsaSecp256k1PubKey" . toDataSafeLaws' genPK shrinkPK $ show
+    $ [ testProperty "EcdsaSecp256k1PubKey" . toDataSafeLaws' genPK shrinkPK $ show
       , testProperty "EcdsaSecp256k1PubKey" . toDataUnsafeLaws' genPK shrinkPK $ show
       , testProperty "BlockProducerRegistration (safe)" . toDataSafeLaws' genBPR shrinkBPR $ show
       , testProperty "BlockProducerRegistration (unsafe)" . toDataUnsafeLaws' genBPR shrinkBPR $ show
@@ -192,10 +184,10 @@ genVOC =
 
 genBPRM :: Gen BlockProducerRegistrationMsg
 genBPRM = do
-  sp <- genSP
+  ArbitraryTxOutRef genUtxo <- arbitrary
   spk <- (\(EcdsaSecp256k1PubKey pk) -> pk) <$> genPK
   ArbitraryTxOutRef tout <- arbitrary
-  pure . BlockProducerRegistrationMsg sp spk $ tout
+  pure . BlockProducerRegistrationMsg genUtxo spk $ tout
 
 genSO :: Gen StakeOwnership
 genSO = oneof [arbitraryAdaBasedCreds, pure TokenBasedStaking]
@@ -242,17 +234,6 @@ genPK = do
         . SECP.derivePubKey ctx
         $ privKey
     Nothing -> genPK -- we assume this isn't gonna happen too often
-
-genGA :: Gen GovernanceAuthority
-genGA = do
-  ArbitraryPubKeyHash pkh <- arbitrary
-  pure $ GovernanceAuthority pkh
-
-genSP :: Gen SidechainParams
-genSP = do
-  ArbitraryTxOutRef gu <- arbitrary
-  ga <- genGA
-  pure . SidechainParams gu $ ga
 
 -- Shrinkers
 
@@ -304,10 +285,10 @@ shrinkVOC (VersionOracleConfig versionOracleCurrencySymbol) = do
 
 shrinkBPRM :: BlockProducerRegistrationMsg -> [BlockProducerRegistrationMsg]
 shrinkBPRM (BlockProducerRegistrationMsg {..}) = do
-  sp' <- shrinkSP sidechainParams
+  ArbitraryTxOutRef genesisUtxo' <- shrink (ArbitraryTxOutRef genesisUtxo)
   EcdsaSecp256k1PubKey spk' <- shrinkPK (EcdsaSecp256k1PubKey sidechainPubKey)
   ArbitraryTxOutRef tout' <- shrink (ArbitraryTxOutRef inputUtxo)
-  pure . BlockProducerRegistrationMsg sp' spk' $ tout'
+  pure . BlockProducerRegistrationMsg genesisUtxo' spk' $ tout'
 
 shrinkSO :: StakeOwnership -> [StakeOwnership]
 shrinkSO = \case
@@ -339,18 +320,6 @@ shrinkBPR (BlockProducerRegistration {..}) = do
 -- We don't shrink these, as it wouldn't make much sense to
 shrinkPK :: EcdsaSecp256k1PubKey -> [EcdsaSecp256k1PubKey]
 shrinkPK = const []
-
-shrinkGA :: GovernanceAuthority -> [GovernanceAuthority]
-shrinkGA (GovernanceAuthority pkh) = do
-  ArbitraryPubKeyHash pkh' <- shrink (ArbitraryPubKeyHash pkh)
-  pure $ GovernanceAuthority pkh'
-
-shrinkSP :: SidechainParams -> [SidechainParams]
-shrinkSP (SidechainParams {..}) = do
-  ArbitraryTxOutRef gu' <- shrink . ArbitraryTxOutRef $ genesisUtxo
-  ga <- shrinkGA governanceAuthority
-  -- We don't shrink the denominator, as this could make the result _bigger_.
-  pure . SidechainParams gu' $ ga
 
 -- | Wrapper for 'PubKey' to provide QuickCheck instances.
 --
