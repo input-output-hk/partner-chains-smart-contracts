@@ -24,8 +24,8 @@ getVersionedPoliciesAndValidators ::
     { versionedPolicies :: (List (Tuple Types.ScriptId PlutusScript))
     , versionedValidators :: (List (Tuple Types.ScriptId PlutusScript))
     }
-getVersionedPoliciesAndValidators sp = do
-  committeeScripts <- getCommitteeSelectionPoliciesAndValidators sp
+getVersionedPoliciesAndValidators genesisUtxo = do
+  committeeScripts <- getCommitteeSelectionPoliciesAndValidators genesisUtxo
 
   pure $ committeeScripts
 

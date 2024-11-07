@@ -77,7 +77,7 @@ getCommitteeSelectionPoliciesAndValidators ::
     { versionedPolicies :: List (Tuple ScriptId PlutusScript)
     , versionedValidators :: List (Tuple ScriptId PlutusScript)
     }
-getCommitteeSelectionPoliciesAndValidators sp =
+getCommitteeSelectionPoliciesAndValidators genesisUtxo =
   do
     -- Getting policies to version
     -----------------------------------
@@ -90,7 +90,7 @@ getCommitteeSelectionPoliciesAndValidators sp =
 
     -- Getting validators to version
     -----------------------------------
-    committeeCandidateValidator <- getCommitteeCandidateValidator sp
+    committeeCandidateValidator <- getCommitteeCandidateValidator genesisUtxo
 
     let
       versionedValidators = List.fromFoldable
@@ -106,8 +106,8 @@ getNativeTokenManagementPoliciesAndValidators ::
     { versionedPolicies :: List (Tuple ScriptId PlutusScript)
     , versionedValidators :: List (Tuple ScriptId PlutusScript)
     }
-getNativeTokenManagementPoliciesAndValidators sp = do
-  versionOracleConfig <- Versioning.getVersionOracleConfig sp
+getNativeTokenManagementPoliciesAndValidators genesisUtxo = do
+  versionOracleConfig <- Versioning.getVersionOracleConfig genesisUtxo
   reserveAuthPolicy' <- reserveAuthPolicy versionOracleConfig
   reserveValidator' <- reserveValidator versionOracleConfig
   illiquidCirculationSupplyValidator' <-

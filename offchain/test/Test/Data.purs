@@ -4,9 +4,6 @@ module Test.Data
 
 import Contract.Prelude
 
-import Cardano.Plutus.Types.PaymentPubKeyHash
-  ( PaymentPubKeyHash(PaymentPubKeyHash)
-  )
 import Cardano.Types.Asset (Asset(Asset))
 import Contract.Prim.ByteArray (ByteArray, byteArrayFromIntArrayUnsafe)
 import Control.Alt ((<|>))
@@ -22,7 +19,6 @@ import Test.Utils.Laws (toDataLaws)
 import Test.Utils.QuickCheck
   ( ArbitraryAssetName(ArbitraryAssetName)
   , ArbitraryBigInt(ArbitraryBigInt)
-  , ArbitraryPaymentPubKeyHash(ArbitraryPaymentPubKeyHash)
   , ArbitraryPubKey(ArbitraryPubKey)
   , ArbitraryScriptHash(ArbitraryScriptHash)
   , ArbitrarySignature(ArbitrarySignature)

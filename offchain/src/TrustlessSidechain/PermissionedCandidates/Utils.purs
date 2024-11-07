@@ -36,7 +36,7 @@ import TrustlessSidechain.Versioning.ScriptId
 import TrustlessSidechain.Versioning.Utils as Versioning
 import Type.Row (type (+))
 
--- | Get the OnlyMintMintingPolicy by applying `SidechainParams` to the dummy
+-- | Get the OnlyMintMintingPolicy by applying `genesisUtxo` to the dummy
 -- | minting policy.
 decodePermissionedCandidatesMintingPolicy ::
   forall r.

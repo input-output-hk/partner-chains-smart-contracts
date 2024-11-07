@@ -183,7 +183,7 @@ optSpec maybeConfig =
     ]
 
 -- | Helper function, adding parsers of common fields (private key, staking key,
--- | sidechain parameters and runtime configuration)
+-- | genesis UTXO and runtime configuration)
 withCommonOpts :: Maybe Config -> Parser TxEndpoint -> Parser Options
 withCommonOpts maybeConfig endpointParser = ado
   pSkey <- pSkeySpec maybeConfig
@@ -307,9 +307,9 @@ genesisUtxoSpec :: Maybe Config -> Parser TransactionInput
 genesisUtxoSpec maybeConfig =
   option Parsers.transactionInput $ fold
     [ short 'c'
-    , long "genesis-committee-hash-utxo"
+    , long "genesis-utxo"
     , metavar "TX_ID#TX_IDX"
-    , help "Input UTxO to be spent with the first committee hash setup"
+    , help "Input UTxO to be spent setting up the chain"
     , maybe mempty value
         (maybeConfig >>= _.genesisUtxo)
     ]

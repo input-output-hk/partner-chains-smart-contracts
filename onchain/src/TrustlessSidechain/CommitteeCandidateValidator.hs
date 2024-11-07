@@ -43,10 +43,10 @@ committeeCandidateValidatorUntyped ::
   BuiltinData ->
   BuiltinData ->
   ()
-committeeCandidateValidatorUntyped sidechainParams datum red ctx =
+committeeCandidateValidatorUntyped genesisUtxo datum red ctx =
   check
     $ mkCommitteeCandidateValidator
-      sidechainParams
+      genesisUtxo
       (unsafeFromBuiltinData datum)
       red
       (Unsafe.ScriptContext ctx)

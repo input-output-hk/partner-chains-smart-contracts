@@ -167,10 +167,10 @@ reserveAuthLookupsAndConstraints ::
     { reserveAuthLookups :: Lookups.ScriptLookups
     , reserveAuthConstraints :: TxConstraints.TxConstraints
     }
-reserveAuthLookupsAndConstraints sp = do
+reserveAuthLookupsAndConstraints genesisUtxo = do
   (reserveAuthRefTxInput /\ reserveAuthRefTxOutput) <-
     Versioning.getVersionedScriptRefUtxo
-      sp
+      genesisUtxo
       ( VersionOracle
           { scriptId: ReserveAuthPolicy
           }
@@ -190,10 +190,10 @@ illiquidCirculationSupplyLookupsAndConstraints ::
     { icsLookups :: Lookups.ScriptLookups
     , icsConstraints :: TxConstraints.TxConstraints
     }
-illiquidCirculationSupplyLookupsAndConstraints sp = do
+illiquidCirculationSupplyLookupsAndConstraints genesisUtxo = do
   (icsRefTxInput /\ icsRefTxOutput) <-
     Versioning.getVersionedScriptRefUtxo
-      sp
+      genesisUtxo
       ( VersionOracle
           { scriptId: IlliquidCirculationSupplyValidator
           }
@@ -213,10 +213,10 @@ reserveLookupsAndConstraints ::
     { reserveLookups :: Lookups.ScriptLookups
     , reserveConstraints :: TxConstraints.TxConstraints
     }
-reserveLookupsAndConstraints sp = do
+reserveLookupsAndConstraints genesisUtxo = do
   (reserveRefTxInput /\ reserveRefTxOutput) <-
     Versioning.getVersionedScriptRefUtxo
-      sp
+      genesisUtxo
       ( VersionOracle
           { scriptId: ReserveValidator
           }
@@ -337,7 +337,6 @@ initialiseReserveUtxo
     , version: BigInt.fromInt 0
     }
 
-
 extractReserveDatum ::
   TransactionOutput -> Maybe (VersionedGenericDatum ReserveDatum)
 extractReserveDatum txOut =
@@ -348,8 +347,8 @@ findReserveUtxoForAssetClass ::
   TransactionInput ->
   Asset ->
   Run (APP r) UtxoMap
-findReserveUtxoForAssetClass sp ac = do
-  utxos <- findReserveUtxos sp
+findReserveUtxoForAssetClass genesisUtxo ac = do
+  utxos <- findReserveUtxos genesisUtxo
   let
     extractTokenKind (VersionedGenericDatum { datum }) =
       (unwrap >>> _.immutableSettings >>> unwrap >>> _.tokenKind) datum
@@ -362,25 +361,25 @@ depositToReserve ::
   Asset ->
   BigNum ->
   Run (APP r) TransactionHash
-depositToReserve sp asset amount = do
+depositToReserve genesisUtxo asset amount = do
   utxo <- fromMaybeThrow (NotFoundUtxo "Reserve UTxO for asset class not found")
-    $ (Map.toUnfoldable <$> findReserveUtxoForAssetClass sp asset)
+    $ (Map.toUnfoldable <$> findReserveUtxoForAssetClass genesisUtxo asset)
 
   { lookups: governanceLookups
   , constraints: governanceConstraints
-  } <- Governance.approvedByGovernanceLookupsAndConstraints sp
+  } <- Governance.approvedByGovernanceLookupsAndConstraints genesisUtxo
 
   { reserveAuthLookups
   , reserveAuthConstraints
-  } <- reserveAuthLookupsAndConstraints sp
+  } <- reserveAuthLookupsAndConstraints genesisUtxo
 
   { reserveLookups
   , reserveConstraints
-  } <- reserveLookupsAndConstraints sp
+  } <- reserveLookupsAndConstraints genesisUtxo
 
   (reserveValidatorTxInput /\ reserveValidatorTxOutput) <-
     Versioning.getVersionedScriptRefUtxo
-      sp
+      genesisUtxo
       ( VersionOracle
           { scriptId: ReserveValidator
           }
@@ -388,9 +387,9 @@ depositToReserve sp asset amount = do
 
   { icsLookups
   , icsConstraints
-  } <- illiquidCirculationSupplyLookupsAndConstraints sp
+  } <- illiquidCirculationSupplyLookupsAndConstraints genesisUtxo
 
-  versionOracleConfig <- Versioning.getVersionOracleConfig sp
+  versionOracleConfig <- Versioning.getVersionOracleConfig genesisUtxo
   reserveValidator' <- reserveValidator versionOracleConfig
 
   datum <- fromMaybeThrow (InvalidData "Reserve does not carry inline datum")
@@ -446,32 +445,32 @@ updateReserveUtxo ::
   MutableReserveSettings ->
   (TransactionInput /\ TransactionOutput) ->
   Run (APP r) TransactionHash
-updateReserveUtxo sp updatedMutableSettings utxo = do
+updateReserveUtxo genesisUtxo updatedMutableSettings utxo = do
   { lookups: governanceLookups
   , constraints: governanceConstraints
-  } <- Governance.approvedByGovernanceLookupsAndConstraints sp
+  } <- Governance.approvedByGovernanceLookupsAndConstraints genesisUtxo
 
   { reserveAuthLookups
   , reserveAuthConstraints
-  } <- reserveAuthLookupsAndConstraints sp
+  } <- reserveAuthLookupsAndConstraints genesisUtxo
 
   { icsLookups
   , icsConstraints
-  } <- illiquidCirculationSupplyLookupsAndConstraints sp
+  } <- illiquidCirculationSupplyLookupsAndConstraints genesisUtxo
 
   { reserveLookups
   , reserveConstraints
-  } <- reserveLookupsAndConstraints sp
+  } <- reserveLookupsAndConstraints genesisUtxo
 
   (reserveValidatorTxInput /\ reserveValidatorTxOutput) <-
     Versioning.getVersionedScriptRefUtxo
-      sp
+      genesisUtxo
       ( VersionOracle
           { scriptId: ReserveValidator
           }
       )
 
-  versionOracleConfig <- Versioning.getVersionOracleConfig sp
+  versionOracleConfig <- Versioning.getVersionOracleConfig genesisUtxo
   reserveValidator' <- reserveValidator versionOracleConfig
 
   genericDatum <-
@@ -538,34 +537,35 @@ transferToIlliquidCirculationSupply ::
   (TransactionInput /\ TransactionOutput) ->
   Run (APP r) TransactionHash
 transferToIlliquidCirculationSupply
-  sp
+  genesisUtxo
   totalAccruedTillNow
   vFunctionTotalAccruedMintingPolicy
   utxo = do
   { reserveAuthLookups
   , reserveAuthConstraints
-  } <- reserveAuthLookupsAndConstraints sp
+  } <- reserveAuthLookupsAndConstraints genesisUtxo
 
   { icsLookups
   , icsConstraints
-  } <- illiquidCirculationSupplyLookupsAndConstraints sp
+  } <- illiquidCirculationSupplyLookupsAndConstraints genesisUtxo
 
   { reserveLookups
   , reserveConstraints
-  } <- reserveLookupsAndConstraints sp
+  } <- reserveLookupsAndConstraints genesisUtxo
 
   (reserveValidatorTxInput /\ reserveValidatorTxOutput) <-
     Versioning.getVersionedScriptRefUtxo
-      sp
+      genesisUtxo
       ( VersionOracle
           { scriptId: ReserveValidator
           }
       )
 
-  versionOracleConfig <- Versioning.getVersionOracleConfig sp
+  versionOracleConfig <- Versioning.getVersionOracleConfig genesisUtxo
   reserveValidator' <- reserveValidator versionOracleConfig
 
-  illiquidCirculationSupplyValidator <- getIlliquidCirculationSupplyValidator sp
+  illiquidCirculationSupplyValidator <- getIlliquidCirculationSupplyValidator
+    genesisUtxo
 
   genericDatum <-
     fromMaybeThrow (InvalidData "Reserve does not carry inline datum")
@@ -701,28 +701,29 @@ handover ::
   (TransactionInput /\ TransactionOutput) ->
   Run (APP r) TransactionHash
 handover
-  sp
+  genesisUtxo
   utxo = do
   { reserveAuthLookups
   , reserveAuthConstraints
-  } <- reserveAuthLookupsAndConstraints sp
+  } <- reserveAuthLookupsAndConstraints genesisUtxo
 
   { icsLookups
   , icsConstraints
-  } <- illiquidCirculationSupplyLookupsAndConstraints sp
+  } <- illiquidCirculationSupplyLookupsAndConstraints genesisUtxo
 
   { lookups: governanceLookups
   , constraints: governanceConstraints
-  } <- Governance.approvedByGovernanceLookupsAndConstraints sp
+  } <- Governance.approvedByGovernanceLookupsAndConstraints genesisUtxo
 
   { reserveLookups
   , reserveConstraints
-  } <- reserveLookupsAndConstraints sp
+  } <- reserveLookupsAndConstraints genesisUtxo
 
-  versionOracleConfig <- Versioning.getVersionOracleConfig sp
+  versionOracleConfig <- Versioning.getVersionOracleConfig genesisUtxo
   reserveAuthPolicy' <- reserveAuthPolicy versionOracleConfig
 
-  illiquidCirculationSupplyValidator <- getIlliquidCirculationSupplyValidator sp
+  illiquidCirculationSupplyValidator <- getIlliquidCirculationSupplyValidator
+    genesisUtxo
 
   datum <- fromMaybeThrow (InvalidData "Reserve does not carry inline datum")
     $ pure
@@ -732,7 +733,7 @@ handover
 
   (reserveAuthRefTxInput /\ reserveAuthRefTxOutput) <-
     Versioning.getVersionedScriptRefUtxo
-      sp
+      genesisUtxo
       ( VersionOracle
           { scriptId: ReserveAuthPolicy
           }
@@ -740,7 +741,7 @@ handover
 
   (reserveRefTxInput /\ reserveRefTxOutput) <-
     Versioning.getVersionedScriptRefUtxo
-      sp
+      genesisUtxo
       ( VersionOracle
           { scriptId: ReserveValidator
           }
