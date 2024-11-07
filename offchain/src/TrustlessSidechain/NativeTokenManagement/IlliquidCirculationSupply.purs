@@ -7,6 +7,7 @@ module TrustlessSidechain.NativeTokenManagement.IlliquidCirculationSupply
 import Contract.Prelude
 
 import Cardano.Types.AssetName (AssetName)
+import Cardano.Types.BigInt as BigInt
 import Cardano.Types.Int as Int
 import Cardano.Types.PlutusData (unit) as PlutusData
 import Cardano.Types.PlutusScript (PlutusScript)
@@ -40,6 +41,9 @@ import TrustlessSidechain.NativeTokenManagement.Types
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Asset (emptyAssetName)
+import TrustlessSidechain.Utils.Data
+  ( VersionedGenericDatum(VersionedGenericDatum)
+  )
 import TrustlessSidechain.Utils.Scripts
   ( mkValidatorWithParams
   )
@@ -110,6 +114,12 @@ depositMoreToSupply sp depositedValue utxo = do
       $ pure (value `Value.add` depositedValue)
 
   let
+    datum = toData $ VersionedGenericDatum
+      { datum: unit
+      , builtinData: toData PlutusData.unit
+      , version: BigInt.fromInt 0
+      }
+
     lookups :: Lookups.ScriptLookups
     lookups =
       Lookups.unspentOutputs (uncurry Map.singleton utxo)
@@ -118,7 +128,7 @@ depositMoreToSupply sp depositedValue utxo = do
     constraints =
       TxConstraints.mustPayToScript
         icsValidatorHash
-        PlutusData.unit
+        datum
         DatumInline
         newValue
         <> TxConstraints.mustSpendScriptOutput (fst utxo)
@@ -166,6 +176,12 @@ withdrawFromSupply sp mintingPolicyHash withdrawnValue utxo = do
       $ pure (value `Value.minus` withdrawnValue)
 
   let
+    datum = toData $ VersionedGenericDatum
+      { datum: unit
+      , builtinData: toData PlutusData.unit
+      , version: BigInt.fromInt 0
+      }
+
     lookups :: Lookups.ScriptLookups
     lookups =
       Lookups.unspentOutputs (uncurry Map.singleton utxo)
@@ -175,7 +191,7 @@ withdrawFromSupply sp mintingPolicyHash withdrawnValue utxo = do
     constraints =
       TxConstraints.mustPayToScript
         icsValidatorHash
-        PlutusData.unit
+        datum
         DatumInline
         newValue
         <> TxConstraints.mustSpendScriptOutput (fst utxo)

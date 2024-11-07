@@ -140,7 +140,7 @@ permissionedCandidatesValidator ::
   BuiltinData ->
   VersionOracleConfig ->
   -- Here raw BuiltinData is passed instead of
-  -- 'PermissionedCandidatesValidatorDatum' to allow to spend from this
+  -- 'VersionedGenericDatum ()' to allow to spend from this
   -- validator even if UTxO contains invalid datum
   BuiltinData ->
   PermissionedCandidatesValidatorRedeemer ->
@@ -192,12 +192,12 @@ serialisableMintingPolicy =
 
 mkValidatorUntyped ::
   BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkValidatorUntyped sp vc address redeemer ctx =
+mkValidatorUntyped sp vc datum redeemer ctx =
   check
     $ permissionedCandidatesValidator
       sp
       (unsafeFromBuiltinData vc)
-      address
+      datum
       (unsafeFromBuiltinData redeemer)
       (Unsafe.wrap ctx)
 

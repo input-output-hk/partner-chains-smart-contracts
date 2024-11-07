@@ -5,7 +5,7 @@ module Test.TrustlessSidechain.Golden.Types (tests) where
 import TrustlessSidechain.HaskellPrelude
 
 import PlutusLedgerApi.V1.Value qualified as Value
-import PlutusLedgerApi.V2 (POSIXTime (..), TxOutRef (TxOutRef))
+import PlutusLedgerApi.V2 (POSIXTime (..), PubKeyHash, TxOutRef (TxOutRef), toBuiltinData)
 import Test.Tasty (TestTree, testGroup)
 import Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest)
 import TrustlessSidechain.Governance.Admin (mkGovernanceAuthority)
@@ -77,6 +77,7 @@ import TrustlessSidechain.Types (
     thresholdNumerator
   ),
   StakeOwnership (AdaBasedStaking, TokenBasedStaking),
+  VersionedGenericDatum (..),
  )
 
 -- | Tests for all data types with @IsData@ implementation
@@ -125,28 +126,40 @@ sampleSidechainParams =
     , thresholdDenominator = 3
     }
 
-sampleBlockProducerRegistration1 :: BlockProducerRegistration
+sampleBlockProducerRegistration1 :: VersionedGenericDatum PubKeyHash
 sampleBlockProducerRegistration1 =
-  BlockProducerRegistration
-    { stakeOwnership = AdaBasedStaking "e734ea6c2b6257de72355e472aa05a4c487e6b463c029ed306df2f01b5636b58" "33a9681755ecdae6f572bcecaacb53d2fc6add491aa5dc65180195e73b87b8abcd0f0520ee808b31fe625631d5c86eda31b5dfe6bf6bb18f0391facd939f6d00"
-    , sidechainPubKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
-    , sidechainSignature = "b377dd97d20aaf784cf88dbbb1ffc0663311cb60451b5646c57192060143b9f6674f52aba3b7e09cc77eddafed0f64ca040dcdaa0c433ecb4b07a11b4b541000"
-    , inputUtxo = sampleTxOutRef
-    , ownPkh = "0f45aaf1b2959db6e5ff94dbb1f823bf257680c3c723ac2d49f97546"
-    , auraKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
-    , grandpaKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
+  VersionedGenericDatum
+    { datum = "0f45aaf1b2959db6e5ff94dbb1f823bf257680c3c723ac2d49f97546"
+    , genericData =
+        toBuiltinData
+          $ BlockProducerRegistration
+            { stakeOwnership = AdaBasedStaking "e734ea6c2b6257de72355e472aa05a4c487e6b463c029ed306df2f01b5636b58" "33a9681755ecdae6f572bcecaacb53d2fc6add491aa5dc65180195e73b87b8abcd0f0520ee808b31fe625631d5c86eda31b5dfe6bf6bb18f0391facd939f6d00"
+            , sidechainPubKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
+            , sidechainSignature = "b377dd97d20aaf784cf88dbbb1ffc0663311cb60451b5646c57192060143b9f6674f52aba3b7e09cc77eddafed0f64ca040dcdaa0c433ecb4b07a11b4b541000"
+            , inputUtxo = sampleTxOutRef
+            , ownPkh = "0f45aaf1b2959db6e5ff94dbb1f823bf257680c3c723ac2d49f97546"
+            , auraKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
+            , grandpaKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
+            }
+    , version = 0
     }
 
-sampleBlockProducerRegistration2 :: BlockProducerRegistration
+sampleBlockProducerRegistration2 :: VersionedGenericDatum PubKeyHash
 sampleBlockProducerRegistration2 =
-  BlockProducerRegistration
-    { stakeOwnership = TokenBasedStaking
-    , sidechainPubKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
-    , sidechainSignature = "b377dd97d20aaf784cf88dbbb1ffc0663311cb60451b5646c57192060143b9f6674f52aba3b7e09cc77eddafed0f64ca040dcdaa0c433ecb4b07a11b4b541000"
-    , inputUtxo = sampleTxOutRef
-    , ownPkh = "0f45aaf1b2959db6e5ff94dbb1f823bf257680c3c723ac2d49f97546"
-    , auraKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
-    , grandpaKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
+  VersionedGenericDatum
+    { datum = "0f45aaf1b2959db6e5ff94dbb1f823bf257680c3c723ac2d49f97546"
+    , genericData =
+        toBuiltinData
+          $ BlockProducerRegistration
+            { stakeOwnership = TokenBasedStaking
+            , sidechainPubKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
+            , sidechainSignature = "b377dd97d20aaf784cf88dbbb1ffc0663311cb60451b5646c57192060143b9f6674f52aba3b7e09cc77eddafed0f64ca040dcdaa0c433ecb4b07a11b4b541000"
+            , inputUtxo = sampleTxOutRef
+            , ownPkh = "0f45aaf1b2959db6e5ff94dbb1f823bf257680c3c723ac2d49f97546"
+            , auraKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
+            , grandpaKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
+            }
+    , version = 0
     }
 
 sampleBlockProducerRegistrationMsg :: BlockProducerRegistrationMsg
@@ -157,11 +170,17 @@ sampleBlockProducerRegistrationMsg =
     , inputUtxo = sampleTxOutRef
     }
 
-sampleDParameterValidatorDatum :: DParameterValidatorDatum
+sampleDParameterValidatorDatum :: VersionedGenericDatum ()
 sampleDParameterValidatorDatum =
-  DParameterValidatorDatum
-    { permissionedCandidatesCount = 17
-    , registeredCandidatesCount = 42
+  VersionedGenericDatum
+    { datum = ()
+    , genericData =
+        toBuiltinData
+          $ DParameterValidatorDatum
+            { permissionedCandidatesCount = 17
+            , registeredCandidatesCount = 42
+            }
+    , version = 0
     }
 
 samplePermissionedCandidatesPolicyRedeemer1 :: PermissionedCandidatesPolicyRedeemer
@@ -178,13 +197,19 @@ samplePermissionedCandidateKeys =
     , grandpaKey = "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
     }
 
-samplePermissionedCandidatesValidatorDatum :: PermissionedCandidatesValidatorDatum
+samplePermissionedCandidatesValidatorDatum :: VersionedGenericDatum ()
 samplePermissionedCandidatesValidatorDatum =
-  PermissionedCandidatesValidatorDatum
-    { candidates =
-        [ samplePermissionedCandidateKeys
-        , samplePermissionedCandidateKeys
-        ]
+  VersionedGenericDatum
+    { datum = ()
+    , genericData =
+        toBuiltinData
+          $ PermissionedCandidatesValidatorDatum
+            { candidates =
+                [ samplePermissionedCandidateKeys
+                , samplePermissionedCandidateKeys
+                ]
+            }
+    , version = 0
     }
 
 samplePermissionedCandidatesValidatorRedeemer1 :: PermissionedCandidatesValidatorRedeemer
@@ -193,16 +218,21 @@ samplePermissionedCandidatesValidatorRedeemer1 = UpdatePermissionedCandidates
 samplePermissionedCandidatesValidatorRedeemer2 :: PermissionedCandidatesValidatorRedeemer
 samplePermissionedCandidatesValidatorRedeemer2 = RemovePermissionedCandidates
 
-sampleReserveDatum :: ReserveDatum
+sampleReserveDatum :: VersionedGenericDatum ReserveDatum
 sampleReserveDatum =
-  ReserveDatum
-    { immutableSettings =
-        ImmutableReserveSettings
-          (POSIXTime 1234513245)
-          (Value.AssetClass ("0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d", "asdf"))
-    , mutableSettings =
-        MutableReserveSettings "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d" 0
-    , stats = ReserveStats 15
+  VersionedGenericDatum
+    { datum =
+        ReserveDatum
+          { immutableSettings =
+              ImmutableReserveSettings
+                (POSIXTime 1234513245)
+                (Value.AssetClass ("0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d", "asdf"))
+          , mutableSettings =
+              MutableReserveSettings "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d" 0
+          , stats = ReserveStats 15
+          }
+    , genericData = toBuiltinData ()
+    , version = 0
     }
 
 sampleReserveRedeemer1 :: ReserveRedeemer

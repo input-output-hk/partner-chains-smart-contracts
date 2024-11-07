@@ -65,6 +65,7 @@ import TrustlessSidechain.NativeTokenManagement.Types
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Asset (emptyAssetName, singletonFromAsset)
+import TrustlessSidechain.Utils.Data (VersionedGenericDatum(..), getDatum)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
   , mkValidatorWithParams
@@ -314,7 +315,7 @@ initialiseReserveUtxo
             )
           <> TxConstraints.mustPayToScript
             reserveValidator'
-            (toData initialReserveDatum)
+            (toData datum)
             DatumInline
             totalValueToPay
 
@@ -330,7 +331,16 @@ initialiseReserveUtxo
     , stats: ReserveStats { tokenTotalAmountTransferred: BigInt.fromInt 0 }
     }
 
-extractReserveDatum :: TransactionOutput -> Maybe ReserveDatum
+  datum :: VersionedGenericDatum ReserveDatum
+  datum = VersionedGenericDatum
+    { datum: initialReserveDatum
+    , builtinData: toData unit
+    , version: BigInt.fromInt 0
+    }
+
+
+extractReserveDatum ::
+  TransactionOutput -> Maybe (VersionedGenericDatum ReserveDatum)
 extractReserveDatum txOut =
   (unwrap txOut).datum >>= outputDatumDatum >>= fromData
 
@@ -342,12 +352,10 @@ findReserveUtxoForAssetClass ::
 findReserveUtxoForAssetClass sp ac = do
   utxos <- findReserveUtxos sp
   let
-    extractTokenKind =
-      unwrap >>> _.immutableSettings >>> unwrap >>> _.tokenKind
+    extractTokenKind (VersionedGenericDatum { datum }) =
+      (unwrap >>> _.immutableSettings >>> unwrap >>> _.tokenKind) datum
   pure $ flip Map.filter utxos $ \txOut ->
-    flip (maybe false) (extractReserveDatum txOut)
-      $ extractTokenKind
-      >>> (_ == ac)
+    maybe false (extractTokenKind >>> (_ == ac)) (extractReserveDatum txOut)
 
 depositToReserve ::
   forall r.
@@ -467,15 +475,27 @@ updateReserveUtxo sp updatedMutableSettings utxo = do
   versionOracleConfig <- Versioning.getVersionOracleConfig sp
   reserveValidator' <- reserveValidator versionOracleConfig
 
-  datum <- fromMaybeThrow (InvalidData "Reserve does not carry inline datum")
-    $ pure
-    $ extractReserveDatum
-    $ snd
-    $ utxo
+  genericDatum <-
+    fromMaybeThrow (InvalidData "Reserve does not carry inline datum")
+      $ pure
+      $ extractReserveDatum
+      $ snd
+      $ utxo
 
   let
-    updatedDatum = ReserveDatum $ (unwrap datum)
+    updatedReserveDatum = ReserveDatum $ (unwrap $ getDatum genericDatum)
       { mutableSettings = updatedMutableSettings }
+
+    updatedDatum =
+      let
+        VersionedGenericDatum { builtinData, version } = genericDatum
+      in
+        VersionedGenericDatum
+          { datum: updatedReserveDatum
+          , builtinData
+          , version
+          }
+
     value = unwrap >>> _.amount $ snd utxo
 
     lookups :: Lookups.ScriptLookups
@@ -548,49 +568,54 @@ transferToIlliquidCirculationSupply
 
   illiquidCirculationSupplyValidator <- getIlliquidCirculationSupplyValidator sp
 
-  datum <- fromMaybeThrow (InvalidData "Reserve does not carry inline datum")
-    $ pure
-    $ extractReserveDatum
-    $ snd
-    $ utxo
+  genericDatum <-
+    fromMaybeThrow (InvalidData "Reserve does not carry inline datum")
+      $ pure
+      $ extractReserveDatum
+      $ snd
+      $ utxo
 
   let
     tokenKindAsset =
-      unwrap
+      getDatum
+        >>> unwrap
         >>> _.immutableSettings
         >>> unwrap
         >>> _.tokenKind
-        $ datum
+        $ genericDatum
 
   tokenTotalAmountTransferred <- fromMaybeThrow
     (GenericInternalError "Could not calculate total amount transferred")
-    ( unwrap
+    ( getDatum
+        >>> unwrap
         >>> _.stats
         >>> unwrap
         >>> _.tokenTotalAmountTransferred
         >>> BigInt.toInt
         >>> pure
-        $ datum
+        $ genericDatum
     )
   let
     vFunctionTotalAccruedCurrencySymbol =
-      unwrap
+      getDatum
+        >>> unwrap
         >>> _.mutableSettings
         >>> unwrap
         >>> _.vFunctionTotalAccrued
-        $ datum
+        $ genericDatum
 
   incentiveAmount <-
     fromMaybeThrow
       (GenericInternalError "Could not calculate incentive amount")
       $ pure
-          ( unwrap
+          ( getDatum
+              >>> unwrap
               >>> _.mutableSettings
               >>> unwrap
               >>> _.incentiveAmount
               >>> BigInt.toString
               >>> BigNum.fromString
-              $ datum
+              $ genericDatum
           )
 
   unless
@@ -614,10 +639,15 @@ transferToIlliquidCirculationSupply
       (BigNum.fromInt toTransferAsInt)
 
   let
-    updatedDatum = ReserveDatum $ (unwrap datum)
+    updatedReserveDatum = ReserveDatum $ (unwrap $ getDatum genericDatum)
       { stats = ReserveStats
           { tokenTotalAmountTransferred: BigInt.fromInt totalAccruedTillNow }
       }
+    updatedDatum =
+      let
+        VersionedGenericDatum { builtinData, version } = genericDatum
+      in
+        VersionedGenericDatum { datum: updatedReserveDatum, builtinData, version }
     value = unwrap >>> _.amount $ snd utxo
 
   newValue <- fromMaybeThrow
@@ -719,7 +749,8 @@ handover
 
   let
     tokenKindAsset =
-      unwrap
+      getDatum
+        >>> unwrap
         >>> _.immutableSettings
         >>> unwrap
         >>> _.tokenKind

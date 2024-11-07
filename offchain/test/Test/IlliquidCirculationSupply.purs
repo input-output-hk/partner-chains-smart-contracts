@@ -57,6 +57,9 @@ import TrustlessSidechain.NativeTokenManagement.IlliquidCirculationSupply
 import TrustlessSidechain.SidechainParams (SidechainParams(SidechainParams))
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Asset (emptyAssetName, singletonFromAsset)
+import TrustlessSidechain.Utils.Data
+  ( VersionedGenericDatum(VersionedGenericDatum)
+  )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId
@@ -146,6 +149,12 @@ initialiseICSUtxo
         versionOracleConfig
 
     let
+      datum = toData $ VersionedGenericDatum
+        { datum: unit
+        , builtinData: toData unit
+        , version: BigInt.fromInt 0
+        }
+
       lookups :: Lookups.ScriptLookups
       lookups =
         mempty
@@ -153,7 +162,7 @@ initialiseICSUtxo
       constraints =
         TxConstraints.mustPayToScript
           illiquidCirculationSupplyValidator'
-          (toData unit)
+          datum
           DatumInline
           (Value.mkValue (wrap (BigNum.fromInt 1)) MultiAsset.empty)
 

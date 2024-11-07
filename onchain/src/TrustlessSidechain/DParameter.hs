@@ -88,7 +88,7 @@ dParameterValidator ::
   -- to allow to spend from this validator even if UTxO contains invalid
   -- datum
   VersionOracleConfig ->
-  BuiltinData ->
+  BuiltinData -> -- VersionedGenericDatum ()
   BuiltinData ->
   Unsafe.ScriptContext ->
   Bool

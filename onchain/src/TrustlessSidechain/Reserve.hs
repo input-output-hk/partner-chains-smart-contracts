@@ -51,6 +51,7 @@ import TrustlessSidechain.Types (
     UpdateReserve
   ),
   ReserveStats (ReserveStats),
+  VersionedGenericDatum (datum),
  )
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Utils qualified as Utils
@@ -153,7 +154,7 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
         == 1
 
     tokenKind' :: AssetClass
-    !tokenKind' = get @"tokenKind" . get @"immutableSettings" $ inputDatum
+    !tokenKind' = get @"tokenKind" . get @"immutableSettings" $ datum inputDatum
 
     -- This function verifies that assets of a propagated unique reserve utxo
     -- change only by reserve tokens and returns the difference of reserve tokens
@@ -200,10 +201,10 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
         [_] -> traceError "ERROR-RESERVE-25"
         _ -> traceError "ERROR-RESERVE-06"
 
-    inputDatum :: ReserveDatum
+    inputDatum :: VersionedGenericDatum ReserveDatum
     !inputDatum = Utils.fromJust "ERROR-RESERVE-07" (extractReserveUtxoDatumUnsafe inputReserveUtxo)
 
-    outputDatum :: ReserveDatum
+    outputDatum :: VersionedGenericDatum ReserveDatum
     outputDatum = Utils.fromJust "ERROR-RESERVE-08" (extractReserveUtxoDatumUnsafe outputReserveUtxo)
 
     isApprovedByGovernance :: Bool
@@ -227,8 +228,8 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
 
     datumChangesOnlyByMutableSettings :: Bool
     datumChangesOnlyByMutableSettings =
-      let updatedMutablePart = mutableSettings outputDatum
-       in toBuiltinData inputDatum {mutableSettings = updatedMutablePart}
+      let updatedMutablePart = mutableSettings $ datum outputDatum
+       in toBuiltinData inputDatum {datum = (datum inputDatum) {mutableSettings = updatedMutablePart}}
             == toBuiltinData outputDatum
 
     assetsDoNotChange :: Bool
@@ -242,11 +243,11 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
 
     vFunctionTotalAccrued' :: CurrencySymbol
     vFunctionTotalAccrued' =
-      get @"vFunctionTotalAccrued" . get @"mutableSettings" $ inputDatum
+      get @"vFunctionTotalAccrued" . get @"mutableSettings" $ datum inputDatum
 
     incentiveAmount :: Integer
     incentiveAmount =
-      get @"incentiveAmount" . get @"mutableSettings" $ inputDatum
+      get @"incentiveAmount" . get @"mutableSettings" $ datum inputDatum
 
     numOfVtTokensMinted :: Integer
     numOfVtTokensMinted =
@@ -261,7 +262,7 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
 
     tokensTransferredUpUntilNow :: Integer
     tokensTransferredUpUntilNow =
-      get @"tokenTotalAmountTransferred" . get @"stats" $ inputDatum
+      get @"tokenTotalAmountTransferred" . get @"stats" $ datum inputDatum
 
     assetsChangeOnlyByCorrectAmountOfReserveTokens :: Bool
     assetsChangeOnlyByCorrectAmountOfReserveTokens =
@@ -270,7 +271,7 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
     datumChangesOnlyByStats :: Bool
     datumChangesOnlyByStats =
       let updatedStats = ReserveStats numOfVtTokensMinted
-       in toBuiltinData inputDatum {stats = updatedStats}
+       in toBuiltinData inputDatum {datum = (datum inputDatum) {stats = updatedStats}}
             == toBuiltinData outputDatum
 
     reserveTokensOn :: Unsafe.TxOut -> Integer
@@ -332,13 +333,13 @@ serialisableReserveValidator =
   serialiseCompiledCode $$(PlutusTx.compile [||mkReserveValidatorUntyped||])
 
 {-# INLINEABLE extractReserveUtxoDatum #-}
-extractReserveUtxoDatum :: TxOut -> Maybe ReserveDatum
+extractReserveUtxoDatum :: TxOut -> Maybe (VersionedGenericDatum ReserveDatum)
 extractReserveUtxoDatum txOut = case txOutDatum txOut of
   OutputDatum datum -> PlutusTx.fromBuiltinData . getDatum $ datum
   _ -> Nothing
 
 {-# INLINEABLE extractReserveUtxoDatumUnsafe #-}
-extractReserveUtxoDatumUnsafe :: Unsafe.TxOut -> Maybe ReserveDatum
+extractReserveUtxoDatumUnsafe :: Unsafe.TxOut -> Maybe (VersionedGenericDatum ReserveDatum)
 extractReserveUtxoDatumUnsafe txOut =
   (PlutusTx.fromBuiltinData . getDatum . Unsafe.decode) =<< (Unsafe.getOutputDatum . Unsafe.txOutDatum $ txOut)
 
@@ -392,7 +393,7 @@ mkReserveAuthPolicy voc _ ctx =
     reserveUtxoValue :: Value
     reserveUtxoValue = txOutValue reserveUtxo
 
-    reserveUtxoDatum :: ReserveDatum
+    reserveUtxoDatum :: VersionedGenericDatum ReserveDatum
     reserveUtxoDatum =
       case extractReserveUtxoDatum reserveUtxo of
         Just d -> d
@@ -414,7 +415,7 @@ mkReserveAuthPolicy voc _ ctx =
 
     reserveUtxoCarriesCorrectInitialDatum :: Bool
     reserveUtxoCarriesCorrectInitialDatum =
-      get @"stats" reserveUtxoDatum == ReserveStats 0
+      get @"stats" (datum reserveUtxoDatum) == ReserveStats 0
 
     reserveUtxoCarriesOnlyAdaTokenKindAndAuthToken :: Bool
     reserveUtxoCarriesOnlyAdaTokenKindAndAuthToken =
@@ -427,7 +428,7 @@ mkReserveAuthPolicy voc _ ctx =
           if AssetClass (adaSymbol, adaToken) == tokenKind'
             then 2 -- ADA + reserve auth token
             else 3 -- ADA + reserve auth token + tokens of `tokenKind`
-        tokenKind' = get @"tokenKind" . get @"immutableSettings" $ reserveUtxoDatum
+        tokenKind' = get @"tokenKind" . get @"immutableSettings" $ datum reserveUtxoDatum
 
 {-# INLINEABLE mkReserveAuthPolicyUntyped #-}
 mkReserveAuthPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()

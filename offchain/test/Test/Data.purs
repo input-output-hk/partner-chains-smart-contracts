@@ -217,13 +217,11 @@ genBPR = do
   grandpaKey <- genGH
   sidechainSignature <- genGH
   ArbitraryTransactionInput inputUtxo <- arbitrary
-  ArbitraryPaymentPubKeyHash (PaymentPubKeyHash ownPkh) <- arbitrary
   pure $ BlockProducerRegistration
     { stakeOwnership
     , sidechainPubKey
     , sidechainSignature
     , inputUtxo
-    , ownPkh: (wrap $ unwrap ownPkh)
     , auraKey
     , grandpaKey
     }

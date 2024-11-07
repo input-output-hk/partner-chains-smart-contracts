@@ -7,6 +7,7 @@ import Contract.Prelude
 import Cardano.FromData (fromData)
 import Cardano.ToData (toData)
 import Cardano.Types.Asset (Asset(Asset))
+import Cardano.Types.BigInt as BigInt
 import Cardano.Types.Int as Int
 import Cardano.Types.OutputDatum (OutputDatum(OutputDatum))
 import Cardano.Types.PlutusData (PlutusData)
@@ -52,6 +53,9 @@ import TrustlessSidechain.PermissionedCandidates.Types
 import TrustlessSidechain.PermissionedCandidates.Utils as PermissionedCandidates
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Asset (emptyAssetName)
+import TrustlessSidechain.Utils.Data
+  ( VersionedGenericDatum(VersionedGenericDatum)
+  )
 import Type.Row (type (+))
 
 permissionedCandidatesTokenName :: TokenName
@@ -102,7 +106,9 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
               d <- case outputDatum of
                 Just (OutputDatum d) -> pure d
                 _ -> Nothing
-              _ <- (fromData d :: Maybe PermissionedCandidatesValidatorDatum)
+              VersionedGenericDatum { builtinData } :: VersionedGenericDatum Unit <-
+                fromData d
+              _ :: PermissionedCandidatesValidatorDatum <- fromData builtinData
               pure
                 ( Value.valueOf
                     ( Asset
@@ -132,7 +138,10 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
             d <- case outputDatum of
               Just (OutputDatum d) -> pure d
               _ -> Nothing
-            PermissionedCandidatesValidatorDatum { candidates } <- fromData d
+            VersionedGenericDatum { builtinData } :: VersionedGenericDatum Unit <-
+              fromData d
+            PermissionedCandidatesValidatorDatum { candidates } <- fromData
+              builtinData
             pure candidates
 
   let
@@ -166,6 +175,12 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
       PermissionedCandidatesValidatorDatum
         { candidates: newCandidates }
 
+    datum = toData $ VersionedGenericDatum
+      { datum: unit
+      , builtinData: permissionedCandidatesDatum
+      , version: BigInt.fromInt 0
+      }
+
     oldUtxoLookups :: ScriptLookups
     oldUtxoLookups = case maybePermissionedCandidatesUTxO of
       Nothing -> mempty
@@ -196,7 +211,7 @@ mkUpdatePermissionedCandidatesLookupsAndConstraints
     constraints :: TxConstraints
     constraints =
       Constraints.mustPayToScript permissionedCandidatesValidatorHash
-        permissionedCandidatesDatum
+        datum
         DatumInline
         value
         <> spendScriptOutputConstraints

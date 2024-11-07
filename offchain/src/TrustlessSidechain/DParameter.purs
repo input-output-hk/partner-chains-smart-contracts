@@ -9,6 +9,7 @@ import Cardano.FromData (fromData)
 import Cardano.ToData (toData)
 import Cardano.Types.Asset (Asset(Asset))
 import Cardano.Types.AssetName (AssetName)
+import Cardano.Types.BigInt as BigInt
 import Cardano.Types.Int as Int
 import Cardano.Types.OutputDatum (OutputDatum(OutputDatum))
 import Cardano.Types.PlutusData as PlutusData
@@ -43,6 +44,9 @@ import TrustlessSidechain.Error
 import TrustlessSidechain.Governance.Utils as Governance
 import TrustlessSidechain.SidechainParams (SidechainParams)
 import TrustlessSidechain.Utils.Asset (emptyAssetName)
+import TrustlessSidechain.Utils.Data
+  ( VersionedGenericDatum(VersionedGenericDatum)
+  )
 import Type.Row (type (+))
 
 dParameterTokenName :: AssetName
@@ -86,6 +90,12 @@ mkInsertDParameterLookupsAndConstraints
     dParameterDatum = toData $ DParameterValidatorDatum
       { permissionedCandidatesCount, registeredCandidatesCount }
 
+    datum = toData $ VersionedGenericDatum
+      { datum: unit
+      , builtinData: dParameterDatum
+      , version: BigInt.fromInt 0
+      }
+
     lookups :: ScriptLookups
     lookups = Lookups.plutusMintingPolicy dParameterMintingPolicy
       <> governanceLookups
@@ -97,7 +107,7 @@ mkInsertDParameterLookupsAndConstraints
         (RedeemerDatum $ PlutusData.unit)
         dParameterTokenName
         (Int.fromInt 1)
-        <> Constraints.mustPayToScript dParameterValidatorHash dParameterDatum
+        <> Constraints.mustPayToScript dParameterValidatorHash datum
           DatumInline
           value
         <> governanceConstraints
@@ -155,15 +165,13 @@ mkUpdateDParameterLookupsAndConstraints
   -- if the old D Parameter is exactly the same as the new one, throw an error
   case oldDParameterOutput of
     TransactionOutput { datum: Just (OutputDatum d) }
-    -> case fromData d of
-      Just (DParameterValidatorDatum dParameter)
-        | dParameter.permissionedCandidatesCount == permissionedCandidatesCount
-            && dParameter.registeredCandidatesCount
-            == registeredCandidatesCount -> throw
-            ( InvalidCLIParams
-                "Provided values have already been set. Please check."
-            )
-      _ -> pure unit
+      | Just (VersionedGenericDatum { builtinData } :: VersionedGenericDatum Unit) <-
+          fromData d
+      , Just (DParameterValidatorDatum dParameter) <- fromData builtinData
+      , dParameter.permissionedCandidatesCount == permissionedCandidatesCount
+      , dParameter.registeredCandidatesCount == registeredCandidatesCount ->
+          throw $ InvalidCLIParams
+            "Provided values have already been set. Please check."
     _ -> pure unit
 
   when (dParameterTokenAmount <= BigNum.fromInt 0)
@@ -182,6 +190,12 @@ mkUpdateDParameterLookupsAndConstraints
     dParameterDatum = toData $ DParameterValidatorDatum
       { permissionedCandidatesCount, registeredCandidatesCount }
 
+    datum = toData $ VersionedGenericDatum
+      { datum: unit
+      , builtinData: dParameterDatum
+      , version: BigInt.fromInt 0
+      }
+
     lookups :: ScriptLookups
     lookups = Lookups.validator dParameterValidator
       <> Lookups.unspentOutputs
@@ -195,7 +209,7 @@ mkUpdateDParameterLookupsAndConstraints
 
     constraints :: TxConstraints
     constraints =
-      Constraints.mustPayToScript dParameterValidatorHash dParameterDatum
+      Constraints.mustPayToScript dParameterValidatorHash datum
         DatumInline
         value
         <> spendScriptOutputConstraints

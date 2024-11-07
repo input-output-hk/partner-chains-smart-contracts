@@ -47,7 +47,7 @@ main =
           [ scriptFitsInto
               "mkCommitteeCandidateValidator (serialized)"
               CCV.serialisableValidator
-              315
+              352
           , scriptFitsInto
               "mkDParameterValidatorCode (DParameter) serialized"
               DParameter.serialisableValidator
@@ -71,15 +71,15 @@ main =
           , scriptFitsInto
               "mkReserveValidator (Reserve) serialized"
               Reserve.serialisableReserveValidator
-              5_936
+              5_870
           , scriptFitsInto
               "mkReserveAuthPolicy (Reserve) serialized"
               Reserve.serialisableReserveAuthPolicy
-              2_640
+              2_718
           , scriptFitsInto
               "mkIlliquidCirculationSupplyValidator (IlliquidCirculationSupply) serialized"
               IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyValidator
-              3_254
+              3_334
           ]
       , testGroup
           "Data rep"
