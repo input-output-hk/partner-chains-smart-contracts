@@ -73,9 +73,9 @@ illiquidCirculationSupplyLookupsAndConstraints ::
     { icsLookups :: Lookups.ScriptLookups
     , icsConstraints :: TxConstraints.TxConstraints
     }
-illiquidCirculationSupplyLookupsAndConstraints sp = do
+illiquidCirculationSupplyLookupsAndConstraints genesisUtxo = do
   (icsRefTxInput /\ icsRefTxOutput) <-
-    Versioning.getVersionedScriptRefUtxo sp
+    Versioning.getVersionedScriptRefUtxo genesisUtxo
       ( VersionOracle
           { scriptId: IlliquidCirculationSupplyWithdrawalPolicy
           }
@@ -96,9 +96,9 @@ depositMoreToSupply ::
   Run
     (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
     Unit
-depositMoreToSupply sp depositedValue utxo = do
+depositMoreToSupply genesisUtxo depositedValue utxo = do
 
-  versionOracleConfig <- Versioning.getVersionOracleConfig sp
+  versionOracleConfig <- Versioning.getVersionOracleConfig genesisUtxo
   illiquidCirculationSupplyValidator' <- illiquidCirculationSupplyValidator
     versionOracleConfig
 
@@ -146,19 +146,19 @@ withdrawFromSupply ::
   Run
     (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
     Unit
-withdrawFromSupply sp mintingPolicyHash withdrawnValue utxo = do
-  versionOracleConfig <- Versioning.getVersionOracleConfig sp
+withdrawFromSupply genesisUtxo mintingPolicyHash withdrawnValue utxo = do
+  versionOracleConfig <- Versioning.getVersionOracleConfig genesisUtxo
 
   { icsLookups
   , icsConstraints
-  } <- illiquidCirculationSupplyLookupsAndConstraints sp
+  } <- illiquidCirculationSupplyLookupsAndConstraints genesisUtxo
 
   illiquidCirculationSupplyValidator' <- illiquidCirculationSupplyValidator
     versionOracleConfig
 
   (withdrawalPolicyInput /\ withdrawalPolicyOutput) <-
     Versioning.getVersionedScriptRefUtxo
-      sp
+      genesisUtxo
       ( VersionOracle
           { scriptId: IlliquidCirculationSupplyWithdrawalPolicy
           }

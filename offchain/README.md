@@ -101,10 +101,8 @@ call, it is easier to put them in a configuration file `$CWD/config.json` in the
 following format:
 
 ```json
-  "sidechainParameters": {
-    "genesisUtxo": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1",
-    "governanceAuthority": "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
-  },
+  "genesisUtxo": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1",
+  "governanceAuthority": "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
   "runtimeConfig": {
     "network": "testnet",
     "ogmios": {
@@ -128,7 +126,7 @@ This allows to shorten a CLI call from:
 
 ```
 nix run .#pc-contracts-cli -- deregister \
-  --genesis-committee-hash-utxo 3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1 \
+  --genesis-utxo 3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1 \
   --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
   --network testnet \
   --ogmios-host localhost \
@@ -166,8 +164,8 @@ default value.
 
 Notes:
 
-- `genesis-committee-hash-utxo` is pinned to the partner chain parameters, so we
-  have to add an arbitrary UTxO here.
+- `genesis-utxo` uniquely identifies the partner chain, so we have to add an
+  arbitrary UTxO here.
 
 - If not using a config file, prior to running the contracts it may be desirable
   to have available your signing key in the environment. Example:
@@ -394,9 +392,9 @@ using the `insert-version`.
 
 #### Get script addresses of a sidechain
 
-Script addresses depend on the sidechain parameters, so we get different
-addresses for different parameters. To get the script addresses for a given
-sidechain, you can use the following command:
+Script addresses depend on the genesis UTXO, so we get different addresses for
+different UTXOs. To get the script addresses for a given sidechain, you can use
+the following command:
 
 ```
 nix run .#pc-contracts-cli -- addresses

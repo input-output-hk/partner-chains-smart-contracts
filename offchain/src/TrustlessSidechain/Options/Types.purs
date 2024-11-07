@@ -45,7 +45,7 @@ data Options
 -- | Sidechain configuration file including common parameters.
 -- Any parameter can be set `null` requiring a CLI argument instead
 type Config =
-  { -- | Sidechain parameters (defining the sidechain which we will interact with)
+  { -- | Genesis UTXO (defining the sidechain which we will interact with)
     genesisUtxo :: Maybe TransactionInput
   -- governanceAuthority should really be a PubKeyHash but there's no
   -- (easy) way of pulling a dummy PubKeyHash value out of thin air in

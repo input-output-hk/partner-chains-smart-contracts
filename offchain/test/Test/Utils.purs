@@ -232,7 +232,7 @@ assertHasOutputWithAsset txId addr cs tn = do
     transactionId == txId
       && (Value.valueOf (Asset cs tn) amount > BigNum.zero)
 
--- | `dummyGenesisUtxo` is some default sidechain parameters which may be
+-- | `dummyGenesisUtxo` is some default UTXO which may be
 -- | helpful when creating tests.
 dummyGenesisUtxo :: TransactionInput
 dummyGenesisUtxo =

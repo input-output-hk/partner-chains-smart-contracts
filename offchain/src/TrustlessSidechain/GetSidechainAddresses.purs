@@ -66,7 +66,7 @@ type SidechainAddresses =
   }
 
 -- | `getSidechainAddresses` returns a `SidechainAddresses` corresponding to
--- | the given `SidechainParams` which contains related
+-- | the given `genesisUtxo` which contains related
 -- | addresses and currency symbols. Moreover, it returns the currency symbol
 -- | of the candidate permission token provided the `permissionTokenUtxo` is
 -- | given.
