@@ -14,6 +14,16 @@
       #optipng.enable = true;
       nixpkgs-fmt.enable = true;
       purs-tidy.enable = true;
+      end-of-file-fixer =
+        {
+          enable = true;
+          excludes = [ ".*\\.golden" ];
+        };
+      trim-trailing-whitespace =
+        {
+          enable = true;
+          excludes = [ ".*\\.golden" ];
+        };
     };
   };
 
