@@ -8,8 +8,8 @@
 
 # Generate TOC for README.md
 # It has to be manually inserted into the README.md for now.
-generate-readme-contents:
-	nix shell nixpkgs#nodePackages.npm --command "npx markdown-toc ./README.md --no-firsth1"
+generate-readme-contents: requires_nix_shell
+	npx markdown-toc ./README.md --no-firsth1
 
 # Attempt the CI locally
 # TODO
