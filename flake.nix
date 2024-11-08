@@ -1,6 +1,4 @@
 {
-  description = "partner-chains-smart-contracts";
-
   nixConfig = {
     extra-substituters = [
       "https://cache.iog.io"
@@ -10,103 +8,135 @@
       "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ="
       "cache.sc.iog.io:b4YIcBabCEVKrLQgGW8Fylz4W8IvvfzRc+hy0idqrWU="
     ];
-    allow-import-from-derivation = true;
     accept-flake-config = true;
   };
 
   inputs = {
-    nixpkgs.follows = "haskell-nix/nixpkgs";
-    pkgs.follows = "nixpkgs";
-    nosys.url = "github:input-output-hk/nosys/overlays";
-
-    blank.url = "github:input-output-hk/empty-flake";
-
-    flake-compat = {
-      url = "github:input-output-hk/flake-compat/fixes";
-      flake = false;
-    };
-    pre-commit-hooks = {
-      url = "github:cachix/git-hooks.nix";
-    };
-    iohk-nix.url = "github:input-output-hk/iohk-nix";
-    iohk-nix.inputs.nixpkgs.follows = "nixpkgs";
-
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
+    pre-commit-hooks.url = "github:cachix/git-hooks.nix";
     purescript-overlay.url = "github:thomashoneyman/purescript-overlay";
     purescript-overlay.inputs.nixpkgs.follows = "nixpkgs";
-
-    npmlock2nix.url = "github:nix-community/npmlock2nix";
-    npmlock2nix.flake = false;
-
-    spago2nix = {
-      url = "github:justinwoo/spago2nix";
-      flake = false;
-    };
-
-    hackage = {
-      url = "github:input-output-hk/hackage.nix";
-      flake = false;
-    };
-
-    CHaP = {
-      url = "github:input-output-hk/cardano-haskell-packages?ref=repo";
-      flake = false;
-    };
-
-    haskell-nix = {
-      url = "github:input-output-hk/haskell.nix";
-      inputs.hackage.follows = "hackage";
-      inputs.hydra.follows = "blank";
-    };
-    devx = {
-      url = "github:input-output-hk/devx/e0d22b5e52a90be3ee23c1056e8334b737bd88e2";
-      inputs.haskellNix.follows = "haskell-nix";
-      inputs.iohk-nix.follows = "iohk-nix";
-    };
-    # Used to provide the cardano-node and cardano-cli executables.
-    cardano-node = {
-      url = "github:input-output-hk/cardano-node/d7abccd4e90c38ff5cd4d6a7839689d888332056";
-      flake = false;
-    };
-    # Rust toolchains in nix
-    fenix = {
-      url = "github:nix-community/fenix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    cardano-node.url = "github:input-output-hk/cardano-node/d7abccd4e90c38ff5cd4d6a7839689d888332056";
   };
-  outputs = inputs @ { nosys, pkgs, self, ... }:
-    let outputs = import ./nix/outputs.nix;
-    in nosys
-      (inputs // {
-        overlays = [
-          inputs.haskell-nix.overlay
-          inputs.iohk-nix.overlays.crypto
-          inputs.iohk-nix.overlays.haskell-nix-extra
-          inputs.purescript-overlay.overlays.default
-          (
-            final: prev: {
-              # In order to actually apply the changes provided by iohk-nix
-              # we need to modify haskell.nix overwriting the attribute set
-              # with the altered crypto libraries
-              haskell-nix = prev.haskell-nix // {
-                extraPkgconfigMappings = prev.haskell-nix.extraPkgconfigMappings or { } // {
-                  "libblst" = [ "libblst" ];
-                  "libsodium" = [ "libsodium-vrf" ];
-                };
+
+  outputs =
+    { self
+    , nixpkgs
+    , flake-utils
+    , purescript-overlay
+    , cardano-node
+    , pre-commit-hooks
+    }:
+    flake-utils.lib.eachDefaultSystem (system:
+    let
+      overlays = [
+        purescript-overlay.overlays.default
+      ];
+      pkgs = import nixpkgs {
+        inherit system overlays;
+      };
+      kupo = pkgs.callPackage ./nix/packages/kupo.nix { };
+      ogmios = pkgs.callPackage ./nix/packages/ogmios.nix { };
+    in
+
+    rec {
+      checks = {
+        pre-commit-check = pre-commit-hooks.lib."${system}".run {
+          src = ./.;
+          hooks = {
+            fourmolu.enable = true;
+            shellcheck.enable = true;
+            cabal-fmt.enable = true;
+            nixpkgs-fmt.enable = true;
+            purs-tidy.enable = true;
+            end-of-file-fixer =
+              {
+                enable = true;
+                excludes = [ ".*\\.golden" ];
               };
-            }
-          )
-          (
-            final: prev: {
-              # no aarch64-darwin for spago 0.21 (stable) from purescript-overlay's spago
-              spago =
-                if prev.stdenv.isDarwin
-                then
-                  inputs.purescript-overlay.packages.x86_64-darwin.spago-0_21_0
-                else
-                  prev.spago;
-            }
-          )
+            trim-trailing-whitespace =
+              {
+                enable = true;
+                excludes = [ ".*\\.golden" ];
+              };
+          };
+          tools = {
+            cabal-fmt = pkgs.haskellPackages.cabal-fmt.bin;
+            fourmolu = pkgs.haskellPackages.fourmolu;
+            shellcheck = pkgs.shellcheck;
+            nixpkgs-fmt = pkgs.nixpkgs-fmt;
+            purs-tidy = pkgs.purs-tidy;
+          };
+        };
+      };
+
+      devShells.default = pkgs.mkShell {
+        buildInputs = with pkgs; [
+          #
+          # build tools
+          #
+          bashInteractive
+          blst
+          cabal-install
+          dhall
+          esbuild
+          fd
+          ghc
+          git
+          gnumake
+          haskell-language-server
+          haskellPackages.cabal-fmt
+          haskellPackages.fourmolu
+          hlint
+          libsodium
+          nixpkgs-fmt
+          nodejs
+          pkg-config
+          purescript
+          purescript-psa
+          purs-tidy
+          eslint
+          secp256k1
+          zlib
+          zip
+
+          #
+          # runtime dependencie
+          #
+          cardano-node.packages."${system}".cardano-cli
+          cardano-node.packages."${system}".cardano-node
+          cardano-node.packages."${system}".cardano-testnet
+          ogmios
+          kupo
+
+          #
+          # Rust dependencies for raw-scripts crate
+          #
+          cargo
+          clippy
+          rust-analyzer
+          rustfmt
+          cargo-edit
         ];
-      })
-      outputs;
+        shellHook = ''
+          # The following settings are required for cardano-testnet to work properly
+          export CARDANO_CLI=${cardano-node.packages."${system}".cardano-cli}/bin/cardano-cli
+          export CARDANO_NODE=${cardano-node.packages."${system}".cardano-node}/bin/cardano-node
+
+          # LD_LIBRARY_PATH is required for cabal to find libraries
+          export LD_LIBRARY_PATH="${pkgs.blst}/lib:${pkgs.libsodium}/lib:${pkgs.secp256k1}/lib"
+
+          ${checks.pre-commit-check.shellHook}
+        '' + pkgs.lib.optionalString pkgs.stdenv.isDarwin ''
+          # There is a problem with cardano-testnet exceeding the MAX_PATH length
+          # so we need to set it to something other than the default long path
+          export TMPDIR=/private/tmp
+        '' + pkgs.lib.optionalString pkgs.stdenv.isLinux ''
+          # Under Linux there is a problem with cardano-testnet failing because
+          # of hedgehog on startup if locale isn't set to UTF8
+          export LC_ALL=C.utf8
+        '';
+      };
+    });
 }

@@ -1,0 +1,3596 @@
+{
+  "workspace": {
+    "packages": {
+      "pc-contracts-cli": {
+        "path": "./",
+        "core": {
+          "dependencies": [
+            "aeson",
+            "aff",
+            "argonaut",
+            "argonaut-core",
+            "arrays",
+            "bifunctors",
+            "bytearrays",
+            "cardano-serialization-lib",
+            "cardano-transaction-lib",
+            "cardano-types",
+            "codec-argonaut",
+            "console",
+            "const",
+            "control",
+            "datetime",
+            "either",
+            "exceptions",
+            "foldable-traversable",
+            "foreign-object",
+            "integers",
+            "js-bigints",
+            "lists",
+            "maybe",
+            "monad-logger",
+            "mote",
+            "mote-testplan",
+            "node-buffer",
+            "node-fs",
+            "node-fs-aff",
+            "node-path",
+            "node-process",
+            "node-streams",
+            "nonempty",
+            "optparse",
+            "ordered-collections",
+            "parsing",
+            "partial",
+            "plutus-types",
+            "posix-types",
+            "prelude",
+            "quickcheck",
+            "random",
+            "run",
+            "spec",
+            "strings",
+            "tailrec",
+            "test-unit",
+            "transformers",
+            "tuples",
+            "typelevel-prelude",
+            "uint",
+            "uplc-apply-args"
+          ],
+          "build_plan": [
+            "aeson",
+            "aff",
+            "aff-promise",
+            "aff-retry",
+            "affjax",
+            "ansi",
+            "argonaut",
+            "argonaut-codecs",
+            "argonaut-core",
+            "argonaut-traversals",
+            "arraybuffer-types",
+            "arrays",
+            "assert",
+            "avar",
+            "bifunctors",
+            "bignumber",
+            "bytearrays",
+            "cardano-collateral-select",
+            "cardano-hd-wallet",
+            "cardano-key-wallet",
+            "cardano-message-signing",
+            "cardano-plutus-data-schema",
+            "cardano-serialization-lib",
+            "cardano-transaction-builder",
+            "cardano-transaction-lib",
+            "cardano-types",
+            "catenable-lists",
+            "checked-exceptions",
+            "cip30",
+            "cip30-mock",
+            "cip30-typesafe",
+            "cip95",
+            "cip95-typesafe",
+            "codec",
+            "codec-argonaut",
+            "console",
+            "const",
+            "contravariant",
+            "control",
+            "crypto",
+            "datetime",
+            "debug",
+            "distributive",
+            "effect",
+            "either",
+            "encoding",
+            "enums",
+            "exceptions",
+            "exists",
+            "exitcodes",
+            "fixed-points",
+            "foldable-traversable",
+            "foreign",
+            "foreign-object",
+            "fork",
+            "form-urlencoded",
+            "formatters",
+            "free",
+            "freet",
+            "functions",
+            "functors",
+            "gen",
+            "heterogeneous",
+            "http-methods",
+            "identity",
+            "integers",
+            "invariant",
+            "js-bigints",
+            "js-date",
+            "js-timers",
+            "js-uri",
+            "lattice",
+            "lazy",
+            "lcg",
+            "lists",
+            "literals",
+            "maybe",
+            "media-types",
+            "mmorph",
+            "monad-logger",
+            "mote",
+            "mote-testplan",
+            "newtype",
+            "noble-secp256k1",
+            "node-buffer",
+            "node-child-process",
+            "node-fs",
+            "node-fs-aff",
+            "node-http",
+            "node-net",
+            "node-path",
+            "node-process",
+            "node-readline",
+            "node-streams",
+            "node-streams-aff",
+            "node-url",
+            "nonempty",
+            "now",
+            "nullable",
+            "numbers",
+            "open-memoize",
+            "options",
+            "optparse",
+            "ordered-collections",
+            "orders",
+            "parallel",
+            "parsing",
+            "partial",
+            "pipes",
+            "plutus-types",
+            "posix-types",
+            "prelude",
+            "profunctor",
+            "profunctor-lenses",
+            "properties",
+            "psci-support",
+            "quickcheck",
+            "quickcheck-combinators",
+            "quickcheck-laws",
+            "random",
+            "rationals",
+            "record",
+            "refs",
+            "run",
+            "safe-coerce",
+            "safely",
+            "spec",
+            "spec-quickcheck",
+            "st",
+            "strings",
+            "stringutils",
+            "tailrec",
+            "test-unit",
+            "these",
+            "toppokki",
+            "transformers",
+            "tuples",
+            "type-equality",
+            "typelevel",
+            "typelevel-prelude",
+            "uint",
+            "unfoldable",
+            "unicode",
+            "unsafe-coerce",
+            "untagged-union",
+            "uplc-apply-args",
+            "variant",
+            "web-dom",
+            "web-events",
+            "web-file",
+            "web-html",
+            "web-storage",
+            "web-xhr"
+          ]
+        },
+        "test": {
+          "dependencies": [],
+          "build_plan": []
+        }
+      }
+    },
+    "package_set": {
+      "address": {
+        "registry": "10.0.0"
+      },
+      "compiler": ">=0.15.4 <0.16.0",
+      "content": {
+        "abc-parser": "2.0.0",
+        "ace": "9.0.0",
+        "aff": "7.1.0",
+        "aff-bus": "6.0.0",
+        "aff-coroutines": "9.0.0",
+        "aff-promise": "4.0.0",
+        "aff-retry": "2.0.0",
+        "affjax": "13.0.0",
+        "affjax-node": "1.0.0",
+        "affjax-web": "1.0.0",
+        "ansi": "7.0.0",
+        "argonaut": "9.0.0",
+        "argonaut-aeson-generic": "0.4.1",
+        "argonaut-codecs": "9.1.0",
+        "argonaut-core": "7.0.0",
+        "argonaut-generic": "8.0.0",
+        "argonaut-traversals": "10.0.0",
+        "argparse-basic": "2.0.0",
+        "array-builder": "0.1.2",
+        "arraybuffer": "13.1.1",
+        "arraybuffer-builder": "3.1.0",
+        "arraybuffer-types": "3.0.2",
+        "arrays": "7.1.0",
+        "arrays-zipper": "2.0.1",
+        "ask": "1.0.0",
+        "assert": "6.0.0",
+        "avar": "5.0.0",
+        "b64": "0.0.8",
+        "barbies": "1.0.1",
+        "barlow-lens": "0.9.0",
+        "basic-auth": "3.0.1",
+        "bifunctors": "6.0.0",
+        "bigints": "7.0.1",
+        "bolson": "0.3.1",
+        "bower-json": "3.0.0",
+        "bucketchain": "1.0.1",
+        "bucketchain-basic-auth": "1.0.1",
+        "bucketchain-conditional": "1.0.1",
+        "bucketchain-cors": "1.0.1",
+        "bucketchain-csrf": "1.0.1",
+        "bucketchain-header-utils": "1.0.1",
+        "bucketchain-health": "1.0.1",
+        "bucketchain-history-api-fallback": "1.0.1",
+        "bucketchain-logger": "1.0.1",
+        "bucketchain-secure": "1.0.1",
+        "bucketchain-simple-api": "5.0.1",
+        "bucketchain-sslify": "1.0.1",
+        "bucketchain-static": "1.0.1",
+        "call-by-name": "4.0.1",
+        "canvas": "6.0.0",
+        "canvas-action": "9.0.0",
+        "cartesian": "1.0.6",
+        "catenable-lists": "7.0.0",
+        "channel": "1.0.0",
+        "checked-exceptions": "3.1.1",
+        "classless": "0.1.1",
+        "classless-arbitrary": "0.1.1",
+        "classless-decode-json": "0.1.1",
+        "classless-encode-json": "0.1.3",
+        "classnames": "2.0.0",
+        "codec": "6.0.0",
+        "codec-argonaut": "10.0.0",
+        "colors": "7.0.1",
+        "concur-core": "0.5.0",
+        "concur-react": "0.5.0",
+        "concurrent-queues": "3.0.0",
+        "console": "6.0.0",
+        "const": "6.0.0",
+        "contravariant": "6.0.0",
+        "control": "6.0.0",
+        "convertable-options": "1.0.0",
+        "coroutines": "7.0.0",
+        "crypto": "5.0.1",
+        "css": "6.0.0",
+        "datetime": "6.1.0",
+        "datetime-parsing": "0.2.0",
+        "debug": "6.0.2",
+        "decimals": "7.1.0",
+        "default-values": "1.0.1",
+        "deku": "0.9.9",
+        "deno": "0.0.5",
+        "dissect": "1.0.0",
+        "distributive": "6.0.0",
+        "dodo-printer": "2.2.1",
+        "dom-filereader": "7.0.0",
+        "dom-indexed": "11.0.0",
+        "dotenv": "3.0.0",
+        "droplet": "0.5.0",
+        "dynamic-buffer": "3.0.1",
+        "echarts-simple": "0.0.1",
+        "effect": "4.0.0",
+        "either": "6.1.0",
+        "elmish": "0.8.3",
+        "elmish-enzyme": "0.1.1",
+        "elmish-hooks": "0.9.1",
+        "elmish-html": "0.7.2",
+        "elmish-testing-library": "0.3.1",
+        "email-validate": "7.0.0",
+        "encoding": "0.0.8",
+        "enums": "6.0.1",
+        "error": "2.0.0",
+        "exceptions": "6.0.0",
+        "exists": "6.0.0",
+        "exitcodes": "4.0.0",
+        "expect-inferred": "3.0.0",
+        "fahrtwind": "2.0.0",
+        "fallback": "0.1.0",
+        "fast-vect": "1.1.0",
+        "fetch": "1.1.4",
+        "fetch-argonaut": "1.0.0",
+        "fetch-core": "4.0.4",
+        "fetch-yoga-json": "1.1.0",
+        "filterable": "5.0.0",
+        "fixed-points": "7.0.0",
+        "fixed-precision": "5.0.0",
+        "flame": "1.2.0",
+        "float32": "2.0.0",
+        "foldable-traversable": "6.0.0",
+        "foreign": "7.0.0",
+        "foreign-object": "4.1.0",
+        "foreign-readwrite": "3.4.0",
+        "fork": "6.0.0",
+        "form-urlencoded": "7.0.0",
+        "formatters": "7.0.0",
+        "framer-motion": "1.0.1",
+        "free": "7.0.0",
+        "freeap": "7.0.0",
+        "freer-free": "0.0.1",
+        "freet": "7.0.0",
+        "functions": "6.0.0",
+        "functor1": "3.0.0",
+        "functors": "5.0.0",
+        "fuzzy": "0.4.0",
+        "gen": "4.0.0",
+        "generate-values": "1.0.1",
+        "generic-router": "0.0.1",
+        "geometry-plane": "1.0.3",
+        "github-actions-toolkit": "0.5.0",
+        "grain": "3.0.0",
+        "grain-router": "3.0.0",
+        "grain-virtualized": "3.0.0",
+        "graphql-client": "9.3.2",
+        "graphs": "8.1.0",
+        "group": "4.1.1",
+        "halogen": "7.0.0",
+        "halogen-bootstrap5": "2.1.0",
+        "halogen-css": "10.0.0",
+        "halogen-echarts-simple": "0.0.4",
+        "halogen-formless": "4.0.2",
+        "halogen-hooks": "0.6.3",
+        "halogen-hooks-extra": "0.9.0",
+        "halogen-store": "0.5.4",
+        "halogen-storybook": "2.0.0",
+        "halogen-subscriptions": "2.0.0",
+        "halogen-svg-elems": "7.0.0",
+        "halogen-vdom": "8.0.0",
+        "halogen-vdom-string-renderer": "0.5.0",
+        "heckin": "2.0.1",
+        "heterogeneous": "0.6.0",
+        "homogeneous": "0.4.0",
+        "http-methods": "6.0.0",
+        "httpure": "0.16.0",
+        "httpurple": "3.0.1",
+        "httpurple-argonaut": "1.0.1",
+        "httpurple-yoga-json": "1.0.0",
+        "humdrum": "0.0.1",
+        "hyrule": "2.3.5",
+        "identity": "6.0.0",
+        "identy": "4.0.1",
+        "indexed-monad": "2.1.0",
+        "int64": "3.0.0",
+        "integers": "6.0.0",
+        "interpolate": "5.0.2",
+        "invariant": "6.0.0",
+        "jarilo": "1.0.1",
+        "jelly": "0.9.1",
+        "jelly-hooks": "0.3.1",
+        "jelly-router": "0.2.2",
+        "jelly-signal": "0.3.0",
+        "jest": "1.0.0",
+        "js-bigints": "1.2.0",
+        "js-date": "8.0.0",
+        "js-fileio": "3.0.0",
+        "js-promise": "1.0.0",
+        "js-promise-aff": "1.0.0",
+        "js-timers": "6.1.0",
+        "js-uri": "3.1.0",
+        "justifill": "0.5.0",
+        "jwt": "0.0.9",
+        "language-cst-parser": "0.12.1",
+        "lazy": "6.0.0",
+        "lazy-joe": "1.0.0",
+        "lcg": "4.0.0",
+        "leibniz": "5.0.0",
+        "linalg": "5.1.0",
+        "lists": "7.0.0",
+        "literals": "1.0.2",
+        "logging": "3.0.0",
+        "logging-journald": "0.4.0",
+        "machines": "7.0.0",
+        "marionette": "1.0.0",
+        "marionette-commander": "0.1.1",
+        "marionette-react-basic-hooks": "0.1.1",
+        "matrices": "5.0.1",
+        "matryoshka": "1.0.0",
+        "maybe": "6.0.0",
+        "mdast-util-from-markdown": "0.2.1",
+        "media-types": "6.0.0",
+        "midi": "4.0.0",
+        "milkis": "9.0.0",
+        "minibench": "4.0.1",
+        "mmorph": "7.0.0",
+        "monad-control": "5.0.0",
+        "monad-logger": "1.3.1",
+        "monad-loops": "0.5.0",
+        "monad-unlift": "1.0.1",
+        "monoid-extras": "0.0.1",
+        "monoidal": "0.16.0",
+        "morello": "0.4.0",
+        "mote": "3.0.0",
+        "motsunabe": "2.0.0",
+        "mysql": "6.0.1",
+        "n3": "0.1.0",
+        "nano-id": "1.1.0",
+        "naturals": "3.0.0",
+        "nested-functor": "0.2.1",
+        "newtype": "5.0.0",
+        "nextui": "0.1.0",
+        "node-buffer": "8.0.0",
+        "node-buffer-blob": "1.0.0",
+        "node-child-process": "9.0.0",
+        "node-fs": "8.1.1",
+        "node-fs-aff": "9.1.0",
+        "node-http": "8.0.0",
+        "node-net": "4.0.0",
+        "node-path": "5.0.0",
+        "node-process": "10.0.0",
+        "node-readline": "7.0.0",
+        "node-sqlite3": "8.0.0",
+        "node-streams": "7.0.0",
+        "node-streams-aff": "4.0.1",
+        "node-url": "6.0.0",
+        "nodemailer": "4.0.1",
+        "nonempty": "7.0.0",
+        "now": "6.0.0",
+        "npm-package-json": "2.0.0",
+        "nullable": "6.0.0",
+        "numbers": "9.0.0",
+        "object-maps": "0.1.1",
+        "ocarina": "1.5.2",
+        "open-folds": "6.3.0",
+        "open-memoize": "6.1.0",
+        "open-pairing": "6.1.0",
+        "options": "7.0.0",
+        "optparse": "5.0.0",
+        "ordered-collections": "3.0.0",
+        "ordered-set": "0.4.0",
+        "orders": "6.0.0",
+        "pairs": "9.0.0",
+        "parallel": "6.0.0",
+        "parsing": "10.2.0",
+        "parsing-dataview": "3.2.4",
+        "partial": "4.0.0",
+        "pathy": "9.0.0",
+        "pha": "0.9.0",
+        "phaser": "0.6.0",
+        "pipes": "8.0.0",
+        "pirates-charm": "0.0.1",
+        "point-free": "1.0.0",
+        "pointed-list": "0.5.1",
+        "polymorphic-vectors": "4.0.0",
+        "posix-types": "6.0.0",
+        "precise": "6.0.0",
+        "precise-datetime": "7.0.0",
+        "prelude": "6.0.1",
+        "prettier-printer": "3.0.0",
+        "profunctor": "6.0.0",
+        "profunctor-lenses": "8.0.0",
+        "protobuf": "4.2.0",
+        "ps-cst": "1.2.0",
+        "psa-utils": "8.0.0",
+        "psc-ide": "19.0.0",
+        "psci-support": "6.0.0",
+        "qualified-do": "2.2.0",
+        "quantities": "12.1.0",
+        "quickcheck": "8.0.1",
+        "quickcheck-combinators": "0.1.3",
+        "quickcheck-laws": "7.0.0",
+        "quickcheck-utf8": "0.0.0",
+        "random": "6.0.0",
+        "rationals": "5.0.1",
+        "rdf": "0.1.0",
+        "react": "10.0.1",
+        "react-aria": "0.2.0",
+        "react-basic": "17.0.0",
+        "react-basic-classic": "3.0.0",
+        "react-basic-dnd": "10.1.0",
+        "react-basic-dom": "6.0.0",
+        "react-basic-emotion": "7.1.0",
+        "react-basic-hooks": "8.1.2",
+        "react-basic-storybook": "2.0.0",
+        "react-dom": "8.0.0",
+        "react-halo": "3.0.0",
+        "react-icons": "1.0.8",
+        "react-testing-library": "4.0.1",
+        "react-virtuoso": "1.0.0",
+        "read": "1.0.1",
+        "record": "4.0.0",
+        "record-extra": "5.0.1",
+        "record-studio": "1.0.4",
+        "refs": "6.0.0",
+        "remotedata": "5.0.0",
+        "resource": "2.0.1",
+        "resourcet": "1.0.0",
+        "result": "1.0.3",
+        "return": "0.2.0",
+        "ring-modules": "5.0.1",
+        "rito": "0.3.2",
+        "routing": "11.0.0",
+        "routing-duplex": "0.7.0",
+        "run": "5.0.0",
+        "safe-coerce": "2.0.0",
+        "safely": "4.0.1",
+        "school-of-music": "1.3.0",
+        "selection-foldable": "0.2.0",
+        "semirings": "7.0.0",
+        "signal": "13.0.0",
+        "simple-emitter": "3.0.1",
+        "simple-i18n": "2.0.1",
+        "simple-json": "9.0.0",
+        "simple-jwt": "4.0.1",
+        "simple-ulid": "3.0.0",
+        "sized-matrices": "1.0.0",
+        "sized-vectors": "5.0.2",
+        "slug": "3.0.8",
+        "small-ffi": "4.0.1",
+        "soundfonts": "4.1.0",
+        "sparse-matrices": "1.2.1",
+        "sparse-polynomials": "1.0.5",
+        "spec": "7.2.0",
+        "spec-discovery": "8.0.1",
+        "spec-quickcheck": "5.0.0",
+        "splitmix": "2.1.0",
+        "ssrs": "1.0.0",
+        "st": "6.2.0",
+        "strictlypositiveint": "1.0.1",
+        "string-parsers": "8.0.0",
+        "strings": "6.0.1",
+        "strings-extra": "4.0.0",
+        "stringutils": "0.0.12",
+        "substitute": "0.2.3",
+        "sunde": "3.0.0",
+        "supply": "0.2.0",
+        "svg-parser": "3.0.0",
+        "systemd-journald": "0.3.0",
+        "tagged": "4.0.2",
+        "tailrec": "6.1.0",
+        "tecton": "0.1.6",
+        "tecton-halogen": "0.1.3",
+        "test-unit": "17.0.0",
+        "thermite": "6.3.1",
+        "thermite-dom": "0.3.1",
+        "these": "6.0.0",
+        "toppokki": "4.0.0",
+        "transformers": "6.0.0",
+        "tree-rose": "4.0.2",
+        "tuples": "7.0.0",
+        "two-or-more": "1.0.0",
+        "type-equality": "4.0.1",
+        "typelevel": "6.0.0",
+        "typelevel-lists": "2.1.0",
+        "typelevel-peano": "1.0.1",
+        "typelevel-prelude": "7.0.0",
+        "typelevel-rows": "0.1.0",
+        "uint": "7.0.0",
+        "ulid": "3.0.1",
+        "uncurried-transformers": "1.1.0",
+        "undefined": "2.0.0",
+        "undefined-is-not-a-problem": "1.1.0",
+        "unfoldable": "6.0.0",
+        "unicode": "6.0.0",
+        "unlift": "1.0.1",
+        "unordered-collections": "3.0.1",
+        "unsafe-coerce": "6.0.0",
+        "unsafe-reference": "5.0.0",
+        "untagged-to-tagged": "0.1.4",
+        "untagged-union": "1.0.0",
+        "uri": "9.0.0",
+        "uuid": "9.0.0",
+        "uuidv4": "1.0.0",
+        "validation": "6.0.0",
+        "variant": "8.0.0",
+        "vectorfield": "1.0.1",
+        "vectors": "2.1.0",
+        "versions": "7.0.0",
+        "visx": "0.0.2",
+        "web-clipboard": "5.0.0",
+        "web-cssom": "2.0.0",
+        "web-dom": "6.0.0",
+        "web-dom-parser": "8.0.0",
+        "web-dom-xpath": "3.0.0",
+        "web-encoding": "3.0.0",
+        "web-events": "4.0.0",
+        "web-fetch": "3.0.0",
+        "web-file": "4.0.0",
+        "web-html": "4.1.0",
+        "web-pointerevents": "1.0.0",
+        "web-proletarian": "1.0.0",
+        "web-promise": "3.1.0",
+        "web-resize-observer": "2.0.0",
+        "web-router": "1.0.0",
+        "web-socket": "4.0.0",
+        "web-storage": "5.0.0",
+        "web-streams": "3.0.0",
+        "web-touchevents": "4.0.0",
+        "web-uievents": "4.0.0",
+        "web-url": "2.0.0",
+        "web-workers": "1.1.0",
+        "web-xhr": "5.0.0",
+        "which": "2.0.0",
+        "yoga-fetch": "1.0.1",
+        "yoga-json": "4.0.1",
+        "yoga-om": "0.1.0",
+        "yoga-postgres": "6.0.0",
+        "yoga-tree": "1.0.0"
+      }
+    },
+    "extra_packages": {
+      "aeson": {
+        "git": "https://github.com/mlabs-haskell/purescript-aeson.git",
+        "ref": "v2.0.1",
+        "dependencies": [
+          "aff",
+          "argonaut",
+          "argonaut-codecs",
+          "argonaut-core",
+          "arrays",
+          "bifunctors",
+          "const",
+          "control",
+          "effect",
+          "either",
+          "exceptions",
+          "foldable-traversable",
+          "foreign-object",
+          "integers",
+          "js-bigints",
+          "lists",
+          "maybe",
+          "mote",
+          "numbers",
+          "ordered-collections",
+          "partial",
+          "prelude",
+          "quickcheck",
+          "record",
+          "spec",
+          "strings",
+          "tuples",
+          "typelevel",
+          "typelevel-prelude",
+          "uint",
+          "untagged-union"
+        ]
+      },
+      "bignumber": {
+        "git": "https://github.com/mlabs-haskell/purescript-bignumber",
+        "ref": "760d11b41ece31b8cdd3c53349c5c2fd48d3ff89",
+        "dependencies": [
+          "console",
+          "effect",
+          "either",
+          "exceptions",
+          "functions",
+          "integers",
+          "partial",
+          "prelude",
+          "tuples"
+        ]
+      },
+      "bytearrays": {
+        "git": "https://github.com/mlabs-haskell/purescript-bytearrays",
+        "ref": "v1.0.0",
+        "dependencies": [
+          "aeson",
+          "aff",
+          "arraybuffer-types",
+          "effect",
+          "either",
+          "foldable-traversable",
+          "maybe",
+          "newtype",
+          "prelude",
+          "quickcheck",
+          "quickcheck-laws",
+          "spec",
+          "strings"
+        ]
+      },
+      "cardano-collateral-select": {
+        "git": "https://github.com/mlabs-haskell/purescript-cardano-collateral-select",
+        "ref": "v1.0.0",
+        "dependencies": [
+          "arrays",
+          "cardano-types",
+          "console",
+          "effect",
+          "exceptions",
+          "foldable-traversable",
+          "lists",
+          "maybe",
+          "newtype",
+          "ordered-collections",
+          "partial",
+          "prelude",
+          "tuples"
+        ]
+      },
+      "cardano-hd-wallet": {
+        "git": "https://github.com/mlabs-haskell/purescript-cardano-hd-wallet",
+        "ref": "cc1073ddf8bce72407ef6671e3decb59f422e304",
+        "dependencies": [
+          "cardano-serialization-lib",
+          "cardano-types",
+          "console",
+          "effect",
+          "either",
+          "prelude",
+          "uint"
+        ]
+      },
+      "cardano-key-wallet": {
+        "git": "https://github.com/mlabs-haskell/purescript-cardano-key-wallet",
+        "ref": "v2.0.0",
+        "dependencies": [
+          "aeson",
+          "aff",
+          "arrays",
+          "cardano-collateral-select",
+          "cardano-message-signing",
+          "cardano-types",
+          "console",
+          "effect",
+          "either",
+          "foldable-traversable",
+          "maybe",
+          "newtype",
+          "prelude",
+          "profunctor-lenses",
+          "typelevel-prelude"
+        ]
+      },
+      "cardano-message-signing": {
+        "git": "https://github.com/mlabs-haskell/purescript-cardano-message-signing",
+        "ref": "v1.0.0",
+        "dependencies": [
+          "bytearrays",
+          "cardano-types",
+          "console",
+          "effect",
+          "newtype",
+          "prelude"
+        ]
+      },
+      "cardano-plutus-data-schema": {
+        "git": "https://github.com/mlabs-haskell/purescript-cardano-plutus-data-schema",
+        "ref": "v1.0.0",
+        "dependencies": [
+          "prelude"
+        ]
+      },
+      "cardano-serialization-lib": {
+        "git": "https://github.com/mlabs-haskell/purescript-cardano-serialization-lib",
+        "ref": "v2.0.0",
+        "dependencies": [
+          "aeson",
+          "aff",
+          "argonaut",
+          "bifunctors",
+          "bytearrays",
+          "effect",
+          "either",
+          "enums",
+          "maybe",
+          "nullable",
+          "ordered-collections",
+          "partial",
+          "prelude",
+          "profunctor",
+          "spec",
+          "transformers",
+          "tuples",
+          "unsafe-coerce"
+        ]
+      },
+      "cardano-transaction-builder": {
+        "git": "https://github.com/mlabs-haskell/purescript-cardano-transaction-builder",
+        "ref": "v2.0.0",
+        "dependencies": [
+          "aeson",
+          "aff",
+          "arraybuffer-types",
+          "arrays",
+          "bifunctors",
+          "bytearrays",
+          "cardano-plutus-data-schema",
+          "cardano-serialization-lib",
+          "cardano-types",
+          "console",
+          "control",
+          "datetime",
+          "effect",
+          "either",
+          "encoding",
+          "exceptions",
+          "foldable-traversable",
+          "foreign-object",
+          "integers",
+          "js-bigints",
+          "lattice",
+          "lists",
+          "literals",
+          "maybe",
+          "monad-logger",
+          "mote",
+          "mote-testplan",
+          "newtype",
+          "nonempty",
+          "nullable",
+          "ordered-collections",
+          "partial",
+          "prelude",
+          "profunctor",
+          "profunctor-lenses",
+          "quickcheck",
+          "rationals",
+          "record",
+          "safe-coerce",
+          "spec",
+          "strings",
+          "these",
+          "transformers",
+          "tuples",
+          "typelevel-prelude",
+          "uint",
+          "unfoldable",
+          "unsafe-coerce"
+        ]
+      },
+      "cardano-transaction-lib": {
+        "git": "https://github.com/Plutonomicon/cardano-transaction-lib.git",
+        "ref": "v9.3.1",
+        "dependencies": [
+          "aeson",
+          "aff",
+          "aff-promise",
+          "aff-retry",
+          "affjax",
+          "ansi",
+          "argonaut",
+          "argonaut-codecs",
+          "arrays",
+          "avar",
+          "bifunctors",
+          "bignumber",
+          "bytearrays",
+          "cardano-hd-wallet",
+          "cardano-key-wallet",
+          "cardano-message-signing",
+          "cardano-plutus-data-schema",
+          "cardano-serialization-lib",
+          "cardano-transaction-builder",
+          "cardano-types",
+          "checked-exceptions",
+          "cip30",
+          "cip30-mock",
+          "cip30-typesafe",
+          "cip95",
+          "cip95-typesafe",
+          "console",
+          "control",
+          "crypto",
+          "datetime",
+          "debug",
+          "effect",
+          "either",
+          "enums",
+          "exceptions",
+          "foldable-traversable",
+          "foreign",
+          "foreign-object",
+          "formatters",
+          "functions",
+          "heterogeneous",
+          "http-methods",
+          "identity",
+          "integers",
+          "js-bigints",
+          "js-date",
+          "lattice",
+          "lists",
+          "literals",
+          "maybe",
+          "media-types",
+          "monad-logger",
+          "mote",
+          "mote-testplan",
+          "newtype",
+          "noble-secp256k1",
+          "node-buffer",
+          "node-child-process",
+          "node-fs",
+          "node-fs-aff",
+          "node-path",
+          "node-process",
+          "node-readline",
+          "node-streams",
+          "node-streams-aff",
+          "nonempty",
+          "now",
+          "nullable",
+          "numbers",
+          "optparse",
+          "ordered-collections",
+          "orders",
+          "parallel",
+          "parsing",
+          "partial",
+          "plutus-types",
+          "posix-types",
+          "prelude",
+          "profunctor",
+          "profunctor-lenses",
+          "quickcheck",
+          "quickcheck-combinators",
+          "random",
+          "rationals",
+          "record",
+          "refs",
+          "safe-coerce",
+          "safely",
+          "spec",
+          "spec-quickcheck",
+          "strings",
+          "stringutils",
+          "tailrec",
+          "these",
+          "toppokki",
+          "transformers",
+          "tuples",
+          "typelevel-prelude",
+          "uint",
+          "unfoldable",
+          "unsafe-coerce",
+          "untagged-union",
+          "uplc-apply-args",
+          "variant",
+          "web-html",
+          "web-storage"
+        ]
+      },
+      "cardano-types": {
+        "git": "https://github.com/mlabs-haskell/purescript-cardano-types",
+        "ref": "v3.0.0",
+        "dependencies": [
+          "aeson",
+          "aff",
+          "arraybuffer-types",
+          "arrays",
+          "bifunctors",
+          "bytearrays",
+          "cardano-plutus-data-schema",
+          "cardano-serialization-lib",
+          "control",
+          "datetime",
+          "effect",
+          "either",
+          "encoding",
+          "exceptions",
+          "foldable-traversable",
+          "foreign-object",
+          "integers",
+          "js-bigints",
+          "lattice",
+          "lists",
+          "literals",
+          "maybe",
+          "monad-logger",
+          "mote",
+          "mote-testplan",
+          "newtype",
+          "nonempty",
+          "nullable",
+          "ordered-collections",
+          "partial",
+          "prelude",
+          "profunctor",
+          "profunctor-lenses",
+          "quickcheck",
+          "rationals",
+          "record",
+          "safe-coerce",
+          "spec",
+          "these",
+          "tuples",
+          "typelevel-prelude",
+          "uint",
+          "unfoldable",
+          "unsafe-coerce"
+        ]
+      },
+      "cip30": {
+        "git": "https://github.com/mlabs-haskell/purescript-cip30",
+        "ref": "v1.0.1",
+        "dependencies": [
+          "aff",
+          "aff-promise",
+          "arrays",
+          "console",
+          "effect",
+          "literals",
+          "maybe",
+          "newtype",
+          "nullable",
+          "prelude",
+          "untagged-union"
+        ]
+      },
+      "cip30-mock": {
+        "git": "https://github.com/mlabs-haskell/purescript-cip30-mock",
+        "ref": "v1.1.0",
+        "dependencies": [
+          "aff-promise",
+          "console",
+          "effect",
+          "functions",
+          "prelude"
+        ]
+      },
+      "cip30-typesafe": {
+        "git": "https://github.com/mlabs-haskell/purescript-cip30-typesafe",
+        "ref": "v1.0.0",
+        "dependencies": [
+          "aff",
+          "bifunctors",
+          "cip30",
+          "control",
+          "effect",
+          "either",
+          "exceptions",
+          "maybe",
+          "prelude",
+          "spec",
+          "transformers",
+          "variant"
+        ]
+      },
+      "cip95": {
+        "git": "https://github.com/mlabs-haskell/purescript-cip95",
+        "ref": "v1.0.0",
+        "dependencies": [
+          "aff",
+          "aff-promise",
+          "console",
+          "effect",
+          "prelude"
+        ]
+      },
+      "cip95-typesafe": {
+        "git": "https://github.com/mlabs-haskell/purescript-cip95-typesafe",
+        "ref": "v1.0.0",
+        "dependencies": [
+          "aff",
+          "bifunctors",
+          "cip30",
+          "cip30-typesafe",
+          "cip95",
+          "console",
+          "control",
+          "effect",
+          "either",
+          "exceptions",
+          "maybe",
+          "prelude",
+          "spec",
+          "transformers",
+          "variant"
+        ]
+      },
+      "js-bigints": {
+        "git": "https://github.com/purescript-contrib/purescript-js-bigints",
+        "ref": "36a7d8ac75a7230043ae511f3145f9ed130954a9",
+        "dependencies": [
+          "integers",
+          "maybe",
+          "prelude"
+        ]
+      },
+      "lattice": {
+        "git": "https://github.com/Risto-Stevcev/purescript-lattice.git",
+        "ref": "v0.3.0",
+        "dependencies": [
+          "console",
+          "prelude",
+          "properties"
+        ]
+      },
+      "mote": {
+        "git": "https://github.com/garyb/purescript-mote",
+        "ref": "v1.1.0",
+        "dependencies": [
+          "arrays",
+          "these",
+          "transformers"
+        ]
+      },
+      "mote-testplan": {
+        "git": "https://github.com/mlabs-haskell/purescript-mote-testplan",
+        "ref": "v1.0.0",
+        "dependencies": [
+          "aff",
+          "console",
+          "datetime",
+          "effect",
+          "foldable-traversable",
+          "maybe",
+          "mote",
+          "newtype",
+          "numbers",
+          "ordered-collections",
+          "prelude",
+          "spec",
+          "transformers"
+        ]
+      },
+      "noble-secp256k1": {
+        "git": "https://github.com/mlabs-haskell/purescript-noble-secp256k1.git",
+        "ref": "v2.0.0",
+        "dependencies": [
+          "aff",
+          "aff-promise",
+          "bytearrays",
+          "effect",
+          "prelude",
+          "spec",
+          "tuples",
+          "unsafe-coerce"
+        ]
+      },
+      "plutus-types": {
+        "git": "https://github.com/mlabs-haskell/purescript-plutus-types",
+        "ref": "v1.0.1",
+        "dependencies": [
+          "aeson",
+          "argonaut-codecs",
+          "arrays",
+          "bifunctors",
+          "bytearrays",
+          "cardano-plutus-data-schema",
+          "cardano-types",
+          "console",
+          "effect",
+          "either",
+          "foldable-traversable",
+          "gen",
+          "js-bigints",
+          "lattice",
+          "maybe",
+          "monad-logger",
+          "newtype",
+          "ordered-collections",
+          "partial",
+          "prelude",
+          "profunctor-lenses",
+          "quickcheck",
+          "these",
+          "tuples"
+        ]
+      },
+      "properties": {
+        "git": "https://github.com/Risto-Stevcev/purescript-properties.git",
+        "ref": "v0.2.0",
+        "dependencies": [
+          "console",
+          "prelude"
+        ]
+      },
+      "toppokki": {
+        "git": "https://github.com/mlabs-haskell/purescript-toppokki",
+        "ref": "5992e93396a734c980ef61c74df5b6ab46108920",
+        "dependencies": [
+          "aff-promise",
+          "functions",
+          "node-buffer",
+          "node-fs-aff",
+          "node-http",
+          "prelude",
+          "record"
+        ]
+      },
+      "uplc-apply-args": {
+        "git": "https://github.com/mlabs-haskell/purescript-uplc-apply-args",
+        "ref": "v1.0.0",
+        "dependencies": [
+          "aff",
+          "bytearrays",
+          "cardano-serialization-lib",
+          "cardano-types",
+          "effect",
+          "either",
+          "foldable-traversable",
+          "foreign-object",
+          "js-bigints",
+          "lists",
+          "maybe",
+          "mote",
+          "mote-testplan",
+          "partial",
+          "prelude",
+          "profunctor",
+          "spec",
+          "transformers",
+          "tuples"
+        ]
+      }
+    }
+  },
+  "packages": {
+    "aeson": {
+      "type": "git",
+      "url": "https://github.com/mlabs-haskell/purescript-aeson.git",
+      "rev": "ac674dda5cf58c6544cb361a208bced4d06ee93a",
+      "dependencies": [
+        "aff",
+        "argonaut",
+        "argonaut-codecs",
+        "argonaut-core",
+        "arrays",
+        "bifunctors",
+        "const",
+        "control",
+        "effect",
+        "either",
+        "exceptions",
+        "foldable-traversable",
+        "foreign-object",
+        "integers",
+        "js-bigints",
+        "lists",
+        "maybe",
+        "mote",
+        "numbers",
+        "ordered-collections",
+        "partial",
+        "prelude",
+        "quickcheck",
+        "record",
+        "spec",
+        "strings",
+        "tuples",
+        "typelevel",
+        "typelevel-prelude",
+        "uint",
+        "untagged-union"
+      ]
+    },
+    "aff": {
+      "type": "registry",
+      "version": "7.1.0",
+      "integrity": "sha256-7hOC6uQO9XBAI5FD8F33ChLjFAiZVfd4BJMqlMh7TNU=",
+      "dependencies": [
+        "arrays",
+        "bifunctors",
+        "control",
+        "datetime",
+        "effect",
+        "either",
+        "exceptions",
+        "foldable-traversable",
+        "functions",
+        "maybe",
+        "newtype",
+        "parallel",
+        "prelude",
+        "refs",
+        "tailrec",
+        "transformers",
+        "unsafe-coerce"
+      ]
+    },
+    "aff-promise": {
+      "type": "registry",
+      "version": "4.0.0",
+      "integrity": "sha256-Kq5EupbUpXeUXx4JqGQE7/RTTz/H6idzWhsocwlEFhM=",
+      "dependencies": [
+        "aff",
+        "foreign"
+      ]
+    },
+    "aff-retry": {
+      "type": "registry",
+      "version": "2.0.0",
+      "integrity": "sha256-01Vi8gUS2cEIToulcK6FAA4REEHvgQIUR7mcW5EY3rY=",
+      "dependencies": [
+        "aff",
+        "arrays",
+        "datetime",
+        "effect",
+        "either",
+        "exceptions",
+        "integers",
+        "maybe",
+        "newtype",
+        "numbers",
+        "prelude",
+        "random",
+        "transformers"
+      ]
+    },
+    "affjax": {
+      "type": "registry",
+      "version": "13.0.0",
+      "integrity": "sha256-blYfaoW4FYIrIdvmT4sB7nN7BathFaEfZuiVLPmHJOo=",
+      "dependencies": [
+        "aff",
+        "argonaut-core",
+        "arraybuffer-types",
+        "foreign",
+        "form-urlencoded",
+        "http-methods",
+        "integers",
+        "media-types",
+        "nullable",
+        "refs",
+        "unsafe-coerce",
+        "web-xhr"
+      ]
+    },
+    "ansi": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-ZMB6HD+q9CXvn9fRCmJ8dvuDrOVHcjombL3oNOerVnE=",
+      "dependencies": [
+        "foldable-traversable",
+        "lists",
+        "strings"
+      ]
+    },
+    "argonaut": {
+      "type": "registry",
+      "version": "9.0.0",
+      "integrity": "sha256-9sHzkzcFkaMUa9+3FjIybJDYnHtY4Jp4zHOJ84qPTXo=",
+      "dependencies": [
+        "argonaut-codecs",
+        "argonaut-core",
+        "argonaut-traversals"
+      ]
+    },
+    "argonaut-codecs": {
+      "type": "registry",
+      "version": "9.1.0",
+      "integrity": "sha256-N6efXByUeg848ompEqJfVvZuZPfdRYDGlTDFn0G0Oh8=",
+      "dependencies": [
+        "argonaut-core",
+        "arrays",
+        "effect",
+        "foreign-object",
+        "identity",
+        "integers",
+        "maybe",
+        "nonempty",
+        "ordered-collections",
+        "prelude",
+        "record"
+      ]
+    },
+    "argonaut-core": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-RC82GfAjItydxrO24cdX373KHVZiLqybu19b5X8u7B4=",
+      "dependencies": [
+        "arrays",
+        "control",
+        "either",
+        "foreign-object",
+        "functions",
+        "gen",
+        "maybe",
+        "nonempty",
+        "prelude",
+        "strings",
+        "tailrec"
+      ]
+    },
+    "argonaut-traversals": {
+      "type": "registry",
+      "version": "10.0.0",
+      "integrity": "sha256-9nSfqR70rjiNWVVsCoK+jrm9dmyZTx89IKNYO6uNUIk=",
+      "dependencies": [
+        "argonaut-codecs",
+        "argonaut-core",
+        "profunctor-lenses"
+      ]
+    },
+    "arraybuffer-types": {
+      "type": "registry",
+      "version": "3.0.2",
+      "integrity": "sha256-mQKokysYVkooS4uXbO+yovmV/s8b138Ws3zQvOwIHRA=",
+      "dependencies": []
+    },
+    "arrays": {
+      "type": "registry",
+      "version": "7.1.0",
+      "integrity": "sha256-Rvb3AVLal0ZLpmpABgOPIUeYHa4M+c5GwcUP5rQ2trA=",
+      "dependencies": [
+        "bifunctors",
+        "control",
+        "foldable-traversable",
+        "maybe",
+        "nonempty",
+        "partial",
+        "prelude",
+        "safe-coerce",
+        "st",
+        "tailrec",
+        "tuples",
+        "unfoldable",
+        "unsafe-coerce"
+      ]
+    },
+    "assert": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-hCSYcCw9kj3qujoDcriWhCdmrpPZoguSPDZhEMnTl3A=",
+      "dependencies": [
+        "console",
+        "effect",
+        "prelude"
+      ]
+    },
+    "avar": {
+      "type": "registry",
+      "version": "5.0.0",
+      "integrity": "sha256-e7hf0x4hEpcygXP0LtvfvAQ49Bbj2aWtZT3gqM///0A=",
+      "dependencies": [
+        "aff",
+        "effect",
+        "either",
+        "exceptions",
+        "functions",
+        "maybe"
+      ]
+    },
+    "bifunctors": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-/gZwC9YhNxZNQpnHa5BIYerCGM2jeX9ukZiEvYxm5Nw=",
+      "dependencies": [
+        "const",
+        "either",
+        "newtype",
+        "prelude",
+        "tuples"
+      ]
+    },
+    "bignumber": {
+      "type": "git",
+      "url": "https://github.com/mlabs-haskell/purescript-bignumber",
+      "rev": "760d11b41ece31b8cdd3c53349c5c2fd48d3ff89",
+      "dependencies": [
+        "console",
+        "effect",
+        "either",
+        "exceptions",
+        "functions",
+        "integers",
+        "partial",
+        "prelude",
+        "tuples"
+      ]
+    },
+    "bytearrays": {
+      "type": "git",
+      "url": "https://github.com/mlabs-haskell/purescript-bytearrays",
+      "rev": "e3991d562a04d8825472551d91a06407ad9c9112",
+      "dependencies": [
+        "aeson",
+        "aff",
+        "arraybuffer-types",
+        "effect",
+        "either",
+        "foldable-traversable",
+        "maybe",
+        "newtype",
+        "prelude",
+        "quickcheck",
+        "quickcheck-laws",
+        "spec",
+        "strings"
+      ]
+    },
+    "cardano-collateral-select": {
+      "type": "git",
+      "url": "https://github.com/mlabs-haskell/purescript-cardano-collateral-select",
+      "rev": "193bf49be979b42aa1f0f9cb3d7582d6bc98e3b9",
+      "dependencies": [
+        "arrays",
+        "cardano-types",
+        "console",
+        "effect",
+        "exceptions",
+        "foldable-traversable",
+        "lists",
+        "maybe",
+        "newtype",
+        "ordered-collections",
+        "partial",
+        "prelude",
+        "tuples"
+      ]
+    },
+    "cardano-hd-wallet": {
+      "type": "git",
+      "url": "https://github.com/mlabs-haskell/purescript-cardano-hd-wallet",
+      "rev": "cc1073ddf8bce72407ef6671e3decb59f422e304",
+      "dependencies": [
+        "cardano-serialization-lib",
+        "cardano-types",
+        "console",
+        "effect",
+        "either",
+        "prelude",
+        "uint"
+      ]
+    },
+    "cardano-key-wallet": {
+      "type": "git",
+      "url": "https://github.com/mlabs-haskell/purescript-cardano-key-wallet",
+      "rev": "99d9bb7c8b291ad0bc9709d493ff7e02d14a89c0",
+      "dependencies": [
+        "aeson",
+        "aff",
+        "arrays",
+        "cardano-collateral-select",
+        "cardano-message-signing",
+        "cardano-types",
+        "console",
+        "effect",
+        "either",
+        "foldable-traversable",
+        "maybe",
+        "newtype",
+        "prelude",
+        "profunctor-lenses",
+        "typelevel-prelude"
+      ]
+    },
+    "cardano-message-signing": {
+      "type": "git",
+      "url": "https://github.com/mlabs-haskell/purescript-cardano-message-signing",
+      "rev": "97f6f97a258ae3490df0be6b39fa6769677aa04f",
+      "dependencies": [
+        "bytearrays",
+        "cardano-types",
+        "console",
+        "effect",
+        "newtype",
+        "prelude"
+      ]
+    },
+    "cardano-plutus-data-schema": {
+      "type": "git",
+      "url": "https://github.com/mlabs-haskell/purescript-cardano-plutus-data-schema",
+      "rev": "eb0bb78927c50c4bee364e932c9fa8cf94546191",
+      "dependencies": [
+        "prelude"
+      ]
+    },
+    "cardano-serialization-lib": {
+      "type": "git",
+      "url": "https://github.com/mlabs-haskell/purescript-cardano-serialization-lib",
+      "rev": "d6ca2f9463b3d4e1cfa98e9964edbe7bfed02905",
+      "dependencies": [
+        "aeson",
+        "aff",
+        "argonaut",
+        "bifunctors",
+        "bytearrays",
+        "effect",
+        "either",
+        "enums",
+        "maybe",
+        "nullable",
+        "ordered-collections",
+        "partial",
+        "prelude",
+        "profunctor",
+        "spec",
+        "transformers",
+        "tuples",
+        "unsafe-coerce"
+      ]
+    },
+    "cardano-transaction-builder": {
+      "type": "git",
+      "url": "https://github.com/mlabs-haskell/purescript-cardano-transaction-builder",
+      "rev": "dbe4203500723282ae73b2cd9b56f4267cbd7117",
+      "dependencies": [
+        "aeson",
+        "aff",
+        "arraybuffer-types",
+        "arrays",
+        "bifunctors",
+        "bytearrays",
+        "cardano-plutus-data-schema",
+        "cardano-serialization-lib",
+        "cardano-types",
+        "console",
+        "control",
+        "datetime",
+        "effect",
+        "either",
+        "encoding",
+        "exceptions",
+        "foldable-traversable",
+        "foreign-object",
+        "integers",
+        "js-bigints",
+        "lattice",
+        "lists",
+        "literals",
+        "maybe",
+        "monad-logger",
+        "mote",
+        "mote-testplan",
+        "newtype",
+        "nonempty",
+        "nullable",
+        "ordered-collections",
+        "partial",
+        "prelude",
+        "profunctor",
+        "profunctor-lenses",
+        "quickcheck",
+        "rationals",
+        "record",
+        "safe-coerce",
+        "spec",
+        "strings",
+        "these",
+        "transformers",
+        "tuples",
+        "typelevel-prelude",
+        "uint",
+        "unfoldable",
+        "unsafe-coerce"
+      ]
+    },
+    "cardano-transaction-lib": {
+      "type": "git",
+      "url": "https://github.com/Plutonomicon/cardano-transaction-lib.git",
+      "rev": "be434c41d80bb10d25825ed247d81f630f2d6b89",
+      "dependencies": [
+        "aeson",
+        "aff",
+        "aff-promise",
+        "aff-retry",
+        "affjax",
+        "ansi",
+        "argonaut",
+        "argonaut-codecs",
+        "arrays",
+        "avar",
+        "bifunctors",
+        "bignumber",
+        "bytearrays",
+        "cardano-hd-wallet",
+        "cardano-key-wallet",
+        "cardano-message-signing",
+        "cardano-plutus-data-schema",
+        "cardano-serialization-lib",
+        "cardano-transaction-builder",
+        "cardano-types",
+        "checked-exceptions",
+        "cip30",
+        "cip30-mock",
+        "cip30-typesafe",
+        "cip95",
+        "cip95-typesafe",
+        "console",
+        "control",
+        "crypto",
+        "datetime",
+        "debug",
+        "effect",
+        "either",
+        "enums",
+        "exceptions",
+        "foldable-traversable",
+        "foreign",
+        "foreign-object",
+        "formatters",
+        "functions",
+        "heterogeneous",
+        "http-methods",
+        "identity",
+        "integers",
+        "js-bigints",
+        "js-date",
+        "lattice",
+        "lists",
+        "literals",
+        "maybe",
+        "media-types",
+        "monad-logger",
+        "mote",
+        "mote-testplan",
+        "newtype",
+        "noble-secp256k1",
+        "node-buffer",
+        "node-child-process",
+        "node-fs",
+        "node-fs-aff",
+        "node-path",
+        "node-process",
+        "node-readline",
+        "node-streams",
+        "node-streams-aff",
+        "nonempty",
+        "now",
+        "nullable",
+        "numbers",
+        "optparse",
+        "ordered-collections",
+        "orders",
+        "parallel",
+        "parsing",
+        "partial",
+        "plutus-types",
+        "posix-types",
+        "prelude",
+        "profunctor",
+        "profunctor-lenses",
+        "quickcheck",
+        "quickcheck-combinators",
+        "random",
+        "rationals",
+        "record",
+        "refs",
+        "safe-coerce",
+        "safely",
+        "spec",
+        "spec-quickcheck",
+        "strings",
+        "stringutils",
+        "tailrec",
+        "these",
+        "toppokki",
+        "transformers",
+        "tuples",
+        "typelevel-prelude",
+        "uint",
+        "unfoldable",
+        "unsafe-coerce",
+        "untagged-union",
+        "uplc-apply-args",
+        "variant",
+        "web-html",
+        "web-storage"
+      ]
+    },
+    "cardano-types": {
+      "type": "git",
+      "url": "https://github.com/mlabs-haskell/purescript-cardano-types",
+      "rev": "71b204c7c9c83b8280ed3ed14837d76b8ac0a6fe",
+      "dependencies": [
+        "aeson",
+        "aff",
+        "arraybuffer-types",
+        "arrays",
+        "bifunctors",
+        "bytearrays",
+        "cardano-plutus-data-schema",
+        "cardano-serialization-lib",
+        "control",
+        "datetime",
+        "effect",
+        "either",
+        "encoding",
+        "exceptions",
+        "foldable-traversable",
+        "foreign-object",
+        "integers",
+        "js-bigints",
+        "lattice",
+        "lists",
+        "literals",
+        "maybe",
+        "monad-logger",
+        "mote",
+        "mote-testplan",
+        "newtype",
+        "nonempty",
+        "nullable",
+        "ordered-collections",
+        "partial",
+        "prelude",
+        "profunctor",
+        "profunctor-lenses",
+        "quickcheck",
+        "rationals",
+        "record",
+        "safe-coerce",
+        "spec",
+        "these",
+        "tuples",
+        "typelevel-prelude",
+        "uint",
+        "unfoldable",
+        "unsafe-coerce"
+      ]
+    },
+    "catenable-lists": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-76vYENhwF4BWTBsjeLuErCH2jqVT4M3R1HX+4RwSftA=",
+      "dependencies": [
+        "control",
+        "foldable-traversable",
+        "lists",
+        "maybe",
+        "prelude",
+        "tuples",
+        "unfoldable"
+      ]
+    },
+    "checked-exceptions": {
+      "type": "registry",
+      "version": "3.1.1",
+      "integrity": "sha256-mVHXIYMZEASPm6Eto1F9pjNSklV7KruEnSboe6J4Ujk=",
+      "dependencies": [
+        "prelude",
+        "transformers",
+        "variant"
+      ]
+    },
+    "cip30": {
+      "type": "git",
+      "url": "https://github.com/mlabs-haskell/purescript-cip30",
+      "rev": "8de9bbcc6728237e3aec418c2c88bfcb519fc176",
+      "dependencies": [
+        "aff",
+        "aff-promise",
+        "arrays",
+        "console",
+        "effect",
+        "literals",
+        "maybe",
+        "newtype",
+        "nullable",
+        "prelude",
+        "untagged-union"
+      ]
+    },
+    "cip30-mock": {
+      "type": "git",
+      "url": "https://github.com/mlabs-haskell/purescript-cip30-mock",
+      "rev": "7ab1d872b550b60ee32df2a01feef3e8dce3f906",
+      "dependencies": [
+        "aff-promise",
+        "console",
+        "effect",
+        "functions",
+        "prelude"
+      ]
+    },
+    "cip30-typesafe": {
+      "type": "git",
+      "url": "https://github.com/mlabs-haskell/purescript-cip30-typesafe",
+      "rev": "d72e51fbc0255eb3246c9132d295de7f65e16a99",
+      "dependencies": [
+        "aff",
+        "bifunctors",
+        "cip30",
+        "control",
+        "effect",
+        "either",
+        "exceptions",
+        "maybe",
+        "prelude",
+        "spec",
+        "transformers",
+        "variant"
+      ]
+    },
+    "cip95": {
+      "type": "git",
+      "url": "https://github.com/mlabs-haskell/purescript-cip95",
+      "rev": "2a27322aaaad116fd6f08832d171d8e5b43f290f",
+      "dependencies": [
+        "aff",
+        "aff-promise",
+        "console",
+        "effect",
+        "prelude"
+      ]
+    },
+    "cip95-typesafe": {
+      "type": "git",
+      "url": "https://github.com/mlabs-haskell/purescript-cip95-typesafe",
+      "rev": "bee527d5bca9b8d9f7126f67160773196f492259",
+      "dependencies": [
+        "aff",
+        "bifunctors",
+        "cip30",
+        "cip30-typesafe",
+        "cip95",
+        "console",
+        "control",
+        "effect",
+        "either",
+        "exceptions",
+        "maybe",
+        "prelude",
+        "spec",
+        "transformers",
+        "variant"
+      ]
+    },
+    "codec": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-VLG7Ii38xmeT5UGH98xBFiWp1YnFZim/iMg+aQz2RB8=",
+      "dependencies": [
+        "bifunctors",
+        "profunctor"
+      ]
+    },
+    "codec-argonaut": {
+      "type": "registry",
+      "version": "10.0.0",
+      "integrity": "sha256-n80U8KiBk333qfQwDobSZWiyNg9BA3CL/EwFznIdRwI=",
+      "dependencies": [
+        "argonaut-core",
+        "codec",
+        "foreign-object",
+        "ordered-collections",
+        "type-equality",
+        "variant"
+      ]
+    },
+    "console": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-gJpJ53fCDAL8BiCiJXH0HNAJ9K3gJtLo8GDaCK6hA5U=",
+      "dependencies": [
+        "effect",
+        "prelude"
+      ]
+    },
+    "const": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-tNrxDW8D8H4jdHE2HiPzpLy08zkzJMmGHdRqt5BQuTc=",
+      "dependencies": [
+        "invariant",
+        "newtype",
+        "prelude"
+      ]
+    },
+    "contravariant": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-TP+ooAp3vvmdjfQsQJSichF5B4BPDHp3wAJoWchip6c=",
+      "dependencies": [
+        "const",
+        "either",
+        "newtype",
+        "prelude",
+        "tuples"
+      ]
+    },
+    "control": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-sH7Pg9E96JCPF9PIA6oQ8+BjTyO/BH1ZuE/bOcyj4Jk=",
+      "dependencies": [
+        "newtype",
+        "prelude"
+      ]
+    },
+    "crypto": {
+      "type": "registry",
+      "version": "5.0.1",
+      "integrity": "sha256-elbRdVTYCMmMioK3KpNZaHCsm+l5i8KTM+k2wh6GJyI=",
+      "dependencies": [
+        "aff",
+        "effect",
+        "functions",
+        "maybe",
+        "node-buffer",
+        "nullable",
+        "prelude"
+      ]
+    },
+    "datetime": {
+      "type": "registry",
+      "version": "6.1.0",
+      "integrity": "sha256-g/5X5BBegQWLpI9IWD+sY6mcaYpzzlW5lz5NBzaMtyI=",
+      "dependencies": [
+        "bifunctors",
+        "control",
+        "either",
+        "enums",
+        "foldable-traversable",
+        "functions",
+        "gen",
+        "integers",
+        "lists",
+        "maybe",
+        "newtype",
+        "numbers",
+        "ordered-collections",
+        "partial",
+        "prelude",
+        "tuples"
+      ]
+    },
+    "debug": {
+      "type": "registry",
+      "version": "6.0.2",
+      "integrity": "sha256-vmkYFuXYuELBzeauvgHG6E6Kf/Hp1dAnxwE9ByHfwSg=",
+      "dependencies": [
+        "functions",
+        "prelude"
+      ]
+    },
+    "distributive": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-HTDdmEnzigMl+02SJB88j+gAXDx9VKsbvR4MJGDPbOQ=",
+      "dependencies": [
+        "identity",
+        "newtype",
+        "prelude",
+        "tuples",
+        "type-equality"
+      ]
+    },
+    "effect": {
+      "type": "registry",
+      "version": "4.0.0",
+      "integrity": "sha256-eBtZu+HZcMa5HilvI6kaDyVX3ji8p0W9MGKy2K4T6+M=",
+      "dependencies": [
+        "prelude"
+      ]
+    },
+    "either": {
+      "type": "registry",
+      "version": "6.1.0",
+      "integrity": "sha256-6hgTPisnMWVwQivOu2PKYcH8uqjEOOqDyaDQVUchTpY=",
+      "dependencies": [
+        "control",
+        "invariant",
+        "maybe",
+        "prelude"
+      ]
+    },
+    "encoding": {
+      "type": "registry",
+      "version": "0.0.8",
+      "integrity": "sha256-n0HhENAax0yr7JFwZXcisx0jJvVf1dFwqd+Q5i2Pr88=",
+      "dependencies": [
+        "arraybuffer-types",
+        "either",
+        "exceptions",
+        "functions",
+        "prelude"
+      ]
+    },
+    "enums": {
+      "type": "registry",
+      "version": "6.0.1",
+      "integrity": "sha256-HWaD73JFLorc4A6trKIRUeDMdzE+GpkJaEOM1nTNkC8=",
+      "dependencies": [
+        "control",
+        "either",
+        "gen",
+        "maybe",
+        "newtype",
+        "nonempty",
+        "partial",
+        "prelude",
+        "tuples",
+        "unfoldable"
+      ]
+    },
+    "exceptions": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-y/xTAEIZIARCE+50/u1di0ncebJ+CIwNOLswyOWzMTw=",
+      "dependencies": [
+        "effect",
+        "either",
+        "maybe",
+        "prelude"
+      ]
+    },
+    "exists": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-A0JQHpTfo1dNOj9U5/Fd3xndlRSE0g2IQWOGor2yXn8=",
+      "dependencies": [
+        "unsafe-coerce"
+      ]
+    },
+    "exitcodes": {
+      "type": "registry",
+      "version": "4.0.0",
+      "integrity": "sha256-4wxViTbyOoyKJ/WaRGI6+hZmgMKI5Miv16lSwefiLSM=",
+      "dependencies": [
+        "enums"
+      ]
+    },
+    "fixed-points": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-hTl5fzeG4mzAOFzEzAeNH7kJvJgYCH7x3v2NdX9pOE4=",
+      "dependencies": [
+        "exists",
+        "newtype",
+        "prelude",
+        "transformers"
+      ]
+    },
+    "foldable-traversable": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-fLeqRYM4jUrZD5H4WqcwUgzU7XfYkzO4zhgtNc3jcWM=",
+      "dependencies": [
+        "bifunctors",
+        "const",
+        "control",
+        "either",
+        "functors",
+        "identity",
+        "maybe",
+        "newtype",
+        "orders",
+        "prelude",
+        "tuples"
+      ]
+    },
+    "foreign": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-1ORiqoS3HW+qfwSZAppHPWy4/6AQysxZ2t29jcdUMNA=",
+      "dependencies": [
+        "either",
+        "functions",
+        "identity",
+        "integers",
+        "lists",
+        "maybe",
+        "prelude",
+        "strings",
+        "transformers"
+      ]
+    },
+    "foreign-object": {
+      "type": "registry",
+      "version": "4.1.0",
+      "integrity": "sha256-q24okj6mT+yGHYQ+ei/pYPj5ih6sTbu7eDv/WU56JVo=",
+      "dependencies": [
+        "arrays",
+        "foldable-traversable",
+        "functions",
+        "gen",
+        "lists",
+        "maybe",
+        "prelude",
+        "st",
+        "tailrec",
+        "tuples",
+        "typelevel-prelude",
+        "unfoldable"
+      ]
+    },
+    "fork": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-X7u0SuCvFbLbzuNEKLBNuWjmcroqMqit4xEzpQwAP7E=",
+      "dependencies": [
+        "aff"
+      ]
+    },
+    "form-urlencoded": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-WUzk8DTjrbPVHKZ5w7XpPBO6ci6xFhvYguHp6RvX+18=",
+      "dependencies": [
+        "foldable-traversable",
+        "js-uri",
+        "maybe",
+        "newtype",
+        "prelude",
+        "strings",
+        "tuples"
+      ]
+    },
+    "formatters": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-5JaC9d2p0xoqJWjWxlHH19R4iJwFTBr4j7SlYcLgicE=",
+      "dependencies": [
+        "datetime",
+        "fixed-points",
+        "lists",
+        "numbers",
+        "parsing",
+        "prelude",
+        "transformers"
+      ]
+    },
+    "free": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-72auTIZAG6fhz4F94rxyDwgfnHwp+/89rujZpZWrV0w=",
+      "dependencies": [
+        "catenable-lists",
+        "control",
+        "distributive",
+        "either",
+        "exists",
+        "foldable-traversable",
+        "invariant",
+        "lazy",
+        "maybe",
+        "prelude",
+        "tailrec",
+        "transformers",
+        "tuples",
+        "unsafe-coerce"
+      ]
+    },
+    "freet": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-zkL6wU4ZPq8xz1kGFxoliWqyhBksepMJTyA68VEBaJo=",
+      "dependencies": [
+        "aff",
+        "bifunctors",
+        "effect",
+        "either",
+        "exists",
+        "free",
+        "prelude",
+        "tailrec",
+        "transformers",
+        "tuples"
+      ]
+    },
+    "functions": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-adMyJNEnhGde2unHHAP79gPtlNjNqzgLB8arEOn9hLI=",
+      "dependencies": [
+        "prelude"
+      ]
+    },
+    "functors": {
+      "type": "registry",
+      "version": "5.0.0",
+      "integrity": "sha256-zfPWWYisbD84MqwpJSZFlvM6v86McM68ob8p9s27ywU=",
+      "dependencies": [
+        "bifunctors",
+        "const",
+        "contravariant",
+        "control",
+        "distributive",
+        "either",
+        "invariant",
+        "maybe",
+        "newtype",
+        "prelude",
+        "profunctor",
+        "tuples",
+        "unsafe-coerce"
+      ]
+    },
+    "gen": {
+      "type": "registry",
+      "version": "4.0.0",
+      "integrity": "sha256-f7yzAXWwr+xnaqEOcvyO3ezKdoes8+WXWdXIHDBCAPI=",
+      "dependencies": [
+        "either",
+        "foldable-traversable",
+        "identity",
+        "maybe",
+        "newtype",
+        "nonempty",
+        "prelude",
+        "tailrec",
+        "tuples",
+        "unfoldable"
+      ]
+    },
+    "heterogeneous": {
+      "type": "registry",
+      "version": "0.6.0",
+      "integrity": "sha256-cfNYSK6yYmjTrkzk95Otpv6TUUkeBreexwqG/tBvUyg=",
+      "dependencies": [
+        "either",
+        "functors",
+        "prelude",
+        "record",
+        "tuples",
+        "variant"
+      ]
+    },
+    "http-methods": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-Orr7rbDGcp7qoqmUMXPRMjBx+C4jqOQcFe9+gE3nMgU=",
+      "dependencies": [
+        "either",
+        "prelude",
+        "strings"
+      ]
+    },
+    "identity": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-4wY0XZbAksjY6UAg99WkuKyJlQlWAfTi2ssadH0wVMY=",
+      "dependencies": [
+        "control",
+        "invariant",
+        "newtype",
+        "prelude"
+      ]
+    },
+    "integers": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-sf+sK26R1hzwl3NhXR7WAu9zCDjQnfoXwcyGoseX158=",
+      "dependencies": [
+        "maybe",
+        "numbers",
+        "prelude"
+      ]
+    },
+    "invariant": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-RGWWyYrz0Hs1KjPDA+87Kia67ZFBhfJ5lMGOMCEFoLo=",
+      "dependencies": [
+        "control",
+        "prelude"
+      ]
+    },
+    "js-bigints": {
+      "type": "git",
+      "url": "https://github.com/purescript-contrib/purescript-js-bigints",
+      "rev": "36a7d8ac75a7230043ae511f3145f9ed130954a9",
+      "dependencies": [
+        "integers",
+        "maybe",
+        "prelude"
+      ]
+    },
+    "js-date": {
+      "type": "registry",
+      "version": "8.0.0",
+      "integrity": "sha256-6TVF4DWg5JL+jRAsoMssYw8rgOVALMUHT1CuNZt8NRo=",
+      "dependencies": [
+        "datetime",
+        "effect",
+        "exceptions",
+        "foreign",
+        "integers",
+        "now"
+      ]
+    },
+    "js-timers": {
+      "type": "registry",
+      "version": "6.1.0",
+      "integrity": "sha256-znHWLSSOYw15P5DTcsAdal2lf7nGA2yayLdOZ2t5r7o=",
+      "dependencies": [
+        "effect"
+      ]
+    },
+    "js-uri": {
+      "type": "registry",
+      "version": "3.1.0",
+      "integrity": "sha256-3p0ynHveCJmC2CXze+eMBdW/2l5e953Q8XMAKz+jxUo=",
+      "dependencies": [
+        "functions",
+        "maybe"
+      ]
+    },
+    "lattice": {
+      "type": "git",
+      "url": "https://github.com/Risto-Stevcev/purescript-lattice.git",
+      "rev": "aebe3686eba30f199d17964bfa892f0176c1742d",
+      "dependencies": [
+        "console",
+        "prelude",
+        "properties"
+      ]
+    },
+    "lazy": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-lMsfFOnlqfe4KzRRiW8ot5ge6HtcU3Eyh2XkXcP5IgU=",
+      "dependencies": [
+        "control",
+        "foldable-traversable",
+        "invariant",
+        "prelude"
+      ]
+    },
+    "lcg": {
+      "type": "registry",
+      "version": "4.0.0",
+      "integrity": "sha256-h7ME5cthLfbgJOJdsZcSfFpwXsx4rf8YmhebU+3iSYg=",
+      "dependencies": [
+        "effect",
+        "integers",
+        "maybe",
+        "partial",
+        "prelude",
+        "random"
+      ]
+    },
+    "lists": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-EKF15qYqucuXP2lT/xPxhqy58f0FFT6KHdIB/yBOayI=",
+      "dependencies": [
+        "bifunctors",
+        "control",
+        "foldable-traversable",
+        "lazy",
+        "maybe",
+        "newtype",
+        "nonempty",
+        "partial",
+        "prelude",
+        "tailrec",
+        "tuples",
+        "unfoldable"
+      ]
+    },
+    "literals": {
+      "type": "registry",
+      "version": "1.0.2",
+      "integrity": "sha256-RaeNZPykLhdJXYcx463xiwyC3XghrSQAqqeU28tDNW0=",
+      "dependencies": [
+        "integers",
+        "maybe",
+        "numbers",
+        "partial",
+        "prelude",
+        "typelevel-prelude",
+        "unsafe-coerce"
+      ]
+    },
+    "maybe": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-5cCIb0wPwbat2PRkQhUeZO0jcAmf8jCt2qE0wbC3v2Q=",
+      "dependencies": [
+        "control",
+        "invariant",
+        "newtype",
+        "prelude"
+      ]
+    },
+    "media-types": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-n/4FoGBasbVSYscGVRSyBunQ6CZbL3jsYL+Lp01mc9k=",
+      "dependencies": [
+        "newtype",
+        "prelude"
+      ]
+    },
+    "mmorph": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-urZlZNNqGeQFe5D/ClHlR8QgGBNHTMFPtJ5S5IpflTQ=",
+      "dependencies": [
+        "free",
+        "functors",
+        "transformers"
+      ]
+    },
+    "monad-logger": {
+      "type": "registry",
+      "version": "1.3.1",
+      "integrity": "sha256-UXpMK19Mfb0Z9G4+28OQN3lzhCi7dL37CqkjhzPkPGY=",
+      "dependencies": [
+        "aff",
+        "ansi",
+        "argonaut",
+        "arrays",
+        "console",
+        "control",
+        "effect",
+        "foldable-traversable",
+        "foreign-object",
+        "integers",
+        "js-date",
+        "maybe",
+        "newtype",
+        "ordered-collections",
+        "prelude",
+        "strings",
+        "transformers",
+        "tuples"
+      ]
+    },
+    "mote": {
+      "type": "git",
+      "url": "https://github.com/garyb/purescript-mote",
+      "rev": "29aea4ad7b013d50b42629c87b01cf0202451abd",
+      "dependencies": [
+        "arrays",
+        "these",
+        "transformers"
+      ]
+    },
+    "mote-testplan": {
+      "type": "git",
+      "url": "https://github.com/mlabs-haskell/purescript-mote-testplan",
+      "rev": "3d56986a32134fbd675e42ef6b6f55dc91ad678a",
+      "dependencies": [
+        "aff",
+        "console",
+        "datetime",
+        "effect",
+        "foldable-traversable",
+        "maybe",
+        "mote",
+        "newtype",
+        "numbers",
+        "ordered-collections",
+        "prelude",
+        "spec",
+        "transformers"
+      ]
+    },
+    "newtype": {
+      "type": "registry",
+      "version": "5.0.0",
+      "integrity": "sha256-gdrQu8oGe9eZE6L3wOI8ql/igOg+zEGB5ITh2g+uttw=",
+      "dependencies": [
+        "prelude",
+        "safe-coerce"
+      ]
+    },
+    "noble-secp256k1": {
+      "type": "git",
+      "url": "https://github.com/mlabs-haskell/purescript-noble-secp256k1.git",
+      "rev": "32a9b39f1734fe0d809b3a3b4854b9e4ad6056f1",
+      "dependencies": [
+        "aff",
+        "aff-promise",
+        "bytearrays",
+        "effect",
+        "prelude",
+        "spec",
+        "tuples",
+        "unsafe-coerce"
+      ]
+    },
+    "node-buffer": {
+      "type": "registry",
+      "version": "8.0.0",
+      "integrity": "sha256-RwOTB8yTS4Jjqc55JqxRcVaMXP+cYJ5aww0XH1Z/I8A=",
+      "dependencies": [
+        "arraybuffer-types",
+        "effect",
+        "maybe",
+        "st",
+        "unsafe-coerce"
+      ]
+    },
+    "node-child-process": {
+      "type": "registry",
+      "version": "9.0.0",
+      "integrity": "sha256-bi7hXHcrgqw6UQzD4p0kr2flPxdqyRHv3bLcffZYpm0=",
+      "dependencies": [
+        "exceptions",
+        "foreign",
+        "foreign-object",
+        "functions",
+        "node-fs",
+        "node-streams",
+        "nullable",
+        "posix-types",
+        "unsafe-coerce"
+      ]
+    },
+    "node-fs": {
+      "type": "registry",
+      "version": "8.1.1",
+      "integrity": "sha256-mXPDpXgWviWhkrYSQx2ERu4R8Z0CLIEikQDLzGZ7iuY=",
+      "dependencies": [
+        "datetime",
+        "effect",
+        "either",
+        "enums",
+        "exceptions",
+        "functions",
+        "integers",
+        "js-date",
+        "maybe",
+        "node-buffer",
+        "node-path",
+        "node-streams",
+        "nullable",
+        "partial",
+        "prelude",
+        "strings",
+        "unsafe-coerce"
+      ]
+    },
+    "node-fs-aff": {
+      "type": "registry",
+      "version": "9.1.0",
+      "integrity": "sha256-YDOvcpw4Ep0vOXvPxzvpWfangki5x4lueHK380J0tYs=",
+      "dependencies": [
+        "aff",
+        "either",
+        "node-fs",
+        "node-path"
+      ]
+    },
+    "node-http": {
+      "type": "registry",
+      "version": "8.0.0",
+      "integrity": "sha256-qN+NeGlqDCzhWMT1uEkwWyGWpNya1B0MccIWVLI5dqo=",
+      "dependencies": [
+        "arraybuffer-types",
+        "contravariant",
+        "effect",
+        "foreign",
+        "foreign-object",
+        "maybe",
+        "node-buffer",
+        "node-net",
+        "node-streams",
+        "node-url",
+        "nullable",
+        "options",
+        "prelude",
+        "unsafe-coerce"
+      ]
+    },
+    "node-net": {
+      "type": "registry",
+      "version": "4.0.0",
+      "integrity": "sha256-jdfCj2GwmXH0BEFuV6uqYycfd4I1Rkn1rJVpQnutaTc=",
+      "dependencies": [
+        "effect",
+        "either",
+        "exceptions",
+        "foreign",
+        "maybe",
+        "node-buffer",
+        "node-fs",
+        "nullable",
+        "options",
+        "prelude",
+        "transformers"
+      ]
+    },
+    "node-path": {
+      "type": "registry",
+      "version": "5.0.0",
+      "integrity": "sha256-pd82nQ+2l5UThzaxPdKttgDt7xlsgIDLpPG0yxDEdyE=",
+      "dependencies": [
+        "effect"
+      ]
+    },
+    "node-process": {
+      "type": "registry",
+      "version": "10.0.0",
+      "integrity": "sha256-YzUqf7HWkGEQVRmkxUpL1x2GzKqKLyEyR7mkP68xcZs=",
+      "dependencies": [
+        "effect",
+        "foreign-object",
+        "maybe",
+        "node-streams",
+        "posix-types",
+        "prelude",
+        "unsafe-coerce"
+      ]
+    },
+    "node-readline": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-zlJEPH1/nbRYuEaLXIaHiuHjMWXC8GoTZJZjSSJCCeo=",
+      "dependencies": [
+        "effect",
+        "foreign",
+        "node-process",
+        "node-streams",
+        "options",
+        "prelude"
+      ]
+    },
+    "node-streams": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-EGCA+hp6chlxDlQ8UG3RIaIIL1R0OckKnqP+KPAX1y4=",
+      "dependencies": [
+        "effect",
+        "either",
+        "exceptions",
+        "node-buffer",
+        "nullable",
+        "prelude"
+      ]
+    },
+    "node-streams-aff": {
+      "type": "registry",
+      "version": "4.0.1",
+      "integrity": "sha256-3lvRkfz+sDut0kOVBrxYyDhoRXvg5h8Vee+yqhneD3A=",
+      "dependencies": [
+        "aff",
+        "arrays",
+        "effect",
+        "either",
+        "exceptions",
+        "maybe",
+        "node-buffer",
+        "node-streams",
+        "nullable",
+        "prelude",
+        "refs",
+        "st",
+        "tuples"
+      ]
+    },
+    "node-url": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-E5wGTcUAGI4xAeE3+3lBeQKTCPHmZWkCZ34JG6Tb5Eo=",
+      "dependencies": [
+        "nullable"
+      ]
+    },
+    "nonempty": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-54ablJZUHGvvlTJzi3oXyPCuvY6zsrWJuH/dMJ/MFLs=",
+      "dependencies": [
+        "control",
+        "foldable-traversable",
+        "maybe",
+        "prelude",
+        "tuples",
+        "unfoldable"
+      ]
+    },
+    "now": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-xZ7x37ZMREfs6GCDw/h+FaKHV/3sPWmtqBZRGTxybQY=",
+      "dependencies": [
+        "datetime",
+        "effect"
+      ]
+    },
+    "nullable": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-yiGBVl3AD+Guy4kNWWeN+zl1gCiJK+oeIFtZtPCw4+o=",
+      "dependencies": [
+        "effect",
+        "functions",
+        "maybe"
+      ]
+    },
+    "numbers": {
+      "type": "registry",
+      "version": "9.0.0",
+      "integrity": "sha256-fDKXExFxMRFgy+v+kbjVbGBIOOQkWGnmm0vtnE3zWRE=",
+      "dependencies": [
+        "functions",
+        "maybe"
+      ]
+    },
+    "open-memoize": {
+      "type": "registry",
+      "version": "6.1.0",
+      "integrity": "sha256-ws/Cix/wgUKvrbPPxTqDSGCPpkTIvP1adTYLHAquBC4=",
+      "dependencies": [
+        "console",
+        "effect",
+        "either",
+        "integers",
+        "lazy",
+        "lists",
+        "maybe",
+        "partial",
+        "prelude",
+        "psci-support",
+        "strings",
+        "tuples"
+      ]
+    },
+    "options": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-treC6h+jvzcWhplPaF/aMENCOx+JGk+ysa5pL1BGHtg=",
+      "dependencies": [
+        "contravariant",
+        "foreign",
+        "foreign-object",
+        "maybe",
+        "tuples"
+      ]
+    },
+    "optparse": {
+      "type": "registry",
+      "version": "5.0.0",
+      "integrity": "sha256-Y1xqUrnOB5934wKssPyWVdF4kqA6ITXwSasdEOkxZT8=",
+      "dependencies": [
+        "aff",
+        "arrays",
+        "bifunctors",
+        "console",
+        "control",
+        "effect",
+        "either",
+        "enums",
+        "exists",
+        "exitcodes",
+        "foldable-traversable",
+        "free",
+        "gen",
+        "integers",
+        "lazy",
+        "lists",
+        "maybe",
+        "newtype",
+        "node-buffer",
+        "node-process",
+        "node-streams",
+        "nonempty",
+        "numbers",
+        "open-memoize",
+        "partial",
+        "prelude",
+        "quickcheck",
+        "strings",
+        "tailrec",
+        "transformers",
+        "tuples"
+      ]
+    },
+    "ordered-collections": {
+      "type": "registry",
+      "version": "3.0.0",
+      "integrity": "sha256-R9WddNBRPkY37gw8XkDCLX2vJ5eI9qdaWDdCp61r2+M=",
+      "dependencies": [
+        "arrays",
+        "foldable-traversable",
+        "gen",
+        "lists",
+        "maybe",
+        "partial",
+        "prelude",
+        "st",
+        "tailrec",
+        "tuples",
+        "unfoldable"
+      ]
+    },
+    "orders": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-nBA0g3/ai0euH8q9pSbGqk53W2q6agm/dECZTHcoink=",
+      "dependencies": [
+        "newtype",
+        "prelude"
+      ]
+    },
+    "parallel": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-VJbkGD0rAKX+NUEeBJbYJ78bEKaZbgow+QwQEfPB6ko=",
+      "dependencies": [
+        "control",
+        "effect",
+        "either",
+        "foldable-traversable",
+        "functors",
+        "maybe",
+        "newtype",
+        "prelude",
+        "profunctor",
+        "refs",
+        "transformers"
+      ]
+    },
+    "parsing": {
+      "type": "registry",
+      "version": "10.2.0",
+      "integrity": "sha256-ZDIdMFAKkst57x6BVa1aUWJnS8smoZnXsZ339Aq1mPA=",
+      "dependencies": [
+        "arrays",
+        "control",
+        "effect",
+        "either",
+        "enums",
+        "foldable-traversable",
+        "functions",
+        "identity",
+        "integers",
+        "lazy",
+        "lists",
+        "maybe",
+        "newtype",
+        "nullable",
+        "numbers",
+        "partial",
+        "prelude",
+        "st",
+        "strings",
+        "tailrec",
+        "transformers",
+        "tuples",
+        "unfoldable",
+        "unicode",
+        "unsafe-coerce"
+      ]
+    },
+    "partial": {
+      "type": "registry",
+      "version": "4.0.0",
+      "integrity": "sha256-fwXerld6Xw1VkReh8yeQsdtLVrjfGiVuC5bA1Wyo/J4=",
+      "dependencies": []
+    },
+    "pipes": {
+      "type": "registry",
+      "version": "8.0.0",
+      "integrity": "sha256-kvfqGM4cPA/wCcBHbp5psouFw5dZGvku2462x7ZBwSY=",
+      "dependencies": [
+        "aff",
+        "lists",
+        "mmorph",
+        "prelude",
+        "tailrec",
+        "transformers",
+        "tuples"
+      ]
+    },
+    "plutus-types": {
+      "type": "git",
+      "url": "https://github.com/mlabs-haskell/purescript-plutus-types",
+      "rev": "dfec05e2dee79ee8dafad3d698906966ea6628bb",
+      "dependencies": [
+        "aeson",
+        "argonaut-codecs",
+        "arrays",
+        "bifunctors",
+        "bytearrays",
+        "cardano-plutus-data-schema",
+        "cardano-types",
+        "console",
+        "effect",
+        "either",
+        "foldable-traversable",
+        "gen",
+        "js-bigints",
+        "lattice",
+        "maybe",
+        "monad-logger",
+        "newtype",
+        "ordered-collections",
+        "partial",
+        "prelude",
+        "profunctor-lenses",
+        "quickcheck",
+        "these",
+        "tuples"
+      ]
+    },
+    "posix-types": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-ZfFz8RR1lee/o/Prccyeut3Q+9tYd08mlR72sIh6GzA=",
+      "dependencies": [
+        "maybe",
+        "prelude"
+      ]
+    },
+    "prelude": {
+      "type": "registry",
+      "version": "6.0.1",
+      "integrity": "sha256-o8p6SLYmVPqzXZhQFd2hGAWEwBoXl1swxLG/scpJ0V0=",
+      "dependencies": []
+    },
+    "profunctor": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-99NzxFgTr4CGlCSRYG1kShL+JhYbihhHtbOk1/0R5zI=",
+      "dependencies": [
+        "control",
+        "distributive",
+        "either",
+        "exists",
+        "invariant",
+        "newtype",
+        "prelude",
+        "tuples"
+      ]
+    },
+    "profunctor-lenses": {
+      "type": "registry",
+      "version": "8.0.0",
+      "integrity": "sha256-K7f29rHRHgVSb2Y/PaSKtfYPriP6n87BJNO7EhsZHas=",
+      "dependencies": [
+        "arrays",
+        "bifunctors",
+        "const",
+        "control",
+        "distributive",
+        "either",
+        "foldable-traversable",
+        "foreign-object",
+        "functors",
+        "identity",
+        "lists",
+        "maybe",
+        "newtype",
+        "ordered-collections",
+        "partial",
+        "prelude",
+        "profunctor",
+        "record",
+        "transformers",
+        "tuples"
+      ]
+    },
+    "properties": {
+      "type": "git",
+      "url": "https://github.com/Risto-Stevcev/purescript-properties.git",
+      "rev": "ddcad0f6043cc665037538467a2e2e4173ef276a",
+      "dependencies": [
+        "console",
+        "prelude"
+      ]
+    },
+    "psci-support": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-C6ql4P9TEP06hft/1Z5QumPA4yARR4VIxDdhmL1EO+Y=",
+      "dependencies": [
+        "console",
+        "effect",
+        "prelude"
+      ]
+    },
+    "quickcheck": {
+      "type": "registry",
+      "version": "8.0.1",
+      "integrity": "sha256-ZvpccKQCvgslTXZCNmpYW4bUsFzhZd/kQUr2WmxFTGY=",
+      "dependencies": [
+        "arrays",
+        "console",
+        "control",
+        "effect",
+        "either",
+        "enums",
+        "exceptions",
+        "foldable-traversable",
+        "gen",
+        "identity",
+        "integers",
+        "lazy",
+        "lcg",
+        "lists",
+        "maybe",
+        "newtype",
+        "nonempty",
+        "numbers",
+        "partial",
+        "prelude",
+        "record",
+        "st",
+        "strings",
+        "tailrec",
+        "transformers",
+        "tuples",
+        "unfoldable"
+      ]
+    },
+    "quickcheck-combinators": {
+      "type": "registry",
+      "version": "0.1.3",
+      "integrity": "sha256-AbmaHcPETKhHGHjmPsniK3xl3vksrv5T2T+kfxNY1OM=",
+      "dependencies": [
+        "quickcheck",
+        "typelevel"
+      ]
+    },
+    "quickcheck-laws": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-rnzVTiDnymzYkvnhI8EvPwrmO8LgcTnrMTuiI172Tkc=",
+      "dependencies": [
+        "enums",
+        "quickcheck"
+      ]
+    },
+    "random": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-CJ611a35MPCE7XQMp0rdC6MCn76znlhisiCRgboAG+Q=",
+      "dependencies": [
+        "effect",
+        "integers"
+      ]
+    },
+    "rationals": {
+      "type": "registry",
+      "version": "5.0.1",
+      "integrity": "sha256-QCRY1DaszdlLdjtecShVZcaxg+6c1s/BwAX/HW5Dnek=",
+      "dependencies": [
+        "integers",
+        "prelude"
+      ]
+    },
+    "record": {
+      "type": "registry",
+      "version": "4.0.0",
+      "integrity": "sha256-Za5U85bTRJEfGK5Sk4hM41oXy84YQI0I8TL3WUn1Qzg=",
+      "dependencies": [
+        "functions",
+        "prelude",
+        "unsafe-coerce"
+      ]
+    },
+    "refs": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-Vgwne7jIbD3ZMoLNNETLT8Litw6lIYo3MfYNdtYWj9s=",
+      "dependencies": [
+        "effect",
+        "prelude"
+      ]
+    },
+    "run": {
+      "type": "registry",
+      "version": "5.0.0",
+      "integrity": "sha256-uCCGBqPXOSTnQoVzQUoCcEYyGvi+dWZp+lLsxtNG6+U=",
+      "dependencies": [
+        "aff",
+        "effect",
+        "either",
+        "free",
+        "maybe",
+        "newtype",
+        "prelude",
+        "profunctor",
+        "tailrec",
+        "tuples",
+        "type-equality",
+        "typelevel-prelude",
+        "unsafe-coerce",
+        "variant"
+      ]
+    },
+    "safe-coerce": {
+      "type": "registry",
+      "version": "2.0.0",
+      "integrity": "sha256-a1ibQkiUcbODbLE/WAq7Ttbbh9ex+x33VCQ7GngKudU=",
+      "dependencies": [
+        "unsafe-coerce"
+      ]
+    },
+    "safely": {
+      "type": "registry",
+      "version": "4.0.1",
+      "integrity": "sha256-GkGocIS80Qt/gWeOHzBQYJjsdY0UDRxwisgxQmSSKqM=",
+      "dependencies": [
+        "freet",
+        "lists"
+      ]
+    },
+    "spec": {
+      "type": "registry",
+      "version": "7.2.0",
+      "integrity": "sha256-dVoyiBGduIVpeuudDyFkvOq4jwZuCZNMqWE7GfULfps=",
+      "dependencies": [
+        "aff",
+        "ansi",
+        "arrays",
+        "avar",
+        "bifunctors",
+        "control",
+        "datetime",
+        "effect",
+        "either",
+        "exceptions",
+        "foldable-traversable",
+        "fork",
+        "identity",
+        "integers",
+        "lists",
+        "maybe",
+        "newtype",
+        "now",
+        "ordered-collections",
+        "parallel",
+        "pipes",
+        "prelude",
+        "strings",
+        "tailrec",
+        "transformers",
+        "tuples"
+      ]
+    },
+    "spec-quickcheck": {
+      "type": "registry",
+      "version": "5.0.0",
+      "integrity": "sha256-iE0iThqZCuDGe3pwg5RvqcL8E5cRQ4txDuloCclOsCs=",
+      "dependencies": [
+        "aff",
+        "prelude",
+        "quickcheck",
+        "random",
+        "spec"
+      ]
+    },
+    "st": {
+      "type": "registry",
+      "version": "6.2.0",
+      "integrity": "sha256-z9X0WsOUlPwNx9GlCC+YccCyz8MejC8Wb0C4+9fiBRY=",
+      "dependencies": [
+        "partial",
+        "prelude",
+        "tailrec",
+        "unsafe-coerce"
+      ]
+    },
+    "strings": {
+      "type": "registry",
+      "version": "6.0.1",
+      "integrity": "sha256-WssD3DbX4OPzxSdjvRMX0yvc9+pS7n5gyPv5I2Trb7k=",
+      "dependencies": [
+        "arrays",
+        "control",
+        "either",
+        "enums",
+        "foldable-traversable",
+        "gen",
+        "integers",
+        "maybe",
+        "newtype",
+        "nonempty",
+        "partial",
+        "prelude",
+        "tailrec",
+        "tuples",
+        "unfoldable",
+        "unsafe-coerce"
+      ]
+    },
+    "stringutils": {
+      "type": "registry",
+      "version": "0.0.12",
+      "integrity": "sha256-t63QWBlp49U0nRqUcFryKflSJsNKGTQAHKjn24/+ooI=",
+      "dependencies": [
+        "arrays",
+        "integers",
+        "maybe",
+        "partial",
+        "prelude",
+        "strings"
+      ]
+    },
+    "tailrec": {
+      "type": "registry",
+      "version": "6.1.0",
+      "integrity": "sha256-Xx19ECVDRrDWpz9D2GxQHHV89vd61dnXxQm0IcYQHGk=",
+      "dependencies": [
+        "bifunctors",
+        "effect",
+        "either",
+        "identity",
+        "maybe",
+        "partial",
+        "prelude",
+        "refs"
+      ]
+    },
+    "test-unit": {
+      "type": "registry",
+      "version": "17.0.0",
+      "integrity": "sha256-aITJ2KngFFjASmG0JjnjybaKWl9dn7Hf2B3Wk4engNs=",
+      "dependencies": [
+        "aff",
+        "avar",
+        "effect",
+        "either",
+        "free",
+        "js-timers",
+        "lists",
+        "prelude",
+        "quickcheck",
+        "strings"
+      ]
+    },
+    "these": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-6poQvFzGw7Ir9mTDEbFV9N6+cUeSHe0FdzTR2ZK1o6g=",
+      "dependencies": [
+        "arrays",
+        "gen",
+        "lists",
+        "quickcheck",
+        "quickcheck-laws",
+        "tuples"
+      ]
+    },
+    "toppokki": {
+      "type": "git",
+      "url": "https://github.com/mlabs-haskell/purescript-toppokki",
+      "rev": "5992e93396a734c980ef61c74df5b6ab46108920",
+      "dependencies": [
+        "aff-promise",
+        "functions",
+        "node-buffer",
+        "node-fs-aff",
+        "node-http",
+        "prelude",
+        "record"
+      ]
+    },
+    "transformers": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-Pzw40HjthX77tdPAYzjx43LK3X5Bb7ZspYAp27wksFA=",
+      "dependencies": [
+        "control",
+        "distributive",
+        "effect",
+        "either",
+        "exceptions",
+        "foldable-traversable",
+        "identity",
+        "lazy",
+        "maybe",
+        "newtype",
+        "prelude",
+        "tailrec",
+        "tuples",
+        "unfoldable"
+      ]
+    },
+    "tuples": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-1rXgTomes9105BjgXqIw0FL6Fz1lqqUTLWOumhWec1M=",
+      "dependencies": [
+        "control",
+        "invariant",
+        "prelude"
+      ]
+    },
+    "type-equality": {
+      "type": "registry",
+      "version": "4.0.1",
+      "integrity": "sha256-Hs9D6Y71zFi/b+qu5NSbuadUQXe5iv5iWx0226vOHUw=",
+      "dependencies": []
+    },
+    "typelevel": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-Iu7INcwTC/SbKcienMe7KKQvWku2VhCZSGCvrQWVVoc=",
+      "dependencies": [
+        "partial",
+        "prelude",
+        "tuples",
+        "typelevel-prelude",
+        "unsafe-coerce"
+      ]
+    },
+    "typelevel-prelude": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-uFF2ph+vHcQpfPuPf2a3ukJDFmLhApmkpTMviHIWgJM=",
+      "dependencies": [
+        "prelude",
+        "type-equality"
+      ]
+    },
+    "uint": {
+      "type": "registry",
+      "version": "7.0.0",
+      "integrity": "sha256-fQ30YjiKz9DS6yqRdmK+WARVbJhpZDDTRcpFw675b6M=",
+      "dependencies": [
+        "effect",
+        "enums",
+        "gen",
+        "maybe",
+        "numbers",
+        "prelude"
+      ]
+    },
+    "unfoldable": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-JtikvJdktRap7vr/K4ITlxUX1QexpnqBq0G/InLr6eg=",
+      "dependencies": [
+        "foldable-traversable",
+        "maybe",
+        "partial",
+        "prelude",
+        "tuples"
+      ]
+    },
+    "unicode": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-QJnTVZpmihEAUiMeYrfkusVoziJWp2hJsgi9bMQLue8=",
+      "dependencies": [
+        "foldable-traversable",
+        "maybe",
+        "strings"
+      ]
+    },
+    "unsafe-coerce": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-IqIYW4Vkevn8sI+6aUwRGvd87tVL36BBeOr0cGAE7t0=",
+      "dependencies": []
+    },
+    "untagged-union": {
+      "type": "registry",
+      "version": "1.0.0",
+      "integrity": "sha256-XSSsmsOIq+JvPaXUdKCW2nGQZ2D+Ku5J6FbWj812AN0=",
+      "dependencies": [
+        "assert",
+        "console",
+        "effect",
+        "foreign",
+        "foreign-object",
+        "literals",
+        "maybe",
+        "newtype",
+        "psci-support",
+        "tuples",
+        "unsafe-coerce"
+      ]
+    },
+    "uplc-apply-args": {
+      "type": "git",
+      "url": "https://github.com/mlabs-haskell/purescript-uplc-apply-args",
+      "rev": "aa528d5310cbfbd01b4d94557f404d95cfb6bb3c",
+      "dependencies": [
+        "aff",
+        "bytearrays",
+        "cardano-serialization-lib",
+        "cardano-types",
+        "effect",
+        "either",
+        "foldable-traversable",
+        "foreign-object",
+        "js-bigints",
+        "lists",
+        "maybe",
+        "mote",
+        "mote-testplan",
+        "partial",
+        "prelude",
+        "profunctor",
+        "spec",
+        "transformers",
+        "tuples"
+      ]
+    },
+    "variant": {
+      "type": "registry",
+      "version": "8.0.0",
+      "integrity": "sha256-SR//zQDg2dnbB8ZHslcxieUkCeNlbMToapvmh9onTtw=",
+      "dependencies": [
+        "enums",
+        "lists",
+        "maybe",
+        "partial",
+        "prelude",
+        "record",
+        "tuples",
+        "unsafe-coerce"
+      ]
+    },
+    "web-dom": {
+      "type": "registry",
+      "version": "6.0.0",
+      "integrity": "sha256-1kSKWFDI4LupdmpjK01b1MMxDFW7jvatEgPgVmCmSBQ=",
+      "dependencies": [
+        "web-events"
+      ]
+    },
+    "web-events": {
+      "type": "registry",
+      "version": "4.0.0",
+      "integrity": "sha256-YDt8b6u1tzGtnWyNRodne57iO8FNSGPaTCVzBUyUn4k=",
+      "dependencies": [
+        "datetime",
+        "enums",
+        "foreign",
+        "nullable"
+      ]
+    },
+    "web-file": {
+      "type": "registry",
+      "version": "4.0.0",
+      "integrity": "sha256-1h5jPBkvjY71jLEdwVadXCx86/2inNoMBO//Rd3eCSU=",
+      "dependencies": [
+        "foreign",
+        "media-types",
+        "web-dom"
+      ]
+    },
+    "web-html": {
+      "type": "registry",
+      "version": "4.1.0",
+      "integrity": "sha256-ByqS/h1/yG+hjCOnOQp7L1QpIWzQENNKB1kaHtpEhlE=",
+      "dependencies": [
+        "js-date",
+        "web-dom",
+        "web-file",
+        "web-storage"
+      ]
+    },
+    "web-storage": {
+      "type": "registry",
+      "version": "5.0.0",
+      "integrity": "sha256-q+6lxcnfWxus0/nDeFVtF1V+tLehZvvXQ0cduYPLksY=",
+      "dependencies": [
+        "nullable",
+        "web-events"
+      ]
+    },
+    "web-xhr": {
+      "type": "registry",
+      "version": "5.0.0",
+      "integrity": "sha256-/++2tUdplQH6BszpPmV6tIeMx+tYa1/hNLvCJh3U29U=",
+      "dependencies": [
+        "arraybuffer-types",
+        "datetime",
+        "http-methods",
+        "web-dom",
+        "web-file",
+        "web-html"
+      ]
+    }
+  }
+}

@@ -19,6 +19,9 @@ tests: true
 benchmarks: true
 test-show-details: direct
 
+package cardano-crypto-praos
+  flags: -external-libsodium-vrf
+
 allow-newer:
     *:aeson
   , size-based:template-haskell
