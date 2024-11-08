@@ -4,37 +4,69 @@
     flake-utils.url = "github:numtide/flake-utils";
     purescript-overlay.url = "github:thomashoneyman/purescript-overlay";
     purescript-overlay.inputs.nixpkgs.follows = "nixpkgs";
+    cardano-node.url = "github:input-output-hk/cardano-node/d7abccd4e90c38ff5cd4d6a7839689d888332056";
   };
 
-  outputs = { self, nixpkgs, flake-utils, purescript-overlay }:
+  outputs =
+    { self
+    , nixpkgs
+    , flake-utils
+    , purescript-overlay
+    , cardano-node
+    }:
     flake-utils.lib.eachDefaultSystem (system:
-      let
-        overlays = [
-          purescript-overlay.overlays.default
+    let
+      overlays = [
+        purescript-overlay.overlays.default
+      ];
+      pkgs = import nixpkgs {
+        inherit system overlays;
+      };
+      kupo = pkgs.callPackage ./nix/packages/kupo.nix { };
+      ogmios = pkgs.callPackage ./nix/packages/ogmios.nix { };
+    in
+    {
+      devShell = pkgs.mkShell {
+        buildInputs = with pkgs; [
+          #
+          # build tools
+          #
+          blst
+          cabal-install
+          dhall
+          esbuild
+          fd
+          ghc
+          gnumake
+          libsodium
+          nixpkgs-fmt
+          nodejs
+          pkg-config
+          purescript
+          purescript-psa
+          purs-tidy
+          eslint
+          secp256k1
+          spago-bin.spago-0_21_0
+          zlib
+
+          #
+          # runtime dependencies
+          #
+          cardano-node.packages."${system}".cardano-cli
+          cardano-node.packages."${system}".cardano-node
+          ogmios
+          kupo
+
+          #
+          # Rust dependencies for raw-scripts crate
+          #
+          cargo
+          clippy
+          rust-analyzer
+          rustfmt
+          cargo-edit
         ];
-        pkgs = import nixpkgs {
-          inherit system overlays;
-        };
-      in
-      {
-        devShell = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            fd
-            ghc
-            libsodium
-            blst
-            secp256k1
-            cabal-install
-            pkg-config
-            zlib
-            dhall
-            esbuild
-            gnumake
-            nodejs
-            purescript
-            purescript-psa
-            spago
-          ];
-        };
-      });
+      };
+    });
 }
