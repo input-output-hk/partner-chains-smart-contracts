@@ -82,6 +82,19 @@ release-zip: esbuild-bundle
 	zip -j release.zip ./dist/pc-contracts-cli
 	@rm -rf ./{dist,node_modules,package.json,package-lock.json}
 
+check-raw-scripts:
+	@make -B update-scripts
+	@git diff --quiet -- src/TrustlessSidechain/RawScripts.purs
+	if [ $$? -ne 0 ]; then \
+	  echo "Error: RawScripts.purs is not up to date"; \
+	  exit 1; \
+	fi
+	@git diff --quiet -- ../raw-scripts/src/lib.rs
+	if [ $$? -ne 0 ]; then \
+	  echo "Error: raw-scripts/src/lib.rs is not up to date"; \
+	  exit 1; \
+	fi
+
 check-format:
 	@purs-tidy check ${ps-sources}
 	@eslint ${js-sources}
