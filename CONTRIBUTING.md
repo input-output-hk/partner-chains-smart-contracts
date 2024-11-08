@@ -25,6 +25,11 @@ or create a PR.
   changes.  Consider summarizing the most important code changes introduced by
   the commit.
 
+#### Updating the changelog
+We use [Changie](https://changie.dev/) to manage our changelog.
+When getting ready to create a PR, create a new changelog entry by running `changie new`.
+Make sure to commit the created changelog fragment along with your changes.
+
 #### When creating a PR
 - Rebase PR branch on top of the latest changes in the branch you want to merge
   against.  Make sure to communicate upstream rebase to all developers working

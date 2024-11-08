@@ -46,6 +46,7 @@ in
       git
       jq
       curl
+      changie
 
       # Lint / Format
       fd
