@@ -3,7 +3,6 @@
 # offical semver regex from https://regex101.com/r/Ly7O1x/3/
 semver_pattern="^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$"
 packagejson=offchain/package.json
-changelog=CHANGELOG.md
 current_version=$(cat $packagejson | jq -r ".version")
 # shellcheck disable=SC2125
 cabalfile=onchain/*.cabal
@@ -74,7 +73,9 @@ cat $packagejson | jq ".version=\"$next_version\"" | sponge $packagejson
 pushd offchain > /dev/null || exit
 npm install --package-lock-only
 popd > /dev/null || exit
-sed -i "s/# Unreleased/# Unreleased\n\n# v$next_version/" $changelog
+# shellcheck disable=SC2086
+changie batch $next_version
+changie merge
 # shellcheck disable=SC2086
 sed -i -r "s/^version:(\s*)\S+$/version:\1$next_version/" $cabalfile
 # shellcheck disable=SC2086
