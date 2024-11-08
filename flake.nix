@@ -49,6 +49,7 @@
           secp256k1
           spago-bin.spago-0_21_0
           zlib
+          zip
 
           #
           # runtime dependencies
