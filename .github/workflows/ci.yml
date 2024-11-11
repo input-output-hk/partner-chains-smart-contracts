@@ -31,7 +31,7 @@ jobs:
           path: |
             ~/.local/state/cabal/store
             ~/.cabal/store
-            offchain/dist-newstyle
+            onchain/dist-newstyle
           key: ${{ runner.os }}-${{ hashFiles('**/*.cabal', '**/cabal.project') }}
           restore-keys: ${{ runner.os }}-
 
