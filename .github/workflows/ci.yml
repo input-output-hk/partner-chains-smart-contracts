@@ -16,6 +16,7 @@ jobs:
       id-token: write
       contents: read
     runs-on: [ self-hosted, Linux ]
+    steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
