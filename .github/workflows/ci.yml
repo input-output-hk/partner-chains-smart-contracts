@@ -25,9 +25,10 @@ jobs:
       - name: Add signing key for nix
         run: echo "${{ secrets.NIX_SIGNING_KEY }}" > "${{ runner.temp }}/nix-key"
 
-      - name: Run omnix to build all outputs
+      - name: Build the release zip
         run: |
-          nix run github:juspay/omnix -- ci -v > ${{ runner.temp }}/outputs
+          cd offchain
+          nix-shell --run "make release-zip"
 
       - name: Acquire AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -56,7 +57,5 @@ jobs:
           token: ${{ github.token }}
       - name: Run tests
         run: |
-          nix-build -A check.x86_64-linux.pre-commit-check
-          nix-build -A check.x86_64-linux.upToDatePlutusScriptCheck
-          nix-build  -A check.x86_64-linux.upToDatePlutusScriptCheck
-          nix-build -A check.x86_64-linux.partner-chains-smart-contracts
+          cd offchain
+          nix-shell --run "make test"
