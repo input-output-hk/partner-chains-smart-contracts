@@ -29,7 +29,9 @@ jobs:
         uses: actions/cache/restore@v3
         with:
           key: linux-${{ github.sha }}
-          path: ~/.local/state/cabal
+          path: |
+            ~/.local/state/cabal
+            dist-newstyle
           restore-keys: linux-
 
       - name: Build onchain
