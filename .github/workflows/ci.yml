@@ -25,7 +25,13 @@ jobs:
       - name: Add signing key for nix
         run: echo "${{ secrets.NIX_SIGNING_KEY }}" > "${{ runner.temp }}/nix-key"
 
-      - name: Build the release zip
+      - name: Build onchain
+        run: |
+          cd onchain
+          nix-shell --run "cabal update"
+          nix-shell --run "cabal build"
+
+      - name: Build offchain 
         run: |
           cd offchain
           nix-shell --run "make release-zip"
