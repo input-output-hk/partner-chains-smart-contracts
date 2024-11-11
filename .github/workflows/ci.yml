@@ -20,7 +20,9 @@ jobs:
       CABAL_DIR: ~/.cabal
     steps:
       - name: Print CABAL_DIR
-        run: echo "CABAL_DIR is set to $CABAL_DIR"
+        run: |
+          echo "CABAL_DIR is set to $CABAL_DIR"
+          cabal user-config init
 
       - name: Checkout code
         uses: actions/checkout@v4
