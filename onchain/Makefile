@@ -1,6 +1,12 @@
-.PHONY: nix-cabal-repl format_check format cabalfmt cabalfmt_check hoogle lint
+.PHONY: nix-cabal-repl format_check format cabalfmt cabalfmt_check hoogle lint ci
 
 CABAL_SOURCES := $(shell fd -ecabal)
+
+ci:
+	@echo ${CABAL_DIR}
+	@cabal update
+	@cabal build
+	@cabal test
 
 # Starts a hoogle Server.
 hoogle:

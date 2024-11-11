@@ -38,6 +38,10 @@ browser-runtime := "" # Use "1" for true and "" for false
 serve-port := 4008
 
 ### Build targets
+default: ci
+
+ci: test
+	@make release-zip
 
 build: ${raw-scripts-purs}
 	@spago build --purs-args ${purs-args}

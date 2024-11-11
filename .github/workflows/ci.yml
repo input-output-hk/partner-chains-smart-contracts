@@ -29,25 +29,24 @@ jobs:
         uses: actions/cache/restore@v3
         with:
           key: linux-${{ github.sha }}
-          path: ${{ env.CABAL_DIR }}/store
+          path: ~/.cabal-devx/store
           restore-keys: linux-
 
       - name: Build onchain
         run: |
           cd onchain
-          nix-shell --run "cabal update"
-          nix-shell --run "cabal build"
+          nix develop --command "make"
 
       - name: save cache
         uses: actions/cache/save@v3
         with:
           key: linux-${{ github.sha }}
-          path: ${{ env.CABAL_DIR }}/store
+          path: ~/.cabal-devx/store/
 
       - name: Build offchain 
         run: |
           cd offchain
-          nix-shell --run "make release-zip"
+          nix develop --command "make"
 
       - name: Acquire AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
