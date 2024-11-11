@@ -16,7 +16,12 @@ jobs:
       id-token: write
       contents: read
     runs-on: [ self-hosted, Linux ]
+    env:
+      CABAL_DIR: ~/.cabal
     steps:
+      - name: Print CABAL_DIR
+        run: echo "CABAL_DIR is set to $CABAL_DIR"
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -29,7 +34,7 @@ jobs:
         uses: actions/cache/restore@v3
         with:
           key: linux-${{ github.sha }}
-          path: ~/.cabal-devx/store
+          path: ~/.cabal/store
           restore-keys: linux-
 
       - name: Build onchain
@@ -41,7 +46,7 @@ jobs:
         uses: actions/cache/save@v3
         with:
           key: linux-${{ github.sha }}
-          path: ~/.cabal-devx/store/
+          path: ~/.cabal/store/
 
       - name: Build offchain 
         run: |
