@@ -50,6 +50,8 @@
           fd
           ghc
           gnumake
+          haskell-language-server
+          hlint
           libsodium
           nixpkgs-fmt
           nodejs
