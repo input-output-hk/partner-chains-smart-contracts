@@ -29,7 +29,7 @@ jobs:
         uses: actions/cache/restore@v3
         with:
           key: linux-${{ github.sha }}
-          path: ~/.cabal/store
+          path: ${{ env.CABAL_DIR }}/store
           restore-keys: linux-
 
       - name: Build onchain
@@ -42,7 +42,7 @@ jobs:
         uses: actions/cache/save@v3
         with:
           key: linux-${{ github.sha }}
-          path: ~/.cabal/store
+          path: ${{ env.CABAL_DIR }}/store
 
       - name: Build offchain 
         run: |
