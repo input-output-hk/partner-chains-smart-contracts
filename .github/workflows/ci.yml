@@ -25,11 +25,24 @@ jobs:
       - name: Add signing key for nix
         run: echo "${{ secrets.NIX_SIGNING_KEY }}" > "${{ runner.temp }}/nix-key"
 
+      - name: restore cache
+        uses: actions/cache/restore@v3
+        with:
+          key: linux-${{ github.sha }}
+          path: ~/.cabal/store
+          restore-keys: linux-
+
       - name: Build onchain
         run: |
           cd onchain
           nix-shell --run "cabal update"
           nix-shell --run "cabal build"
+
+      - name: save cache
+        uses: actions/cache/save@v3
+        with:
+          key: linux-${{ github.sha }}
+          path: ~/.cabal/store
 
       - name: Build offchain 
         run: |
