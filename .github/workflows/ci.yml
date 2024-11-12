@@ -25,15 +25,15 @@ jobs:
       - name: Add signing key for nix
         run: echo "${{ secrets.NIX_SIGNING_KEY }}" > "${{ runner.temp }}/nix-key"
 
-      - name: Cache cabal directories
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.local/state/cabal/store
-            ~/.cabal/store
-            onchain/dist-newstyle
-          key: ${{ runner.os }}-${{ hashFiles('**/*.cabal', '**/cabal.project') }}
-          restore-keys: ${{ runner.os }}-
+      #      - name: Cache cabal directories
+      #        uses: actions/cache@v4
+      #        with:
+      #          path: |
+      #            ~/.local/state/cabal/store
+      #            ~/.cabal/store
+      #            onchain/dist-newstyle
+      #          key: ${{ runner.os }}-${{ hashFiles('**/*.cabal', '**/cabal.project') }}
+      #          restore-keys: ${{ runner.os }}-
 
       - name: Build onchain
         run: |
