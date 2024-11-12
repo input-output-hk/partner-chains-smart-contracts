@@ -40,7 +40,7 @@ jobs:
           cd onchain
           nix develop --command "make"
 
-      - name: Build offchain 
+      - name: Build offchain
         run: |
           cd offchain
           nix develop --command "make"
