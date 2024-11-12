@@ -70,6 +70,7 @@
           #
           cardano-node.packages."${system}".cardano-cli
           cardano-node.packages."${system}".cardano-node
+          cardano-node.packages."${system}".cardano-testnet
           ogmios
           kupo
 
