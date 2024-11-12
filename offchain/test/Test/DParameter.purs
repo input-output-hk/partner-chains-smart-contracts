@@ -9,7 +9,6 @@ import JS.BigInt as BigInt
 import Mote.Monad (group, test)
 import Test.Utils (TestnetTest, fails, getOwnTransactionInput)
 import TrustlessSidechain.DParameter as DParameter
-import TrustlessSidechain.Effects.Env (emptyEnv)
 import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
 import TrustlessSidechain.InitSidechain.Governance (initGovernance)
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
@@ -32,7 +31,7 @@ testScenario =
         , BigNum.fromInt 150_000_000
         ]
     withWallets initialDistribution \alice -> do
-      withKeyWallet alice $ unliftApp emptyEnv do
+      withKeyWallet alice $ unliftApp do
 
         pkh <- getOwnPaymentPubKeyHash
         genesisUtxo <- getOwnTransactionInput

@@ -36,7 +36,6 @@ import TrustlessSidechain.CommitteeCandidateValidator
   , register
   )
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
-import TrustlessSidechain.Effects.Env (Env, READER, emptyEnv)
 import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
@@ -60,7 +59,7 @@ runRegister ::
   forall r.
   TransactionInput ->
   Run
-    ( READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT
+    ( EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT
         + EFFECT
         + r
     )
@@ -71,7 +70,7 @@ runRegisterWithFixedKeys ::
   forall r.
   TransactionInput ->
   Run
-    ( READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT +
+    ( EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT +
         r
     )
     TransactionHash
@@ -101,7 +100,7 @@ runRegisterWithCandidatePermissionInfo ::
   forall r.
   TransactionInput ->
   Run
-    ( READER Env + EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT
+    ( EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT
         + EFFECT
         + r
     )
@@ -138,7 +137,7 @@ runRegisterWithCandidatePermissionInfo scParams = do
 runDeregister ::
   forall r.
   TransactionInput ->
-  Run (READER Env + EXCEPT OffchainError + WALLET + TRANSACTION + LOG + r) Unit
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + LOG + r) Unit
 runDeregister scParams =
   void $ deregister $ DeregisterParams
     { genesisUtxo: scParams, spoPubKey: Just mockSpoPubKey }
@@ -155,7 +154,7 @@ testScenarioSuccess1 =
         , BigNum.fromInt 5_000_000
         ]
     withWallets initialDistribution \alice -> do
-      withKeyWallet alice $ unliftApp emptyEnv do
+      withKeyWallet alice $ unliftApp do
         sequence_ $ replicate 10 $ runRegister dummyGenesisUtxo
         runDeregister dummyGenesisUtxo
 
@@ -170,7 +169,7 @@ testScenarioFailure1 =
           [ BigNum.fromInt 5_000_000, BigNum.fromInt 5_000_000 ]
       withWallets (initialDistribution /\ initialDistribution) \(alice /\ bob) ->
         do
-          unliftApp emptyEnv do
+          unliftApp do
             withUnliftApp (Wallet.withKeyWallet alice) do
               void $ runRegisterWithFixedKeys dummyGenesisUtxo
 

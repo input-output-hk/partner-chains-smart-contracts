@@ -33,7 +33,6 @@ import Data.Set as Set
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.Effects.App (APP)
-import TrustlessSidechain.Effects.Env (Env, READER)
 import TrustlessSidechain.Effects.Log (logDebug', logInfo')
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Transaction as Effect
@@ -280,7 +279,7 @@ updateVersion genesisUtxo = do
 getExpectedVersionedPoliciesAndValidators ::
   forall r.
   TransactionInput ->
-  Run (READER Env + EXCEPT OffchainError + WALLET + r)
+  Run (EXCEPT OffchainError + WALLET + r)
     { versionedPolicies :: List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators :: List (Tuple Types.ScriptId PlutusScript)
     }
@@ -307,7 +306,7 @@ getCommitteeSelectionPoliciesAndValidators genesisUtxo = do
 getNativeTokenManagementPoliciesAndValidators ::
   forall r.
   TransactionInput ->
-  Run (READER Env + EXCEPT OffchainError + WALLET + r)
+  Run (EXCEPT OffchainError + WALLET + r)
     { versionedPolicies :: List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators :: List (Tuple Types.ScriptId PlutusScript)
     }
@@ -322,7 +321,7 @@ getNativeTokenManagementPoliciesAndValidators genesisUtxo = do
 getActualVersionedPoliciesAndValidators ::
   forall r.
   TransactionInput ->
-  Run (READER Env + EXCEPT OffchainError + TRANSACTION + WALLET + r)
+  Run (EXCEPT OffchainError + TRANSACTION + WALLET + r)
     { versionedPolicies :: List (Tuple Types.ScriptId PlutusScript)
     , versionedValidators :: List (Tuple Types.ScriptId PlutusScript)
     }

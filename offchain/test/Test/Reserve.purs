@@ -37,7 +37,6 @@ import Test.Utils (TestnetTest)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
-import TrustlessSidechain.Effects.Env (emptyEnv)
 import TrustlessSidechain.Effects.Log (LOG, logInfo')
 import TrustlessSidechain.Effects.Run (unliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
@@ -173,9 +172,9 @@ testScenario3 :: TestnetTest
 testScenario3 =
   test "Deposit more non-ADA to a reserve" do
     withWallets initialDistribution \alice -> do
-      withKeyWallet alice $ unliftApp emptyEnv do
+      withKeyWallet alice $ unliftApp do
         pkh <- getOwnPaymentPubKeyHash
-        Test.Utils.withSingleMultiSig (unwrap pkh) $ do
+        do
 
           genesisUtxo <- dummyInitialiseSidechain pkh
 
@@ -225,9 +224,9 @@ testScenario4 =
     "Update reserve utxo mutable settings"
     do
       withWallets initialDistribution \alice -> do
-        withKeyWallet alice $ unliftApp emptyEnv do
+        withKeyWallet alice $ unliftApp do
           pkh <- getOwnPaymentPubKeyHash
-          Test.Utils.withSingleMultiSig (unwrap pkh) $ do
+          do
 
             genesisUtxo <- dummyInitialiseSidechain pkh
 
@@ -287,9 +286,9 @@ testScenario5 =
     "Transfer to illiquid circulation supply with non-ADA as reserve token"
     do
       withWallets initialDistribution \alice -> do
-        withKeyWallet alice $ unliftApp emptyEnv do
+        withKeyWallet alice $ unliftApp do
           pkh <- getOwnPaymentPubKeyHash
-          Test.Utils.withSingleMultiSig (unwrap pkh) $ do
+          do
             genesisUtxo <- dummyInitialiseSidechain pkh
 
             let
@@ -362,9 +361,9 @@ testScenario8 =
     "Transfer to illiquid circulation supply with ADA as reserve token"
     do
       withWallets initialDistribution \alice -> do
-        withKeyWallet alice $ unliftApp emptyEnv do
+        withKeyWallet alice $ unliftApp do
           pkh <- getOwnPaymentPubKeyHash
-          Test.Utils.withSingleMultiSig (unwrap pkh) $ do
+          do
 
             genesisUtxo <- dummyInitialiseSidechain pkh
 
@@ -430,10 +429,10 @@ testScenario6 =
     "Handover with non-ADA as reserve token"
     do
       withWallets initialDistribution \alice -> do
-        withKeyWallet alice $ unliftApp emptyEnv do
+        withKeyWallet alice $ unliftApp do
 
           pkh <- getOwnPaymentPubKeyHash
-          Test.Utils.withSingleMultiSig (unwrap pkh) $ do
+          do
             genesisUtxo <- dummyInitialiseSidechain pkh
 
             let numOfNonAdaTokens = 101
@@ -485,9 +484,9 @@ testScenario7 =
     "Handover with ADA as reserve token"
     do
       withWallets initialDistribution \alice -> do
-        withKeyWallet alice $ unliftApp emptyEnv do
+        withKeyWallet alice $ unliftApp do
           pkh <- getOwnPaymentPubKeyHash
-          Test.Utils.withSingleMultiSig (unwrap pkh) $ do
+          do
             genesisUtxo <- dummyInitialiseSidechain pkh
 
             let numOfAda = 3_000_000

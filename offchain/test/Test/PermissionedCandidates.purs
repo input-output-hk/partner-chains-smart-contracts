@@ -8,7 +8,6 @@ import Contract.Test.Testnet (withWallets)
 import Contract.Wallet (withKeyWallet)
 import Mote.Monad (group, test)
 import Test.Utils (TestnetTest, fails, getOwnTransactionInput)
-import TrustlessSidechain.Effects.Env (emptyEnv)
 import TrustlessSidechain.Effects.Log as Effect
 import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
 import TrustlessSidechain.InitSidechain.Governance (initGovernance)
@@ -34,7 +33,7 @@ testScenario =
         , BigNum.fromInt 150_000_000
         ]
     withWallets initialDistribution \alice -> do
-      withKeyWallet alice $ unliftApp emptyEnv do
+      withKeyWallet alice $ unliftApp do
         pkh <- getOwnPaymentPubKeyHash
         genesisUtxo <- getOwnTransactionInput
         Effect.logInfo' $ "genesisUtxo: " <> show genesisUtxo

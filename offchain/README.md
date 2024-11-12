@@ -102,7 +102,6 @@ following format:
 
 ```json
   "genesisUtxo": "3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1",
-  "governanceAuthority": "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
   "runtimeConfig": {
     "network": "testnet",
     "ogmios": {
@@ -127,7 +126,6 @@ This allows to shorten a CLI call from:
 ```
 nix run .#pc-contracts-cli -- deregister \
   --genesis-utxo 3824c3a7c4437cc6ca4f893cd1519ae1dbe77862304e14d910ddc1f32de69b60#1 \
-  --governance-authority 4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501c \
   --network testnet \
   --ogmios-host localhost \
   --ogmios-port 1442 \

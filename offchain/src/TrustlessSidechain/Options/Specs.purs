@@ -2,7 +2,6 @@ module TrustlessSidechain.Options.Specs (options) where
 
 import Contract.Prelude
 
-import Cardano.AsCbor (decodeCbor)
 import Cardano.Types.Asset (Asset(..))
 import Cardano.Types.BigNum (BigNum)
 import Cardano.Types.NetworkId (NetworkId(MainnetId))
@@ -55,7 +54,6 @@ import Options.Applicative
 import TrustlessSidechain.CommitteeCandidateValidator
   ( StakeOwnership(AdaBasedStaking, TokenBasedStaking)
   )
-import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.NativeTokenManagement.Types
   ( ImmutableReserveSettings(ImmutableReserveSettings)
   , MutableReserveSettings(MutableReserveSettings)
@@ -189,7 +187,6 @@ withCommonOpts maybeConfig endpointParser = ado
   pSkey <- pSkeySpec maybeConfig
   stSkey <- stSKeySpec maybeConfig
   genesisUtxo <- genesisUtxoSpec maybeConfig
-  governanceAuthority <- governanceAuthoritySpec maybeConfig
   endpoint <- endpointParser
 
   ogmiosConfig <- serverConfigSpec "ogmios" $
@@ -216,7 +213,6 @@ withCommonOpts maybeConfig endpointParser = ado
   in
     TxOptions
       { genesisUtxo
-      , governanceAuthority
       , endpoint
       , contractParams: config
           { logLevel = environment.logLevel
@@ -314,23 +310,6 @@ genesisUtxoSpec maybeConfig =
         (maybeConfig >>= _.genesisUtxo)
     ]
 
-governanceAuthoritySpec :: Maybe Config -> Parser Governance.GovernanceAuthority
-governanceAuthoritySpec maybeConfig =
-  option governanceAuthority $ fold
-    [ short 'g'
-    , long "governance-authority"
-    , metavar "PUB_KEY_HASH"
-    , help "Public key hash of governance authority"
-    , maybe mempty value
-        ( maybeConfig >>= _.governanceAuthority >>=
-            -- parse ByteArray stored in Config into a PubKeyHash
-            ( wrap >>> decodeCbor >=> wrap
-                >>> Governance.mkGovernanceAuthority
-                >>> pure
-            )
-        )
-    ]
-
 -- | Parse required data for a stake ownership variant
 stakeOwnershipSpec :: Parser StakeOwnership
 stakeOwnershipSpec = parseAdaBasedStaking <|> parseTokenBasedStaking
@@ -415,13 +394,13 @@ parseSpoPubKey = option byteArray $ fold
 initGovernanceSpec :: Parser TxEndpoint
 initGovernanceSpec =
   ado
-    governanceAuthority <- optional $ option governanceAuthority $ fold
+    governanceAuthority <- option governanceAuthority $ fold
       [ short 'g'
       , long "governance-authority"
       , metavar "PUB_KEY_HASH"
       , help "Public key hash of governance authority"
       ]
-    in InitGovernance { governancePubKeyHash: unwrap <$> governanceAuthority }
+    in InitGovernance { governancePubKeyHash: unwrap governanceAuthority }
 
 updateGovernanceSpec :: Parser TxEndpoint
 updateGovernanceSpec = ado

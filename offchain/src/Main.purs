@@ -5,7 +5,6 @@ import Contract.Prelude
 import Contract.Monad (launchAff_)
 import Contract.Transaction (TransactionInput)
 import Data.Array as Array
-import JS.BigInt as BigInt
 import Node.Encoding (Encoding(UTF8))
 import Node.Process (exit, stderr)
 import Node.Stream (writeString)
@@ -38,11 +37,6 @@ import TrustlessSidechain.EndpointResp
   )
 import TrustlessSidechain.Error (OffchainError(NotFoundUtxo))
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
-import TrustlessSidechain.Governance (Governance(MultiSig))
-import TrustlessSidechain.Governance.Admin as Governance
-import TrustlessSidechain.Governance.MultiSig
-  ( MultiSigGovParams(MultiSigGovParams)
-  )
 import TrustlessSidechain.Governance.Utils (updateGovernance)
 import TrustlessSidechain.InitSidechain.Governance (initGovernance)
 import TrustlessSidechain.InitSidechain.NativeTokenManagement
@@ -96,22 +90,12 @@ main = do
   allOpts <- getOptions
   case allOpts of
     TxOptions opts -> do
-      -- Do some validation on the CLI options
-      -----------------------
-      let
-        governance = Just $ MultiSig $ MultiSigGovParams
-          { governanceMembers:
-              [ unwrap $ unwrap $ opts.governanceAuthority ]
-          , requiredSignatures: BigInt.fromInt 1
-          }
-
       -- Running the program
       -----------------------
       launchAff_ $ do
-        endpointResp <- runAppLive opts.contractParams { governance }
+        endpointResp <- runAppLive opts.contractParams
           $ runTxEndpoint
               opts.genesisUtxo
-              opts.governanceAuthority
               opts.endpoint
 
         liftEffect $ case endpointResp of
@@ -135,10 +119,9 @@ getOptions = do
 runTxEndpoint ::
   forall r.
   TransactionInput ->
-  Governance.GovernanceAuthority ->
   TxEndpoint ->
   Run (APP + EFFECT + r) EndpointResp
-runTxEndpoint genesisUtxo governanceAuthority endpoint =
+runTxEndpoint genesisUtxo endpoint =
   case endpoint of
     CommitteeCandidateReg
       { stakeOwnership
@@ -183,12 +166,7 @@ runTxEndpoint genesisUtxo governanceAuthority endpoint =
 
     InitGovernance { governancePubKeyHash } ->
       do
-        let
-          govPubKeyHash = case governancePubKeyHash of
-            Just pubKeyHash -> pubKeyHash
-            Nothing -> unwrap governanceAuthority
-
-        transactionId <- initGovernance genesisUtxo govPubKeyHash
+        transactionId <- initGovernance genesisUtxo governancePubKeyHash
 
         pure $ InitGovernanceResp
           { transactionId: txHashToByteArray transactionId
