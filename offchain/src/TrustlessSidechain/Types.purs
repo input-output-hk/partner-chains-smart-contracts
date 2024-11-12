@@ -23,4 +23,3 @@ type CurrencyInfo =
   { mintingPolicy :: PlutusScript
   , currencySymbol :: ScriptHash
   }
-
