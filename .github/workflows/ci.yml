@@ -35,6 +35,10 @@ jobs:
       #          key: ${{ runner.os }}-${{ hashFiles('**/*.cabal', '**/cabal.project') }}
       #          restore-keys: ${{ runner.os }}-
 
+      - name: Lint sources
+        run: |
+          nix flake check
+
       - name: Build onchain
         run: |
           cd onchain
