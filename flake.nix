@@ -62,7 +62,7 @@
               };
           };
           tools = {
-            cabal-fmt = pkgs.haskellPackages.cabal-fmt;
+            cabal-fmt = pkgs.haskellPackages.cabal-fmt.bin;
             fourmolu = pkgs.haskellPackages.fourmolu;
             shellcheck = pkgs.shellcheck;
             nixpkgs-fmt = pkgs.nixpkgs-fmt;
