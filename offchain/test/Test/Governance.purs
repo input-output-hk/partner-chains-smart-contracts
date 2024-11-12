@@ -11,7 +11,6 @@ import Test.Utils
   , fails
   , getOwnTransactionInput
   )
-import TrustlessSidechain.Effects.Env (emptyEnv)
 import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
 import TrustlessSidechain.Governance.Utils (updateGovernance)
 import TrustlessSidechain.InitSidechain.Governance (initGovernance)
@@ -38,7 +37,7 @@ testScenarioSuccess =
           ]
       withWallets (initialDistribution /\ initialDistribution) \(alice /\ bob) ->
         do
-          unliftApp emptyEnv do
+          unliftApp do
 
             bobPkh <- withUnliftApp (Wallet.withKeyWallet bob)
               getOwnPaymentPubKeyHash
@@ -68,7 +67,7 @@ testScenarioFailure =
           ]
       withWallets (initialDistribution /\ initialDistribution) \(alice /\ bob) ->
         do
-          unliftApp emptyEnv do
+          unliftApp do
 
             genesisUtxo <- withUnliftApp (Wallet.withKeyWallet alice) do
               pkh <- getOwnPaymentPubKeyHash

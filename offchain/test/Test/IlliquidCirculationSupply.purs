@@ -37,7 +37,6 @@ import Test.Utils (TestnetTest)
 import Test.Utils as Test.Utils
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
-import TrustlessSidechain.Effects.Env (Env, READER, emptyEnv)
 import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Run (unliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
@@ -169,7 +168,7 @@ insertFakeIcsWithdrawalPolicy ::
   forall r.
   TransactionInput ->
   Run
-    (READER Env + EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
     ScriptHash
 insertFakeIcsWithdrawalPolicy genesisUtxo =
   do
@@ -217,9 +216,9 @@ testScenario :: TestnetTest
 testScenario =
   test "Withdraw from ICS" do
     withWallets initialDistribution \alice -> do
-      withKeyWallet alice $ unliftApp emptyEnv do
+      withKeyWallet alice $ unliftApp do
         pkh <- getOwnPaymentPubKeyHash
-        Test.Utils.withSingleMultiSig (unwrap pkh) $ do
+        do
 
           genesisUtxo <- dummyInitialiseSidechain pkh
           mintingPolicyHash <- insertFakeIcsWithdrawalPolicy genesisUtxo

@@ -15,7 +15,6 @@ import Test.Utils
   ( TestnetTest
   , fails
   , getOwnTransactionInput
-  , withSingleMultiSig
   )
 import TrustlessSidechain.CommitteeCandidateValidator
   ( getCommitteeCandidateValidator
@@ -23,7 +22,6 @@ import TrustlessSidechain.CommitteeCandidateValidator
 import TrustlessSidechain.DParameter.Utils
   ( getDParameterMintingPolicyAndCurrencySymbol
   )
-import TrustlessSidechain.Effects.Env (Env, READER, emptyEnv)
 import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
@@ -63,9 +61,9 @@ testInsertAndInvalidateSuccessScenario =
         , BigNum.fromInt 40_000_000
         ]
     withWallets initialDistribution \alice -> do
-      withKeyWallet alice $ unliftApp emptyEnv do
+      withKeyWallet alice $ unliftApp do
         pkh <- getOwnPaymentPubKeyHash
-        withSingleMultiSig (unwrap pkh) $ do
+        do
           genesisUtxo <- getOwnTransactionInput
 
           -- No versioned scripts are inserted.
@@ -128,9 +126,9 @@ testInsertSameScriptTwiceSuccessScenario =
         , BigNum.fromInt 40_000_000
         ]
     withWallets initialDistribution \alice -> do
-      withKeyWallet alice $ unliftApp emptyEnv do
+      withKeyWallet alice $ unliftApp do
         pkh <- getOwnPaymentPubKeyHash
-        withSingleMultiSig (unwrap pkh) $ do
+        do
           genesisUtxo <- getOwnTransactionInput
 
           assertNumberOfActualVersionedScripts genesisUtxo 0 0
@@ -171,9 +169,9 @@ testInsertUnversionedScriptSuccessScenario =
         , BigNum.fromInt 40_000_000
         ]
     withWallets initialDistribution \alice -> do
-      withKeyWallet alice $ unliftApp emptyEnv do
+      withKeyWallet alice $ unliftApp do
         pkh <- getOwnPaymentPubKeyHash
-        withSingleMultiSig (unwrap pkh) $ do
+        do
           genesisUtxo <- getOwnTransactionInput
 
           assertNumberOfActualVersionedScripts genesisUtxo 0 0
@@ -209,9 +207,9 @@ testRemovingTwiceSameScriptFailScenario =
         , BigNum.fromInt 40_000_000
         ]
     withWallets initialDistribution \alice -> do
-      withKeyWallet alice $ unliftApp emptyEnv do
+      withKeyWallet alice $ unliftApp do
         pkh <- getOwnPaymentPubKeyHash
-        withSingleMultiSig (unwrap pkh) $ do
+        do
           genesisUtxo <- getOwnTransactionInput
 
           void $ initGovernance genesisUtxo pkh
@@ -241,7 +239,7 @@ assertNumberOfActualVersionedScripts ::
   -- | Number of expected versionned validator scripts
   Int ->
   Run
-    (EXCEPT OffchainError + TRANSACTION + WALLET + READER Env + AFF + EFFECT + r)
+    (EXCEPT OffchainError + TRANSACTION + WALLET + AFF + EFFECT + r)
     Unit
 assertNumberOfActualVersionedScripts
   genesisUtxo

@@ -22,7 +22,6 @@ import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.CommitteeCandidateValidator as CommitteeCandidateValidator
 import TrustlessSidechain.DParameter.Utils as DParameter
-import TrustlessSidechain.Effects.Env (Env, READER)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
@@ -73,7 +72,7 @@ type SidechainAddresses =
 getSidechainAddresses ::
   forall r.
   TransactionInput ->
-  Run (EXCEPT OffchainError + WALLET + TRANSACTION + READER Env + r)
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + r)
     SidechainAddresses
 getSidechainAddresses
   genesisUtxo = do

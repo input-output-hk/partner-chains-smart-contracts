@@ -27,7 +27,6 @@ configCodec =
   CA.object "Config file"
     ( CAR.record
         { genesisUtxo: CAC.maybe transactionInputCodec
-        , governanceAuthority: CAC.maybe byteArrayCodec
         , paymentSigningKeyFile: CAC.maybe CA.string
         , stakeSigningKeyFile: CAC.maybe CA.string
         , runtimeConfig: CAC.maybe runtimeConfigCodec

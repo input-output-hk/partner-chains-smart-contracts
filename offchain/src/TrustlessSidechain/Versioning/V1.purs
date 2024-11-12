@@ -16,7 +16,6 @@ import Run.Except (EXCEPT)
 import TrustlessSidechain.CommitteeCandidateValidator
   ( getCommitteeCandidateValidator
   )
-import TrustlessSidechain.Effects.Env (Env, READER)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError)
 import TrustlessSidechain.NativeTokenManagement.IlliquidCirculationSupply
@@ -41,7 +40,7 @@ import Type.Row (type (+))
 getVersionedPoliciesAndValidators ::
   forall r.
   TransactionInput ->
-  Run (READER Env + EXCEPT OffchainError + WALLET + r)
+  Run (EXCEPT OffchainError + WALLET + r)
     { versionedPolicies :: List (Tuple ScriptId PlutusScript)
     , versionedValidators :: List (Tuple ScriptId PlutusScript)
     }
@@ -102,7 +101,7 @@ getCommitteeSelectionPoliciesAndValidators genesisUtxo =
 getNativeTokenManagementPoliciesAndValidators ::
   forall r.
   TransactionInput ->
-  Run (READER Env + EXCEPT OffchainError + WALLET + r)
+  Run (EXCEPT OffchainError + WALLET + r)
     { versionedPolicies :: List (Tuple ScriptId PlutusScript)
     , versionedValidators :: List (Tuple ScriptId PlutusScript)
     }

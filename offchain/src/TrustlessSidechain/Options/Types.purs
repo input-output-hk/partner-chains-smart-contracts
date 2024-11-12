@@ -21,7 +21,6 @@ import Node.Path (FilePath)
 import TrustlessSidechain.CommitteeCandidateValidator
   ( StakeOwnership
   )
-import TrustlessSidechain.Governance.Admin as Governance
 import TrustlessSidechain.NativeTokenManagement.Types
   ( ImmutableReserveSettings
   , MutableReserveSettings
@@ -36,7 +35,6 @@ data Options
     -- | In particular, these endpoints need to be in the `Contract` monad
     TxOptions
       { genesisUtxo :: TransactionInput
-      , governanceAuthority :: Governance.GovernanceAuthority
       , endpoint :: TxEndpoint
       , contractParams :: ContractParams
       }
@@ -47,10 +45,6 @@ data Options
 type Config =
   { -- | Genesis UTXO (defining the sidechain which we will interact with)
     genesisUtxo :: Maybe TransactionInput
-  -- governanceAuthority should really be a PubKeyHash but there's no
-  -- (easy) way of pulling a dummy PubKeyHash value out of thin air in
-  -- TrustlessSidechain.ConfigFile.optExample
-  , governanceAuthority :: Maybe ByteArray
   , -- | Filepath of the payment signing key of the wallet owner
     paymentSigningKeyFile :: Maybe FilePath
   , -- | Filepath of the stake signing key of the wallet owner
@@ -71,7 +65,7 @@ data TxEndpoint
       }
   | CommitteeCandidateDereg { spoPubKey :: Maybe PubKey }
   | GetAddrs
-  | InitGovernance { governancePubKeyHash :: Maybe PaymentPubKeyHash }
+  | InitGovernance { governancePubKeyHash :: PaymentPubKeyHash }
   | UpdateGovernance { governancePubKeyHash :: PaymentPubKeyHash }
   | InitReserveManagement
   | UpdateVersion
