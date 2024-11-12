@@ -40,7 +40,10 @@ serve-port := 4008
 ### Build targets
 default: ci
 
-ci: test
+npm:
+	@npm install
+
+ci: npm test
 	@make release-zip
 
 build: ${raw-scripts-purs}
