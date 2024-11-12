@@ -64,9 +64,6 @@ Make sure to commit the created changelog fragment along with your changes.
 
 ### When creating a GitHub release
 - Versioning must follow semantic versioning (details in the [coding standards](./onchain/STANDARDS.md#versioning-and-changelogging))
-- `Unreleased` section of the Changelog is updated
-- In code `@since Unreleased` headers are updated
-- Versions are bumped in `flake.nix`, `onchain/trustless-sidechain.cabal`, `offchain/package.json`
-- Push a git tag with the version (e.g. `v3.0.0`)
-- Create a GitHub release with a short description of the major changes, and a link to the Changelog
-- Build and upload an bundled JS artifact for the CLI
+- Run release script with the version (e.g. `./release.sh 3.0.0`) and create a PR from it and have it merged
+- Run the GitHub release workflow on master
+- Review the GitHub draft release and publish it if everything is correct
