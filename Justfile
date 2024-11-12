@@ -26,7 +26,7 @@ trustless_sidechain_serialise := "cabal run trustless-sidechain-serialise --"
 
 # Output files with serialized scripts
 raw_scripts_purs := offchain_dir + "/src/TrustlessSidechain/RawScripts.purs"
-raw_scripts_rs := raw-scripts/src/lib.rs
+raw_scripts_rs := "raw-scripts/src/lib.rs"
 
 # Bundler setup
 ps_entrypoint := "Main"
