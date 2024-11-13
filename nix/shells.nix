@@ -18,6 +18,7 @@ in
     env = {
       CARDANO_CLI = "${cardano-cli}/bin/cardano-cli";
       CARDANO_NODE = "${cardano-node}/bin/cardano-node";
+      LC_ALL = "C.UTF-8";
     };
     nativeBuildInputs = [
       # These packages are all required for running checks present
