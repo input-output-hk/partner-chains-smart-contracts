@@ -12,7 +12,7 @@
   };
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     pre-commit-hooks.url = "github:cachix/git-hooks.nix";
     purescript-overlay.url = "github:thomashoneyman/purescript-overlay";
@@ -71,7 +71,7 @@
         };
       };
 
-      devShell = pkgs.mkShell {
+      devShells.default = pkgs.mkShell {
         buildInputs = with pkgs; [
           #
           # build tools
