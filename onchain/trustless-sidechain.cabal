@@ -153,18 +153,6 @@ library plutus-shim-prelude
     , template-haskell
     , th-abstraction
 
-library quickcheck-extra
-  import:          common-lang, common-optimized
-  exposed-modules: Test.QuickCheck.Extra
-  build-depends:
-    , bytestring
-    , plutus-ledger-api
-    , plutus-shim-prelude
-    , QuickCheck
-    , trustless-sidechain-prelude
-
-  hs-source-dirs:  test/quickcheck-extra/src
-
 -- Executables
 
 executable trustless-sidechain-serialise
@@ -205,7 +193,6 @@ test-suite trustless-sidechain-test
     , plutus-tx
     , plutus-tx-plugin
     , QuickCheck
-    , quickcheck-extra
     , secp256k1-haskell
     , tasty
     , tasty-golden
@@ -244,19 +231,6 @@ test-suite script-size
 
   hs-source-dirs: test/script-size
 
-test-suite quickcheck-extra-test
-  import:         common-lang, common-optimized-parallel
-  type:           exitcode-stdio-1.0
-  main-is:        Main.hs
-  build-depends:
-    , QuickCheck
-    , quickcheck-extra
-    , tasty
-    , tasty-quickcheck
-    , trustless-sidechain-prelude
-
-  hs-source-dirs: test/quickcheck-extra/test
-
 test-suite roundtrip
   import:         common-lang, common-optimized-parallel
   type:           exitcode-stdio-1.0
@@ -266,7 +240,6 @@ test-suite roundtrip
     , plutus-ledger-api
     , plutus-shim-prelude
     , QuickCheck
-    , quickcheck-extra
     , secp256k1-haskell
     , tasty
     , tasty-quickcheck
@@ -274,19 +247,3 @@ test-suite roundtrip
     , trustless-sidechain-prelude
 
   hs-source-dirs: test/roundtrip
-
--- Benchmarks
-
-benchmark quickcheck-extra-bench
-  import:         common-lang, common-optimized
-  main-is:        Main.hs
-  ghc-options:    -fproc-alignment=64 -rtsopts -with-rtsopts=-A32m
-  type:           exitcode-stdio-1.0
-  build-depends:
-    , QuickCheck
-    , quickcheck-extra
-    , tasty
-    , tasty-bench
-    , trustless-sidechain-prelude
-
-  hs-source-dirs: test/quickcheck-extra/bench

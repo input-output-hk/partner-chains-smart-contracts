@@ -3,17 +3,22 @@
 module Main (main) where
 
 import Crypto.Secp256k1 qualified as SECP
-import GHC.Exts (fromList)
+import GHC.Exts (fromList, toList)
 import Laws (toDataSafeLaws', toDataUnsafeLaws')
 import PlutusLedgerApi.V1.Value (AssetClass (AssetClass))
 import PlutusLedgerApi.V2 (
+  CurrencySymbol (CurrencySymbol),
   LedgerBytes (LedgerBytes),
   POSIXTime (POSIXTime),
+  PubKeyHash (PubKeyHash),
+  TxId (TxId),
+  TxOutRef (TxOutRef),
  )
 import System.IO.Unsafe (unsafePerformIO)
 import Test.QuickCheck (
   Arbitrary (arbitrary, shrink),
   Gen,
+  NonNegative (NonNegative),
   arbitrary,
   chooseInteger,
   liftArbitrary,
@@ -21,12 +26,6 @@ import Test.QuickCheck (
   oneof,
   shrink,
   vectorOf,
- )
-import Test.QuickCheck.Extra (
-  ArbitraryBytes (ArbitraryBytes),
-  ArbitraryCurrencySymbol (ArbitraryCurrencySymbol),
-  ArbitraryPubKeyHash (ArbitraryPubKeyHash),
-  ArbitraryTxOutRef (ArbitraryTxOutRef),
  )
 import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (QuickCheckTests (QuickCheckTests), testProperty)
@@ -384,3 +383,164 @@ instance Arbitrary ArbitrarySignature where
       . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
       . fromList @ByteString
       <$> vectorOf 64 arbitrary
+
+-- | Wrapper for 'TxId' to provide QuickCheck instances.
+--
+-- @since v4.0.0
+newtype ArbitraryTxId = ArbitraryTxId TxId
+  deriving
+    ( -- | @since v4.0.0
+      Eq
+    , -- | @since v4.0.0
+      Ord
+    , -- | @since v4.0.0
+      PTPrelude.Eq
+    , -- | @since v4.0.0
+      PTPrelude.Ord
+    )
+    via TxId
+  deriving stock
+    ( -- | @since v4.0.0
+      Show
+    )
+
+-- | Does not shrink, as this is a fixed-width hash.
+--
+-- @since v4.0.0
+instance Arbitrary ArbitraryTxId where
+  arbitrary =
+    ArbitraryTxId <$> do
+      xs <- vectorOf 28 arbitrary
+      let bs = fromList @ByteString xs
+      pure . TxId . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString $ bs
+
+-- | Wrapper for 'PubKeyHash' to provide QuickCheck instances.
+--
+-- @since v4.0.0
+newtype ArbitraryPubKeyHash = ArbitraryPubKeyHash PubKeyHash
+  deriving
+    ( -- | @since v4.0.0
+      Eq
+    , -- | @since v4.0.0
+      Ord
+    , -- | @since v4.0.0
+      PTPrelude.Eq
+    , -- | @since v4.0.0
+      PTPrelude.Ord
+    )
+    via PubKeyHash
+  deriving stock
+    ( -- | @since v4.0.0
+      Show
+    )
+
+-- | Does not shrink, as it doesn't make much sense to.
+--
+-- @since v4.0.0
+instance Arbitrary ArbitraryPubKeyHash where
+  arbitrary =
+    ArbitraryPubKeyHash
+      . PubKeyHash
+      . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
+      . fromList @ByteString
+      <$> vectorOf 28 arbitrary
+
+-- | Wrapper for 'CurrencySymbol' to provide QuickCheck instances.
+--
+-- @since v4.0.0
+newtype ArbitraryCurrencySymbol = ArbitraryCurrencySymbol CurrencySymbol
+  deriving
+    ( -- | @since v4.0.0
+      Eq
+    , -- | @since v4.0.0
+      Ord
+    , -- | @since v4.0.0
+      PTPrelude.Eq
+    , -- | @since v4.0.0
+      PTPrelude.Ord
+    )
+    via CurrencySymbol
+  deriving stock
+    ( -- | @since v4.0.0
+      Show
+    )
+
+-- | This does /not/ generate the ADA symbol. Does not shrink (it wouldn't make
+-- much sense to).
+--
+-- @since v4.0.0
+instance Arbitrary ArbitraryCurrencySymbol where
+  arbitrary =
+    ArbitraryCurrencySymbol
+      . CurrencySymbol
+      . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
+      . fromList @ByteString
+      <$> vectorOf 28 arbitrary
+
+-- | Wrapper for 'TxOutRef' to provide QuickCheck instances.
+--
+-- @since v4.0.0
+newtype ArbitraryTxOutRef = ArbitraryTxOutRef TxOutRef
+  deriving
+    ( -- | @since v4.0.0
+      Eq
+    , -- | @since v4.0.0
+      Ord
+    , -- | @since v4.0.0
+      PTPrelude.Eq
+    )
+    via TxOutRef
+  deriving stock
+    ( -- | @since v4.0.0
+      Show
+    )
+
+-- | @since v4.0.0
+instance Arbitrary ArbitraryTxOutRef where
+  arbitrary =
+    ArbitraryTxOutRef <$> do
+      NonNegative tidx <- arbitrary
+      ArbitraryTxId tid <- arbitrary
+      pure . TxOutRef tid $ tidx
+  shrink (ArbitraryTxOutRef (TxOutRef tid tidx)) =
+    ArbitraryTxOutRef <$> do
+      NonNegative tidx' <- shrink . NonNegative $ tidx
+      pure . TxOutRef tid $ tidx'
+
+-- | Wrapper for 'LedgerBytes' to provide QuickCheck instances. This assumes any
+-- kind of bytestring is OK.
+--
+-- @since v4.0.0
+newtype ArbitraryBytes = ArbitraryBytes LedgerBytes
+  deriving
+    ( -- | @since v4.0.0
+      Eq
+    , -- | @since v4.0.0
+      Ord
+    , -- | @since v4.0.0
+      PTPrelude.Eq
+    , -- | @since v4.0.0
+      PTPrelude.Ord
+    )
+    via LedgerBytes
+  deriving stock
+    ( -- | @since v4.0.0
+      Show
+    )
+
+-- | @since v4.0.0
+instance Arbitrary ArbitraryBytes where
+  arbitrary =
+    ArbitraryBytes
+      . LedgerBytes
+      . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
+      . fromList @ByteString
+      <$> arbitrary @[Word8]
+  shrink (ArbitraryBytes (LedgerBytes bs)) = do
+    shrunk <- shrink . toList . PTPrelude.fromBuiltin $ bs
+    pure
+      . ArbitraryBytes
+      . LedgerBytes
+      . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
+      . fromList @ByteString
+      $ shrunk
