@@ -67,6 +67,7 @@ import TrustlessSidechain.NativeTokenManagement.Types
   , ReserveStats(..)
   )
 import TrustlessSidechain.SidechainParams (SidechainParams)
+import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Asset (emptyAssetName, singletonFromAsset)
 import TrustlessSidechain.Utils.Scripts
   ( mkMintingPolicyWithParams
@@ -637,7 +638,7 @@ transferToIlliquidCirculationSupply
   illiquidCirculationNewValue <- fromMaybeThrow
     (GenericInternalError "Could not calculate new ICS value")
     (pure (toTransferAsValue `Value.minus` incentiveAsValue))
-
+  ownPkh <- getOwnPaymentPubKeyHash
   let
     lookups :: Lookups.ScriptLookups
     lookups =
@@ -659,6 +660,7 @@ transferToIlliquidCirculationSupply
           (RedeemerDatum $ toData TransferToIlliquidCirculationSupply)
         <> TxConstraints.mustMintValue
           (Mint.fromMultiAsset $ Value.getMultiAsset vtTokensAsValue)
+        <> TxConstraints.mustBeSignedBy ownPkh
         <> TxConstraints.mustPayToScript
           (PlutusScript.hash illiquidCirculationSupplyValidator)
           PlutusData.unit
