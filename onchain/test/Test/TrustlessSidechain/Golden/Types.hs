@@ -17,7 +17,6 @@ import TrustlessSidechain.Types (
     auraKey,
     grandpaKey,
     inputUtxo,
-    ownPkh,
     sidechainPubKey,
     sidechainSignature,
     stakeOwnership
@@ -117,7 +116,6 @@ sampleBlockProducerRegistration1 =
             , sidechainPubKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
             , sidechainSignature = "b377dd97d20aaf784cf88dbbb1ffc0663311cb60451b5646c57192060143b9f6674f52aba3b7e09cc77eddafed0f64ca040dcdaa0c433ecb4b07a11b4b541000"
             , inputUtxo = sampleTxOutRef
-            , ownPkh = "0f45aaf1b2959db6e5ff94dbb1f823bf257680c3c723ac2d49f97546"
             , auraKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
             , grandpaKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
             }
@@ -135,7 +133,6 @@ sampleBlockProducerRegistration2 =
             , sidechainPubKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
             , sidechainSignature = "b377dd97d20aaf784cf88dbbb1ffc0663311cb60451b5646c57192060143b9f6674f52aba3b7e09cc77eddafed0f64ca040dcdaa0c433ecb4b07a11b4b541000"
             , inputUtxo = sampleTxOutRef
-            , ownPkh = "0f45aaf1b2959db6e5ff94dbb1f823bf257680c3c723ac2d49f97546"
             , auraKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
             , grandpaKey = "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"
             }

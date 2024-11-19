@@ -41,7 +41,6 @@ import TrustlessSidechain.Types (
     auraKey,
     grandpaKey,
     inputUtxo,
-    ownPkh,
     sidechainPubKey,
     sidechainSignature,
     stakeOwnership
@@ -205,14 +204,12 @@ genBPR = do
   grandpaKey <- (\(EcdsaSecp256k1PubKey pk) -> pk) <$> genPK
   ArbitrarySignature sideSig <- arbitrary
   ArbitraryTxOutRef iu <- arbitrary
-  ArbitraryPubKeyHash pkh <- arbitrary
   pure
     $ BlockProducerRegistration
       so
       sidePk
       sideSig
       iu
-      pkh
       auraKey
       grandpaKey
 
@@ -306,14 +303,12 @@ shrinkBPR (BlockProducerRegistration {..}) = do
   EcdsaSecp256k1PubKey grandpaKey' <- shrinkPK (EcdsaSecp256k1PubKey grandpaKey)
   ArbitrarySignature sideSig' <- shrink (ArbitrarySignature sidechainSignature)
   ArbitraryTxOutRef tout' <- shrink (ArbitraryTxOutRef inputUtxo)
-  ArbitraryPubKeyHash pkh' <- shrink (ArbitraryPubKeyHash ownPkh)
   pure
     $ BlockProducerRegistration
       so'
       sidePk'
       sideSig'
       tout'
-      pkh'
       auraKey'
       grandpaKey'
 

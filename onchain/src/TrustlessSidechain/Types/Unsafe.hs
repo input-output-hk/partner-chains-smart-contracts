@@ -13,7 +13,6 @@ module TrustlessSidechain.Types.Unsafe (
   auraKey,
   grandpaKey,
   inputUtxo,
-  ownPkh,
   sidechainPubKey,
   sidechainSignature,
   stakeOwnership,

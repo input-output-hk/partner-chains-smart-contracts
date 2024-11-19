@@ -25,7 +25,6 @@ module TrustlessSidechain.Types (
   VersionedGenericDatum (..),
 ) where
 
-import PlutusLedgerApi.V1.Crypto (PubKeyHash)
 import PlutusLedgerApi.V1.Value (AssetClass)
 import PlutusLedgerApi.V2 (
   BuiltinData (BuiltinData),
@@ -164,9 +163,6 @@ data BlockProducerRegistration = BlockProducerRegistration
   -- | @since v4.0.0
   , inputUtxo :: TxOutRef
   -- ^ A UTxO that must be spent by th@ext:haskell.haskelltransaction
-  -- | @since v4.0.0
-  , ownPkh :: PubKeyHash
-  -- ^ Owner public key hash
   -- | @since v4.0.0
   , auraKey :: LedgerBytes
   -- ^ Sidechain authority discovery key
