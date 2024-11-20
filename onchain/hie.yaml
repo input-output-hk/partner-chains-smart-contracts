@@ -9,9 +9,6 @@ cradle:
     - path: "./prelude"
       component: "lib:plutus-shim-prelude"
 
-    - path: "./src"
-      component: "lib:quickcheck-extra"
-
     - path: "./app/serialise"
       component: "exe:trustless-sidechain-serialise"
 
@@ -21,14 +18,5 @@ cradle:
     - path: "./test/script-size"
       component: "test:script-size"
 
-    - path: "./test/quickcheck-extra-test"
-      component: "test:quickcheck-extra-test"
-
     - path: "./test/roundtrip"
       component: "test:roundtrip"
-
-    - path: "./bench"
-      component: "bench:bench-ctl"
-
-    - path: "./bench/quickcheck-extra-bench"
-      component: "bench:quickcheck-extra-bench"

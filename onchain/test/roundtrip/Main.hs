@@ -2,15 +2,14 @@
 
 module Main (main) where
 
-import Crypto.Secp256k1 qualified as SECP
 import GHC.Exts (fromList)
 import Laws (toDataSafeLaws', toDataUnsafeLaws')
 import PlutusLedgerApi.V1.Value (AssetClass (AssetClass))
 import PlutusLedgerApi.V2 (
-  LedgerBytes (LedgerBytes),
+  CurrencySymbol (CurrencySymbol),
   POSIXTime (POSIXTime),
+  PubKeyHash (PubKeyHash),
  )
-import System.IO.Unsafe (unsafePerformIO)
 import Test.QuickCheck (
   Arbitrary (arbitrary, shrink),
   Gen,
@@ -22,12 +21,6 @@ import Test.QuickCheck (
   shrink,
   vectorOf,
  )
-import Test.QuickCheck.Extra (
-  ArbitraryBytes (ArbitraryBytes),
-  ArbitraryCurrencySymbol (ArbitraryCurrencySymbol),
-  ArbitraryPubKeyHash (ArbitraryPubKeyHash),
-  ArbitraryTxOutRef (ArbitraryTxOutRef),
- )
 import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (QuickCheckTests (QuickCheckTests), testProperty)
 import TrustlessSidechain.Governance.MultiSig (
@@ -36,37 +29,14 @@ import TrustlessSidechain.Governance.MultiSig (
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.PlutusPrelude qualified as PTPrelude
 import TrustlessSidechain.Types (
-  BlockProducerRegistration (
-    BlockProducerRegistration,
-    auraKey,
-    grandpaKey,
-    inputUtxo,
-    ownPkh,
-    sidechainPubKey,
-    sidechainSignature,
-    stakeOwnership
-  ),
-  BlockProducerRegistrationMsg (
-    BlockProducerRegistrationMsg,
-    genesisUtxo,
-    inputUtxo,
-    sidechainPubKey
-  ),
-  DParameterValidatorDatum (DParameterValidatorDatum),
-  EcdsaSecp256k1PubKey (EcdsaSecp256k1PubKey),
   IlliquidCirculationSupplyRedeemer (DepositMoreToSupply, WithdrawFromSupply),
   ImmutableReserveSettings (ImmutableReserveSettings),
   MutableReserveSettings (MutableReserveSettings),
-  PermissionedCandidateKeys (PermissionedCandidateKeys),
   PermissionedCandidatesPolicyRedeemer (PermissionedCandidatesBurn, PermissionedCandidatesMint),
-  PermissionedCandidatesValidatorDatum (PermissionedCandidatesValidatorDatum),
   PermissionedCandidatesValidatorRedeemer (RemovePermissionedCandidates, UpdatePermissionedCandidates),
-  PubKey (PubKey),
   ReserveDatum (ReserveDatum),
   ReserveRedeemer (DepositToReserve, Handover, TransferToIlliquidCirculationSupply, UpdateReserve),
   ReserveStats (ReserveStats),
-  Signature (Signature),
-  StakeOwnership (AdaBasedStaking, TokenBasedStaking),
  )
 import TrustlessSidechain.Versioning (
   VersionOracle (VersionOracle),
@@ -78,24 +48,12 @@ main =
   defaultMain
     . adjustOption go
     . testGroup "Roundtrip"
-    $ [ testProperty "EcdsaSecp256k1PubKey" . toDataSafeLaws' genPK shrinkPK $ show
-      , testProperty "EcdsaSecp256k1PubKey" . toDataUnsafeLaws' genPK shrinkPK $ show
-      , testProperty "BlockProducerRegistration (safe)" . toDataSafeLaws' genBPR shrinkBPR $ show
-      , testProperty "BlockProducerRegistration (unsafe)" . toDataUnsafeLaws' genBPR shrinkBPR $ show
-      , testProperty "BlockProducerRegistrationMsg (safe)" . toDataSafeLaws' genBPRM shrinkBPRM $ show
-      , testProperty "BlockProducerRegistrationMsg (unsafe)" . toDataUnsafeLaws' genBPRM shrinkBPRM $ show
-      , testProperty "VersionOracle (safe)" . toDataSafeLaws' genVO shrinkVO $ show
+    $ [ testProperty "VersionOracle (safe)" . toDataSafeLaws' genVO shrinkVO $ show
       , testProperty "VersionOracle (unsafe)" . toDataUnsafeLaws' genVO shrinkVO $ show
       , testProperty "VersionOracleConfig (safe)" . toDataSafeLaws' genVOC shrinkVOC $ show
       , testProperty "VersionOracleConfig (unsafe)" . toDataUnsafeLaws' genVOC shrinkVOC $ show
-      , testProperty "DParameterValidatorDatum (safe)" . toDataSafeLaws' genDPVD shrinkDPVD $ show
-      , testProperty "DParameterValidatorDatum (unsafe)" . toDataUnsafeLaws' genDPVD shrinkDPVD $ show
-      , testProperty "PermissionedCandidateKeys (safe)" . toDataSafeLaws' genPCK shrinkPCK $ show
-      , testProperty "PermissionedCandidateKeys (unsafe)" . toDataUnsafeLaws' genPCK shrinkPCK $ show
       , testProperty "PermissionedCandidatesPolicyRedeemer (safe)" . toDataSafeLaws' genPCPR shrinkPCPR $ show
       , testProperty "PermissionedCandidatesPolicyRedeemer (unsafe)" . toDataUnsafeLaws' genPCPR shrinkPCPR $ show
-      , testProperty "PermissionedCandidatesValidatorDatum (safe)" . toDataSafeLaws' genPCVD shrinkPCVD $ show
-      , testProperty "PermissionedCandidatesValidatorDatum (unsafe)" . toDataUnsafeLaws' genPCVD shrinkPCVD $ show
       , testProperty "PermissionedCandidatesValidatorRedeemer (safe)" . toDataSafeLaws' genPCVR shrinkPCVR $ show
       , testProperty "PermissionedCandidatesValidatorRedeemer (unsafe)" . toDataUnsafeLaws' genPCVR shrinkPCVR $ show
       , testProperty "ReserveDatum (safe)" . toDataSafeLaws' genRD shrinkRD $ show
@@ -115,21 +73,8 @@ main =
 
 -- Generators
 
-genDPVD :: Gen DParameterValidatorDatum
-genDPVD = DParameterValidatorDatum <$> arbitrary <*> arbitrary
-
-genPCK :: Gen PermissionedCandidateKeys
-genPCK = do
-  ArbitraryBytes sk <- arbitrary
-  ArbitraryBytes ak <- arbitrary
-  ArbitraryBytes gk <- arbitrary
-  pure $ PermissionedCandidateKeys sk ak gk
-
 genPCPR :: Gen PermissionedCandidatesPolicyRedeemer
 genPCPR = oneof [pure PermissionedCandidatesMint, pure PermissionedCandidatesBurn]
-
-genPCVD :: Gen PermissionedCandidatesValidatorDatum
-genPCVD = PermissionedCandidatesValidatorDatum <$> liftArbitrary genPCK
 
 genPCVR :: Gen PermissionedCandidatesValidatorRedeemer
 genPCVR = oneof [pure UpdatePermissionedCandidates, pure RemovePermissionedCandidates]
@@ -182,76 +127,10 @@ genVOC =
     ArbitraryCurrencySymbol sym <- arbitrary
     pure sym
 
-genBPRM :: Gen BlockProducerRegistrationMsg
-genBPRM = do
-  ArbitraryTxOutRef genUtxo <- arbitrary
-  spk <- (\(EcdsaSecp256k1PubKey pk) -> pk) <$> genPK
-  ArbitraryTxOutRef tout <- arbitrary
-  pure . BlockProducerRegistrationMsg genUtxo spk $ tout
-
-genSO :: Gen StakeOwnership
-genSO = oneof [arbitraryAdaBasedCreds, pure TokenBasedStaking]
-  where
-    arbitraryAdaBasedCreds = do
-      ArbitraryPubKey pk <- arbitrary
-      ArbitrarySignature sig <- arbitrary
-      pure $ AdaBasedStaking pk sig
-
-genBPR :: Gen BlockProducerRegistration
-genBPR = do
-  so <- genSO
-  sidePk <- (\(EcdsaSecp256k1PubKey pk) -> pk) <$> genPK
-  auraKey <- (\(EcdsaSecp256k1PubKey pk) -> pk) <$> genPK
-  grandpaKey <- (\(EcdsaSecp256k1PubKey pk) -> pk) <$> genPK
-  ArbitrarySignature sideSig <- arbitrary
-  ArbitraryTxOutRef iu <- arbitrary
-  ArbitraryPubKeyHash pkh <- arbitrary
-  pure
-    $ BlockProducerRegistration
-      so
-      sidePk
-      sideSig
-      iu
-      pkh
-      auraKey
-      grandpaKey
-
--- | A local context.
-{-# NOINLINE ctx #-}
-ctx :: SECP.Ctx
-ctx = unsafePerformIO SECP.createContext
-
-genPK :: Gen EcdsaSecp256k1PubKey
-genPK = do
-  seed <- fromList @ByteString <$> vectorOf 32 arbitrary
-  case SECP.secKey seed of
-    Just privKey ->
-      pure
-        . EcdsaSecp256k1PubKey
-        . LedgerBytes
-        . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
-        . SECP.exportPubKey ctx True
-        . SECP.derivePubKey ctx
-        $ privKey
-    Nothing -> genPK -- we assume this isn't gonna happen too often
-
 -- Shrinkers
-
-shrinkDPVD :: DParameterValidatorDatum -> [DParameterValidatorDatum]
-shrinkDPVD (DParameterValidatorDatum pcc rcc) = DParameterValidatorDatum <$> shrink pcc <*> shrink rcc
-
-shrinkPCK :: PermissionedCandidateKeys -> [PermissionedCandidateKeys]
-shrinkPCK (PermissionedCandidateKeys sk ak gk) = do
-  ArbitraryBytes sk' <- shrink $ ArbitraryBytes sk
-  ArbitraryBytes ak' <- shrink $ ArbitraryBytes ak
-  ArbitraryBytes gk' <- shrink $ ArbitraryBytes gk
-  pure $ PermissionedCandidateKeys sk' ak' gk'
 
 shrinkPCPR :: PermissionedCandidatesPolicyRedeemer -> [PermissionedCandidatesPolicyRedeemer]
 shrinkPCPR = const []
-
-shrinkPCVD :: PermissionedCandidatesValidatorDatum -> [PermissionedCandidatesValidatorDatum]
-shrinkPCVD (PermissionedCandidatesValidatorDatum apck) = PermissionedCandidatesValidatorDatum <$> liftShrink shrinkPCK apck
 
 shrinkPCVR :: PermissionedCandidatesValidatorRedeemer -> [PermissionedCandidatesValidatorRedeemer]
 shrinkPCVR = const []
@@ -283,48 +162,10 @@ shrinkVOC (VersionOracleConfig versionOracleCurrencySymbol) = do
   ArbitraryCurrencySymbol sym <- shrink (ArbitraryCurrencySymbol versionOracleCurrencySymbol)
   pure $ VersionOracleConfig sym
 
-shrinkBPRM :: BlockProducerRegistrationMsg -> [BlockProducerRegistrationMsg]
-shrinkBPRM (BlockProducerRegistrationMsg {..}) = do
-  ArbitraryTxOutRef genesisUtxo' <- shrink (ArbitraryTxOutRef genesisUtxo)
-  EcdsaSecp256k1PubKey spk' <- shrinkPK (EcdsaSecp256k1PubKey sidechainPubKey)
-  ArbitraryTxOutRef tout' <- shrink (ArbitraryTxOutRef inputUtxo)
-  pure . BlockProducerRegistrationMsg genesisUtxo' spk' $ tout'
-
-shrinkSO :: StakeOwnership -> [StakeOwnership]
-shrinkSO = \case
-  AdaBasedStaking pk sig -> do
-    ArbitraryPubKey pk' <- shrink (ArbitraryPubKey pk)
-    ArbitrarySignature sig' <- shrink (ArbitrarySignature sig)
-    pure $ AdaBasedStaking pk' sig'
-  TokenBasedStaking -> []
-
-shrinkBPR :: BlockProducerRegistration -> [BlockProducerRegistration]
-shrinkBPR (BlockProducerRegistration {..}) = do
-  so' <- shrinkSO stakeOwnership
-  EcdsaSecp256k1PubKey sidePk' <- shrinkPK (EcdsaSecp256k1PubKey sidechainPubKey)
-  EcdsaSecp256k1PubKey auraKey' <- shrinkPK (EcdsaSecp256k1PubKey auraKey)
-  EcdsaSecp256k1PubKey grandpaKey' <- shrinkPK (EcdsaSecp256k1PubKey grandpaKey)
-  ArbitrarySignature sideSig' <- shrink (ArbitrarySignature sidechainSignature)
-  ArbitraryTxOutRef tout' <- shrink (ArbitraryTxOutRef inputUtxo)
-  ArbitraryPubKeyHash pkh' <- shrink (ArbitraryPubKeyHash ownPkh)
-  pure
-    $ BlockProducerRegistration
-      so'
-      sidePk'
-      sideSig'
-      tout'
-      pkh'
-      auraKey'
-      grandpaKey'
-
--- We don't shrink these, as it wouldn't make much sense to
-shrinkPK :: EcdsaSecp256k1PubKey -> [EcdsaSecp256k1PubKey]
-shrinkPK = const []
-
--- | Wrapper for 'PubKey' to provide QuickCheck instances.
+-- | Wrapper for 'PubKeyHash' to provide QuickCheck instances.
 --
 -- @since v4.0.0
-newtype ArbitraryPubKey = ArbitraryPubKey PubKey
+newtype ArbitraryPubKeyHash = ArbitraryPubKeyHash PubKeyHash
   deriving
     ( -- | @since v4.0.0
       Eq
@@ -335,28 +176,27 @@ newtype ArbitraryPubKey = ArbitraryPubKey PubKey
     , -- | @since v4.0.0
       PTPrelude.Ord
     )
-    via PubKey
+    via PubKeyHash
   deriving stock
     ( -- | @since v4.0.0
       Show
     )
 
--- | Does not shrink, as this wouldn't make much sense.
+-- | Does not shrink, as it doesn't make much sense to.
 --
 -- @since v4.0.0
-instance Arbitrary ArbitraryPubKey where
+instance Arbitrary ArbitraryPubKeyHash where
   arbitrary =
-    ArbitraryPubKey
-      . PubKey
-      . LedgerBytes
+    ArbitraryPubKeyHash
+      . PubKeyHash
       . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
       . fromList @ByteString
-      <$> vectorOf 64 arbitrary
+      <$> vectorOf 28 arbitrary
 
--- | Wrapper for 'Signature' to provide QuickCheck instances.
+-- | Wrapper for 'CurrencySymbol' to provide QuickCheck instances.
 --
 -- @since v4.0.0
-newtype ArbitrarySignature = ArbitrarySignature Signature
+newtype ArbitraryCurrencySymbol = ArbitraryCurrencySymbol CurrencySymbol
   deriving
     ( -- | @since v4.0.0
       Eq
@@ -367,20 +207,20 @@ newtype ArbitrarySignature = ArbitrarySignature Signature
     , -- | @since v4.0.0
       PTPrelude.Ord
     )
-    via Signature
+    via CurrencySymbol
   deriving stock
     ( -- | @since v4.0.0
       Show
     )
 
--- | Does not shrink, as this wouldn't make much sense.
+-- | This does /not/ generate the ADA symbol. Does not shrink (it wouldn't make
+-- much sense to).
 --
 -- @since v4.0.0
-instance Arbitrary ArbitrarySignature where
+instance Arbitrary ArbitraryCurrencySymbol where
   arbitrary =
-    ArbitrarySignature
-      . Signature
-      . LedgerBytes
+    ArbitraryCurrencySymbol
+      . CurrencySymbol
       . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
       . fromList @ByteString
-      <$> vectorOf 64 arbitrary
+      <$> vectorOf 28 arbitrary
