@@ -84,9 +84,8 @@ mkMintingPolicy _ _ _ _ _ = traceError "ERROR-DPARAMETER-POLICY-03"
 {-# INLINEABLE dParameterValidator #-}
 dParameterValidator ::
   BuiltinData ->
-  -- Here raw BuiltinData is passed instead of 'DParameterValidatorDatum'
-  -- to allow to spend from this validator even if UTxO contains invalid
-  -- datum
+  -- Here raw BuiltinData is passed to allow to spend from this validator
+  -- even if UTxO contains invalid datum
   VersionOracleConfig ->
   BuiltinData -> -- VersionedGenericDatum ()
   BuiltinData ->

@@ -8,16 +8,6 @@
 module TrustlessSidechain.Types.Unsafe (
   Packable (..),
   Codable (..),
-  -- | From TrustlessSidechain.Types
-  BlockProducerRegistration (..),
-  auraKey,
-  grandpaKey,
-  inputUtxo,
-  sidechainPubKey,
-  sidechainSignature,
-  stakeOwnership,
-  Signature (..),
-  StakeOwnership (..),
   -- | From Plutus.V2.Ledger.Api
   Address (..),
   addressCredential,
@@ -90,7 +80,6 @@ import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 import TrustlessSidechain.PlutusPrelude hiding (Integer)
 import TrustlessSidechain.PlutusPrelude qualified as PTPrelude
-import TrustlessSidechain.Types qualified as Types
 
 class Packable a where
   wrap :: BuiltinData -> a
@@ -130,9 +119,6 @@ unsafeDataAsMaybe bd = case Builtins.unsafeDataAsConstr bd of
   _ -> traceError "unsafeDataAsMaybe: unreachable"
 
 makeUnsafeNewtypes ''V2.StakingCredential
-makeUnsafeNewtypes ''Types.BlockProducerRegistration
-makeUnsafeNewtypes ''Types.Signature
-makeUnsafeNewtypes ''Types.StakeOwnership
 makeUnsafeNewtypes ''V2.Address
 makeUnsafeNewtypes ''V2.Credential
 makeUnsafeNewtypes ''V2.CurrencySymbol
@@ -155,7 +141,6 @@ makeUnsafeNewtypes ''V2.Value
 makeUnsafeNewtypes ''V2.Redeemer
 makeUnsafeNewtypes ''PTPrelude.Integer
 
-makeUnsafeGetters ''Types.BlockProducerRegistration
 makeUnsafeGetters ''V2.Address
 makeUnsafeGetters ''V2.Credential
 makeUnsafeGetters ''V2.OutputDatum
