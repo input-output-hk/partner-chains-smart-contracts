@@ -7,6 +7,7 @@ import Contract.Prelude
   , show
   , ($)
   , (&&)
+  , (<$>)
   , (<<<)
   , (<=)
   , (<>)
@@ -21,7 +22,7 @@ import Effect.Aff (Error, message)
 import Parsing (Parser, fail, runParser)
 import Parsing.Combinators (many1)
 import Parsing.String (char, string)
-import Parsing.String.Basic (digit)
+import Parsing.String.Basic (digit, hexDigit)
 import TrustlessSidechain.Effects.Errors.Context (ErrorContext, ppErrorContext)
 import TrustlessSidechain.Effects.Errors.Lexer (token)
 import TrustlessSidechain.Error
@@ -60,10 +61,15 @@ parseDefaultError s = parseMissingCtlRuntime s
 
 parseReferenceInputNotFound :: String -> Parser String OffchainError
 parseReferenceInputNotFound ctx = do
-  _ <- token $ string "It maybe have been consumed, or was never created."
+  _ <- string "Could not find a reference input:\n"
+  utxo <- utxoParser
+  _ <- string "\nIt maybe have been consumed, or was never created."
   pure $ InterpretedContractError
     $ ctx
-    <> "The chain follower might also not be fully synced."
+    <> "Could not find a reference input: "
+    <> utxo
+    <>
+      ". It maybe have been consumed, was never created, or the chain follower is not fully synced."
 
 pareseAggregateError :: String -> Parser String OffchainError
 pareseAggregateError ctx = do
@@ -84,6 +90,13 @@ parseMissingCtlRuntime ctx = do
     <> ip
     <> ". Is the CTL runtime running?"
 
+utxoParser :: Parser String String
+utxoParser = do
+  address <- many1Str hexDigit
+  _ <- char '#'
+  index <- many1Str digit
+  pure $ address <> "#" <> index
+
 {- | Parses an IP address from a string.-}
 ipParser :: Parser String String
 ipParser = do
@@ -99,10 +112,13 @@ ipParser = do
   where
   octet :: Parser String Int
   octet = do
-    digits <- many1 digit
-    case fromString <<< fromCharArray <<< toUnfoldable $ digits of
+    digits <- many1Str digit
+    case fromString digits of
       Just num ->
         if num >= 0 && num <= 255 then pure num
         else fail $ "Octet: " <> show num <>
           " out of range when attempting to parse IP address."
       _ -> fail "Empty octet when attempting to parse IP address."
+
+many1Str :: Parser String Char -> Parser String String
+many1Str p = fromCharArray <<< toUnfoldable <$> many1 p
