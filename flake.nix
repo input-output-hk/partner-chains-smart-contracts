@@ -18,8 +18,6 @@
     purescript-overlay.url = "github:thomashoneyman/purescript-overlay";
     purescript-overlay.inputs.nixpkgs.follows = "nixpkgs";
     cardano-node.url = "github:input-output-hk/cardano-node/d7abccd4e90c38ff5cd4d6a7839689d888332056";
-    spago-legacy.url = "github:gilligan/spago-legacy";
-    spago-legacy.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =
@@ -29,7 +27,6 @@
     , purescript-overlay
     , cardano-node
     , pre-commit-hooks
-    , spago-legacy
     }:
     flake-utils.lib.eachDefaultSystem (system:
     let
@@ -98,7 +95,6 @@
           purescript
           purescript-psa
           purs-tidy
-          spago-legacy.packages."${system}".spago-legacy
           eslint
           secp256k1
           zlib
