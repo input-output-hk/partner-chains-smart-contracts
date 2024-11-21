@@ -13,7 +13,7 @@ import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
 import TrustlessSidechain.InitSidechain.Governance (initGovernance)
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Transaction
-  ( balanceSignAndSubmitWithoutSpendingUtxo
+  ( balanceSignAndSubmit
   )
 
 suite :: TestnetTest
@@ -45,8 +45,7 @@ testScenario =
                 , registeredCandidatesCount: BigInt.fromInt 3
                 }
                 >>=
-                  balanceSignAndSubmitWithoutSpendingUtxo
-                    genesisUtxo
+                  balanceSignAndSubmit
                     "Test: insert D param"
             )
 
@@ -58,8 +57,7 @@ testScenario =
                 , registeredCandidatesCount: BigInt.fromInt 4
                 }
                 >>=
-                  balanceSignAndSubmitWithoutSpendingUtxo
-                    genesisUtxo
+                  balanceSignAndSubmit
                     "Test: update D param"
             )
 
@@ -71,8 +69,7 @@ testScenario =
                   , registeredCandidatesCount: BigInt.fromInt 4
                   }
                   >>=
-                    balanceSignAndSubmitWithoutSpendingUtxo
-                      genesisUtxo
+                    balanceSignAndSubmit
                       "Test: update removed D param"
               )
         ) # withUnliftApp fails

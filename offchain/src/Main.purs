@@ -16,7 +16,6 @@ import TrustlessSidechain.ConfigFile as ConfigFile
 import TrustlessSidechain.DParameter as DParameter
 import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Run (runAppLive)
-import TrustlessSidechain.Effects.Util as Effect
 import TrustlessSidechain.EndpointResp
   ( EndpointResp
       ( CommitteeCandidateRegResp
@@ -35,7 +34,6 @@ import TrustlessSidechain.EndpointResp
       )
   , stringifyEndpointResp
   )
-import TrustlessSidechain.Error (OffchainError(NotFoundUtxo))
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.Governance.Utils (updateGovernance)
 import TrustlessSidechain.InitSidechain.Governance (initGovernance)
@@ -75,10 +73,9 @@ import TrustlessSidechain.Options.Types
   )
 import TrustlessSidechain.PermissionedCandidates as PermissionedCandidates
 import TrustlessSidechain.Utils.Transaction
-  ( balanceSignAndSubmitWithoutSpendingUtxo
+  ( balanceSignAndSubmit
   , txHashToByteArray
   )
-import TrustlessSidechain.Utils.Utxos (plutusScriptFromTxIn)
 import TrustlessSidechain.Versioning as Versioning
 import Type.Row (type (+))
 
@@ -202,8 +199,7 @@ runTxEndpoint genesisUtxo endpoint =
       { permissionedCandidatesCount, registeredCandidatesCount } ->
       DParameter.mkInsertDParameterLookupsAndConstraints genesisUtxo
         { permissionedCandidatesCount, registeredCandidatesCount }
-        >>= balanceSignAndSubmitWithoutSpendingUtxo
-          genesisUtxo
+        >>= balanceSignAndSubmit
           "InsertDParameter"
         <#> txHashToByteArray
         >>> { transactionId: _ }
@@ -213,8 +209,7 @@ runTxEndpoint genesisUtxo endpoint =
       { permissionedCandidatesCount, registeredCandidatesCount } ->
       DParameter.mkUpdateDParameterLookupsAndConstraints genesisUtxo
         { permissionedCandidatesCount, registeredCandidatesCount }
-        >>= balanceSignAndSubmitWithoutSpendingUtxo
-          genesisUtxo
+        >>= balanceSignAndSubmit
           "UpdateDParameter"
         <#> txHashToByteArray
         >>> { transactionId: _ }
@@ -229,8 +224,7 @@ runTxEndpoint genesisUtxo endpoint =
         , permissionedCandidatesToRemove: Array.fromFoldable <$>
             permissionedCandidatesToRemove
         }
-        >>= balanceSignAndSubmitWithoutSpendingUtxo
-          genesisUtxo
+        >>= balanceSignAndSubmit
           "UpdatePermissionedCandidates"
         <#> txHashToByteArray
         >>> { transactionId: _ }
@@ -268,13 +262,10 @@ runTxEndpoint genesisUtxo endpoint =
       , transactionInput
       } -> do
       utxo <- findOneReserveUtxo genesisUtxo
-      plutusScript <- Effect.fromMaybeThrow
-        (NotFoundUtxo "No Reserved UTxO exists for the given asset")
-        (plutusScriptFromTxIn transactionInput)
       txHash <- transferToIlliquidCirculationSupply
         genesisUtxo
         totalAccruedTillNow
-        plutusScript
+        transactionInput
         utxo
       pure $ ReserveResp { transactionHash: (txHashToByteArray txHash) }
 

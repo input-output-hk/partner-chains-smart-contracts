@@ -18,7 +18,6 @@ import Cardano.Types.AssetName (AssetName)
 import Cardano.Types.BigNum (BigNum)
 import Cardano.Types.BigNum as BigNum
 import Cardano.Types.Int as Int
-import Cardano.Types.Mint as Mint
 import Cardano.Types.OutputDatum (outputDatumDatum)
 import Cardano.Types.PlutusData (unit) as PlutusData
 import Cardano.Types.PlutusScript (PlutusScript)
@@ -45,13 +44,13 @@ import Contract.TxConstraints
   )
 import Contract.TxConstraints as TxConstraints
 import Contract.Utxos (UtxoMap)
-import Contract.Value (add, getMultiAsset, minus, singleton) as Value
+import Contract.Value (add, minus, singleton) as Value
 import Data.Map as Map
 import JS.BigInt as BigInt
 import Run (Run)
 import Run.Except (EXCEPT, throw)
 import TrustlessSidechain.Effects.App (APP)
-import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
+import TrustlessSidechain.Effects.Transaction (TRANSACTION, getUtxo, utxosAt)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError(..))
@@ -70,6 +69,7 @@ import TrustlessSidechain.Utils.Scripts
   , mkValidatorWithParams
   )
 import TrustlessSidechain.Utils.Transaction (balanceSignAndSubmit)
+import TrustlessSidechain.Utils.Utxos (plutusScriptFromTxIn)
 import TrustlessSidechain.Versioning.ScriptId
   ( ScriptId
       ( IlliquidCirculationSupplyValidator
@@ -533,14 +533,24 @@ transferToIlliquidCirculationSupply ::
   forall r.
   TransactionInput ->
   Int -> -- total amount of assets paid out until now
-  PlutusScript ->
+  TransactionInput ->
   (TransactionInput /\ TransactionOutput) ->
   Run (APP r) TransactionHash
 transferToIlliquidCirculationSupply
   genesisUtxo
   totalAccruedTillNow
-  vFunctionTotalAccruedMintingPolicy
+  vFunctionTxInput
   utxo = do
+
+  vFunctionTotalAccruedMintingPolicy <- fromMaybeThrow
+    (NotFoundUtxo "No Reserved UTxO exists for the given asset")
+    (plutusScriptFromTxIn vFunctionTxInput)
+
+  vFunctionTxOutput <-
+    fromMaybeThrow
+      (NotFoundUtxo "VFunction utxo not found")
+      $ getUtxo vFunctionTxInput
+
   { reserveAuthLookups
   , reserveAuthConstraints
   } <- reserveAuthLookupsAndConstraints genesisUtxo
@@ -632,11 +642,6 @@ transferToIlliquidCirculationSupply
     toTransferAsValue =
       singletonFromAsset tokenKindAsset (BigNum.fromInt toTransferAsInt)
 
-    vtTokensAsValue = Value.singleton
-      vFunctionTotalAccruedCurrencySymbol
-      vFunctionTotalAccruedTokenName
-      (BigNum.fromInt toTransferAsInt)
-
   let
     updatedReserveDatum = ReserveDatum $ (unwrap $ getDatum genericDatum)
       { stats = ReserveStats
@@ -665,7 +670,8 @@ transferToIlliquidCirculationSupply
         <> icsLookups
         <> Lookups.unspentOutputs (uncurry Map.singleton utxo)
         <> Lookups.validator reserveValidator'
-        <> Lookups.plutusMintingPolicy vFunctionTotalAccruedMintingPolicy
+        <> Lookups.unspentOutputs
+          (Map.singleton vFunctionTxInput vFunctionTxOutput)
 
     constraints =
       reserveAuthConstraints
@@ -683,8 +689,16 @@ transferToIlliquidCirculationSupply
               , output: reserveValidatorTxOutput
               }
           )
-        <> TxConstraints.mustMintValue
-          (Mint.fromMultiAsset $ Value.getMultiAsset vtTokensAsValue)
+        <> TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
+          vFunctionTotalAccruedCurrencySymbol
+          (RedeemerDatum $ toData unit)
+          vFunctionTotalAccruedTokenName
+          (Int.fromInt totalAccruedTillNow)
+          ( RefInput $ TransactionUnspentOutput
+              { input: vFunctionTxInput
+              , output: vFunctionTxOutput
+              }
+          )
         <> TxConstraints.mustPayToScript
           (PlutusScript.hash illiquidCirculationSupplyValidator)
           PlutusData.unit

@@ -85,6 +85,7 @@ import TrustlessSidechain.Options.Types
       , UpdatePermissionedCandidates
       , ListVersionedScripts
       , CreateReserve
+      , UpdateReserveSettings
       , DepositReserve
       , ReleaseReserveFunds
       , HandoverReserve
@@ -130,6 +131,10 @@ optSpec maybeConfig =
     , command "reserve-create"
         ( info (withCommonOpts maybeConfig createReserveSpec)
             (progDesc "Create a new token reserve")
+        )
+    , command "reserve-update-settings"
+        ( info (withCommonOpts maybeConfig updateReserveSettingsSpec)
+            (progDesc "Update reserve settings")
         )
     , command "reserve-handover"
         ( info (withCommonOpts maybeConfig handOverReserveSpec)
@@ -639,6 +644,14 @@ parseMutableReserveSettings = ado
 
   incentiveAmount <- parseIncentiveAmount
   in MutableReserveSettings { vFunctionTotalAccrued, incentiveAmount }
+
+updateReserveSettingsSpec :: Parser TxEndpoint
+updateReserveSettingsSpec = ado
+  mutableReserveSettings <- parseMutableReserveSettings
+  in
+    UpdateReserveSettings
+      { mutableReserveSettings
+      }
 
 createReserveSpec :: Parser TxEndpoint
 createReserveSpec = ado
