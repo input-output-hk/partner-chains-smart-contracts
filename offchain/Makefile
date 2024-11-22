@@ -9,7 +9,6 @@ SHELL := bash
 ps-sources := $(shell fd --no-ignore-parent -epurs)
 nix-sources := $(shell fd --no-ignore-parent -enix --exclude='spago*')
 js-sources := $(shell fd --no-ignore-parent -ejs -ecjs)
-purs-args := "--censor-lib --stash --strict --censor-codes=UserDefinedWarning"
 
 ### Serialization of Plutus on-chain scripts to PureScript
 
@@ -49,10 +48,10 @@ ci: npm test
 	@make release-zip
 
 build: ${raw-scripts-purs}
-	@$(SPAGO) build --purs-args ${purs-args}
+	@$(SPAGO) build
 
 test: ${raw-scripts-purs}
-	@$(SPAGO) test --purs-args=${purs-args} -m ${ps-test-entrypoint}
+	@$(SPAGO) test -m ${ps-test-entrypoint}
 
 update-scripts: ${raw-scripts-purs} ${raw-scripts-rs}
 
