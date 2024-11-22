@@ -122,6 +122,11 @@
           cargo-edit
         ];
         shellHook = ''
+          export LD_LIBRARY_PATH="${pkgs.blst}/lib:${pkgs.libsodium}/lib:${pkgs.secp256k1}/lib"
+          export CARDANO_CLI=${cardano-node.packages."${system}".cardano-cli}/bin/cardano-cli
+          export CARDANO_NODE=${cardano-node.packages."${system}".cardano-node}/bin/cardano-node
+          export LANG=en_US.UTF-8
+          export LC_CTYPE=UTF-8
           ${checks.pre-commit-check.shellHook}
         '';
       };
