@@ -303,8 +303,8 @@ getFakeVt = do
 
   ownUtxos <- utxosAt ownAddr
   let
-    (input /\ _) = unsafePartial $ fromJust $ Array.head
-      $ Array.filter
+    (input /\ _) = unsafePartial $ fromJust
+      $ Array.find
           ( \(_ /\ TransactionOutput { scriptRef }) ->
               case scriptRef of
                 Nothing -> false

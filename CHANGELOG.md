@@ -3,15 +3,6 @@
 This changelog is based on [Keep A
 Changelog](https://keepachangelog.com/en/1.1.0).
 
-## Unreleased
-
-### Added
-* added `reserve-update-settings` command
-
-### Changed
-* wallet utxos with script refs are no longer used for balancing
-* CTL deps updated
-
 ## 7.0.1 - 2024-11-14
 ### Removed
 * Removed redundant --governance-authority from most commands (except init-governance) and the config

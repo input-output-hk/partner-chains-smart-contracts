@@ -54,12 +54,7 @@ balanceSignAndSubmit txName { lookups, constraints } = do
   ownUtxos <- Effect.utxosAt ownAddr
   let
     ownReferenceInputs = map (\(a /\ _) -> a)
-      $ Array.filter
-          ( \(_ /\ TransactionOutput { scriptRef }) ->
-              case scriptRef of
-                Nothing -> false
-                Just _ -> true
-          )
+      $ Array.filter (\(_ /\ TransactionOutput { scriptRef }) -> isJust scriptRef)
       $ Map.toUnfoldable ownUtxos
 
   let

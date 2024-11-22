@@ -689,9 +689,8 @@ transferToIlliquidCirculationSupply
               , output: reserveValidatorTxOutput
               }
           )
-        <> TxConstraints.mustMintCurrencyWithRedeemerUsingScriptRef
+        <> TxConstraints.mustMintCurrencyUsingScriptRef
           vFunctionTotalAccruedCurrencySymbol
-          (RedeemerDatum $ toData unit)
           vFunctionTotalAccruedTokenName
           (Int.fromInt totalAccruedTillNow)
           ( RefInput $ TransactionUnspentOutput
