@@ -601,4 +601,4 @@ workspace:
       git: https://github.com/mlabs-haskell/purescript-uplc-apply-args
       ref: v1.0.0
   packageSet:
-    url: https://raw.githubusercontent.com/purescript/package-sets/psc-0.15.4-20230105/packages.json
+    registry: 10.0.0
