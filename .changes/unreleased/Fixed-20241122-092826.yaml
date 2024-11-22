@@ -1,0 +1,3 @@
+kind: Fixed
+body: Only allow `--stake-signing-key-file` option for `register` command
+time: 2024-11-22T09:28:26.0979134+01:00

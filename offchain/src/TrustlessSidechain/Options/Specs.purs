@@ -70,7 +70,7 @@ import TrustlessSidechain.Options.Parsers
 import TrustlessSidechain.Options.Parsers as Parsers
 import TrustlessSidechain.Options.Types
   ( Config
-  , Options(TxOptions, CLIVersion)
+  , Options(..)
   , TxEndpoint
       ( GetAddrs
       , InitGovernance
@@ -104,70 +104,70 @@ optSpec :: Maybe Config -> Parser Options
 optSpec maybeConfig =
   hsubparser $ fold
     [ command "init-governance"
-        ( info (withCommonOpts maybeConfig initGovernanceSpec)
+        ( info (withCommonOpts initGovernanceSpec)
             (progDesc "Initialize the governance")
         )
     , command "update-governance"
-        ( info (withCommonOpts maybeConfig updateGovernanceSpec)
+        ( info (withCommonOpts updateGovernanceSpec)
             (progDesc "Update the governance")
         )
     , command "init-reserve-management"
-        ( info (withCommonOpts maybeConfig initReserveManagementSpec)
+        ( info (withCommonOpts initReserveManagementSpec)
             (progDesc "Initialise native token reserve management system")
         )
     , command "addresses"
-        ( info (withCommonOpts maybeConfig getAddrSpec)
+        ( info (withCommonOpts getAddrSpec)
             (progDesc "Get the script addresses for a given sidechain")
         )
     , command "register"
-        ( info (withCommonOpts maybeConfig regSpec)
+        ( info (withStakingKeyOpt $ withCommonOpts regSpec)
             (progDesc "Register a committee candidate")
         )
     , command "deregister"
-        ( info (withCommonOpts maybeConfig deregSpec)
+        ( info (withCommonOpts deregSpec)
             (progDesc "Deregister a committee member")
         )
     , command "reserve-create"
-        ( info (withCommonOpts maybeConfig createReserveSpec)
+        ( info (withCommonOpts createReserveSpec)
             (progDesc "Create a new token reserve")
         )
     , command "reserve-handover"
-        ( info (withCommonOpts maybeConfig handOverReserveSpec)
+        ( info (withCommonOpts handOverReserveSpec)
             (progDesc "Empty and remove an existing reserve")
         )
     , command "reserve-deposit"
-        ( info (withCommonOpts maybeConfig depositReserveSpec)
+        ( info (withCommonOpts depositReserveSpec)
             (progDesc "Deposit assets to existing reserve")
         )
     , command "reserve-release-funds"
-        ( info (withCommonOpts maybeConfig releaseReserveFundsSpec)
+        ( info (withCommonOpts releaseReserveFundsSpec)
             (progDesc "Release currently available funds from an existing reserve")
         )
     , command "update-version"
-        ( info (withCommonOpts maybeConfig updateVersionSpec)
+        ( info (withCommonOpts updateVersionSpec)
             (progDesc "Update an existing protocol version")
         )
     , command "invalidate-version"
-        ( info (withCommonOpts maybeConfig invalidateVersionSpec)
+        ( info (withCommonOpts invalidateVersionSpec)
             (progDesc "Invalidate a protocol version")
         )
     , command "list-versioned-scripts"
-        ( info (withCommonOpts maybeConfig listVersionedScriptsSpec)
+        ( info (withCommonOpts listVersionedScriptsSpec)
             ( progDesc
                 "Get scripts (validators and minting policies) that are currently being versioned"
             )
         )
 
     , command "insert-d-parameter"
-        ( info (withCommonOpts maybeConfig insertDParameterSpec)
+        ( info (withCommonOpts insertDParameterSpec)
             (progDesc "Insert new D parameter")
         )
     , command "update-d-parameter"
-        ( info (withCommonOpts maybeConfig updateDParameterSpec)
+        ( info (withCommonOpts updateDParameterSpec)
             (progDesc "Update a D parameter")
         )
     , command "update-permissioned-candidates"
-        ( info (withCommonOpts maybeConfig updatePermissionedCandidatesSpec)
+        ( info (withCommonOpts updatePermissionedCandidatesSpec)
             (progDesc "Update a Permissioned Candidates list")
         )
 
@@ -179,67 +179,88 @@ optSpec maybeConfig =
         )
 
     ]
-
--- | Helper function, adding parsers of common fields (private key, staking key,
--- | genesis UTXO and runtime configuration)
-withCommonOpts :: Maybe Config -> Parser TxEndpoint -> Parser Options
-withCommonOpts maybeConfig endpointParser = ado
-  pSkey <- pSkeySpec maybeConfig
-  stSkey <- stSKeySpec maybeConfig
-  genesisUtxo <- genesisUtxoSpec maybeConfig
-  endpoint <- endpointParser
-
-  ogmiosConfig <- serverConfigSpec "ogmios" $
-    fromMaybe defaultOgmiosWsConfig
-      (maybeConfig >>= _.runtimeConfig >>= _.ogmios)
-
-  kupoConfig <- serverConfigSpec "kupo" $
-    fromMaybe defaultKupoServerConfig
-      (maybeConfig >>= _.runtimeConfig >>= _.kupo)
-
-  network <- option networkId $ fold
-    [ long "network"
-    , metavar "NETWORK"
-    , help "Network ID of the sidechain"
-    , maybe mempty value
-        (maybeConfig >>= _.runtimeConfig >>= _.network)
-    ]
-
-  let
-    config = case network of
-      MainnetId -> mainnetConfig
-      _ -> testnetConfig
-
-  in
-    TxOptions
-      { genesisUtxo
-      , endpoint
-      , contractParams: config
-          { logLevel = environment.logLevel
-          , suppressLogs = not environment.isTTY
-          , customLogger = Just
-              \_ m -> fileLogger m *> logWithLevel environment.logLevel m
-          , walletSpec = Just $ UseKeys
-              (PrivatePaymentKeyFile pSkey)
-              (PrivateStakeKeyFile <$> stSkey)
-              Nothing
-          , backendParams = mkCtlBackendParams { kupoConfig, ogmiosConfig }
-          }
-      }
   where
-  -- the default server config upstream is different than Kupo's defaults
-  defaultKupoServerConfig ::
-    { host :: String
-    , path :: Maybe String
-    , port :: UInt
-    , secure :: Boolean
-    }
-  defaultKupoServerConfig =
-    { port: UInt.fromInt 1442
-    , host: "localhost"
-    , secure: false
-    , path: Nothing
-    }
+  -- | Helper function, adding parsers of common fields (private key, staking key,
+  -- | genesis UTXO and runtime configuration)
+  withCommonOpts :: Parser TxEndpoint -> Parser Options
+  withCommonOpts endpointParser = ado
+    pSkey <- pSkeySpec maybeConfig
+    genesisUtxo <- genesisUtxoSpec maybeConfig
+    endpoint <- endpointParser
+
+    ogmiosConfig <- serverConfigSpec "ogmios" $
+      fromMaybe defaultOgmiosWsConfig
+        (maybeConfig >>= _.runtimeConfig >>= _.ogmios)
+
+    kupoConfig <- serverConfigSpec "kupo" $
+      fromMaybe defaultKupoServerConfig
+        (maybeConfig >>= _.runtimeConfig >>= _.kupo)
+
+    network <- option networkId $ fold
+      [ long "network"
+      , metavar "NETWORK"
+      , help "Network ID of the sidechain"
+      , maybe mempty value
+          (maybeConfig >>= _.runtimeConfig >>= _.network)
+      ]
+
+    let
+      config = case network of
+        MainnetId -> mainnetConfig
+        _ -> testnetConfig
+
+    in
+      TxOptions
+        { genesisUtxo
+        , endpoint
+        , contractParams: config
+            { logLevel = environment.logLevel
+            , suppressLogs = not environment.isTTY
+            , customLogger = Just
+                \_ m -> fileLogger m *> logWithLevel environment.logLevel m
+            , walletSpec = Just $ UseKeys
+                (PrivatePaymentKeyFile pSkey)
+                Nothing
+                Nothing
+            , backendParams = mkCtlBackendParams { kupoConfig, ogmiosConfig }
+            }
+        }
+    where
+    -- the default server config upstream is different than Kupo's defaults
+    defaultKupoServerConfig ::
+      { host :: String
+      , path :: Maybe String
+      , port :: UInt
+      , secure :: Boolean
+      }
+    defaultKupoServerConfig =
+      { port: UInt.fromInt 1442
+      , host: "localhost"
+      , secure: false
+      , path: Nothing
+      }
+
+  withStakingKeyOpt :: Parser Options -> Parser Options
+  withStakingKeyOpt optParser = ado
+    stSkey <- stSKeySpec maybeConfig
+    opts <- optParser
+
+    in
+      case opts of
+        TxOptions
+          txOpts@
+            { contractParams:
+                { walletSpec: Just (UseKeys (PrivatePaymentKeyFile pSkey) _ _) }
+            } -> TxOptions $
+          txOpts
+            { contractParams = txOpts.contractParams
+                { walletSpec = Just $ UseKeys
+                    (PrivatePaymentKeyFile pSkey)
+                    (PrivateStakeKeyFile <$> stSkey)
+                    Nothing
+                }
+            }
+        _ -> opts
 
 -- | Payment signing key file CLI parser
 pSkeySpec :: Maybe Config -> Parser String
