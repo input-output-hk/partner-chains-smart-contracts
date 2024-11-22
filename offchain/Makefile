@@ -24,6 +24,8 @@ haskell-scripts := $(shell find $(onchain-dir)/src -type f -name "*.hs") \
 raw-scripts-purs := src/TrustlessSidechain/RawScripts.purs
 raw-scripts-rs := ../raw-scripts/src/lib.rs
 
+SPAGO=./node_modules/.bin/spago
+
 ### Bundler setup
 
 # The main Purescript module
@@ -47,10 +49,10 @@ ci: npm test
 	@make release-zip
 
 build: ${raw-scripts-purs}
-	@spago build --purs-args ${purs-args}
+	@$(SPAGO) build --purs-args ${purs-args}
 
 test: ${raw-scripts-purs}
-	@spago test --purs-args=${purs-args} -m ${ps-test-entrypoint}
+	@$(SPAGO) test --purs-args=${purs-args} -m ${ps-test-entrypoint}
 
 update-scripts: ${raw-scripts-purs} ${raw-scripts-rs}
 
