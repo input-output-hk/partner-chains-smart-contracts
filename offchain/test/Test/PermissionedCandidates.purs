@@ -14,7 +14,7 @@ import TrustlessSidechain.InitSidechain.Governance (initGovernance)
 import TrustlessSidechain.PermissionedCandidates as PermissionedCandidates
 import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
 import TrustlessSidechain.Utils.Transaction
-  ( balanceSignAndSubmitWithoutSpendingUtxo
+  ( balanceSignAndSubmit
   )
 
 suite :: TestnetTest
@@ -55,8 +55,7 @@ testScenario =
                 , permissionedCandidatesToRemove: Nothing
                 }
                 >>=
-                  balanceSignAndSubmitWithoutSpendingUtxo
-                    genesisUtxo
+                  balanceSignAndSubmit
                     "Test: insert permissioned candidates"
             )
 
@@ -78,8 +77,7 @@ testScenario =
                     ]
                 }
                 >>=
-                  balanceSignAndSubmitWithoutSpendingUtxo
-                    genesisUtxo
+                  balanceSignAndSubmit
                     "Test: update permissioned candidates"
             )
 
@@ -100,8 +98,7 @@ testScenario =
                     ]
                 }
                 >>=
-                  balanceSignAndSubmitWithoutSpendingUtxo
-                    genesisUtxo
+                  balanceSignAndSubmit
                     "Test: update permissioned candidates to the same value again (should fail)"
             )
         ) # withUnliftApp fails
@@ -114,8 +111,7 @@ testScenario =
                 , permissionedCandidatesToRemove: Nothing
                 }
                 >>=
-                  balanceSignAndSubmitWithoutSpendingUtxo
-                    genesisUtxo
+                  balanceSignAndSubmit
                     "Test: remove permissioned candidates"
             )
 

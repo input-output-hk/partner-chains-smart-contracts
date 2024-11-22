@@ -14,7 +14,9 @@ import Cardano.Types.Mint as Mint
 import Cardano.Types.PaymentPubKeyHash (PaymentPubKeyHash)
 import Cardano.Types.PlutusScript as PlutusScript
 import Cardano.Types.ScriptHash (ScriptHash)
-import Cardano.Types.Value (getCoin, valueOf)
+import Cardano.Types.ScriptRef (ScriptRef(PlutusScriptRef))
+import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
+import Cardano.Types.Value (getCoin, lovelaceValueOf, valueOf)
 import Cardano.Types.Value as Value
 import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.ScriptLookups as Lookups
@@ -59,7 +61,10 @@ import TrustlessSidechain.NativeTokenManagement.Types
   ( ImmutableReserveSettings(ImmutableReserveSettings)
   , MutableReserveSettings(MutableReserveSettings)
   )
-import TrustlessSidechain.Utils.Address (getOwnPaymentPubKeyHash)
+import TrustlessSidechain.Utils.Address
+  ( getOwnPaymentPubKeyHash
+  , getOwnWalletAddress
+  )
 import TrustlessSidechain.Utils.Asset (emptyAssetName)
 import TrustlessSidechain.Utils.Data
   ( VersionedGenericDatum(VersionedGenericDatum)
@@ -139,7 +144,7 @@ mintNonAdaTokens ::
   forall r.
   Int.Int ->
   Run
-    (EXCEPT OffchainError + LOG + TRANSACTION + r)
+    (EXCEPT OffchainError + LOG + WALLET + TRANSACTION + r)
     AssetClass
 mintNonAdaTokens numOfTokens = do
   policy <- alwaysPassingPolicy $ BigInt.fromInt 100
@@ -280,6 +285,35 @@ testScenario4 =
               )
               (liftContract $ throwError $ error "Update not sucessful")
 
+getFakeVt ::
+  forall r.
+  Run (APP + r)
+    { input :: TransactionInput
+    , policy :: PlutusScript.PlutusScript
+    }
+getFakeVt = do
+  policy <- alwaysPassingPolicy $ BigInt.fromInt 11
+  ownPkh <- getOwnPaymentPubKeyHash
+  ownAddr <- getOwnWalletAddress
+  let
+    constraints = TxConstraints.mustPayToPubKeyWithScriptRef ownPkh
+      (PlutusScriptRef policy)
+      (lovelaceValueOf $ BigNum.fromInt 1000000)
+  _ <- balanceSignAndSubmit "Fake VT" { lookups: mempty, constraints }
+
+  ownUtxos <- utxosAt ownAddr
+  let
+    (input /\ _) = unsafePartial $ fromJust
+      $ Array.find
+          ( \(_ /\ TransactionOutput { scriptRef }) ->
+              case scriptRef of
+                Nothing -> false
+                Just (PlutusScriptRef ref) -> ref == policy
+          )
+      $ Map.toUnfoldable ownUtxos
+
+  pure $ { input, policy }
+
 testScenario5 :: TestnetTest
 testScenario5 =
   test
@@ -296,7 +330,7 @@ testScenario5 =
               numOfTransferTokens = 15
             tokenKind <- mintNonAdaTokens $ Int.fromInt numOfNonAdaTokens
 
-            fakeVt <- alwaysPassingPolicy $ BigInt.fromInt 11
+            { input: fakeVtInput, policy: fakeVt } <- getFakeVt
 
             let
               incentiveAmount = 1
@@ -325,7 +359,7 @@ testScenario5 =
             void $ transferToIlliquidCirculationSupply
               genesisUtxo
               numOfTransferTokens
-              fakeVt
+              fakeVtInput
               utxo
 
             reserveAfterTransfer <- totalAssets <$> findReserveUtxos
@@ -367,7 +401,7 @@ testScenario8 =
 
             genesisUtxo <- dummyInitialiseSidechain pkh
 
-            fakeVt <- alwaysPassingPolicy $ BigInt.fromInt 11
+            { input: fakeVtInput, policy: fakeVt } <- getFakeVt
 
             let
               numOfAda = 5_000_000
@@ -394,7 +428,7 @@ testScenario8 =
             void $ transferToIlliquidCirculationSupply
               genesisUtxo
               numOfTransferred
-              fakeVt
+              fakeVtInput
               utxo
 
             let amountOfReserveTokens t = unwrap $ getCoin t

@@ -28,6 +28,7 @@ document.
       - [Create a new token reserve](#create-a-new-token-reserve)
       - [Empty and remove an existing reserve](#empty-and-remove-an-existing-reserve)
       - [Deposit assets to existing reserve](#deposit-assets-to-existing-reserve)
+      - [Update reserve settings](#update-reserve-settings)
       - [Release currently available funds from an existing reserve](#release-currently-available-funds-from-an-existing-reserve)
     - [5. Queries](#5-queries)
       - [List currently versioned scripts](#list-currently-versioned-scripts)
@@ -306,6 +307,7 @@ candidates and add new ones in a single transaction. Just provide
 | `reserve-handover`      | Empty and remove an existing reserve                       |
 | `reserve-deposit`       | Deposit assets to existing reserve                         |
 | `reserve-release-funds` | Release currently available funds from an existing reserve |
+| `reserve-update-settings` | Update vFunction or incentive |
 
 #### Create a new token reserve
 
@@ -346,6 +348,13 @@ nix run .#pc-contracts-cli -- reserve-deposit \
 Instead of `--deposit-reserve-asset` and `--reserve-asset-name` one might
 specify `--reserve-ada-asset` flag to indicate that Ada is being used as the
 reserve asset.
+
+#### Update reserve settings
+```
+nix run .#pc-contracts-cli -- reserve-update-settings \
+   --total-accrued-function-script-hash SCRIPT-HASH \
+   --reserve-initial-incentive-amount RESERVE-INCENTIVE-AMOUNT
+```
 
 #### Release currently available funds from an existing reserve
 

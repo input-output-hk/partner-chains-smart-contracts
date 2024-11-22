@@ -3,7 +3,6 @@
 This changelog is based on [Keep A
 Changelog](https://keepachangelog.com/en/1.1.0).
 
-
 ## 7.0.1 - 2024-11-14
 ### Removed
 * Removed redundant --governance-authority from most commands (except init-governance) and the config

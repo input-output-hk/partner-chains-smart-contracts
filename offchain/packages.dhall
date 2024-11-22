@@ -113,7 +113,7 @@ let additions =
           , "web-storage"
           ]
         , repo = "https://github.com/Plutonomicon/cardano-transaction-lib.git"
-        , version = "v9.3.1"
+        , version = "4f40bba1846b9bb3455c41946538ba385215e940"
         }
       , aeson =
         { dependencies =
@@ -319,7 +319,7 @@ let additions =
           ]
         , repo =
             "https://github.com/mlabs-haskell/purescript-cardano-serialization-lib"
-        , version = "v2.0.0"
+        , version = "v3.0.0"
         }
       , cardano-plutus-data-schema =
         { dependencies = [ "prelude" ]
@@ -478,7 +478,7 @@ let additions =
           , "unsafe-coerce"
           ]
         , repo = "https://github.com/mlabs-haskell/purescript-cardano-types"
-        , version = "v3.0.0"
+        , version = "v4.0.0"
         }
       , cardano-message-signing =
         { dependencies =

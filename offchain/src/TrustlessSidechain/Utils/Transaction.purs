@@ -1,20 +1,21 @@
 module TrustlessSidechain.Utils.Transaction
   ( balanceSignAndSubmit
-  , balanceSignAndSubmitWithoutSpendingUtxo
   , txHashToByteArray
   ) where
 
 import Contract.Prelude
 
 import Cardano.AsCbor (encodeCbor)
+import Cardano.Types.TransactionOutput (TransactionOutput(TransactionOutput))
 import Contract.BalanceTxConstraints (mustNotSpendUtxoWithOutRef)
 import Contract.ScriptLookups (ScriptLookups)
 import Contract.Transaction
   ( TransactionHash
-  , TransactionInput
   )
 import Contract.TxConstraints (TxConstraints)
+import Data.Array as Array
 import Data.ByteArray (ByteArray)
+import Data.Map as Map
 import Run (Run)
 import Run.Except (EXCEPT)
 import TrustlessSidechain.Effects.Log (LOG)
@@ -22,16 +23,18 @@ import TrustlessSidechain.Effects.Log (logInfo') as Effect
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Transaction
   ( awaitTxConfirmed
-  , balanceTx
   , balanceTxWithConstraints
   , mkUnbalancedTx
   , signTransaction
   , submit
+  , utxosAt
   ) as Effect
 import TrustlessSidechain.Effects.Util (mapError)
+import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error
   ( OffchainError(BalanceTxError, BuildTxError)
   )
+import TrustlessSidechain.Utils.Address (getOwnWalletAddress)
 import Type.Row (type (+))
 
 -- | Build a transaction from lookups and constraints, balance, sign and submit it to the network
@@ -43,32 +46,20 @@ balanceSignAndSubmit ::
   { lookups :: ScriptLookups
   , constraints :: TxConstraints
   } ->
-  Run (EXCEPT OffchainError + TRANSACTION + LOG + r) TransactionHash
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + LOG + r) TransactionHash
 balanceSignAndSubmit txName { lookups, constraints } = do
   ubTx <- mapError BuildTxError $ Effect.mkUnbalancedTx lookups constraints
-  bsTx <- mapError BalanceTxError $ Effect.balanceTx ubTx
-  signedTx <- Effect.signTransaction bsTx
-  txId <- Effect.submit signedTx
-  Effect.logInfo' $ "Submitted " <> txName <> " Tx: " <> show txId
-  Effect.awaitTxConfirmed txId
-  Effect.logInfo' $ txName <> " Tx confirmed!"
 
-  pure txId
+  ownAddr <- getOwnWalletAddress
+  ownUtxos <- Effect.utxosAt ownAddr
+  let
+    ownReferenceInputs = map (\(a /\ _) -> a)
+      $ Array.filter (\(_ /\ TransactionOutput { scriptRef }) -> isJust scriptRef)
+      $ Map.toUnfoldable ownUtxos
 
-balanceSignAndSubmitWithoutSpendingUtxo ::
-  forall r.
-  TransactionInput ->
-  String ->
-  { lookups :: ScriptLookups
-  , constraints :: TxConstraints
-  } ->
-  Run (EXCEPT OffchainError + TRANSACTION + LOG + r) TransactionHash
-balanceSignAndSubmitWithoutSpendingUtxo
-  forbiddenUtxo
-  txName
-  { lookups, constraints } = do
-  ubTx <- mapError BuildTxError $ Effect.mkUnbalancedTx lookups constraints
-  let balanceTxConstraints = mustNotSpendUtxoWithOutRef forbiddenUtxo
+  let
+    balanceTxConstraints = mconcat $ map mustNotSpendUtxoWithOutRef
+      ownReferenceInputs
 
   bsTx <- mapError BalanceTxError $ Effect.balanceTxWithConstraints ubTx
     balanceTxConstraints

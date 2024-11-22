@@ -91,7 +91,7 @@ mintNonAdaTokens ::
   forall r.
   Int ->
   Run
-    (EXCEPT OffchainError + LOG + TRANSACTION + r)
+    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
     AssetClass
 mintNonAdaTokens numOfTokens = do
   policy <- alwaysPassingPolicy $ BigInt.fromInt 100
