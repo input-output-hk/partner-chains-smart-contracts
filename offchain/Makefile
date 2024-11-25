@@ -92,14 +92,16 @@ release-zip: esbuild-bundle
 
 check-raw-scripts:
 	@make -B update-scripts
-	@git diff --quiet -- src/TrustlessSidechain/RawScripts.purs
-	if [ $$? -ne 0 ]; then \
+	@if ! git diff --quiet -- src/TrustlessSidechain/RawScripts.purs ; then \
+	  echo
 	  echo "Error: RawScripts.purs is not up to date"; \
+	  echo
 	  exit 1; \
 	fi
-	@git diff --quiet -- ../raw-scripts/src/lib.rs
-	if [ $$? -ne 0 ]; then \
+	@if ! git diff --quiet -- ../raw-scripts/src/lib.rs ; then \
+	  echo
 	  echo "Error: raw-scripts/src/lib.rs is not up to date"; \
+	  echo
 	  exit 1; \
 	fi
 
