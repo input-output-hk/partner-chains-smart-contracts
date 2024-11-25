@@ -122,11 +122,19 @@
           # The following settings are required for cardano-testnet to work properly
           export CARDANO_CLI=${cardano-node.packages."${system}".cardano-cli}/bin/cardano-cli
           export CARDANO_NODE=${cardano-node.packages."${system}".cardano-node}/bin/cardano-node
-          export LC_ALL=C.utf8
 
           # LD_LIBRARY_PATH is required for cabal to find libraries
           export LD_LIBRARY_PATH="${pkgs.blst}/lib:${pkgs.libsodium}/lib:${pkgs.secp256k1}/lib"
+
           ${checks.pre-commit-check.shellHook}
+        '' + pkgs.lib.optionalString pkgs.stdenv.isDarwin ''
+          # There is a problem with cardano-testnet exceeding the MAX_PATH length
+          # so we need to set it to something other than the default long path
+          export TMPDIR=/private/tmp
+        '' + pkgs.lib.optionalString pkgs.stdenv.isLinux ''
+          # Under Linux there is a problem with cardano-testnet failing because
+          # of hedgehog on startup if locale isn't set to UTF8
+          export LC_ALL=C.utf8
         '';
       };
     });
