@@ -44,7 +44,7 @@ default: ci
 npm:
 	@npm install
 
-ci: npm test
+ci: npm test check-raw-scripts
 	@make release-zip
 
 build: ${raw-scripts-purs}
