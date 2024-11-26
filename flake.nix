@@ -76,6 +76,7 @@
           #
           # build tools
           #
+          bashInteractive
           blst
           cabal-install
           dhall
