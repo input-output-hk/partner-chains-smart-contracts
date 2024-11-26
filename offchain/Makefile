@@ -1,8 +1,6 @@
 SHELL := bash
 .ONESHELL:
-.PHONY: build test update-scripts clean \
-        check-format format \
-        spago2nix \
+.PHONY: build test update-scripts clean check-format format \
         esbuild-bundle create-bundle-entrypoint delete-bundle-entrypoint
 .SHELLFLAGS := -eu -o pipefail -c
 
