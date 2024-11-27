@@ -48,26 +48,7 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_DEFAULT_REGION }}
 
-      #      - name: Copy nix scopes to nix cache
-      #        run: |
-      #          nix-store --stdin -q --deriver < ${{ runner.temp }}/outputs | nix-store --stdin -qR --include-outputs \
-      #          | nix copy --stdin --to \
-      #          "s3://cache.sc.iog.io?secret-key=${{ runner.temp }}/nix-key&region=$AWS_DEFAULT_REGION" \
-      #          && rm ${{ runner.temp }}/outputs
-
-      #  test-x64-linux:
-      #    permissions:
-      #      id-token: write
-      #      contents: read
-      #    runs-on: [ self-hosted, Linux ]
-      #    needs:
-      #      - build-x64-linux
-      #    steps:
-      #      - name: Checkout code
-      #        uses: actions/checkout@v4
-      #        with:
-      #          token: ${{ github.token }}
-      #      - name: Run tests
-      #        run: |
-      #          cd offchain
-      #          nix-shell --run "make test"
+      - name: Copy nix scopes to nix cache
+        run: |
+          DRV=$(nix build .#devShells.x86_64-linux.default --dry-run --json | jq '.[] | .drvPath')
+          nix copy --to "s3://cache.sc.iog.io?secret-key=${{ runner.temp }}/nix-key&region=$AWS_DEFAULT_REGION" "$DRV^*"
