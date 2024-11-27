@@ -203,7 +203,7 @@ workspace:
         - tuples
         - unsafe-coerce
       git: https://github.com/mlabs-haskell/purescript-cardano-serialization-lib
-      ref: v2.0.0
+      ref: v3.0.0
     cardano-transaction-builder:
       dependencies:
         - aeson
@@ -365,7 +365,7 @@ workspace:
         - web-html
         - web-storage
       git: https://github.com/Plutonomicon/cardano-transaction-lib.git
-      ref: v9.3.1
+      ref: 4f40bba1846b9bb3455c41946538ba385215e940
     cardano-types:
       dependencies:
         - aeson
@@ -413,7 +413,7 @@ workspace:
         - unfoldable
         - unsafe-coerce
       git: https://github.com/mlabs-haskell/purescript-cardano-types
-      ref: v3.0.0
+      ref: v4.0.0
     cip30:
       dependencies:
         - aff

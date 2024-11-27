@@ -799,7 +799,7 @@
       },
       "cardano-serialization-lib": {
         "git": "https://github.com/mlabs-haskell/purescript-cardano-serialization-lib",
-        "ref": "v2.0.0",
+        "ref": "v3.0.0",
         "dependencies": [
           "aeson",
           "aff",
@@ -877,7 +877,7 @@
       },
       "cardano-transaction-lib": {
         "git": "https://github.com/Plutonomicon/cardano-transaction-lib.git",
-        "ref": "v9.3.1",
+        "ref": "4f40bba1846b9bb3455c41946538ba385215e940",
         "dependencies": [
           "aeson",
           "aff",
@@ -989,7 +989,7 @@
       },
       "cardano-types": {
         "git": "https://github.com/mlabs-haskell/purescript-cardano-types",
-        "ref": "v3.0.0",
+        "ref": "v4.0.0",
         "dependencies": [
           "aeson",
           "aff",
@@ -1607,7 +1607,7 @@
     "cardano-serialization-lib": {
       "type": "git",
       "url": "https://github.com/mlabs-haskell/purescript-cardano-serialization-lib",
-      "rev": "d6ca2f9463b3d4e1cfa98e9964edbe7bfed02905",
+      "rev": "5865fddad045566ca2192526a7de355c59629000",
       "dependencies": [
         "aeson",
         "aff",
@@ -1687,7 +1687,7 @@
     "cardano-transaction-lib": {
       "type": "git",
       "url": "https://github.com/Plutonomicon/cardano-transaction-lib.git",
-      "rev": "be434c41d80bb10d25825ed247d81f630f2d6b89",
+      "rev": "4f40bba1846b9bb3455c41946538ba385215e940",
       "dependencies": [
         "aeson",
         "aff",
@@ -1800,7 +1800,7 @@
     "cardano-types": {
       "type": "git",
       "url": "https://github.com/mlabs-haskell/purescript-cardano-types",
-      "rev": "71b204c7c9c83b8280ed3ed14837d76b8ac0a6fe",
+      "rev": "46cc078af59926c566a38307cd34c40049e7880c",
       "dependencies": [
         "aeson",
         "aff",
