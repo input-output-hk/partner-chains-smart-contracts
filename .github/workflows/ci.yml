@@ -42,6 +42,11 @@ jobs:
           cd offchain
           nix develop --command "make"
 
+      - name: Build raw scripts crate
+        run: |
+          cd raw-scripts
+          nix develop --command "make"
+
       - name: Acquire AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
