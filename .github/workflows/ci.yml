@@ -50,5 +50,5 @@ jobs:
 
       - name: Copy nix scopes to nix cache
         run: |
-          DRV=$(nix build .#devShells.x86_64-linux.default --dry-run --json | jq '.[] | .drvPath')
-          nix copy --to "s3://cache.sc.iog.io?secret-key=${{ runner.temp }}/nix-key&region=$AWS_DEFAULT_REGION" "$DRV^*"
+          nix build .#devShells.x86_64-linux.default --dry-run --json | jq -r '.[] | .drvPath + "^*"' \
+          | nix copy --stdin --to "s3://cache.sc.iog.io?secret-key=${{ runner.temp }}/nix-key&region=$AWS_DEFAULT_REGION"
