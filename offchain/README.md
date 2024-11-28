@@ -366,10 +366,9 @@ nix run .#pc-contracts-cli -- reserve-release-funds \
 
 `total-accrued-till-now` is a non-negative integer Computed integer for v(t)
 `reserve-transaction-input` is a CBOR-encoded transaction id and the transaction
-index separated by a `#`. It must contain a policy script to transfer illiquid
-circulation.
+index separated by a `#`. It must be an UTXO with plutus script ref of v(t). Smart contract for the v(t) must be compiled, and then stored in a utxo, only then the user will be able to release funds from the reserve.
 
-Example: `a03ebf281ed96549f74d0e724841fcf928194c44f6ff9a8056d1829598042c62#0`
+Example: `5e796dd9f647d4a6db100daeef926a179edff4d944594303da100c1be6a890fd#0`
 
 - [Reserve smart contract code](../onchain/src/TrustlessSidechain/Reserve.hs)
 - [Reserve off-chain code](./src/TrustlessSidechain/NativeTokenManagement/Reserve.purs)
