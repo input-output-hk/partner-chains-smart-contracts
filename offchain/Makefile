@@ -78,12 +78,13 @@ esbuild-bundle: build create-bundle-entrypoint
 	BROWSER_RUNTIME=${browser-runtime} node esbuild/bundle.js ./dist/entrypoint.js dist/pc-contracts-cli
 	@make delete-bundle-entrypoint
 
-release-zip: esbuild-bundle
+release-zip: npm esbuild-bundle
 	@rm -rf build
 	mkdir build
 	cp -R node_modules package.json dist ./build
 	cd build
 	npm prune --offline --cache node_modules --omit=dev --ignore-scripts
+	chmod +x ./dist/pc-contracts-cli
 	zip -r release.zip ./package.json ./node_modules
 	zip -j release.zip ./dist/pc-contracts-cli
 	@rm -rf ./{dist,node_modules,package.json,package-lock.json}
