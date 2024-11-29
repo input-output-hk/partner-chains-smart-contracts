@@ -9,9 +9,6 @@ on:
       release-version:
         description: "Specify the version number"
         required: true
-      create_draft_release_page:
-        type: boolean
-        description: "Create a draft release page"
 env:
   AWS_DEFAULT_REGION: eu-central-1
 
@@ -20,7 +17,7 @@ jobs:
   partner-chains-smart-contracts-process:
     permissions:
       id-token: write
-      contents: read
+      contents: write
     runs-on: ubuntu-latest
     outputs:
       pc_contracts_cli: ${{ steps.set_filename_vars_and_rename.outputs.pc_contracts_cli }}
@@ -33,63 +30,13 @@ jobs:
 
       - name: Download artifact from S3
         run: |
-          aws s3 cp "s3://pcsc-bucket/${{ github.event.inputs.revision }}.zip" ./artifact.zip
+          aws s3 cp "s3://pcsc-bucket/${{ github.event.inputs.revision }}.zip" ./pc-contracts-cli-v${{ github.event.inputs.release-version }}.zip
 
-      - name: Set filename variables and rename artifact
-        id: set_filename_vars_and_rename
-        run: |
-          PC_CONTRACTS_CLI="pc-contracts-cli-v${{ github.event.inputs.release-version }}.zip"
-          mv ./artifact.zip "./${PC_CONTRACTS_CLI}"
-          echo "pc_contracts_cli=${PC_CONTRACTS_CLI}" >> $GITHUB_OUTPUT
-
-      - name: Upload renamed artifact
-        uses: actions/upload-artifact@v4
+      - name: Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: "${{ steps.set_filename_vars_and_rename.outputs.pc_contracts_cli }}"
-          path: "${{ steps.set_filename_vars_and_rename.outputs.pc_contracts_cli }}"
-
-  release:
-    runs-on: ubuntu-latest
-    needs: partner-chains-smart-contracts-process
-    if: ${{ github.event.inputs.create_draft_release_page == 'true' }}
-    steps:
-      - name: Check if release already exists
-        id: check_release
-        run: |
-          tag="v${{ github.event.inputs.release-version }}"
-          release_response=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                            "https://api.github.com/repos/${{ github.repository }}/releases/tags/$tag")
-          if echo "$release_response" | grep -q '"message": "Not Found"'; then
-            echo "release_exists=false" >> $GITHUB_ENV
-            echo "::set-output name=release_exists::false"
-          else
-            echo "release_exists=true" >> $GITHUB_ENV
-            echo "::set-output name=release_exists::true"
-            echo "release_id=$(echo $release_response | jq -r .id)" >> $GITHUB_ENV
-            echo "::set-output name=release_id::$(echo $release_response | jq -r .id)"
-          fi
-
-      - name: Create draft release
-        id: create_release
-        if: ${{ steps.check_release.outputs.release_exists == 'false' }}
-        run: |
-          tag="v${{ github.event.inputs.release-version }}"
-          release_response=$(curl -s -X POST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                              -d '{"tag_name": "'$tag'", "name": "'$tag'", "body": "Draft release for '$tag'", "draft": true}' \
-                              "https://api.github.com/repos/${{ github.repository }}/releases")
-          echo "release_id=$(echo $release_response | jq -r .id)" >> $GITHUB_ENV
-          echo "::set-output name=release_id::$(echo $release_response | jq -r .id)"
-
-      - name: Upload renamed artifact to release
-        if: ${{ steps.check_release.outputs.release_exists == 'true' || steps.create_release.outputs.release_id != '' }}
-        run: |
-          release_id="${{ steps.create_release.outputs.release_id }}"
-          if [ -z "$release_id" ]; then
-            release_id="${{ steps.check_release.outputs.release_id }}"
-          fi
-          artifact="${{ needs.partner-chains-smart-contracts-process.outputs.pc_contracts_cli }}"
-          curl -s -X POST \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Content-Type: application/octet-stream" \
-            --data-binary @"$artifact" \
-            "https://uploads.github.com/repos/${{ github.repository }}/releases/$release_id/assets?name=$(basename $artifact)"
+          body: ""
+          draft: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: ./pc-contracts-cli-v${{ github.event.inputs.release-version }}.zip
+          name: "v${{ github.event.inputs.release-version }}"
