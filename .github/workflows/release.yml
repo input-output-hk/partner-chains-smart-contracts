@@ -37,10 +37,18 @@ jobs:
         run: |
           aws s3 cp "s3://pcsc-bucket/${{ github.event.inputs.revision }}.zip" ./pc-contracts-cli-v${{ github.event.inputs.release-version }}.zip
 
+      - name: create changes text
+        run: |
+          if test -f ./.changes/{{ github.event.inputs.release-version }}.md ; then
+            cp ./.changes/{{ github.event.inputs.release-version }}.md ./release-notes
+          else
+            echo "No changie entry for the version specified" > ./release-notes
+          fi
+
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          body_path: ./.changes/${{ github.event.inputs.release-version }}.md
+          body_path: ./release-notes
           draft: true
           token: ${{ secrets.GITHUB_TOKEN }}
           files: ./pc-contracts-cli-v${{ github.event.inputs.release-version }}.zip
