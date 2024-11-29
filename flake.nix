@@ -76,6 +76,7 @@
           #
           # build tools
           #
+          awscli2
           bashInteractive
           blst
           cabal-install

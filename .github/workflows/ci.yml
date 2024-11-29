@@ -53,6 +53,10 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_DEFAULT_REGION }}
 
+      - name: Upload zip to S3
+        run: |
+          nix-shell --run "aws s3 cp offchain/build/release.zip s3://pcsc-bucket/${GITHUB_SHA}.zip --region $AWS_DEFAULT_REGION"
+
       - name: Copy nix scopes to nix cache
         run: |
           nix build .#devShells.x86_64-linux.default --dry-run --json | jq -r '.[] | .drvPath + "^*"' \
