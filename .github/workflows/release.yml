@@ -7,8 +7,8 @@ on:
         description: "Git Revision to release"
         required: true
       release-version:
-        description: "Specify the version number"
-        required: true
+        description: "Specify the version number (overwriting the package.json version)"
+        required: false
 env:
   AWS_DEFAULT_REGION: eu-central-1
 
@@ -33,14 +33,23 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_DEFAULT_REGION }}
 
+      - name: Set the version
+        run: |
+          if [ -z "${{ github.event.inputs.release-version }}" ]; then
+            VER=$(jq -r ".version" ./offchain/package.json)
+            echo "VERSION=$VER" >> $GITHUB_ENV
+          else
+            echo "VERSION=${{ github.event.inputs.release-version }}" >> $GITHUB_ENV
+          fi
+
       - name: Download artifact from S3
         run: |
-          aws s3 cp "s3://pcsc-bucket/${{ github.event.inputs.revision }}.zip" ./pc-contracts-cli-v${{ github.event.inputs.release-version }}.zip
+          aws s3 cp "s3://pcsc-bucket/${{ github.event.inputs.revision }}.zip" ./pc-contracts-cli-v"${{ env.VERSION }}".zip
 
       - name: create changes text
         run: |
-          if test -f ./.changes/{{ github.event.inputs.release-version }}.md ; then
-            cp ./.changes/{{ github.event.inputs.release-version }}.md ./release-notes
+          if test -f ./.changes/"$VERSION".md ; then
+            cp ./.changes/.md ./release-notes
           else
             echo "No changie entry for the version specified" > ./release-notes
           fi
@@ -51,5 +60,5 @@ jobs:
           body_path: ./release-notes
           draft: true
           token: ${{ secrets.GITHUB_TOKEN }}
-          files: ./pc-contracts-cli-v${{ github.event.inputs.release-version }}.zip
+          files: ./pc-contracts-cli-v${{ env.VERSION }}.zip
           name: "v${{ github.event.inputs.release-version }}"
