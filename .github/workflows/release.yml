@@ -61,4 +61,4 @@ jobs:
           draft: true
           token: ${{ secrets.GITHUB_TOKEN }}
           files: ./pc-contracts-cli-v${{ env.VERSION }}.zip
-          name: "v${{ github.event.inputs.release-version }}"
+          name: "v${{ env.VERSION }}"
