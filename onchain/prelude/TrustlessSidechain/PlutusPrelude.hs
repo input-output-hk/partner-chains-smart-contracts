@@ -9,6 +9,7 @@ module TrustlessSidechain.PlutusPrelude (
   PlutusTx.FromData (..),
   PlutusTx.UnsafeFromData (..),
   HaskellPrelude.fromInteger,
+  HaskellPrelude.div,
   ifThenElse,
   HasField (..),
   put,
