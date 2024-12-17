@@ -50,6 +50,9 @@ data ScriptId
   | AlwaysPassingValidator
   | AlwaysPassingPolicy
   | OnlyMintMintingPolicy
+  | AlwaysFailingValidator
+  | AlwaysFailingPolicy
+  | ExampleVFunctionPolicy
 
 derive instance Eq ScriptId
 derive instance Ord ScriptId
@@ -92,6 +95,12 @@ instance FromData ScriptId where
     Just AlwaysPassingPolicy
   fromData (Integer i) | i == BigInt.fromInt 36 =
     Just OnlyMintMintingPolicy
+  fromData (Integer i) | i == BigInt.fromInt 37 =
+    Just AlwaysFailingValidator
+  fromData (Integer i) | i == BigInt.fromInt 38 =
+    Just AlwaysFailingPolicy
+  fromData (Integer i) | i == BigInt.fromInt 39 =
+    Just ExampleVFunctionPolicy
   fromData _ = Nothing
 
 instance ToData ScriptId where
@@ -112,3 +121,6 @@ instance ToData ScriptId where
   toData AlwaysPassingValidator = Integer (BigInt.fromInt 34)
   toData AlwaysPassingPolicy = Integer (BigInt.fromInt 35)
   toData OnlyMintMintingPolicy = Integer (BigInt.fromInt 36)
+  toData AlwaysFailingValidator = Integer (BigInt.fromInt 37)
+  toData AlwaysFailingPolicy = Integer (BigInt.fromInt 38)
+  toData ExampleVFunctionPolicy = Integer (BigInt.fromInt 39)

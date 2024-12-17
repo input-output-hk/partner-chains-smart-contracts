@@ -27,7 +27,7 @@ import TrustlessSidechain.PlutusPrelude (
   Bool (False, True),
   BuiltinData,
   check,
-  div,
+  divideInteger,
   fromInteger,
   fromString,
   traceError,
@@ -45,11 +45,11 @@ mkVFunctionPolicy time _ (ScriptContext {scriptContextPurpose = Minting cs, scri
   minted <= allowedMint
   where
     valididyIntervalStart = case ivFrom $ txInfoValidRange scriptContextTxInfo of
-      LowerBound (Finite a) True -> a
+      LowerBound (Finite a) True -> getPOSIXTime a
       _ -> traceError "invalid validity interval"
 
     cycleLength = fromInteger (60 * 1) -- 60*60*24
-    allowedMint = getPOSIXTime ((valididyIntervalStart - time) `div` cycleLength)
+    allowedMint = ((valididyIntervalStart - (getPOSIXTime time)) `divideInteger` cycleLength)
 
     minted = currencySymbolValueOf (txInfoMint scriptContextTxInfo) cs
 mkVFunctionPolicy _ _ _ = False

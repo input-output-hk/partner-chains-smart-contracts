@@ -121,6 +121,8 @@ data TxEndpoint
 
   -- | handover of a reserve
   | HandoverReserve
+  -- | get VFunciton cbor
+  | GetVFunctionCBOR { unixTimestamp :: BigInt }
 
 -- | `InputArgOrFile` represents that we may either allow an option as input
 -- | via a CLI argument or a filepath of a JSON file

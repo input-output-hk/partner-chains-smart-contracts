@@ -169,7 +169,7 @@ main =
       , (AlwaysPassingPolicy, AlwaysPassing.serialisableAlwaysPassingPolicy)
       , (AlwaysFailingValidator, AlwaysFailing.serialisableAlwaysFailingValidator)
       , (AlwaysFailingPolicy, AlwaysFailing.serialisableAlwaysFailingPolicy)
-      , (ExampleVFunction, ExampleVFunction.serialisableVFunctionPolicy)
+      , (ExampleVFunctionPolicy, ExampleVFunction.serialisableVFunctionPolicy)
       ]
 
 serialiseScriptsToPurescript ::

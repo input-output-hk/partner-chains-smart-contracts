@@ -15,7 +15,7 @@ import PlutusLedgerApi.V2 (
  )
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude (
-  Bool (True),
+  Bool (False),
   BuiltinData,
   Integer,
   check,
