@@ -21,6 +21,7 @@ import System.Console.GetOpt (
  )
 import System.Console.GetOpt qualified as GetOpt
 import System.Environment qualified as Environment
+import System.Exit (die)
 import System.IO (FilePath, Handle)
 import System.IO qualified as IO
 import System.IO.Error qualified as Error
@@ -115,21 +116,19 @@ main :: IO ()
 main =
   getOpts >>= \case
     GenPureScriptRawScripts {gpsrsOutputFile = outputFile} ->
-      outputSerializedScripts (serialiseScriptsToPurescript "TrustlessSidechain.RawScripts") outputFile
+      outputSerializedScripts (serialiseScriptsToPurescript "TrustlessSidechain.RawScripts" plutusScripts) outputFile
     GenRustRawScripts {grrsOutputFile = outputFile} ->
-      outputSerializedScripts serialiseScriptsToRust outputFile
+      outputSerializedScripts (serialiseScriptsToRust plutusScripts idOnlyPlutusScripts) outputFile
   where
     outputSerializedScripts serialiseScripts = \case
       Nothing ->
         serialiseScripts
-          plutusScripts
           IO.stdout
       Just filepath ->
         IO.withFile filepath IO.ReadWriteMode $ \handle ->
           -- clear the file first, then put our code in.
           IO.hSetFileSize handle 0
             >> serialiseScripts
-              plutusScripts
               handle
 
     -- See Note [Serialized script names]
@@ -170,6 +169,10 @@ main =
       , (AlwaysFailingValidator, AlwaysFailing.serialisableAlwaysFailingValidator)
       , (AlwaysFailingPolicy, AlwaysFailing.serialisableAlwaysFailingPolicy)
       , (ExampleVFunctionPolicy, ExampleVFunction.serialisableVFunctionPolicy)
+      ]
+    idOnlyPlutusScripts =
+      [ IlliquidCirculationSupplyWithdrawalPolicy
+      , GovernancePolicy
       ]
 
 serialiseScriptsToPurescript ::
@@ -264,12 +267,17 @@ serialiseScriptsToPurescript moduleName plutusScripts handle = do
 serialiseScriptsToRust ::
   -- | ScriptId and associated script Entries
   [(ScriptId.ScriptId, SerialisedScript)] ->
+  -- | id-only ScriptIds
+  [ScriptId.ScriptId] ->
   -- | Handle to append the purescript module to.
   --
   -- Note: one probably wants to clear the file before calling this function.
   Handle ->
   IO ()
-serialiseScriptsToRust plutusScripts handle = do
+serialiseScriptsToRust plutusScripts idOnlyPlutusScripts handle = do
+  when (definedScriptIdCount /= length allScriptIds) do
+    die "Not all script ids are included in script generation."
+
   let putLn = IO.hPutStrLn handle
   let put = IO.hPutStr handle
 
@@ -312,4 +320,6 @@ serialiseScriptsToRust plutusScripts handle = do
     putLn "),"
   putLn "];"
   where
-    sortedScriptIds = List.sortOn snd $ (\(scriptId, _) -> (scriptId, ScriptId.toInteger scriptId)) <$> plutusScripts
+    sortedScriptIds = List.sortOn snd $ (\scriptId -> (scriptId, ScriptId.toInteger scriptId)) <$> allScriptIds
+    allScriptIds = List.nub ((fst <$> plutusScripts) <> idOnlyPlutusScripts)
+    definedScriptIdCount = length [minBound :: ScriptId .. maxBound]

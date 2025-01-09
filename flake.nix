@@ -80,6 +80,7 @@
           bashInteractive
           blst
           cabal-install
+          changie
           dhall
           esbuild
           fd
@@ -103,7 +104,7 @@
           zip
 
           #
-          # runtime dependencie
+          # runtime dependencies
           #
           cardano-node.packages."${system}".cardano-cli
           cardano-node.packages."${system}".cardano-node
