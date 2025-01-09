@@ -25,9 +25,11 @@ import System.IO (FilePath, Handle)
 import System.IO qualified as IO
 import System.IO.Error qualified as Error
 import Text.Casing (fromHumps, toScreamingSnake)
+import TrustlessSidechain.AlwaysFailingScripts qualified as AlwaysFailing
 import TrustlessSidechain.AlwaysPassingScripts qualified as AlwaysPassing
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.DParameter qualified as DParameter
+import TrustlessSidechain.ExampleVFunction as ExampleVFunction
 import TrustlessSidechain.Governance.MultiSig qualified as MultiSig
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.IlliquidCirculationSupply qualified as IlliquidCirculationSupply
@@ -165,6 +167,9 @@ main =
       , (OnlyMintMintingPolicy, OnlyMintMintingPolicy.serialisableOnlyMintMintingPolicy)
       , (AlwaysPassingValidator, AlwaysPassing.serialisableAlwaysPassingValidator)
       , (AlwaysPassingPolicy, AlwaysPassing.serialisableAlwaysPassingPolicy)
+      , (AlwaysFailingValidator, AlwaysFailing.serialisableAlwaysFailingValidator)
+      , (AlwaysFailingPolicy, AlwaysFailing.serialisableAlwaysFailingPolicy)
+      , (ExampleVFunctionPolicy, ExampleVFunction.serialisableVFunctionPolicy)
       ]
 
 serialiseScriptsToPurescript ::

@@ -16,7 +16,8 @@ import Run.Except (EXCEPT, runExcept)
 import TrustlessSidechain.Effects.App (APP, BASE)
 import TrustlessSidechain.Effects.Contract (liftContract, unliftContract)
 import TrustlessSidechain.Effects.Contract as Effect
-import TrustlessSidechain.Effects.Log (LogF, handleLogLive, handleLogWith)
+import TrustlessSidechain.Effects.Log (LOG, LogF, handleLogLive, handleLogWith)
+import TrustlessSidechain.Effects.Time (TimeF, handleTimeLive, handleTimeWith)
 import TrustlessSidechain.Effects.Transaction
   ( TRANSACTION
   , TransactionF
@@ -46,12 +47,17 @@ runAppWith ::
       ( EXCEPT OffchainError + WALLET + TRANSACTION + r
       )
   ) ->
+  ( TimeF ~> Run
+      ( EXCEPT OffchainError + WALLET + TRANSACTION + LOG + r
+      )
+  ) ->
   Run (APP + r) ~>
     Run (EXCEPT OffchainError + r)
-runAppWith handleTransaction handleWallet handleLog f =
+runAppWith handleTransaction handleWallet handleLog handleTime f =
   handleTransactionWith handleTransaction
     $ handleWalletWith handleWallet
     $ handleLogWith handleLog
+    $ handleTimeWith handleTime
     $ f
 
 -- | Run the effect stack down to an `Aff` using the live handlers
@@ -64,6 +70,7 @@ runAppLive contractParams = runBaseAff'
   <<< runExcept
   <<< Effect.runContract contractParams
   <<< runAppWith handleTransactionLive handleWalletLive handleLogLive
+    handleTimeLive
 
 -- | Strip away the `APP` effect using the live handlers
 runToBase ::
@@ -72,6 +79,7 @@ runToBase f =
   runAppWith handleTransactionLive
     handleWalletLive
     handleLogLive
+    handleTimeLive
     $ f
 
 -- | Unlift an effect stack which contains a `CONTRACT` effect to the `Contract` monad

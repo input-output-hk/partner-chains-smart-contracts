@@ -39,6 +39,7 @@ import TrustlessSidechain.Effects.App (APP)
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
 import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Run (unliftApp)
+import TrustlessSidechain.Effects.Time (TIME)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION, utxosAt)
 import TrustlessSidechain.Effects.Util (fromMaybeThrow)
 import TrustlessSidechain.Effects.Wallet (WALLET)
@@ -168,7 +169,7 @@ insertFakeIcsWithdrawalPolicy ::
   forall r.
   TransactionInput ->
   Run
-    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + r)
+    (EXCEPT OffchainError + WALLET + LOG + TRANSACTION + TIME + r)
     ScriptHash
 insertFakeIcsWithdrawalPolicy genesisUtxo =
   do

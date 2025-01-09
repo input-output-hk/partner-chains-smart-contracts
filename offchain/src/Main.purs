@@ -31,9 +31,11 @@ import TrustlessSidechain.EndpointResp
       , UpdatePermissionedCandidatesResp
       , ListVersionedScriptsResp
       , ReserveResp
+      , GetVFunctionCBORResp
       )
   , stringifyEndpointResp
   )
+import TrustlessSidechain.ExampleVFunction as ExampleVFunction
 import TrustlessSidechain.GetSidechainAddresses as GetSidechainAddresses
 import TrustlessSidechain.Governance.Utils (updateGovernance)
 import TrustlessSidechain.InitSidechain.Governance (initGovernance)
@@ -69,6 +71,7 @@ import TrustlessSidechain.Options.Types
       , DepositReserve
       , ReleaseReserveFunds
       , HandoverReserve
+      , GetVFunctionCBOR
       )
   )
 import TrustlessSidechain.PermissionedCandidates as PermissionedCandidates
@@ -273,6 +276,10 @@ runTxEndpoint genesisUtxo endpoint =
       utxo <- findOneReserveUtxo genesisUtxo
       txHash <- handover genesisUtxo utxo
       pure $ ReserveResp { transactionHash: txHashToByteArray txHash }
+
+    GetVFunctionCBOR { unixTimestamp } -> do
+      vFunctionCBOR <- ExampleVFunction.decodeExampleVFunctionPolicy unixTimestamp
+      pure $ GetVFunctionCBORResp { vFunctionCBOR }
 
 printEndpointResp :: EndpointResp -> Effect Unit
 printEndpointResp =

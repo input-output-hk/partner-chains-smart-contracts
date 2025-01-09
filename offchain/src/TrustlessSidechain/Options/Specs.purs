@@ -59,7 +59,8 @@ import TrustlessSidechain.NativeTokenManagement.Types
   , MutableReserveSettings(MutableReserveSettings)
   )
 import TrustlessSidechain.Options.Parsers
-  ( byteArray
+  ( bigInt
+  , byteArray
   , governanceAuthority
   , networkId
   , permissionedCandidateKeys
@@ -89,6 +90,7 @@ import TrustlessSidechain.Options.Types
       , DepositReserve
       , ReleaseReserveFunds
       , HandoverReserve
+      , GetVFunctionCBOR
       )
   )
 import TrustlessSidechain.Utils.Logging (environment, fileLogger)
@@ -175,7 +177,12 @@ optSpec maybeConfig =
         ( info (withCommonOpts maybeConfig updatePermissionedCandidatesSpec)
             (progDesc "Update a Permissioned Candidates list")
         )
-
+    , command "get-v-function-cbor"
+        ( info (withCommonOpts maybeConfig getVFunctionCBORSpec)
+            ( progDesc
+                "Get the v(t) policy script in CBOR format"
+            )
+        )
     , command "cli-version"
         ( info (pure CLIVersion)
             ( progDesc
@@ -245,6 +252,17 @@ withCommonOpts maybeConfig endpointParser = ado
     , secure: false
     , path: Nothing
     }
+
+getVFunctionCBORSpec :: Parser TxEndpoint
+getVFunctionCBORSpec = ado
+
+  unixTimestamp <- option bigInt $ fold
+    [ long "unix-timestamp"
+    , metavar "UNIX_TIMESTAMP"
+    , help "Unix timestamp"
+    ]
+  in
+    GetVFunctionCBOR { unixTimestamp }
 
 -- | Payment signing key file CLI parser
 pSkeySpec :: Maybe Config -> Parser String

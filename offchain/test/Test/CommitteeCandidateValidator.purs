@@ -38,6 +38,7 @@ import TrustlessSidechain.CommitteeCandidateValidator
 import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
 import TrustlessSidechain.Effects.Log (LOG)
 import TrustlessSidechain.Effects.Run (unliftApp, withUnliftApp)
+import TrustlessSidechain.Effects.Time (TIME)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError(GenericInternalError))
@@ -59,7 +60,7 @@ runRegister ::
   forall r.
   TransactionInput ->
   Run
-    ( EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT
+    ( EXCEPT OffchainError + LOG + TRANSACTION + WALLET + TIME + CONTRACT
         + EFFECT
         + r
     )
@@ -70,7 +71,7 @@ runRegisterWithFixedKeys ::
   forall r.
   TransactionInput ->
   Run
-    ( EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT +
+    ( EXCEPT OffchainError + LOG + TRANSACTION + WALLET + TIME + CONTRACT +
         r
     )
     TransactionHash
@@ -100,7 +101,7 @@ runRegisterWithCandidatePermissionInfo ::
   forall r.
   TransactionInput ->
   Run
-    ( EXCEPT OffchainError + LOG + TRANSACTION + WALLET + CONTRACT
+    ( EXCEPT OffchainError + LOG + TRANSACTION + WALLET + TIME + CONTRACT
         + EFFECT
         + r
     )
@@ -137,7 +138,7 @@ runRegisterWithCandidatePermissionInfo scParams = do
 runDeregister ::
   forall r.
   TransactionInput ->
-  Run (EXCEPT OffchainError + WALLET + TRANSACTION + LOG + r) Unit
+  Run (EXCEPT OffchainError + WALLET + TRANSACTION + LOG + TIME + r) Unit
 runDeregister scParams =
   void $ deregister $ DeregisterParams
     { genesisUtxo: scParams, spoPubKey: Just mockSpoPubKey }

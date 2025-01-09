@@ -43,6 +43,9 @@ data ScriptId
   | AlwaysPassingValidator
   | AlwaysPassingPolicy
   | OnlyMintMintingPolicy
+  | AlwaysFailingValidator
+  | AlwaysFailingPolicy
+  | ExampleVFunctionPolicy
   deriving stock (Show, Eq, Ord)
 
 toInteger :: ScriptId -> Integer
@@ -65,6 +68,9 @@ toInteger = \case
   AlwaysPassingValidator -> 34
   AlwaysPassingPolicy -> 35
   OnlyMintMintingPolicy -> 36
+  AlwaysFailingValidator -> 37
+  AlwaysFailingPolicy -> 38
+  ExampleVFunctionPolicy -> 39
 
 -- Pre-applied versions so Plutus compiler doesn't error with
 -- "Unsupported feature: Int#: unboxed integers are not supported"
