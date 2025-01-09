@@ -737,12 +737,6 @@ transferToIlliquidCirculationSupply
     "Transfer to illiquid circulation supply"
     { constraints, lookups }
 
-now :: POSIXTime
-now = mkPosixTime "1666918454000"
-
-mkPosixTime :: String -> POSIXTime
-mkPosixTime = wrap <<< unsafePartial fromJust <<< BigInt.fromString
-
 handover ::
   forall r.
   TransactionInput ->

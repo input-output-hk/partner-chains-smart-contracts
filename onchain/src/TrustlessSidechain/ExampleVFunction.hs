@@ -22,34 +22,19 @@ import PlutusLedgerApi.V2 (
   txInfoValidRange,
  )
 import PlutusTx qualified
-import TrustlessSidechain.PlutusPrelude (
-  Bool (False, True),
-  BuiltinData,
-  Integer,
-  check,
-  divideInteger,
-  fromInteger,
-  fromString,
-  traceError,
-  ($),
-  (*),
-  (-),
-  (<=),
- )
-
--- import Plutus.V1.Ledger.Time (POSIXTime, getPOSIXTime)
+import TrustlessSidechain.PlutusPrelude
 
 {-# INLINEABLE mkVFunctionPolicy #-}
 mkVFunctionPolicy :: Integer -> BuiltinData -> ScriptContext -> Bool
 mkVFunctionPolicy time _ (ScriptContext {scriptContextPurpose = Minting cs, scriptContextTxInfo}) =
   minted <= allowedMint
   where
-    valididyIntervalStart = case ivFrom $ txInfoValidRange scriptContextTxInfo of
+    validityIntervalStart = case ivFrom $ txInfoValidRange scriptContextTxInfo of
       LowerBound (Finite a) True -> getPOSIXTime a
       _ -> traceError "invalid validity interval"
 
-    cycleLength = fromInteger (60 * 1000) -- 60*60*24
-    allowedMint = ((valididyIntervalStart - time) `divideInteger` cycleLength)
+    cycleLength = fromInteger (60 * 1000) -- 1 token per minute
+    allowedMint = (validityIntervalStart - time) `divideInteger` cycleLength
 
     minted = currencySymbolValueOf (txInfoMint scriptContextTxInfo) cs
 mkVFunctionPolicy _ _ _ = False
@@ -60,7 +45,7 @@ mkVFunctionPolicyUntyped posixTime redeemer ctx =
   check
     $ mkVFunctionPolicy
       (PlutusTx.unsafeFromBuiltinData posixTime)
-      (PlutusTx.unsafeFromBuiltinData redeemer)
+      redeemer
       (PlutusTx.unsafeFromBuiltinData ctx)
 
 serialisableVFunctionPolicy :: SerialisedScript

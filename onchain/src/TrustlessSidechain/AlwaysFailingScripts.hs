@@ -14,14 +14,7 @@ import PlutusLedgerApi.V2 (
   serialiseCompiledCode,
  )
 import PlutusTx qualified
-import TrustlessSidechain.PlutusPrelude (
-  Bool (False),
-  BuiltinData,
-  Integer,
-  check,
-  ($),
- )
-import TrustlessSidechain.Types.Unsafe qualified as Unsafe
+import TrustlessSidechain.PlutusPrelude
 
 -- Always Failing Validator and Always Failing Minting Policy
 -- are scripts that unconditionally fail. Such scripts are
@@ -30,38 +23,29 @@ import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 -- Both scripts are parametrized by an Integer. That allows for
 -- obtaining different currency symbols.
 mkAlwaysFailingValidator ::
-  Integer ->
   BuiltinData ->
   BuiltinData ->
-  Unsafe.ScriptContext ->
+  BuiltinData ->
+  BuiltinData ->
   Bool
 mkAlwaysFailingValidator _ _ _ _ = False
 
 mkAlwaysFailingValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkAlwaysFailingValidatorUntyped seed datum redeemer ctx =
-  check
-    $ mkAlwaysFailingValidator
-      (PlutusTx.unsafeFromBuiltinData seed)
-      (PlutusTx.unsafeFromBuiltinData datum)
-      (PlutusTx.unsafeFromBuiltinData redeemer)
-      (Unsafe.wrap ctx)
+  check $ mkAlwaysFailingValidator seed datum redeemer ctx
 
 serialisableAlwaysFailingValidator :: SerialisedScript
 serialisableAlwaysFailingValidator =
   serialiseCompiledCode $$(PlutusTx.compile [||mkAlwaysFailingValidatorUntyped||])
 
 {-# INLINEABLE mkAlwaysFailingPolicy #-}
-mkAlwaysFailingPolicy :: Integer -> BuiltinData -> Unsafe.ScriptContext -> Bool
+mkAlwaysFailingPolicy :: BuiltinData -> BuiltinData -> BuiltinData -> Bool
 mkAlwaysFailingPolicy _ _ _ = False
 
 {-# INLINEABLE mkAlwaysFailingPolicyUntyped #-}
 mkAlwaysFailingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
 mkAlwaysFailingPolicyUntyped seed redeemer ctx =
-  check
-    $ mkAlwaysFailingPolicy
-      (PlutusTx.unsafeFromBuiltinData seed)
-      (PlutusTx.unsafeFromBuiltinData redeemer)
-      (Unsafe.wrap ctx)
+  check $ mkAlwaysFailingPolicy seed redeemer ctx
 
 serialisableAlwaysFailingPolicy :: SerialisedScript
 serialisableAlwaysFailingPolicy =

@@ -125,7 +125,7 @@ rawAlwaysPassingPolicy =
 rawAlwaysFailingValidator :: Tuple ScriptId String
 rawAlwaysFailingValidator =
   ( AlwaysFailingValidator /\
-      """{"cborHex":"4b4a0100002222326375a009","description":"","type":"PlutusScriptV2"}"""
+      """{"cborHex":"4746010000222261","description":"","type":"PlutusScriptV2"}"""
   )
 
 rawAlwaysFailingPolicy :: Tuple ScriptId String
