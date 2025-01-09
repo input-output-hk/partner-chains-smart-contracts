@@ -9,6 +9,7 @@ module TrustlessSidechain.PlutusPrelude (
   PlutusTx.FromData (..),
   PlutusTx.UnsafeFromData (..),
   HaskellPrelude.fromInteger,
+  divideInteger,
   ifThenElse,
   HasField (..),
   put,
@@ -52,7 +53,7 @@ import PlutusTx (
   ToData (toBuiltinData),
   UnsafeFromData (unsafeFromBuiltinData),
  )
-import PlutusTx.Builtins (chooseData, matchList)
+import PlutusTx.Builtins (chooseData, divideInteger, matchList)
 import PlutusTx.Builtins.Internal qualified as Unsafe
 import PlutusTx.Prelude hiding (fromInteger, toList)
 import TrustlessSidechain.PlutusPrelude.TH as PlutusPrelude.TH

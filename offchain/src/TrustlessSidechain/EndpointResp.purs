@@ -51,6 +51,7 @@ data EndpointResp
       , versionedValidators :: List (Tuple Types.ScriptId PlutusScript)
       }
   | ReserveResp { transactionHash :: ByteArray }
+  | GetVFunctionCBORResp { vFunctionCBOR :: ByteArray }
 
 -- Note [BigInt values and JSON]
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -188,6 +189,11 @@ endpointRespCodec = CA.prismaticCodec "EndpointResp" dec enc CA.json
     ReserveResp { transactionHash } ->
       J.fromObject $ Object.fromFoldable
         [ "transactionHash" /\ J.fromString (byteArrayToHex transactionHash) ]
+
+    GetVFunctionCBORResp { vFunctionCBOR } ->
+      J.fromObject $ Object.fromFoldable
+        [ "vFunctionCBOR" /\ J.fromString (byteArrayToHex vFunctionCBOR)
+        ]
 
 -- | Encode the endpoint response to a json object
 encodeEndpointResp :: EndpointResp -> J.Json

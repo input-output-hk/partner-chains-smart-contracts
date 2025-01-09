@@ -32,6 +32,10 @@ import Contract.PlutusData
   , toData
   )
 import Contract.ScriptLookups as Lookups
+import Contract.Time
+  ( POSIXTime
+  )
+import Contract.Time as Time
 import Contract.Transaction
   ( ScriptRef(..)
   , TransactionHash
@@ -45,15 +49,27 @@ import Contract.TxConstraints
 import Contract.TxConstraints as TxConstraints
 import Contract.Utxos (UtxoMap)
 import Contract.Value (add, minus, singleton) as Value
+import Data.Array as Array
+import Data.Bifunctor (lmap)
+import Data.DateTime.Instant (unInstant)
+import Data.Int (floor)
 import Data.Map as Map
+import Data.Time.Duration (Milliseconds(..))
+import Effect.Now as Now
+import Effect.Unsafe (unsafePerformEffect)
 import JS.BigInt as BigInt
+import Partial.Unsafe (unsafePartial)
+import Run (EFFECT, Run, liftEffect)
 import Run (Run)
 import Run.Except (EXCEPT, throw)
-import TrustlessSidechain.Effects.App (APP)
+import TrustlessSidechain.Effects.App (APP, BASE)
+import TrustlessSidechain.Effects.Contract (CONTRACT, liftContract)
+import TrustlessSidechain.Effects.Time (getCurrentEra, getSystemStart)
 import TrustlessSidechain.Effects.Transaction (TRANSACTION, getUtxo, utxosAt)
-import TrustlessSidechain.Effects.Util (fromMaybeThrow)
+import TrustlessSidechain.Effects.Util (fromEitherThrow, fromMaybeThrow)
 import TrustlessSidechain.Effects.Wallet (WALLET)
 import TrustlessSidechain.Error (OffchainError(..))
+import TrustlessSidechain.Error (OffchainError(GenericInternalError))
 import TrustlessSidechain.Governance.Utils as Governance
 import TrustlessSidechain.NativeTokenManagement.Types
   ( ImmutableReserveSettings
@@ -662,6 +678,18 @@ transferToIlliquidCirculationSupply
     (GenericInternalError "Could not calculate new ICS value")
     (pure (toTransferAsValue `Value.minus` incentiveAsValue))
 
+  currentEra <- getCurrentEra
+  systemStart <- getSystemStart
+
+  let summaries = wrap $ Array.singleton currentEra
+
+  nowMoment <- fromEitherThrow $ pure
+    $ lmap (\x -> GenericInternalError (show x))
+    $ Time.slotToPosixTime summaries systemStart
+        (unwrap (unwrap currentEra).start).slot
+
+  let validityInterval = Time.from nowMoment
+
   let
     lookups :: Lookups.ScriptLookups
     lookups =
@@ -703,6 +731,7 @@ transferToIlliquidCirculationSupply
           PlutusData.unit
           DatumInline
           illiquidCirculationNewValue
+        <> TxConstraints.mustValidateIn validityInterval
 
   balanceSignAndSubmit
     "Transfer to illiquid circulation supply"
