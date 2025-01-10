@@ -92,6 +92,7 @@
           haskellPackages.fourmolu
           hlint
           libsodium
+          moreutils
           nixpkgs-fmt
           nodejs
           pkg-config
