@@ -1,3 +1,0 @@
-kind: Changed
-body: '`reserve-release-funds` now sets up validity interval from the current time to +infinity'
-time: 2025-01-09T14:42:41.875132+01:00
