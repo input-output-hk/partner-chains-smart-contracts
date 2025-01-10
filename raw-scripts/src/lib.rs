@@ -19,6 +19,8 @@ pub enum ScriptId {
   ReserveValidator = 28,
   ReserveAuthPolicy = 29,
   IlliquidCirculationSupplyValidator = 30,
+  IlliquidCirculationSupplyWithdrawalPolicy = 31,
+  GovernancePolicy = 32,
   MultiSigPolicy = 33,
   AlwaysPassingValidator = 34,
   AlwaysPassingPolicy = 35,

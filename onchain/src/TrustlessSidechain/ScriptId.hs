@@ -9,7 +9,7 @@ module TrustlessSidechain.ScriptId (
 ) where
 
 import GHC.Num.Integer (Integer)
-import Prelude (Eq, Ord, Show, fromInteger)
+import Prelude (Bounded, Enum, Eq, Ord, Show, fromInteger)
 
 -- Note [Versioned script identifiers]
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -33,7 +33,6 @@ data ScriptId
   | PermissionedCandidatesPolicy
   | PermissionedCandidatesValidator
   | ScriptCache
-  | InitTokenPolicy
   | ReserveValidator
   | ReserveAuthPolicy
   | IlliquidCirculationSupplyValidator
@@ -46,7 +45,7 @@ data ScriptId
   | AlwaysFailingValidator
   | AlwaysFailingPolicy
   | ExampleVFunctionPolicy
-  deriving stock (Show, Eq, Ord)
+  deriving stock (Show, Eq, Ord, Enum, Bounded)
 
 toInteger :: ScriptId -> Integer
 toInteger = \case
@@ -58,7 +57,6 @@ toInteger = \case
   PermissionedCandidatesPolicy -> 24
   PermissionedCandidatesValidator -> 25
   ScriptCache -> 26
-  InitTokenPolicy -> 27
   ReserveValidator -> 28
   ReserveAuthPolicy -> 29
   IlliquidCirculationSupplyValidator -> 30
