@@ -3,6 +3,21 @@
 This changelog is based on [Keep A
 Changelog](https://keepachangelog.com/en/1.1.0).
 
+
+## 7.0.2 - 2025-01-10
+### Added
+* added `reserve-update-settings` command
+* Example V function
+* All script ids are now included in raw-scripts crate
+### Changed
+* wallet utxos with script refs are no longer used for balancing
+* CTL deps updated
+* `reserve-release-funds` now sets up validity interval from the current time to +infinity
+### Removed
+* Removed unused onchain types BlockProducerRegistration, BlockProducerRegistrationMsg, DParameterValidatorDatum, EcdsaSecp256k1PubKey, PermissionedCandidateKeys, PermissionedCandidatesPolicyRedeemer, PermissionedCandidatesValidatorDatum, PermissionedCandidatesValidatorRedeemer, PubKey, Signature, StakeOwnership
+### Fixed
+* Fixed error parser not parsing missing utxo error correctly
+
 ## 7.0.1 - 2024-11-14
 ### Removed
 * Removed redundant --governance-authority from most commands (except init-governance) and the config

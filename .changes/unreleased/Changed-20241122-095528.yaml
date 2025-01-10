@@ -1,3 +1,0 @@
-kind: Changed
-body: wallet utxos with script refs are no longer used for balancing
-time: 2024-11-22T09:55:28.822830531+01:00
