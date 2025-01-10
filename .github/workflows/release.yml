@@ -50,7 +50,7 @@ jobs:
       - name: create changes text
         run: |
           if test -f ./.changes/"$VERSION".md ; then
-            cp ./.changes/.md ./release-notes
+            cp ./.changes/"$VERSION".md ./release-notes
           else
             echo "No changie entry for the version specified" > ./release-notes
           fi
