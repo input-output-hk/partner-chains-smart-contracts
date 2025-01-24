@@ -11,10 +11,6 @@ The repository targets the following users:
 * the Sidechain node operator
 * the end-user wishing to transfer assets between the mainchain and the sidechain
 
-## Getting started
-
-See our [user manual](./offchain/README.md) for the list of available commands that you can use to interact with Cardano.
-
 ## CONTRIBUTING
 
 See [CONTRIBUTING](./CONTRIBUTING.md) for guidelines on contributing code and documentation.

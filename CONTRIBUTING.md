@@ -3,7 +3,6 @@
 Following are the relevant developer guidelines for the project. If you have any suggestion, reach out to the team,
 or create a PR.
 
-- [Off-chain developer guideline](./offchain/CONTRIBUTING.md)
 - [Haskell coding standards](./onchain/STANDARDS.md)
 
 ## GitHub rules
@@ -66,7 +65,7 @@ Make sure to commit the created changelog fragment along with your changes.
 - Versioning must follow semantic versioning (details in the [coding standards](./onchain/STANDARDS.md#versioning-and-changelogging))
 - `Unreleased` section of the Changelog is updated
 - In code `@since Unreleased` headers are updated
-- Versions are bumped in `flake.nix`, `onchain/trustless-sidechain.cabal`, `offchain/package.json`
+- Versions are bumped in `flake.nix`, `onchain/trustless-sidechain.cabal`
 - Push a git tag with the version (e.g. `v3.0.0`)
 - Create a GitHub release with a short description of the major changes, and a link to the Changelog
 - Build and upload an bundled JS artifact for the CLI

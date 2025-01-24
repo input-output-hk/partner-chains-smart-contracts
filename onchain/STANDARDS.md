@@ -211,8 +211,7 @@ problems with Haddock specifically.
 
 ``-fexpose-all-unfoldings`` is a bruteforce hammer of an optimization option: we
 mostly enforce its use due to Plutus scripts needing it in some cases to avoid
-compilation issues revolving around type class methods. It also helps offchain
-Haskell code, especially in cases revolving around type class dictionaries.
+compilation issues revolving around type class methods.
 While it does increase compile time somewhat, the alternative would be to use it
 piecemeal in only those modules whose Plutus scripts require it, which is a
 tedious task and leads to confusion as to why this flag is on in some modules,
@@ -339,9 +338,7 @@ well as examples of downcasing (``http-api-data``). One choice for consistency
 The use of a dedicated prefix for FFI bindings is common across languages, as it
 helps distinguish them from natively-defined identifiers. This can be important,
 as directly calling bindings might be much less safe, or come with more caveats
-around use. The exact choice of prefix varies: for consistency with our
-Purescript standards, we use `c_`. Furthermore, mandating a name match (apart
-from the prefix) makes it easy to see what identifier we're binding.
+around use.
 
 The word ‘transaction’ (in both capitalized and non-capitalized form) comes up
 often in the context of Plutus-adjacent code; ‘tx’ is not ambiguous, and is
@@ -1202,24 +1199,7 @@ A project MUST use the [PVP][pvp]. Three, and only three, version numbers MUST b
 used: a major version and two minor versions.
 
 Any changes MUST be logged in `CHANGELOG.md`, which MUST comply with [Keep A
-Changelog](https://keepachangelog.com/en/1.1.0/) requirements. Each entry SHOULD
-provide two additional pieces of information:
-
-* A link to Github issue(s) that the entry corresponds to; and
-* A marker (either "onchain" or "offchain") explaining which part of the
-  codebase it relates to.
-
-Exceptions are given when:
-
-* The change did not have a Github issue associated with it; or
-* The change affects both onchain and offchain.
-
-An example entry is below:
-
-```
-* Demons no longer fly out your nose
-  ([666](https://github.com/mlabs/trustless-sidechain/issues/666), onchain)
-```
+Changelog](https://keepachangelog.com/en/1.1.0/) requirements.
 
 ### Justification
 
@@ -1235,10 +1215,7 @@ Changelogs are critical for several reasons: they allow downstream users to
 quickly see what's changed, provide context for incoming developers, and
 maintain an easier-to-read record of project changes over time. Keep A Changelog
 is a relatively common format, which is designed for easy reading, which suits
-our needs. In order to add context to our changes, we require 'linking' to
-Github issues, as well as a marker of whether the change affects onchain or
-offchain: this helps both users and developers get more context easily if they
-need to.
+our needs.
 
 ## Documentation
 

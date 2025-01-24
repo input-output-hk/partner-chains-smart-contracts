@@ -2,8 +2,7 @@
 
 # offical semver regex from https://regex101.com/r/Ly7O1x/3/
 semver_pattern="^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$"
-packagejson=offchain/package.json
-current_version=$(cat $packagejson | jq -r ".version")
+
 # shellcheck disable=SC2125
 cabalfile=onchain/*.cabal
 hsfiles=$(find onchain/src -type f -name "*.hs")
@@ -15,7 +14,7 @@ if [[ -z $IN_NIX_SHELL ]]; then
 fi
 
 if [[ ($# -eq 0) || $1 == "--help" || $1 == "-h" ]]; then
-    echo "Usage: $0 [next-major|next-minor|next-patch|<semver>]"
+    echo "Usage: $0 <semver>"
     exit 1
 fi
 
@@ -37,26 +36,11 @@ if [[ $(git rev-parse --abbrev-ref HEAD) != "master" ]]; then
     fi
 fi
 
-case $1 in
-    next-major | next-minor | next-patch)
-        if [[ "$current_version" =~ $semver_pattern ]]; then
-            case $1 in
-                next-major) next_version="$((BASH_REMATCH[1]+1)).0.0" ;;
-                next-minor) next_version="${BASH_REMATCH[1]}.$((BASH_REMATCH[2]+1)).0" ;;
-                next-patch) next_version="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3]+1))" ;;
-            esac
-        else
-            echo "FATAL: version number in $packagejson is not valid semver!"
-        fi
-    ;;
-    *)
-        if [[ "$1" =~ $semver_pattern ]]; then
-            next_version=$1
-        else
-            echo "ERROR: provided version ($1) is not valid semver"
-        fi
-    ;;
-esac
+if [[ "$1" =~ $semver_pattern ]]; then
+    next_version=$1
+else
+    echo "ERROR: provided version ($1) is not valid semver"
+fi
 
 # if we didn't set next_version above we exit
 if [ -z "${next_version+x}" ]; then exit 1; fi
@@ -67,12 +51,8 @@ if git show-ref --tags "v$next_version" --quiet; then
     exit 1
 fi
 
-echo "Making release changes for new release $next_version (last version: $current_version)"
+echo "Making release changes for new release $next_version"
 
-cat $packagejson | jq ".version=\"$next_version\"" | sponge $packagejson
-pushd offchain > /dev/null || exit
-npm install --package-lock-only
-popd > /dev/null || exit
 # shellcheck disable=SC2086
 changie batch $next_version
 changie merge
