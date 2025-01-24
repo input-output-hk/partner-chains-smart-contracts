@@ -5,7 +5,7 @@ module Test.TrustlessSidechain.Golden.Types (tests) where
 import TrustlessSidechain.HaskellPrelude
 
 import PlutusLedgerApi.V1.Value qualified as Value
-import PlutusLedgerApi.V2 (POSIXTime (..), toBuiltinData)
+import PlutusLedgerApi.V2 (toBuiltinData)
 import Test.Tasty (TestTree, testGroup)
 import Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest)
 import TrustlessSidechain.Governance.MultiSig (
@@ -43,6 +43,7 @@ import TrustlessSidechain.Types (
 -- Some of the data types are only checked transitively (included by some other type)
 --
 -- In order to regenerate golden tests files, simply delete the old ones in `./test/golden`
+-- or run: cabal test trustless-sidechain-test --test-options "--accept"
 tests :: TestTree
 tests =
   testGroup
@@ -82,7 +83,6 @@ sampleReserveDatum =
         ReserveDatum
           { immutableSettings =
               ImmutableReserveSettings
-                (POSIXTime 1234513245)
                 (Value.AssetClass ("0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d", "asdf"))
           , mutableSettings =
               MutableReserveSettings "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d" 0
