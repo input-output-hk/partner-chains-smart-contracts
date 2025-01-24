@@ -23,7 +23,6 @@ module TrustlessSidechain.Types (
 import PlutusLedgerApi.Data.V2 (
   BuiltinData (BuiltinData),
   CurrencySymbol,
-  POSIXTime,
   ScriptHash,
  )
 import PlutusLedgerApi.V1.Data.Value (AssetClass)
@@ -127,9 +126,7 @@ instance UnsafeFromData PermissionedCandidatesValidatorRedeemer where
           _ -> error ()
 
 data ImmutableReserveSettings = ImmutableReserveSettings
-  { t0 :: POSIXTime
-  -- ^ `t0` is a POSIX time of a reserve UTxO initialization
-  , tokenKind :: AssetClass
+  { tokenKind :: AssetClass
   -- ^ `tokenKind` is an asset class of tokens that a reserve
   -- UTxO is allowed to store
   }
@@ -140,16 +137,15 @@ data ImmutableReserveSettings = ImmutableReserveSettings
 
 instance ToData ImmutableReserveSettings where
   {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData (ImmutableReserveSettings s a) =
-    productToData2 s a
+  toBuiltinData (ImmutableReserveSettings a) = toBuiltinData a
 
 instance FromData ImmutableReserveSettings where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData2 ImmutableReserveSettings
+  fromBuiltinData x = ImmutableReserveSettings <$> fromBuiltinData x
 
 instance UnsafeFromData ImmutableReserveSettings where
   {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData = productUnsafeFromData2 ImmutableReserveSettings
+  unsafeFromBuiltinData = ImmutableReserveSettings . unsafeFromBuiltinData
 
 data MutableReserveSettings = MutableReserveSettings
   { vFunctionTotalAccrued :: CurrencySymbol

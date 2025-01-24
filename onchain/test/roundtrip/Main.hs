@@ -6,7 +6,6 @@ import GHC.Exts (fromList)
 import Laws (toDataSafeLaws', toDataUnsafeLaws')
 import PlutusLedgerApi.Data.V2 (
   CurrencySymbol (CurrencySymbol),
-  POSIXTime (POSIXTime),
   PubKeyHash (PubKeyHash),
  )
 import PlutusLedgerApi.V1.Data.Value (AssetClass (AssetClass), adaToken)
@@ -81,7 +80,6 @@ genPCVR = oneof [pure UpdatePermissionedCandidates, pure RemovePermissionedCandi
 
 genRD :: Gen ReserveDatum
 genRD = do
-  pt <- arbitrary
   ArbitraryCurrencySymbol cs1 <- arbitrary
   ArbitraryCurrencySymbol cs2 <- arbitrary
   i <- arbitrary
@@ -89,7 +87,7 @@ genRD = do
 
   pure
     $ ReserveDatum
-      (ImmutableReserveSettings (POSIXTime pt) (AssetClass (cs1, adaToken)))
+      (ImmutableReserveSettings (AssetClass (cs1, adaToken)))
       (MutableReserveSettings cs2 i)
       (ReserveStats c)
 
