@@ -1,6 +1,4 @@
 # Node artifact files
-node_modules/
-node_modules
 dist/
 dist-newstyle/
 
@@ -48,7 +46,6 @@ Thumbs.db
 # Local configuration files
 cabal.project.local*
 .ghci
-config.json
 
 # Notes
 *.txt
@@ -57,11 +54,6 @@ config.json
 *.db
 bench-output/
 
-# Logs
-contractlog.json
-
-# Purescript
-.psc-ide-port
 
 # Rust
 raw-scripts/target

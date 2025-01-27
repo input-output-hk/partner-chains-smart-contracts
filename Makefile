@@ -1,8 +1,7 @@
 .PHONY: requires_nix_shell format-staged \
 		unreachable-commit-staged format-whitespace-staged format-nix-staged \
-		format-hs-staged format-cabal-staged format-purs-staged format-js-staged \
-		format-dhall-staged check-format-hs-staged check-format-cabal-staged \
-		check-format-purs-staged check-format-js-staged check-format-dhall-staged \
+		format-hs-staged format-cabal-staged \
+		check-format-hs-staged check-format-cabal-staged \
 		check-format-nix-staged check-format-whitespace
 
 current-system := $(shell nix eval --impure --expr builtins.currentSystem)
@@ -31,12 +30,6 @@ format-staged: unreachable-commit-staged requires_nix_shell
 	@$(MAKE) --no-print-directory format-cabal-staged
 	@echo 'Formatting whitespace...'
 	@$(MAKE) --no-print-directory format-whitespace-staged
-	@echo 'Formatting `*.purs`...'
-	@$(MAKE) --no-print-directory format-purs-staged
-	@echo 'Formatting `*.js`...'
-	@$(MAKE) --no-print-directory format-js-staged
-	@echo 'Formatting `*.dhall`...'
-	@$(MAKE) --no-print-directory format-dhall-staged
 	@echo 'Formatting `*.nix` files...'
 	@$(MAKE) --no-print-directory format-nix-staged
 
@@ -118,39 +111,6 @@ check-format-cabal-staged: requires_nix_shell
 	@git diff -z --name-only --diff-filter=d --cached HEAD\
 		| grep -Ez '^.*\.cabal$$'\
 		| xargs -0 -r cabal-fmt --check
-
-format-purs-staged: requires_nix_shell
-	@git diff -z --name-only --diff-filter=d --cached HEAD\
-		| grep -Ez '^.*\.purs$$'\
-		| while IFS= read -r -d '' FILE; do test -f $$FILE && printf "$$FILE\0"; done\
-		| xargs -0 -r purs-tidy format-in-place
-
-check-format-purs-staged: requires_nix_shell
-	@git diff -z --name-only --diff-filter=d --cached HEAD\
-		| grep -Ez '^.*\.purs$$'\
-		| xargs -0 -r purs-tidy check
-
-format-js-staged: requires_nix_shell
-	@git diff -z --name-only --diff-filter=d --cached HEAD\
-		| grep -Ez '^.*\.js$$'\
-		| while IFS= read -r -d '' FILE; do test -f $$FILE && printf "$$FILE\0"; done\
-		| xargs -0 -r eslint --fix
-
-check-format-js-staged: requires_nix_shell
-	@git diff -z --name-only --diff-filter=d --cached HEAD\
-		| grep -Ez '^.*\.js$$'\
-		| xargs -0 -r eslint
-
-format-dhall-staged: requires_nix_shell
-	@git diff -z --name-only --diff-filter=d --cached HEAD\
-		| grep -Ez '^.*\.dhall$$'\
-		| while IFS= read -r -d '' FILE; do test -f $$FILE && printf "$$FILE\0"; done\
-		| xargs -0 -r dhall lint
-
-check-format-dhall-staged: requires_nix_shell
-	@git diff -z --name-only --diff-filter=d --cached HEAD\
-		| grep -Ez '^.*\.dhall$$'\
-		| xargs -0 -r dhall lint --check
 
 nixpkgsfmt: requires_nix_shell
 	nixpkgs-fmt $(NIX_SOURCES)
