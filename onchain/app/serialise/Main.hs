@@ -27,6 +27,7 @@ import TrustlessSidechain.AlwaysPassingScripts qualified as AlwaysPassing
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.DParameter qualified as DParameter
 import TrustlessSidechain.ExampleVFunction as ExampleVFunction
+import TrustlessSidechain.GenericContainer qualified as GenericContainer
 import TrustlessSidechain.Governance.MultiSig qualified as MultiSig
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.IlliquidCirculationSupply qualified as IlliquidCirculationSupply
@@ -148,6 +149,8 @@ main =
       , (AlwaysFailingValidator, AlwaysFailing.serialisableAlwaysFailingValidator)
       , (AlwaysFailingPolicy, AlwaysFailing.serialisableAlwaysFailingPolicy)
       , (ExampleVFunctionPolicy, ExampleVFunction.serialisableVFunctionPolicy)
+      , (GenericContainerPolicy, GenericContainer.serialisableMintingPolicy)
+      , (GenericContainerValidator, GenericContainer.serialisableValidator)
       ]
     idOnlyPlutusScripts =
       [ IlliquidCirculationSupplyWithdrawalPolicy
