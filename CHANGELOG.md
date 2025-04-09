@@ -4,6 +4,12 @@ This changelog is based on [Keep A
 Changelog](https://keepachangelog.com/en/1.1.0).
 
 
+## 7.1.0 - 2025-04-09
+### Added
+* Generic Containers smart contracts
+### Removed
+* Offchain directory removed
+
 ## 7.0.2 - 2025-01-10
 ### Added
 * added `reserve-update-settings` command
