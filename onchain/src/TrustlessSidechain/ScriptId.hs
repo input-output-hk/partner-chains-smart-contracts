@@ -6,8 +6,8 @@ module TrustlessSidechain.ScriptId (
   illiquidCirculationSupplyValidatorId,
   illiquidCirculationSupplyWithdrawalPolicyId,
   governancePolicyId,
-  genericContainerPolicyId,
-  genericContainerValidatorId,
+  governedMapPolicyId,
+  governedMapValidatorId,
 ) where
 
 import GHC.Num.Integer (Integer)
@@ -47,8 +47,8 @@ data ScriptId
   | AlwaysFailingValidator
   | AlwaysFailingPolicy
   | ExampleVFunctionPolicy
-  | GenericContainerPolicy
-  | GenericContainerValidator
+  | GovernedMapPolicy
+  | GovernedMapValidator
   deriving stock (Show, Eq, Ord, Enum, Bounded)
 
 toInteger :: ScriptId -> Integer
@@ -73,8 +73,8 @@ toInteger = \case
   AlwaysFailingValidator -> 37
   AlwaysFailingPolicy -> 38
   ExampleVFunctionPolicy -> 39
-  GenericContainerPolicy -> 40
-  GenericContainerValidator -> 41
+  GovernedMapPolicy -> 40
+  GovernedMapValidator -> 41
 
 -- Pre-applied versions so Plutus compiler doesn't error with
 -- "Unsupported feature: Int#: unboxed integers are not supported"
@@ -94,8 +94,8 @@ illiquidCirculationSupplyWithdrawalPolicyId = toInteger IlliquidCirculationSuppl
 governancePolicyId :: Integer
 governancePolicyId = toInteger GovernancePolicy
 
-genericContainerPolicyId :: Integer
-genericContainerPolicyId = toInteger GenericContainerPolicy
+governedMapPolicyId :: Integer
+governedMapPolicyId = toInteger GovernedMapPolicy
 
-genericContainerValidatorId :: Integer
-genericContainerValidatorId = toInteger GenericContainerValidator
+governedMapValidatorId :: Integer
+governedMapValidatorId = toInteger GovernedMapValidator

@@ -1,10 +1,10 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 
-module TrustlessSidechain.GenericContainer (
+module TrustlessSidechain.GovernedMap (
   serialisableMintingPolicy,
   serialisableValidator,
-  genericContainerValidator,
+  governedMapValidator,
   mkMintingPolicy,
 ) where
 
@@ -19,7 +19,7 @@ import TrustlessSidechain.Versioning (VersionOracleConfig, approvedByGovernance)
 
 -- OnChain error descriptions:
 --
---   ERROR-GENERIC-CONTAINER-POLICY-01: transaction not signed by the governance
+--   ERROR-GOVERNED-MAP-POLICY-01: transaction not signed by the governance
 --   authority
 --
 mkMintingPolicy ::
@@ -43,18 +43,18 @@ mkMintingPolicy
 
 -- OnChain error descriptions:
 --
---   ERROR-GENERIC-CONTAINER-VALIDATOR-01: transaction not signed by the governance
+--   ERROR-GOVERNED-MAP-VALIDATOR-01: transaction not signed by the governance
 --   authority
 --
-{-# INLINEABLE genericContainerValidator #-}
-genericContainerValidator ::
+{-# INLINEABLE governedMapValidator #-}
+governedMapValidator ::
   BuiltinData ->
   VersionOracleConfig ->
   BuiltinData ->
-  BuiltinByteString ->
+  BuiltinData ->
   Unsafe.ScriptContext ->
   Bool
-genericContainerValidator
+governedMapValidator
   _genesisUtxo
   vc
   _
@@ -76,11 +76,11 @@ mkValidatorUntyped ::
   ()
 mkValidatorUntyped genesisUtxo vc dat redeemer ctx =
   check
-    $ genericContainerValidator
+    $ governedMapValidator
       genesisUtxo
       (unsafeFromBuiltinData vc)
       dat
-      (unsafeFromBuiltinData redeemer)
+      redeemer
       (Unsafe.wrap ctx)
 
 serialisableValidator :: SerialisedScript
