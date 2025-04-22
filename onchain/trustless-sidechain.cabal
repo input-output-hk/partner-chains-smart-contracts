@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               trustless-sidechain
-version:            7.1.0
+version:            7.1.1
 synopsis:           TODO
 description:        TODO
 homepage:           https://github.com/mlabs-haskell/trustless-sidechain
@@ -84,8 +84,8 @@ library
     TrustlessSidechain.CommitteeCandidateValidator
     TrustlessSidechain.DParameter
     TrustlessSidechain.ExampleVFunction
-    TrustlessSidechain.GenericContainer
     TrustlessSidechain.Governance.MultiSig
+    TrustlessSidechain.GovernedMap
     TrustlessSidechain.IlliquidCirculationSupply
     TrustlessSidechain.OnlyMintMintingPolicy
     TrustlessSidechain.PermissionedCandidates

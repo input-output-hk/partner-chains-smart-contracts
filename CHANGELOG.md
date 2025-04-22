@@ -4,6 +4,10 @@ This changelog is based on [Keep A
 Changelog](https://keepachangelog.com/en/1.1.0).
 
 
+## 7.1.1 - 2025-04-22
+### Changed
+* GenericContainer changed to GovernedMap
+
 ## 7.1.0 - 2025-04-09
 ### Added
 * Generic Containers smart contracts
