@@ -7,7 +7,6 @@ import Laws (toDataSafeLaws', toDataUnsafeLaws')
 import PlutusLedgerApi.V1.Value (AssetClass (AssetClass))
 import PlutusLedgerApi.V2 (
   CurrencySymbol (CurrencySymbol),
-  POSIXTime (POSIXTime),
   PubKeyHash (PubKeyHash),
  )
 import Test.QuickCheck (
@@ -81,7 +80,6 @@ genPCVR = oneof [pure UpdatePermissionedCandidates, pure RemovePermissionedCandi
 
 genRD :: Gen ReserveDatum
 genRD = do
-  pt <- arbitrary
   ArbitraryCurrencySymbol cs1 <- arbitrary
   ArbitraryCurrencySymbol cs2 <- arbitrary
   i <- arbitrary
@@ -89,7 +87,7 @@ genRD = do
 
   pure
     $ ReserveDatum
-      (ImmutableReserveSettings (POSIXTime pt) (AssetClass (cs1, "")))
+      (ImmutableReserveSettings (AssetClass (cs1, "")))
       (MutableReserveSettings cs2 i)
       (ReserveStats c)
 
