@@ -194,17 +194,19 @@ serialiseScriptsToRust plutusScripts idOnlyPlutusScripts handle = do
 
   putLn "}"
   putLn ""
+  putLn "pub struct RawScript(pub &'static [u8]);"
+  putLn ""
 
   Foldable.for_ plutusScripts \(scriptId, script) -> do
     put "pub const "
     put $ toScreamingSnake $ fromHumps $ show scriptId
-    put ": &[u8] = &hex!(\""
+    put ": RawScript = RawScript(&hex!(\""
     ByteString.hPutStr handle $ Base16.encode $ serialiseToCBOR $ scriptToPlutusScript script
-    putLn "\");"
+    putLn "\"));"
 
   putLn ""
 
-  putLn "pub const SCRIPTS: &[(ScriptId, &[u8])] = &["
+  putLn "pub const SCRIPTS: &[(ScriptId, RawScript)] = &["
   Foldable.for_ plutusScripts \(scriptId, _) -> do
     put "  (ScriptId::"
     put $ show scriptId
