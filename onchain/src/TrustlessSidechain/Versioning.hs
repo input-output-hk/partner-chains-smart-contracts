@@ -306,14 +306,12 @@ serialisableVersionOraclePolicy =
 {-# INLINEABLE mkVersionOracleValidator #-}
 mkVersionOracleValidator ::
   BuiltinData ->
-  VersionOracleConfig ->
   VersionOracleDatum ->
   VersionOracle ->
   Unsafe.ScriptContext ->
   Bool
 mkVersionOracleValidator
   _genesisUtxo
-  vc
   (VersionOracleDatum versionOracle currencySymbol)
   versionOracle'
   ctx =
@@ -326,7 +324,7 @@ mkVersionOracleValidator
 
       txInfo = Unsafe.scriptContextTxInfo ctx -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority =
-        approvedByGovernance vc ctx
+        approvedByGovernance (VersionOracleConfig currencySymbol) ctx
 
       -- Check that version oracle in the datum matches the redeemer
       versionOraclesMatch = versionOracle == versionOracle'
@@ -345,8 +343,6 @@ mkVersionOracleValidator
 mkVersionOracleValidatorUntyped ::
   -- | Genesis UTXO
   BuiltinData ->
-  -- | VersionOracleConfig
-  BuiltinData ->
   -- | Datum
   BuiltinData ->
   -- | Redeemer
@@ -354,11 +350,10 @@ mkVersionOracleValidatorUntyped ::
   -- | ScriptContext
   BuiltinData ->
   ()
-mkVersionOracleValidatorUntyped genesisUtxo vc datum redeemer ctx =
+mkVersionOracleValidatorUntyped genesisUtxo datum redeemer ctx =
   check
     $ mkVersionOracleValidator
       genesisUtxo
-      (unsafeFromBuiltinData vc)
       (PlutusTx.unsafeFromBuiltinData datum)
       (PlutusTx.unsafeFromBuiltinData redeemer)
       (Unsafe.wrap ctx)

@@ -67,7 +67,7 @@ main =
           , scriptFitsInto
               "mkVersionOracleValidatorCode (Versioning) serialized"
               Versioning.serialisableVersionOracleValidator
-              2_073
+              2_068
           , scriptFitsInto
               "mkReserveValidator (Reserve) serialized"
               Reserve.serialisableReserveValidator
