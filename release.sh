@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# offical semver regex from https://regex101.com/r/Ly7O1x/3/
+# official semver regex from https://regex101.com/r/Ly7O1x/3/
 semver_pattern="^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-((0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$"
 
 # shellcheck disable=SC2125
@@ -16,24 +16,6 @@ fi
 if [[ ($# -eq 0) || $1 == "--help" || $1 == "-h" ]]; then
     echo "Usage: $0 <semver>"
     exit 1
-fi
-
-# check if there are any modified files (based on https://stackoverflow.com/a/3879077)
-git update-index --refresh &> /dev/null
-git diff-index --quiet HEAD --
-if [[ ($? -eq 1) ]]; then
-    echo "Release script can only run on a clean repo. Please stash your changes."
-    exit 1
-fi
-
-if [[ $(git rev-parse --abbrev-ref HEAD) != "master" ]]; then
-    echo "WARNING: you are trying to cut a release from a branch other than master!"
-    read -r -n1 -p "Do you wish to continue? [y/n]" yesno
-    printf "\n"
-    if [[ "$yesno" =~ ^[^Yy]$ ]]; then
-        echo "Aborting..."
-        exit 1
-    fi
 fi
 
 if [[ "$1" =~ $semver_pattern ]]; then
@@ -62,7 +44,3 @@ sed -i -r "s/^version:(\s*)\S+$/version:\1$next_version/" $cabalfile
 sed -i -r "s/@since (U|u)nreleased/@since v$next_version/" $hsfiles
 # shellcheck disable=SC2086
 cargo set-version --manifest-path raw-scripts/Cargo.toml $next_version
-
-git checkout -b "release-v$next_version"
-git add .
-git commit -m "chore: bump version to v$next_version"
