@@ -4,6 +4,10 @@ This changelog is based on [Keep A
 Changelog](https://keepachangelog.com/en/1.1.0).
 
 
+## 7.2.1 - 2025-05-29
+### Changed
+* add scriptid params to governed map validator and policy
+
 ## 7.2.0 - 2025-05-15
 ### Changed
 * raw scripts are now wrapped with newtype RawScript

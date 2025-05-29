@@ -24,11 +24,13 @@ import TrustlessSidechain.Versioning (VersionOracleConfig, approvedByGovernance)
 --
 mkMintingPolicy ::
   BuiltinData ->
+  BuiltinData ->
   VersionOracleConfig ->
   BuiltinData ->
   Unsafe.ScriptContext ->
   Bool
 mkMintingPolicy
+  _scriptId
   _genesisUtxo
   vc
   _redeemer
@@ -39,7 +41,7 @@ mkMintingPolicy
       signedByGovernanceAuthority =
         approvedByGovernance vc ctx
      in
-      traceIfFalse "ERROR-GENERIC-CONTAINER-POLICY-01" signedByGovernanceAuthority
+      traceIfFalse "ERROR-GOVERNED-MAP-POLICY-01" signedByGovernanceAuthority
 
 -- OnChain error descriptions:
 --
@@ -49,18 +51,20 @@ mkMintingPolicy
 {-# INLINEABLE governedMapValidator #-}
 governedMapValidator ::
   BuiltinData ->
+  BuiltinData ->
   VersionOracleConfig ->
   BuiltinData ->
   BuiltinData ->
   Unsafe.ScriptContext ->
   Bool
 governedMapValidator
+  _scriptId
   _genesisUtxo
   vc
   _
   _redeemer
   ctx =
-    traceIfFalse "ERROR-GENERIC-CONTAINER-VALIDATOR-01" signedByGovernanceAuthority
+    traceIfFalse "ERROR-GOVERNED-MAP-VALIDATOR-01" signedByGovernanceAuthority
     where
       -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority :: Bool
@@ -73,10 +77,12 @@ mkValidatorUntyped ::
   BuiltinData ->
   BuiltinData ->
   BuiltinData ->
+  BuiltinData ->
   ()
-mkValidatorUntyped genesisUtxo vc dat redeemer ctx =
+mkValidatorUntyped scriptId genesisUtxo vc dat redeemer ctx =
   check
     $ governedMapValidator
+      scriptId
       genesisUtxo
       (unsafeFromBuiltinData vc)
       dat
@@ -92,10 +98,12 @@ mkMintingPolicyUntyped ::
   BuiltinData ->
   BuiltinData ->
   BuiltinData ->
+  BuiltinData ->
   ()
-mkMintingPolicyUntyped genesisUtxo vc redeemer ctx =
+mkMintingPolicyUntyped scriptId genesisUtxo vc redeemer ctx =
   check
     $ mkMintingPolicy
+      scriptId
       genesisUtxo
       (unsafeFromBuiltinData vc)
       redeemer
