@@ -4,6 +4,10 @@ This changelog is based on [Keep A
 Changelog](https://keepachangelog.com/en/1.1.0).
 
 
+## 7.2.2 - 2025-06-02
+### Fixed
+* Fix cyclical dependency in versioning scripts
+
 ## 7.2.1 - 2025-05-29
 ### Changed
 * add scriptid params to governed map validator and policy
