@@ -58,3 +58,5 @@ bench-output/
 # Rust
 raw-scripts/target
 raw-scripts/Cargo.lock
+raw-scripts-traced/target
+raw-scripts-traced/Cargo.lock
