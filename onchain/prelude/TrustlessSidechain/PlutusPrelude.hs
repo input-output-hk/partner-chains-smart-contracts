@@ -41,7 +41,8 @@ module TrustlessSidechain.PlutusPrelude (
   productUnsafeFromData4,
   productUnsafeFromData5,
   productUnsafeFromData6,
-) where
+)
+where
 
 import Data.Kind (Type)
 import Data.String qualified as HString

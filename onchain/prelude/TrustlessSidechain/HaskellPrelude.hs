@@ -125,7 +125,6 @@ module TrustlessSidechain.HaskellPrelude (
   FoldableWithIndex.iall,
   FoldableWithIndex.none,
   FoldableWithIndex.inone,
-  equating,
 
   -- ** Order
   Ord.comparing,
@@ -142,8 +141,6 @@ module TrustlessSidechain.HaskellPrelude (
   Semiring.fromIntegral,
   signum,
   Euclidean.gcdExt,
-  even,
-  odd,
   Field.fromRational,
   Field.recip,
   abs,
@@ -195,11 +192,6 @@ module TrustlessSidechain.HaskellPrelude (
   (Applicative.<**>),
   Applicative.liftA3,
   Monad.forever,
-  mapAndUnzipA,
-  zipWithA,
-  zipWithA_,
-  replicateA,
-  replicateA_,
   Monad.when,
   Monad.unless,
 
@@ -277,9 +269,9 @@ module TrustlessSidechain.HaskellPrelude (
   ifThenElse,
   Err.error,
   Coerce.coerce,
-) where
+)
+where
 
-import Control.Applicative (Applicative)
 import Control.Applicative qualified as Applicative
 import Control.Category qualified as Category
 import Control.Monad qualified as Monad
@@ -291,9 +283,8 @@ import Data.ByteString qualified as ByteString
 import Data.Char qualified as Char
 import Data.Coerce qualified as Coerce
 import Data.Either qualified as Either
-import Data.Eq (Eq ((/=), (==)))
+import Data.Eq (Eq ((==)))
 import Data.Eq qualified as Eq
-import Data.Euclidean (Euclidean (rem))
 import Data.Euclidean qualified as Euclidean
 import Data.Field qualified as Field
 import Data.Foldable (Foldable (foldMap))
@@ -302,7 +293,6 @@ import Data.Foldable.WithIndex qualified as FoldableWithIndex
 import Data.Function qualified as Function
 import Data.Functor qualified as Functor
 import Data.Functor.WithIndex qualified as FunctorWithIndex
-import Data.Int (Int)
 import Data.Int qualified as Int
 import Data.Kind (Constraint, Type)
 import Data.List.NonEmpty qualified as NonEmpty
@@ -319,7 +309,6 @@ import Data.Semiring (
   Ring (negate),
   Semiring (one, zero),
   WrappedNum (WrapNum),
-  fromInteger,
  )
 import Data.Semiring qualified as Semiring
 import Data.Set qualified as Set
@@ -342,109 +331,6 @@ import Test.Tasty.QuickCheck (QuickCheckTests)
 import Text.Read qualified as Read
 import Text.Show qualified as Show
 import Witherable qualified
-
--- | Map the first argument over the list, returning the result as a pair of
--- lists. Mainly useful for complex state, or the 'State' monad.
---
--- @since v3.0.0
-{-# INLINEABLE mapAndUnzipA #-}
-mapAndUnzipA ::
-  forall (a :: Type) (b :: Type) (c :: Type) (f :: Type -> Type).
-  (Applicative f) =>
-  (a -> f (b, c)) ->
-  [a] ->
-  f ([b], [c])
-mapAndUnzipA = Monad.mapAndUnzipM
-
--- | Generalizes 'zipWith' to arbitrary 'Applicative's.
---
--- @since v3.0.0
-{-# INLINEABLE zipWithA #-}
-zipWithA ::
-  forall (a :: Type) (b :: Type) (c :: Type) (f :: Type -> Type).
-  (Applicative f) =>
-  (a -> b -> f c) ->
-  [a] ->
-  [b] ->
-  f [c]
-zipWithA = Monad.zipWithM
-
--- | As 'zipWithA', but ignores the result: only the effects of @f@ are
--- performed.
---
--- @since v3.0.0
-{-# INLINEABLE zipWithA_ #-}
-zipWithA_ ::
-  forall (a :: Type) (b :: Type) (c :: Type) (f :: Type -> Type).
-  (Applicative f) =>
-  (a -> b -> f c) ->
-  [a] ->
-  [b] ->
-  f ()
-zipWithA_ = Monad.zipWithM_
-
--- | @'replicateA' n act@ performs the action @act@ @'max' 0 n@ times, gathering
--- the results.
---
--- @since v3.0.0
-{-# INLINEABLE replicateA #-}
-replicateA ::
-  forall (a :: Type) (f :: Type -> Type).
-  (Applicative f) =>
-  Int ->
-  f a ->
-  f [a]
-replicateA = Monad.replicateM
-
--- | As 'replicateA', but ignores the result: only the effects of @f@ are
--- performed.
---
--- @since v3.0.0
-{-# INLINEABLE replicateA_ #-}
-replicateA_ ::
-  forall (a :: Type) (f :: Type -> Type).
-  (Applicative f) =>
-  Int ->
-  f a ->
-  f ()
-replicateA_ = Monad.replicateM_
-
--- | Similar to 'comparing', but for 'Eq' instead of 'Ord'.
---
--- @since v3.0.0
-{-# INLINEABLE equating #-}
-equating ::
-  forall (a :: Type) (b :: Type).
-  (Eq a) =>
-  (b -> a) ->
-  b ->
-  b ->
-  Bool
-equating f x y = f x == f y
-
--- | Needed to ensure @if@ works properly.
---
--- @since v3.0.0
-ifThenElse ::
-  forall (a :: Type).
-  Bool ->
-  a ->
-  a ->
-  a
-ifThenElse False _ x = x
-ifThenElse True x _ = x
-
--- | Check for evenness.
---
--- @since v3.0.0
-even :: forall (a :: Type). (Euclidean a, Ring a, Eq a) => a -> Bool
-even x = (x `rem` 2) == 0
-
--- | Check for oddness.
---
--- @since v3.0.0
-odd :: forall (a :: Type). (Euclidean a, Ring a, Eq a) => a -> Bool
-odd x = (x `rem` 2) /= 0
 
 -- | Retrieve a representation of the sign of a numerical value as a type of
 -- that value. Put another way, gives 'zero' when given an argument of
@@ -479,6 +365,18 @@ abs x =
         | sig == zero -> x
         | sig == one -> x
         | otherwise -> negate x
+
+-- | Needed to ensure @if@ works properly.
+--
+-- @since v3.0.0
+ifThenElse ::
+  forall (a :: Type).
+  Bool ->
+  a ->
+  a ->
+  a
+ifThenElse False _ x = x
+ifThenElse True x _ = x
 
 -- Orphan instances
 
