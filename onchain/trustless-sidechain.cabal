@@ -19,13 +19,25 @@ source-repository head
   location: https://github.com/mlabs-haskell/trustless-sidechain
 
 -- Common sections
+flag Trace
+  description: "Enable tracing"
+  manual:      True
+  default:     False
 
 common common-lang
-  ghc-options:
-    -Wall -Wcompat -Wincomplete-record-updates
-    -Wincomplete-uni-patterns -Wredundant-constraints -Werror
-    -fexpose-all-unfoldings -fplugin-opt
-    PlutusTx.Plugin:target-version=1.0.0
+  if flag(trace)
+    ghc-options:
+      -fplugin-opt PlutusTx.Plugin:preserve-logging -Wall -Wcompat
+      -Wincomplete-record-updates -Wincomplete-uni-patterns
+      -Wredundant-constraints -Werror -fexpose-all-unfoldings
+      -fplugin-opt PlutusTx.Plugin:target-version=1.0.0
+
+  else
+    ghc-options:
+      -Wall -Wcompat -Wincomplete-record-updates
+      -Wincomplete-uni-patterns -Wredundant-constraints -Werror
+      -fexpose-all-unfoldings -fplugin-opt
+      PlutusTx.Plugin:target-version=1.0.0
 
   build-depends:      base
   default-extensions:
