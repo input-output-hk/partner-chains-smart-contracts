@@ -78,6 +78,7 @@
           haskell-language-server
           haskellPackages.cabal-fmt
           haskellPackages.fourmolu
+          haskellPackages.weeder
           hlint
           libsodium
           nixpkgs-fmt
