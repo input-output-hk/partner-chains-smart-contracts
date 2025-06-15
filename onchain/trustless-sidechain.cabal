@@ -20,6 +20,7 @@ source-repository head
 
 -- Common sections
 
+
 common common-lang
   ghc-options:
     -Wall -Wcompat -Wincomplete-record-updates
@@ -60,6 +61,10 @@ common common-lang
     ViewPatterns
 
   default-language:   Haskell2010
+
+common common-lang-traced
+  import:      common-lang
+  ghc-options: -fplugin-opt PlutusTx.Plugin:preserve-logging
 
 common common-script-lang
   ghc-options:
@@ -154,6 +159,44 @@ executable trustless-sidechain-serialise
     , trustless-sidechain-prelude
 
   hs-source-dirs: app/serialise
+
+executable trustless-sidechain-serialise-traced
+  import:
+    common-lang-traced, common-script-lang, common-optimized-parallel
+
+  main-is:        Main.hs
+  build-depends:
+    , aeson
+    , base16-bytestring
+    , bytestring
+    , cardano-api
+    , casing
+    , plutus-ledger-api
+    , plutus-shim-prelude
+    , plutus-tx
+    , plutus-tx-plugin
+    , trustless-sidechain-prelude
+
+  other-modules:
+    TrustlessSidechain.AlwaysFailingScripts
+    TrustlessSidechain.AlwaysPassingScripts
+    TrustlessSidechain.CommitteeCandidateValidator
+    TrustlessSidechain.DParameter
+    TrustlessSidechain.ExampleVFunction
+    TrustlessSidechain.Governance.MultiSig
+    TrustlessSidechain.GovernedMap
+    TrustlessSidechain.IlliquidCirculationSupply
+    TrustlessSidechain.OnlyMintMintingPolicy
+    TrustlessSidechain.PermissionedCandidates
+    TrustlessSidechain.Reserve
+    TrustlessSidechain.ScriptCache
+    TrustlessSidechain.ScriptId
+    TrustlessSidechain.Types
+    TrustlessSidechain.Types.Unsafe
+    TrustlessSidechain.Utils
+    TrustlessSidechain.Versioning
+
+  hs-source-dirs: app/serialise src
 
 -- Tests
 
