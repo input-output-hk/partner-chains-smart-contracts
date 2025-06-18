@@ -861,3 +861,6 @@ done1 ::
   k ->
   Unsafe.BuiltinList BuiltinData
 done1 f x = Unsafe.mkCons (f x) (Unsafe.mkNilData Unsafe.unitval)
+
+silly :: Int
+silly = 42
