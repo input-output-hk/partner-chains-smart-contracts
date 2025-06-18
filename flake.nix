@@ -80,6 +80,7 @@
           haskellPackages.fourmolu
           hlint
           libsodium
+          lmdb
           nixpkgs-fmt
           pkg-config
           secp256k1

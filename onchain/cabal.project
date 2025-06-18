@@ -30,7 +30,6 @@ allow-newer:
   , size-based:template-haskell
 
 constraints:
-  plutus-tx ^>= 1.27
   , cardano-api == 10.16.3.0
   , cardano-node == 10.1.4
 
@@ -50,4 +49,3 @@ source-repository-package
       src/tx-mod
       src/un-ada
       src/wallet
-
