@@ -13,6 +13,7 @@ module TrustlessSidechain.PlutusPrelude (
   ifThenElse,
   HasField (..),
   put,
+  silly,
 
   -- * Helpers for Data encoding
 
@@ -862,5 +863,5 @@ done1 ::
   Unsafe.BuiltinList BuiltinData
 done1 f x = Unsafe.mkCons (f x) (Unsafe.mkNilData Unsafe.unitval)
 
-silly :: Int
-silly = 42
+silly :: x -> x
+silly x = x
