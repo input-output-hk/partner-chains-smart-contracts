@@ -221,6 +221,13 @@ test-suite trustless-sidechain-test
     , text
     , trustless-sidechain
     , trustless-sidechain-prelude
+    , convex-base
+    , convex-coin-selection
+    , convex-devnet
+    , convex-mockchain
+    , convex-node-client
+    , un-ada
+    , convex-wallet
 
   hs-source-dirs: test
 
