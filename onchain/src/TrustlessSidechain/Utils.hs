@@ -47,7 +47,7 @@ fromJust err m =
 -- | Get amount of given currency in a value, ignoring token names.
 {-# INLINEABLE currencySymbolValueOf #-}
 currencySymbolValueOf :: Value -> CurrencySymbol -> Integer
-currencySymbolValueOf v c = maybe 0 sum $ Map.lookup c $ getValue v
+currencySymbolValueOf v c = maybe 0 sum $ Map.lookup c $ (getValue v)
 
 -- | Check that exactly on specified asset was minted by a transaction.  Note
 -- that transaction is also allowed to mint/burn tokens of the same
