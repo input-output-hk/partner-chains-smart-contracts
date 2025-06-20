@@ -82,6 +82,7 @@
           libsodium
           nixpkgs-fmt
           pkg-config
+          reviewdog
           secp256k1
           zlib
           zip
