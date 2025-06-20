@@ -77,6 +77,7 @@ module TrustlessSidechain.Types.Unsafe (
 
 import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx qualified
+import PlutusTx.Builtins (BuiltinData)
 import PlutusTx.Builtins qualified as Builtins
 import PlutusTx.List (any, filter, find, (!!))
 import TrustlessSidechain.PlutusPrelude hiding (Integer)

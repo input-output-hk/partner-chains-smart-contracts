@@ -8,12 +8,10 @@ module TrustlessSidechain.PlutusPrelude (
   PlutusTx.ToData (..),
   PlutusTx.FromData (..),
   PlutusTx.UnsafeFromData (..),
-  HaskellPrelude.fromInteger,
   divideInteger,
   ifThenElse,
   HasField (..),
   put,
-  map,
 
   -- * Helpers for Data encoding
 
@@ -56,9 +54,10 @@ import PlutusTx (
  )
 import PlutusTx.Builtins (chooseData, divideInteger, matchList)
 import PlutusTx.Builtins.Internal qualified as Unsafe
-import PlutusTx.List (map)
 import TrustlessSidechain.PlutusPrelude.TH as PlutusPrelude.TH
-import Prelude qualified as HaskellPrelude
+
+-- import Prelude (Maybe(..), Bool(..), const, ($))
+import PlutusTx.Prelude
 
 {-# INLINE ifThenElse #-}
 ifThenElse :: forall (a :: Type). Bool -> a -> a -> a

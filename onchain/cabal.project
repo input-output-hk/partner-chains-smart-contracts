@@ -28,15 +28,17 @@ package cardano-crypto-praos
 allow-newer:
     *:aeson
   , size-based:template-haskell
+  , *:plutus-core
+  , *:plutus-ledger-api
 
 constraints:
-  , cardano-api == 10.16.3.0
-  , cardano-node == 10.1.4
+  plutus-core == 1.40.0.0,
+  plutus-ledger-api == 1.40.0.0
 
 
 source-repository-package
   location: https://github.com/j-mueller/sc-tools
-  tag: fedd88a0fd8a053d1bd37faa6babc452260e88f8
+  tag: 100452e6b64200cdffcb2582be07c47e1efebb6b
   type: git
   subdir:
       src/base
