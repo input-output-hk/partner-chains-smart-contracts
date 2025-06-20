@@ -36,7 +36,7 @@ jobs:
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run:
-          nix develop --command bash -c 'hlint onchain --json | reviewdog -f=hlint --reporter=github-pr-review -level=info'
+          nix develop --command bash -c 'hlint onchain | reviewdog -f=hlint --reporter=github-pr-review -level=info'
 
       - name: Build onchain
         run: |
