@@ -13,6 +13,7 @@ module TrustlessSidechain.PlutusPrelude (
   ifThenElse,
   HasField (..),
   put,
+  map,
 
   -- * Helpers for Data encoding
 
@@ -55,7 +56,7 @@ import PlutusTx (
  )
 import PlutusTx.Builtins (chooseData, divideInteger, matchList)
 import PlutusTx.Builtins.Internal qualified as Unsafe
-import PlutusTx.Prelude hiding (fromInteger, toList)
+import PlutusTx.List (map)
 import TrustlessSidechain.PlutusPrelude.TH as PlutusPrelude.TH
 import Prelude qualified as HaskellPrelude
 
@@ -816,7 +817,7 @@ step ::
   (k -> Unsafe.BuiltinList BuiltinData -> Maybe r) ->
   Unsafe.BuiltinList BuiltinData ->
   Maybe r
-step f cb ell = matchList ell Nothing $ \x xs ->
+step f cb ell = matchList ell (\_ -> Nothing) $ \x xs ->
   case f x of
     Nothing -> Nothing
     Just x' -> cb x' xs
@@ -845,7 +846,7 @@ done ::
   Maybe d ->
   Unsafe.BuiltinList BuiltinData ->
   Maybe d
-done res ell = matchList ell res (\_ _ -> Nothing)
+done res ell = matchList ell (\_ -> res) (\_ _ -> Nothing)
 
 done' ::
   forall (k :: Type) (r :: Type).

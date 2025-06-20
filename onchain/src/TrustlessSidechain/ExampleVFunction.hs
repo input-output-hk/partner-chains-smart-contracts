@@ -40,7 +40,7 @@ mkVFunctionPolicy time _ (ScriptContext {scriptContextPurpose = Minting cs, scri
 mkVFunctionPolicy _ _ _ = False
 
 {-# INLINEABLE mkVFunctionPolicyUntyped #-}
-mkVFunctionPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkVFunctionPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
 mkVFunctionPolicyUntyped posixTime redeemer ctx =
   check
     $ mkVFunctionPolicy

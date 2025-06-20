@@ -30,7 +30,7 @@ mkAlwaysFailingValidator ::
   Bool
 mkAlwaysFailingValidator _ _ _ _ = False
 
-mkAlwaysFailingValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkAlwaysFailingValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
 mkAlwaysFailingValidatorUntyped seed datum redeemer ctx =
   check $ mkAlwaysFailingValidator seed datum redeemer ctx
 
@@ -43,7 +43,7 @@ mkAlwaysFailingPolicy :: BuiltinData -> BuiltinData -> BuiltinData -> Bool
 mkAlwaysFailingPolicy _ _ _ = False
 
 {-# INLINEABLE mkAlwaysFailingPolicyUntyped #-}
-mkAlwaysFailingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkAlwaysFailingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
 mkAlwaysFailingPolicyUntyped seed redeemer ctx =
   check $ mkAlwaysFailingPolicy seed redeemer ctx
 
