@@ -2,8 +2,8 @@
 
 module Test.TrustlessSidechain.Golden.Types (tests) where
 
-import TrustlessSidechain.HaskellPrelude
-
+import Data.ByteString.Base16 qualified as B16
+import Data.ByteString.Char8 qualified as BC
 import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusLedgerApi.V2 (POSIXTime (..), toBuiltinData)
 import Test.Tasty (TestTree, testGroup)
@@ -11,6 +11,7 @@ import Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest)
 import TrustlessSidechain.Governance.MultiSig (
   MultiSigGovParams (..),
  )
+import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.Types (
   IlliquidCirculationSupplyRedeemer (
     DepositMoreToSupply,
@@ -38,6 +39,7 @@ import TrustlessSidechain.Types (
   ReserveStats (ReserveStats),
   VersionedGenericDatum (..),
  )
+import Prelude (String)
 
 -- | Tests for all data types with @IsData@ implementation
 -- Some of the data types are only checked transitively (included by some other type)
@@ -75,6 +77,13 @@ samplePermissionedCandidatesValidatorRedeemer1 = UpdatePermissionedCandidates
 samplePermissionedCandidatesValidatorRedeemer2 :: PermissionedCandidatesValidatorRedeemer
 samplePermissionedCandidatesValidatorRedeemer2 = RemovePermissionedCandidates
 
+hexToBSUnsafe :: String -> ByteString
+hexToBSUnsafe str =
+  let bs = BC.pack str
+   in case B16.decode bs of
+        Right raw -> raw
+        Left e -> error e
+
 sampleReserveDatum :: VersionedGenericDatum ReserveDatum
 sampleReserveDatum =
   VersionedGenericDatum
@@ -83,9 +92,9 @@ sampleReserveDatum =
           { immutableSettings =
               ImmutableReserveSettings
                 (POSIXTime 1234513245)
-                (Value.AssetClass ("0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d", "asdf"))
+                (Value.AssetClass (Value.currencySymbol (hexToBSUnsafe "0281158622b7d2eb738b885e1cca50218fb36ab4dc39014b83286b8ed95c78789d"), Value.tokenName "asdf"))
           , mutableSettings =
-              MutableReserveSettings "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d" 0
+              MutableReserveSettings (Value.currencySymbol (hexToBSUnsafe "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d")) 0
           , stats = ReserveStats 15
           }
     , genericData = toBuiltinData ()

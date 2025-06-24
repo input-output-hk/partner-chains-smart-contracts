@@ -1,7 +1,7 @@
 -- Custom repository for cardano haskell packages
 -- See https://github.com/input-output-hk/cardano-haskell-packages on how to use CHaP in a Haskell project.
 repository cardano-haskell-packages
-  url: https://input-output-hk.github.io/cardano-haskell-packages
+  url: https://chap.intersectmbo.org/
   secure: True
   root-keys:
     3e0cce471cf09815f930210f7827266fd09045445d65923e6d0238a6cd15126f
@@ -11,7 +11,10 @@ repository cardano-haskell-packages
     c00aae8461a256275598500ea0e187588c35a5d5d7454fb57eac18d9edb86a56
     d4a35cd3121aa00d18544bb0ac01c3e1691d618f462c46129271bccf39f7e8ee
 
-index-state: 2024-07-16T05:49:34Z
+with-compiler: ghc-9.6.6
+index-state:
+  , hackage.haskell.org 2025-05-26T19:51:53Z
+  , cardano-haskell-packages 2025-05-26T19:51:53Z
 
 packages: ./.
 
@@ -25,7 +28,9 @@ package cardano-crypto-praos
 allow-newer:
     *:aeson
   , size-based:template-haskell
+  , *:plutus-core
+  , *:plutus-ledger-api
 
 constraints:
-
-  plutus-tx ^>= 1.27
+  plutus-core == 1.40.0.0,
+  plutus-ledger-api == 1.40.0.0

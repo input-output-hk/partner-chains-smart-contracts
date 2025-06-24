@@ -103,6 +103,8 @@ library
     TrustlessSidechain.Versioning
 
   build-depends:
+    , base16-bytestring
+    , bytestring
     , cardano-api
     , plutus-ledger-api
     , plutus-shim-prelude
@@ -230,13 +232,7 @@ test-suite script-size
 
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
-  other-modules:
-    Compiled
-    Data.Generated
-    Data.Handwritten
-    Data.Wrappers
-    Sizer
-
+  other-modules:  Sizer
   build-depends:
     , bytestring
     , plutus-core

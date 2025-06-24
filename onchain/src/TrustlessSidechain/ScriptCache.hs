@@ -35,7 +35,7 @@ mkScriptCacheUntyped ::
   BuiltinData ->
   BuiltinData ->
   BuiltinData ->
-  ()
+  BuiltinUnit
 mkScriptCacheUntyped pkh =
   mkUntypedValidator
     $ mkScriptCache

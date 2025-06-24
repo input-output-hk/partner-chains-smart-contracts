@@ -82,7 +82,7 @@ mkUntypedValidator ::
   forall (d :: Type) (r :: Type).
   (UnsafeFromData d, UnsafeFromData r) =>
   (d -> r -> ScriptContext -> Bool) ->
-  (BuiltinData -> BuiltinData -> BuiltinData -> ())
+  (BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit)
 -- We can use unsafeFromBuiltinData here as we would fail immediately anyway if
 -- parsing failed
 mkUntypedValidator f d r p =
@@ -95,7 +95,7 @@ mkUntypedMintingPolicy ::
   forall (r :: Type).
   (UnsafeFromData r) =>
   (r -> ScriptContext -> Bool) ->
-  (BuiltinData -> BuiltinData -> ())
+  (BuiltinData -> BuiltinData -> BuiltinUnit)
 -- We can use unsafeFromBuiltinData here as we would fail immediately anyway if
 -- parsing failed
 mkUntypedMintingPolicy f r p =

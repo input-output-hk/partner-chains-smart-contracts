@@ -176,7 +176,7 @@ permissionedCandidatesValidator
         approvedByGovernance vc ctx
 
 mkMintingPolicyUntyped ::
-  BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+  BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
 mkMintingPolicyUntyped genesisUtxo vc validatorAddress redeemer ctx =
   check
     $ mkMintingPolicy
@@ -191,7 +191,7 @@ serialisableMintingPolicy =
   serialiseCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
 
 mkValidatorUntyped ::
-  BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+  BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
 mkValidatorUntyped genesisUtxo vc datum redeemer ctx =
   check
     $ permissionedCandidatesValidator

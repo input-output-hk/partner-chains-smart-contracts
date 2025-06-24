@@ -113,7 +113,7 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
             >>= PlutusTx.fromBuiltinData @(VersionedGenericDatum ())
         )
 
-mkIlliquidCirculationSupplyValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkIlliquidCirculationSupplyValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
 mkIlliquidCirculationSupplyValidatorUntyped voc rd rr ctx =
   check
     $ mkIlliquidCirculationSupplyValidator
