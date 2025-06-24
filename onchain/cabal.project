@@ -1,7 +1,7 @@
 -- Custom repository for cardano haskell packages
 -- See https://github.com/input-output-hk/cardano-haskell-packages on how to use CHaP in a Haskell project.
 repository cardano-haskell-packages
-  url: https://chap.intersectmbo.org/
+  url: https://input-output-hk.github.io/cardano-haskell-packages
   secure: True
   root-keys:
     3e0cce471cf09815f930210f7827266fd09045445d65923e6d0238a6cd15126f
