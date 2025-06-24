@@ -57,8 +57,6 @@ import PlutusTx.Builtins (chooseData, divideInteger, matchList)
 import PlutusTx.Builtins.Internal qualified as Unsafe
 import TrustlessSidechain.PlutusPrelude.TH as PlutusPrelude.TH
 
--- import Prelude (Maybe(..), Bool(..), const, ($))
-
 import GHC.Num (fromInteger)
 import PlutusTx.Prelude hiding (fromInteger)
 

@@ -79,7 +79,6 @@ import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
 
--- import PlutusTx.Builtins.Internal qualified as BuiltinsInternal
 import TrustlessSidechain.PlutusPrelude hiding (BuiltinByteString, BuiltinUnit, Integer)
 import TrustlessSidechain.PlutusPrelude qualified as PTPrelude
 
@@ -119,15 +118,6 @@ unsafeDataAsMaybe bd = case Builtins.unsafeDataAsConstr bd of
   (0, [x]) -> Just x
   (1, []) -> Nothing
   _ -> traceError "unsafeDataAsMaybe: unreachable"
-
--- instance ToData PTPrelude.BuiltinUnit where
---   {-# INLINEABLE toBuiltinData #-}
---   toBuiltinData _ = (Builtins.mkList [])
-
--- instance FromData PTPrelude.BuiltinUnit where
---   {-# INLINEABLE fromBuiltinData #-}
---   fromBuiltinData d | Builtins.unsafeDataAsList d == [] = Just (Builtins.toBuiltin ())
---   fromBuiltinData _ = Nothing
 
 instance UnsafeFromData PTPrelude.BuiltinUnit where
   {-# INLINEABLE unsafeFromBuiltinData #-}
