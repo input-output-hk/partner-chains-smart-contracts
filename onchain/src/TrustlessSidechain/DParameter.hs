@@ -105,7 +105,7 @@ mkValidatorUntyped ::
   BuiltinData ->
   BuiltinData ->
   BuiltinData ->
-  ()
+  BuiltinUnit
 mkValidatorUntyped genesisUtxo vc dat redeemer ctx =
   check
     $ dParameterValidator
@@ -125,7 +125,7 @@ mkMintingPolicyUntyped ::
   BuiltinData ->
   BuiltinData ->
   BuiltinData ->
-  ()
+  BuiltinUnit
 mkMintingPolicyUntyped genesisUtxo vc validatorAddress redeemer ctx =
   check
     $ mkMintingPolicy

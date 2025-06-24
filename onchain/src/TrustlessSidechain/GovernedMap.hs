@@ -78,7 +78,7 @@ mkValidatorUntyped ::
   BuiltinData ->
   BuiltinData ->
   BuiltinData ->
-  ()
+  BuiltinUnit
 mkValidatorUntyped scriptId genesisUtxo vc dat redeemer ctx =
   check
     $ governedMapValidator
@@ -99,7 +99,7 @@ mkMintingPolicyUntyped ::
   BuiltinData ->
   BuiltinData ->
   BuiltinData ->
-  ()
+  BuiltinUnit
 mkMintingPolicyUntyped scriptId genesisUtxo vc redeemer ctx =
   check
     $ mkMintingPolicy

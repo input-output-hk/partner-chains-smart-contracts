@@ -1,6 +1,5 @@
 module Sizer (
   scriptFitsInto,
-  scriptFitsUnder,
 ) where
 
 import Data.ByteString.Short qualified
@@ -18,13 +17,6 @@ import Test.Tasty.Providers (
 import TrustlessSidechain.HaskellPrelude
 import Type.Reflection (Typeable)
 
-scriptFitsUnder ::
-  HString.String ->
-  (HString.String, SerialisedScript) ->
-  (HString.String, SerialisedScript) ->
-  TestTree
-scriptFitsUnder name test target = singleTest name $ ScriptSizeComparison @() test target
-
 scriptFitsInto ::
   HString.String ->
   SerialisedScript ->
@@ -37,7 +29,6 @@ scriptFitsInto name script limit =
 
 data SizeTest (a :: Type)
   = ScriptSizeBound SerialisedScript Integer
-  | ScriptSizeComparison (HString.String, SerialisedScript) (HString.String, SerialisedScript)
 
 instance (Typeable a) => IsTest (SizeTest a) where
   testOptions = Tagged []
@@ -62,50 +53,6 @@ instance (Typeable a) => IsTest (SizeTest a) where
             <> " (New size: "
             <> show estimate
             <> ")"
-    ScriptSizeComparison (mName, mScript) (tName, tScript) -> do
-      let tEstimate = scriptSize tScript
-      let mEstimate = scriptSize mScript
-      let diff = tEstimate - mEstimate
-      pure $ case signum diff of
-        (-1) -> testFailed . renderFailed (tName, tEstimate) (mName, mEstimate) $ diff
-        0 -> testPassed . renderEstimates (tName, tEstimate) $ (mName, mEstimate)
-        _ -> testPassed . renderExcess (tName, tEstimate) (mName, mEstimate) $ diff
-
-renderFailed ::
-  (HString.String, Integer) ->
-  (HString.String, Integer) ->
-  Integer ->
-  HString.String
-renderFailed tData mData diff =
-  renderEstimates tData mData
-    <> "Exceeded by: "
-    <> show (abs diff)
-
-renderEstimates ::
-  (HString.String, Integer) ->
-  (HString.String, Integer) ->
-  HString.String
-renderEstimates (tName, tEstimate) (mName, mEstimate) =
-  "Target: "
-    <> tName
-    <> "; size "
-    <> show tEstimate
-    <> "\n"
-    <> "Measured: "
-    <> mName
-    <> "; size "
-    <> show mEstimate
-    <> "\n"
-
-renderExcess ::
-  (HString.String, Integer) ->
-  (HString.String, Integer) ->
-  Integer ->
-  HString.String
-renderExcess tData mData diff =
-  renderEstimates tData mData
-    <> "Remaining headroom: "
-    <> show diff
 
 -- Attempt to estimate the script size.  Note that:
 --
@@ -113,7 +60,7 @@ renderExcess tData mData diff =
 --     much different from the actual size of serialized script added to the
 --     transaction.
 --
---  * We optimize the script before estiamting its size, because this gets us
+--  * We optimize the script before estimating its size, because this gets us
 --    closer to how the scripts are being serialized for the off-chain code.
 --
 --  * Plutus abandoned CBOR serialization in favour of flat serialization. See

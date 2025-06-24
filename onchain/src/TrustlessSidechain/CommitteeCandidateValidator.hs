@@ -42,7 +42,7 @@ committeeCandidateValidatorUntyped ::
   BuiltinData ->
   BuiltinData ->
   BuiltinData ->
-  ()
+  BuiltinUnit
 committeeCandidateValidatorUntyped genesisUtxo datum red ctx =
   check
     $ mkCommitteeCandidateValidator

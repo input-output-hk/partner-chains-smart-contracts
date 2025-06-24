@@ -23,7 +23,7 @@ import TrustlessSidechain.Utils (currencySymbolValueOf, mkUntypedMintingPolicy)
 -- wish to do so in order to allow recovering minAda.
 mkOnlyMintMintingPolicy ::
   BuiltinData ->
-  () -> -- no redeemer
+  BuiltinUnit -> -- no redeemer
   ScriptContext ->
   Bool
 mkOnlyMintMintingPolicy _ _ (ScriptContext txInfo (Minting currSymbol)) =
@@ -41,7 +41,7 @@ mkOnlyMintMintingPolicyUntyped ::
   BuiltinData ->
   -- | ScriptContext
   BuiltinData ->
-  ()
+  BuiltinUnit
 mkOnlyMintMintingPolicyUntyped genesisUtxo =
   mkUntypedMintingPolicy $ mkOnlyMintMintingPolicy (unsafeFromBuiltinData genesisUtxo)
 

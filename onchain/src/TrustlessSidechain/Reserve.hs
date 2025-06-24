@@ -319,7 +319,7 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
     noOtherTokensButReserveAuthBurntAndGovernanceMinted :: Bool
     noOtherTokensButReserveAuthBurntAndGovernanceMinted = kindsOfTokenMinted 2
 
-mkReserveValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkReserveValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
 mkReserveValidatorUntyped voc rd rr ctx =
   check
     $ mkReserveValidator
@@ -431,7 +431,7 @@ mkReserveAuthPolicy voc _ ctx =
         tokenKind' = get @"tokenKind" . get @"immutableSettings" $ datum reserveUtxoDatum
 
 {-# INLINEABLE mkReserveAuthPolicyUntyped #-}
-mkReserveAuthPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkReserveAuthPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
 mkReserveAuthPolicyUntyped voc red ctx =
   check
     $ mkReserveAuthPolicy

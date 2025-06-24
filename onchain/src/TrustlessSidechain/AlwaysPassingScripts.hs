@@ -17,6 +17,7 @@ import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude (
   Bool (True),
   BuiltinData,
+  BuiltinUnit,
   Integer,
   check,
   ($),
@@ -37,7 +38,7 @@ mkAlwaysPassingValidator ::
   Bool
 mkAlwaysPassingValidator _ _ _ _ = True
 
-mkAlwaysPassingValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkAlwaysPassingValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
 mkAlwaysPassingValidatorUntyped seed datum redeemer ctx =
   check
     $ mkAlwaysPassingValidator
@@ -55,7 +56,7 @@ mkAlwaysPassingPolicy :: Integer -> BuiltinData -> Unsafe.ScriptContext -> Bool
 mkAlwaysPassingPolicy _ _ _ = True
 
 {-# INLINEABLE mkAlwaysPassingPolicyUntyped #-}
-mkAlwaysPassingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+mkAlwaysPassingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
 mkAlwaysPassingPolicyUntyped seed redeemer ctx =
   check
     $ mkAlwaysPassingPolicy

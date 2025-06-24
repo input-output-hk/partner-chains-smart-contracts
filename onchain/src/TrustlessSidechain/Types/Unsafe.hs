@@ -78,7 +78,8 @@ module TrustlessSidechain.Types.Unsafe (
 import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx qualified
 import PlutusTx.Builtins qualified as Builtins
-import TrustlessSidechain.PlutusPrelude hiding (Integer)
+
+import TrustlessSidechain.PlutusPrelude hiding (BuiltinByteString, BuiltinUnit, Integer)
 import TrustlessSidechain.PlutusPrelude qualified as PTPrelude
 
 class Packable a where
@@ -117,6 +118,11 @@ unsafeDataAsMaybe bd = case Builtins.unsafeDataAsConstr bd of
   (0, [x]) -> Just x
   (1, []) -> Nothing
   _ -> traceError "unsafeDataAsMaybe: unreachable"
+
+instance UnsafeFromData PTPrelude.BuiltinUnit where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData d | Builtins.unsafeDataAsList d == [] = Builtins.toOpaque ()
+  unsafeFromBuiltinData _ = error ()
 
 makeUnsafeNewtypes ''V2.StakingCredential
 makeUnsafeNewtypes ''V2.Address

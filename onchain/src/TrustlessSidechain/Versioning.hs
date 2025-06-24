@@ -1,6 +1,8 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | 'TrustlessSidechain.Versioning' module implements script versioning system.
 -- It provides VersionOraclePolicy for minting tokens that store versioned
@@ -30,7 +32,7 @@ import PlutusLedgerApi.V2.Contexts (txInfoInputs, txInfoReferenceInputs)
 import PlutusTx qualified
 import PlutusTx.AssocMap (lookup, toList)
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
-import TrustlessSidechain.PlutusPrelude
+import TrustlessSidechain.PlutusPrelude hiding (toList)
 import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Utils (
@@ -130,6 +132,7 @@ instance UnsafeFromData VersionOracleConfig where
 
 -- | Token name for versioning tokens.  Must match definition in off-chain
 -- | module.
+{-# INLINEABLE versionOracleTokenName #-}
 versionOracleTokenName :: TokenName
 versionOracleTokenName = TokenName "Version oracle"
 
@@ -284,7 +287,7 @@ mkVersionOraclePolicyUntyped ::
   BuiltinData ->
   -- | ScriptContext
   BuiltinData ->
-  ()
+  BuiltinUnit
 mkVersionOraclePolicyUntyped genesisUtxo validatorAddress redeemer ctx =
   check
     $ mkVersionOraclePolicy
@@ -349,7 +352,7 @@ mkVersionOracleValidatorUntyped ::
   BuiltinData ->
   -- | ScriptContext
   BuiltinData ->
-  ()
+  BuiltinUnit
 mkVersionOracleValidatorUntyped genesisUtxo datum redeemer ctx =
   check
     $ mkVersionOracleValidator

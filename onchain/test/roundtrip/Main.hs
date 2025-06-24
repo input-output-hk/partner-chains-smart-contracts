@@ -4,7 +4,7 @@ module Main (main) where
 
 import GHC.Exts (fromList)
 import Laws (toDataSafeLaws', toDataUnsafeLaws')
-import PlutusLedgerApi.V1.Value (AssetClass (AssetClass))
+import PlutusLedgerApi.V1.Value (AssetClass (AssetClass), adaToken)
 import PlutusLedgerApi.V2 (
   CurrencySymbol (CurrencySymbol),
   POSIXTime (POSIXTime),
@@ -89,7 +89,7 @@ genRD = do
 
   pure
     $ ReserveDatum
-      (ImmutableReserveSettings (POSIXTime pt) (AssetClass (cs1, "")))
+      (ImmutableReserveSettings (POSIXTime pt) (AssetClass (cs1, adaToken)))
       (MutableReserveSettings cs2 i)
       (ReserveStats c)
 
@@ -189,7 +189,7 @@ instance Arbitrary ArbitraryPubKeyHash where
   arbitrary =
     ArbitraryPubKeyHash
       . PubKeyHash
-      . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
+      . PTPrelude.toBuiltin
       . fromList @ByteString
       <$> vectorOf 28 arbitrary
 
@@ -221,6 +221,6 @@ instance Arbitrary ArbitraryCurrencySymbol where
   arbitrary =
     ArbitraryCurrencySymbol
       . CurrencySymbol
-      . PTPrelude.toBuiltin @_ @PTPrelude.BuiltinByteString
+      . PTPrelude.toBuiltin
       . fromList @ByteString
       <$> vectorOf 28 arbitrary

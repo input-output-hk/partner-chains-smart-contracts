@@ -98,7 +98,7 @@ mkGovernanceMultiSigPolicyUntyped ::
   BuiltinData ->
   -- | ScriptContext
   BuiltinData ->
-  ()
+  BuiltinUnit
 mkGovernanceMultiSigPolicyUntyped params red ctx =
   check
     $ mkGovernanceMultiSigPolicy
