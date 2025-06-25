@@ -44,3 +44,5 @@ sed -i -r "s/^version:(\s*)\S+$/version:\1$next_version/" $cabalfile
 sed -i -r "s/@since (U|u)nreleased/@since v$next_version/" $hsfiles
 # shellcheck disable=SC2086
 cargo set-version --manifest-path raw-scripts/Cargo.toml $next_version
+# shellcheck disable=SC2086
+cargo set-version --manifest-path raw-scripts-traced/Cargo.toml $next_version

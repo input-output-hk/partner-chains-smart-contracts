@@ -1,4 +1,4 @@
-name: 'Partner Chains Smart Contracts CI'
+name: "Partner Chains Smart Contracts CI"
 on:
   pull_request:
   push:
@@ -15,7 +15,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    runs-on: [ self-hosted, Linux ]
+    runs-on: [self-hosted, Linux]
     env:
       # Modify this value to "invalidate" the cabal cache.
       CABAL_CACHE_VERSION: "2024-11-14"
@@ -37,7 +37,10 @@ jobs:
           cd onchain
           nix develop --command "make"
 
-      - name: Build raw scripts crate
+      - name: Build raw scripts crates
         run: |
           cd raw-scripts
+          nix develop --command "make"
+          cd ..
+          cd raw-scripts-traced
           nix develop --command "make"
