@@ -211,15 +211,26 @@ test-suite trustless-sidechain-test
     Test.TrustlessSidechain.Golden.Types
     Test.TrustlessSidechain.Golden.Versioning
     Test.TrustlessSidechain.GoldenTest
+    Test.TrustlessSidechain.Transactions
 
   build-depends:
     , base16-bytestring
     , bytestring
+    , cardano-api
+    , convex-base
+    , convex-coin-selection
+    , convex-devnet
+    , convex-mockchain
+    , convex-node-client
+    , convex-optics
+    , convex-wallet
+    , HUnit
     , plutus-ledger-api
     , plutus-shim-prelude
     , plutus-tx
     , tasty
     , tasty-golden
+    , tasty-hunit
     , text
     , trustless-sidechain
     , trustless-sidechain-prelude
