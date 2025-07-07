@@ -3,6 +3,8 @@
 
 module TrustlessSidechain.PlutusPrelude (
   module PlutusTx.Prelude,
+  module PlutusTx.List,
+  module PlutusTx.Foldable,
   module PlutusPrelude.TH,
   GHC.IsString (..),
   PlutusTx.ToData (..),
@@ -58,6 +60,8 @@ import PlutusTx.Builtins.Internal qualified as Unsafe
 import TrustlessSidechain.PlutusPrelude.TH as PlutusPrelude.TH
 
 import GHC.Num (fromInteger)
+import PlutusTx.Foldable (sum)
+import PlutusTx.List
 import PlutusTx.Prelude hiding (fromInteger)
 
 {-# INLINE ifThenElse #-}

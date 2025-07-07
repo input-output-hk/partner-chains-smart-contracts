@@ -32,7 +32,7 @@ import PlutusLedgerApi.V2.Contexts (txInfoInputs, txInfoReferenceInputs)
 import PlutusTx qualified
 import PlutusTx.AssocMap (lookup, toList)
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
-import TrustlessSidechain.PlutusPrelude hiding (toList)
+import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Utils (
