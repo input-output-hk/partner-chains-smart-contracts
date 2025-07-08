@@ -6,7 +6,7 @@ import Data.ByteString.Char8 qualified as BC
 import Data.Either (Either (..))
 import Data.String
 import GHC.Num (fromInteger)
-import PlutusLedgerApi.V1 (currencySymbol)
+import PlutusLedgerApi.V1.Data.Value (currencySymbol)
 import Test.Tasty (TestTree, testGroup)
 import Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest)
 import TrustlessSidechain.Versioning (

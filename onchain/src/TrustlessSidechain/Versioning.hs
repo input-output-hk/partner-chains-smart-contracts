@@ -15,9 +15,7 @@ module TrustlessSidechain.Versioning (
   mkVersionOraclePolicy,
   mkVersionOracleValidator,
   getVersionedValidatorAddress,
-  getVersionedValidatorAddressUnsafe,
   getVersionedCurrencySymbol,
-  getVersionedCurrencySymbolUnsafe,
   approvedByGovernance,
   VersionOracle (..),
   VersionOracleDatum (..),
@@ -25,140 +23,51 @@ module TrustlessSidechain.Versioning (
   VersionOraclePolicyRedeemer,
 ) where
 
-import PlutusLedgerApi.V1.Address (scriptHashAddress)
-import PlutusLedgerApi.V1.Value (getValue, valueOf)
-import PlutusLedgerApi.V2 (Address, CurrencySymbol (CurrencySymbol), Datum (Datum), OutputDatum (OutputDatum), ScriptContext (ScriptContext), ScriptHash (ScriptHash), SerialisedScript, TokenName (TokenName), TxInInfo (TxInInfo), TxOut (TxOut), Value, serialiseCompiledCode)
-import PlutusLedgerApi.V2.Contexts (txInfoInputs, txInfoReferenceInputs)
+import PlutusLedgerApi.Data.V2 (
+  Address,
+  CurrencySymbol (CurrencySymbol),
+  Datum (Datum),
+  ScriptContext,
+  ScriptHash (ScriptHash),
+  SerialisedScript,
+  TokenName (TokenName),
+  TxOutRef,
+  Value,
+  scriptContextTxInfo,
+  serialiseCompiledCode,
+  txInInfoOutRef,
+  txInInfoResolved,
+  txInfoInputs,
+  txInfoMint,
+  txInfoOutputs,
+  txInfoReferenceInputs,
+  txOutAddress,
+  txOutValue,
+  pattern Minting,
+  pattern OutputDatum,
+  pattern ScriptContext,
+  pattern Spending,
+  pattern TxInInfo,
+  pattern TxOut,
+ )
+import PlutusLedgerApi.V1.Data.Address (scriptHashAddress)
+import PlutusLedgerApi.V1.Data.Value (getValue, valueOf)
+import PlutusLedgerApi.V2.Data.Contexts (findOwnInput)
 import PlutusTx qualified
-import PlutusTx.AssocMap (lookup, toList)
-import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
+import PlutusTx.Data.AssocMap (lookup, toSOPList)
+import PlutusTx.Data.List qualified as List
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.ScriptId qualified as ScriptId
-import TrustlessSidechain.Types.Unsafe qualified as Unsafe
+import TrustlessSidechain.Types
 import TrustlessSidechain.Utils (
-  fromJust,
   fromSingleton,
  )
-
--- | Datum attached to 'VersionOraclePolicy' tokens stored on the
--- 'VersionOracleValidator' script.
---
--- @since v5.0.0
-newtype VersionOracle = VersionOracle
-  { scriptId :: Integer
-  -- ^ Unique identifier of the validator.
-  -- @since v5.0.0
-  }
-  deriving stock (TSPrelude.Show, TSPrelude.Eq)
-
--- | @since v5.0.0
-instance ToData VersionOracle where
-  {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData VersionOracle {scriptId} =
-    toBuiltinData scriptId
-
--- | @since v5.0.0
-instance FromData VersionOracle where
-  {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData x = VersionOracle <$> fromBuiltinData x
-
--- | @since v5.0.0
-instance UnsafeFromData VersionOracle where
-  {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData x = VersionOracle $ unsafeFromBuiltinData x
-
--- | @since v5.0.0
-instance Eq VersionOracle where
-  VersionOracle s == VersionOracle s' = s == s'
-
--- | Datum attached to 'VersionOraclePolicy' tokens stored on the
--- 'VersionOracleValidator' script.
-data VersionOracleDatum = VersionOracleDatum
-  { versionOracle :: VersionOracle
-  -- ^ VersionOracle which identifies the script.
-  -- @since v6.0.0
-  , currencySymbol :: CurrencySymbol
-  -- ^ Currency Symbol of the VersioningOraclePolicy tokens.
-  -- @since v6.0.0
-  }
-  deriving stock (TSPrelude.Show, TSPrelude.Eq)
-
--- | @since v6.0.0
-instance ToData VersionOracleDatum where
-  {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData VersionOracleDatum {versionOracle, currencySymbol} =
-    productToData2 versionOracle currencySymbol
-
--- | @since v6.0.0
-instance FromData VersionOracleDatum where
-  {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData = productFromData2 VersionOracleDatum
-
--- | @since v6.0.0
-instance UnsafeFromData VersionOracleDatum where
-  {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData = productUnsafeFromData2 VersionOracleDatum
-
--- | @since v6.0.0
-instance Eq VersionOracleDatum where
-  VersionOracleDatum vO c == VersionOracleDatum vO' c' = vO == vO' && c == c'
-
--- | Configuration of the versioning system.  Contains currency symbol of
--- VersionOraclePolicy tokens.  Required to identify versioning tokens that can
--- be trusted.
---
--- @since v5.0.0
-newtype VersionOracleConfig = VersionOracleConfig
-  { versionOracleCurrencySymbol :: CurrencySymbol
-  -- ^ @since v5.0.0
-  }
-  deriving stock (TSPrelude.Show, TSPrelude.Eq)
-
--- | @since v5.0.0
-instance ToData VersionOracleConfig where
-  {-# INLINEABLE toBuiltinData #-}
-  toBuiltinData VersionOracleConfig {versionOracleCurrencySymbol} =
-    toBuiltinData versionOracleCurrencySymbol
-
--- | @since v5.0.0
-instance FromData VersionOracleConfig where
-  {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData x = VersionOracleConfig <$> fromBuiltinData x
-
--- | @since v5.0.0
-instance UnsafeFromData VersionOracleConfig where
-  {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData = VersionOracleConfig . unsafeFromBuiltinData
 
 -- | Token name for versioning tokens.  Must match definition in off-chain
 -- | module.
 {-# INLINEABLE versionOracleTokenName #-}
 versionOracleTokenName :: TokenName
 versionOracleTokenName = TokenName "Version oracle"
-
--- | Redeemer for the versioning oracle minting policy that instructs the script
--- whether to mint or burn versioning tokens.
---
--- @since v5.0.0
-data VersionOraclePolicyRedeemer
-  = -- | Mint versioning tokens from init tokens.  Used during sidechain
-    -- initialization.
-    -- @since v6.0.0
-    InitializeVersionOracle VersionOracle ScriptHash
-  | -- | Mint a new versioning token ensuring it contains correct datum and
-    -- reference script.
-    -- @since v5.0.0
-    MintVersionOracle VersionOracle ScriptHash
-  | -- | Burn existing versioning token.
-    -- @since v5.0.0
-    BurnVersionOracle VersionOracle
-
-PlutusTx.makeIsDataIndexed
-  ''VersionOraclePolicyRedeemer
-  [ ('InitializeVersionOracle, 0)
-  , ('MintVersionOracle, 1)
-  , ('BurnVersionOracle, 2)
-  ]
 
 -- | Manages minting and burning of versioning tokens.  (Note that these are
 -- ordinary tokens, not NFTs.)  No restrictions are placed on minting initial
@@ -192,12 +101,12 @@ PlutusTx.makeIsDataIndexed
 --
 --   ERROR-VERSION-POLICY-10: Script purpose is not Minting.
 mkVersionOraclePolicy ::
-  Unsafe.TxOutRef ->
+  TxOutRef ->
   Address ->
   VersionOraclePolicyRedeemer ->
-  Unsafe.ScriptContext ->
+  ScriptContext ->
   Bool
-mkVersionOraclePolicy genesisUtxo validatorAddress redeemer ctx =
+mkVersionOraclePolicy genesisUtxo validatorAddress redeemer ctx@(ScriptContext txInfo (Minting currSym)) =
   case redeemer of
     InitializeVersionOracle versionOracle scriptHash ->
       traceIfFalse "ERROR-VERSION-POLICY-01" isGenesisUtxoUsed
@@ -214,18 +123,11 @@ mkVersionOraclePolicy genesisUtxo validatorAddress redeemer ctx =
   where
     isGenesisUtxoUsed :: Bool
     isGenesisUtxoUsed =
-      genesisUtxo `elem` map Unsafe.txInInfoOutRef (Unsafe.txInfoInputs $ Unsafe.scriptContextTxInfo ctx)
-
-    txInfo = Unsafe.scriptContextTxInfo ctx
-
-    currSym =
-      fromJust "ERROR-ORACLE-POLICY-10"
-        $ Unsafe.decode
-        <$> (Unsafe.getMinting . Unsafe.scriptContextPurpose $ ctx)
+      List.any ((genesisUtxo ==) . txInInfoOutRef) (txInfoInputs $ scriptContextTxInfo ctx)
 
     mintOneVersionToken :: Bool
     mintOneVersionToken =
-      valueOf (Unsafe.decode $ Unsafe.txInfoMint txInfo) currSym versionOracleTokenName == 1
+      valueOf (txInfoMint txInfo) currSym versionOracleTokenName == 1
 
     -- Check that this transaction mints a token with correct datum and script
     -- hash.
@@ -233,7 +135,7 @@ mkVersionOraclePolicy genesisUtxo validatorAddress redeemer ctx =
     verifyOut versionOracle scriptHash =
       [ True
       | (TxOut address value (OutputDatum (Datum datum)) (Just scriptHash')) <-
-          Unsafe.decode <$> Unsafe.txInfoOutputs txInfo
+          List.toSOP $ txInfoOutputs txInfo
       , address == validatorAddress
       , Just (VersionOracleDatum versionOracle' _) <-
           [PlutusTx.fromBuiltinData datum]
@@ -256,7 +158,7 @@ mkVersionOraclePolicy genesisUtxo validatorAddress redeemer ctx =
     versionInputPresent oldVersion =
       [ True
       | TxInInfo _ (TxOut address value (OutputDatum (Datum datum)) _) <-
-          Unsafe.decode <$> Unsafe.txInfoInputs txInfo
+          List.toSOP $ txInfoInputs txInfo
       , address == validatorAddress
       , Just (VersionOracleDatum oldVersion' _) <-
           [PlutusTx.fromBuiltinData datum]
@@ -273,9 +175,10 @@ mkVersionOraclePolicy genesisUtxo validatorAddress redeemer ctx =
     versionOutputAbsent =
       null
         [ ()
-        | txOut <- Unsafe.txInfoOutputs txInfo
-        , valueOf (Unsafe.decode $ Unsafe.txOutValue txOut) currSym versionOracleTokenName > 0
+        | txOut <- List.toSOP $ txInfoOutputs txInfo
+        , valueOf (txOutValue txOut) currSym versionOracleTokenName > 0
         ]
+mkVersionOraclePolicy _ _ _ _ = traceError "ERROR-ORACLE-POLICY-10"
 
 {-# INLINEABLE mkVersionOraclePolicyUntyped #-}
 mkVersionOraclePolicyUntyped ::
@@ -291,10 +194,10 @@ mkVersionOraclePolicyUntyped ::
 mkVersionOraclePolicyUntyped genesisUtxo validatorAddress redeemer ctx =
   check
     $ mkVersionOraclePolicy
-      (Unsafe.wrap genesisUtxo)
+      (unsafeFromBuiltinData genesisUtxo)
       (unsafeFromBuiltinData validatorAddress)
       (unsafeFromBuiltinData redeemer)
-      (Unsafe.wrap ctx)
+      (unsafeFromBuiltinData ctx)
 
 serialisableVersionOraclePolicy ::
   SerialisedScript
@@ -311,36 +214,33 @@ mkVersionOracleValidator ::
   BuiltinData ->
   VersionOracleDatum ->
   VersionOracle ->
-  Unsafe.ScriptContext ->
+  ScriptContext ->
   Bool
 mkVersionOracleValidator
   _genesisUtxo
   (VersionOracleDatum versionOracle currencySymbol)
   versionOracle'
-  ctx =
+  ctx@(ScriptContext txInfo (Spending _currSym)) =
     traceIfFalse "ERROR-VERSION-ORACLE-01" signedByGovernanceAuthority
       && traceIfFalse "ERROR-VERSION-ORACLE-02" versionOraclesMatch
       && traceIfFalse "ERROR-VERSION-ORACLE-03" versionOutputAbsent
-      && traceIfFalse "ERROR-VERSION-ORACLE-04" isSpending
     where
-      isSpending = isJust $ Unsafe.getSpending $ Unsafe.scriptContextPurpose ctx
-
-      txInfo = Unsafe.scriptContextTxInfo ctx -- Check that transaction was approved by governance authority
       signedByGovernanceAuthority =
         approvedByGovernance (VersionOracleConfig currencySymbol) ctx
 
       -- Check that version oracle in the datum matches the redeemer
       versionOraclesMatch = versionOracle == versionOracle'
 
-      ownAddress = case Unsafe.findOwnInput ctx of
-        Just txIn -> Unsafe.txOutAddress $ Unsafe.txInInfoResolved txIn
+      ownAddress = case findOwnInput ctx of
+        Just txIn -> txOutAddress $ txInInfoResolved txIn
         _ -> traceError "ERROR-VERSION-ORACLE-05"
 
       -- Check that transaction doesn't output any version tokens.
       versionOutputAbsent =
-        all
-          (\txOut -> (Unsafe.txOutAddress txOut == ownAddress) || valueOf (Unsafe.decode $ Unsafe.txOutValue txOut) currencySymbol versionOracleTokenName <= 0)
-          (Unsafe.txInfoOutputs txInfo)
+        List.all
+          (\txOut -> (txOutAddress txOut == ownAddress) || valueOf (txOutValue txOut) currencySymbol versionOracleTokenName <= 0)
+          (txInfoOutputs txInfo)
+mkVersionOracleValidator _ _ _ _ = traceError "ERROR-VERSION-ORACLE-04"
 
 {-# INLINEABLE mkVersionOracleValidatorUntyped #-}
 mkVersionOracleValidatorUntyped ::
@@ -359,7 +259,7 @@ mkVersionOracleValidatorUntyped genesisUtxo datum redeemer ctx =
       genesisUtxo
       (PlutusTx.unsafeFromBuiltinData datum)
       (PlutusTx.unsafeFromBuiltinData redeemer)
-      (Unsafe.wrap ctx)
+      (unsafeFromBuiltinData ctx)
 
 serialisableVersionOracleValidator ::
   SerialisedScript
@@ -379,15 +279,6 @@ getVersionedValidatorAddress ::
 getVersionedValidatorAddress voConfig vo =
   scriptHashAddress . ScriptHash . getVersionedScriptHash voConfig vo
 
-{-# INLINEABLE getVersionedValidatorAddressUnsafe #-}
-getVersionedValidatorAddressUnsafe ::
-  VersionOracleConfig ->
-  VersionOracle ->
-  Unsafe.ScriptContext ->
-  Address
-getVersionedValidatorAddressUnsafe voConfig vo =
-  scriptHashAddress . ScriptHash . getVersionedScriptHashUnsafe voConfig vo
-
 -- | Searches for a specified minting policy passed as a reference input.  Note
 -- that if requested script ID corresponds to a validator this function will
 -- return a result anyway without reporting any errors.
@@ -399,15 +290,6 @@ getVersionedCurrencySymbol ::
   CurrencySymbol
 getVersionedCurrencySymbol voConfig vo sc =
   CurrencySymbol (getVersionedScriptHash voConfig vo sc)
-
-{-# INLINEABLE getVersionedCurrencySymbolUnsafe #-}
-getVersionedCurrencySymbolUnsafe ::
-  VersionOracleConfig ->
-  VersionOracle ->
-  Unsafe.ScriptContext ->
-  CurrencySymbol
-getVersionedCurrencySymbolUnsafe voConfig vo sc =
-  CurrencySymbol (getVersionedScriptHashUnsafe voConfig vo sc)
 
 -- | Searches script context for a reference input containing specified script
 -- as a reference input.  Said reference input must come from
@@ -437,38 +319,7 @@ getVersionedScriptHash
               (OutputDatum (Datum datum))
               (Just (ScriptHash hash))
             ) <-
-          txInfoReferenceInputs txInfo ++ txInfoInputs txInfo
-        , -- 1. Contains datum that matches desired version and scriptId.
-        Just (VersionOracleDatum versionOracle' _) <- [PlutusTx.fromBuiltinData datum]
-        , versionOracle' == versionOracle
-        , -- 2. Contains exactly one VersionOraclePolicy token.
-        valueOf value versionOracleCurrencySymbol versionOracleTokenName == 1
-        ]
-
-{-# INLINEABLE getVersionedScriptHashUnsafe #-}
-getVersionedScriptHashUnsafe ::
-  VersionOracleConfig ->
-  VersionOracle ->
-  Unsafe.ScriptContext ->
-  BuiltinByteString
-getVersionedScriptHashUnsafe
-  VersionOracleConfig {versionOracleCurrencySymbol}
-  versionOracle
-  sc =
-    fromSingleton "ERROR-VERSION-CURRENCY-01"
-      $ [ hash
-        | -- Lookup reference input that:
-        TxInInfo
-          _
-          ( TxOut
-              _
-              value
-              (OutputDatum (Datum datum))
-              (Just (ScriptHash hash))
-            ) <-
-          PlutusTx.unsafeFromBuiltinData
-            . Unsafe.unTxInInfo
-            <$> ((\x -> Unsafe.txInfoReferenceInputs x ++ Unsafe.txInfoInputs x) . Unsafe.scriptContextTxInfo $ sc)
+          List.toSOP (txInfoReferenceInputs txInfo `List.append` txInfoInputs txInfo)
         , -- 1. Contains datum that matches desired version and scriptId.
         Just (VersionOracleDatum versionOracle' _) <- [PlutusTx.fromBuiltinData datum]
         , versionOracle' == versionOracle
@@ -484,7 +335,7 @@ getVersionedScriptHashUnsafe
 {-# INLINEABLE approvedByGovernance #-}
 approvedByGovernance ::
   VersionOracleConfig ->
-  Unsafe.ScriptContext ->
+  ScriptContext ->
   Bool
 approvedByGovernance voc ctx =
   case ofGovernanceCs of
@@ -493,14 +344,14 @@ approvedByGovernance voc ctx =
   where
     ofGovernanceCs :: Maybe [(TokenName, Integer)]
     ofGovernanceCs =
-      fmap toList . lookup governanceTokenCurrencySymbol . getValue $ minted
+      fmap toSOPList . lookup governanceTokenCurrencySymbol . getValue $ minted
 
     governanceTokenCurrencySymbol :: CurrencySymbol
     governanceTokenCurrencySymbol =
-      getVersionedCurrencySymbolUnsafe
+      getVersionedCurrencySymbol
         voc
         (VersionOracle {scriptId = ScriptId.governancePolicyId})
         ctx
 
     minted :: Value
-    minted = Unsafe.decode . Unsafe.txInfoMint . Unsafe.scriptContextTxInfo $ ctx
+    minted = txInfoMint . scriptContextTxInfo $ ctx

@@ -11,11 +11,11 @@ module TrustlessSidechain.CommitteeCandidateValidator (
 ) where
 
 import PlutusLedgerApi.Common (SerialisedScript)
-import PlutusLedgerApi.V2 (PubKeyHash, serialiseCompiledCode)
+import PlutusLedgerApi.Data.V2 (PubKeyHash, ScriptContext, TxInfo, scriptContextTxInfo, serialiseCompiledCode)
+import PlutusLedgerApi.V2.Data.Contexts (txSignedBy)
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.Types (VersionedGenericDatum (..))
-import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 
 {-# INLINEABLE mkCommitteeCandidateValidator #-}
 -- OnChain error descriptions:
@@ -26,15 +26,15 @@ mkCommitteeCandidateValidator ::
   BuiltinData ->
   VersionedGenericDatum PubKeyHash ->
   BuiltinData ->
-  Unsafe.ScriptContext ->
+  ScriptContext ->
   Bool
 mkCommitteeCandidateValidator _genesisUtxo (VersionedGenericDatum {datum = pkh}) _redeemer ctx =
   traceIfFalse "ERROR-COMMITTEE-CANDIDATE-VALIDATOR-01" isSigned
   where
-    info :: Unsafe.TxInfo
-    info = Unsafe.scriptContextTxInfo ctx
+    info :: TxInfo
+    info = scriptContextTxInfo ctx
     isSigned :: Bool
-    isSigned = Unsafe.txSignedBy info pkh
+    isSigned = txSignedBy info pkh
 
 {-# INLINEABLE committeeCandidateValidatorUntyped #-}
 committeeCandidateValidatorUntyped ::
@@ -49,7 +49,7 @@ committeeCandidateValidatorUntyped genesisUtxo datum red ctx =
       genesisUtxo
       (unsafeFromBuiltinData datum)
       red
-      (Unsafe.ScriptContext ctx)
+      (unsafeFromBuiltinData ctx)
 
 serialisableValidator :: SerialisedScript
 serialisableValidator =

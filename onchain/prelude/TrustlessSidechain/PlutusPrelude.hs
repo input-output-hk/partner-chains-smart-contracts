@@ -5,7 +5,6 @@ module TrustlessSidechain.PlutusPrelude (
   module PlutusTx.Prelude,
   module PlutusTx.List,
   module PlutusTx.Foldable,
-  module PlutusPrelude.TH,
   GHC.IsString (..),
   PlutusTx.ToData (..),
   PlutusTx.FromData (..),
@@ -54,7 +53,6 @@ import PlutusTx (
  )
 import PlutusTx.Builtins (chooseData, divideInteger, matchList)
 import PlutusTx.Builtins.Internal qualified as Unsafe
-import TrustlessSidechain.PlutusPrelude.TH as PlutusPrelude.TH
 
 import GHC.Num (fromInteger)
 import PlutusTx.Foldable (sum)

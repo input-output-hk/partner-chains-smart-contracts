@@ -9,18 +9,24 @@ module TrustlessSidechain.Governance.MultiSig (
 ) where
 
 import PlutusLedgerApi.Common (SerialisedScript)
-import PlutusLedgerApi.V2 (PubKeyHash, serialiseCompiledCode)
+import PlutusLedgerApi.Data.V2 (PubKeyHash, ScriptContext, TxInfo, scriptContextTxInfo, serialiseCompiledCode)
+import PlutusLedgerApi.V2.Data.Contexts (txSignedBy)
 import PlutusTx
 import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.Types.Unsafe qualified as Unsafe
+
+-- ScriptContext
+-- TxInfo
+-- scriptContextTxInfo
+-- txSignedBy
+-- ScriptContext
 
 -- | Parameters of the security mechanism.  Note that setting
 -- `requiredSignatures` to a value greater than `length governanceMembers` will
 -- result in governance that can never approve anything.
 --
 -- NOTE: the order of entries in the `governanceMembers` matters!  Since
--- `MultiSigGovParams` is used to parameterize the multi-sognature governance
+-- `MultiSigGovParams` is used to parameterize the multi-signature governance
 -- minting policy, changing the order of elements will change the hash of the
 -- policy.
 --
@@ -49,7 +55,7 @@ instance UnsafeFromData MultiSigGovParams where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 MultiSigGovParams
 
--- | N-out-of-M multisignature governance check.
+-- | N-out-of-M multi-signature governance check.
 --
 -- When passed the `MultiSignatureCheck` redeemer this policy checks that the
 -- transaction has at least N out of M required signatures, as specified by the
@@ -62,13 +68,13 @@ instance UnsafeFromData MultiSigGovParams where
 mkGovernanceMultiSigPolicy ::
   MultiSigGovParams ->
   BuiltinData ->
-  Unsafe.ScriptContext ->
+  ScriptContext ->
   Bool
 mkGovernanceMultiSigPolicy MultiSigGovParams {..} _ ctx =
   traceIfFalse "ERROR-MULTISIG-GOV-POLICY-01" enoughSignatures
   where
-    txInfo :: Unsafe.TxInfo
-    txInfo = Unsafe.scriptContextTxInfo ctx
+    txInfo :: TxInfo
+    txInfo = scriptContextTxInfo ctx
 
     -- count the number of governance member signatures on a transaction
     govSigCount :: Integer
@@ -76,7 +82,7 @@ mkGovernanceMultiSigPolicy MultiSigGovParams {..} _ ctx =
       sum
         ( map
             ( \pkh ->
-                if Unsafe.txSignedBy txInfo pkh
+                if txSignedBy txInfo pkh
                   then 1
                   else 0
             )
@@ -101,7 +107,7 @@ mkGovernanceMultiSigPolicyUntyped params red ctx =
     $ mkGovernanceMultiSigPolicy
       (unsafeFromBuiltinData params)
       red
-      (Unsafe.ScriptContext ctx)
+      (unsafeFromBuiltinData ctx)
 
 serialisableGovernanceMultiSigPolicy :: SerialisedScript
 serialisableGovernanceMultiSigPolicy =

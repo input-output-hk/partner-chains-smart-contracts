@@ -18,11 +18,9 @@ import TrustlessSidechain.PlutusPrelude (
   Bool (True),
   BuiltinData,
   BuiltinUnit,
-  Integer,
   check,
   ($),
  )
-import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 
 -- Always Passing Validator and Always Passing Minting Policy
 -- are scripts that unconditionally pass. Such scripts are
@@ -31,10 +29,10 @@ import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 -- Both scripts are parametrized by an Integer. That allows for
 -- obtaining different currency symbols.
 mkAlwaysPassingValidator ::
-  Integer ->
   BuiltinData ->
   BuiltinData ->
-  Unsafe.ScriptContext ->
+  BuiltinData ->
+  BuiltinData ->
   Bool
 mkAlwaysPassingValidator _ _ _ _ = True
 
@@ -42,17 +40,17 @@ mkAlwaysPassingValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> 
 mkAlwaysPassingValidatorUntyped seed datum redeemer ctx =
   check
     $ mkAlwaysPassingValidator
-      (PlutusTx.unsafeFromBuiltinData seed)
-      (PlutusTx.unsafeFromBuiltinData datum)
-      (PlutusTx.unsafeFromBuiltinData redeemer)
-      (Unsafe.wrap ctx)
+      seed
+      datum
+      redeemer
+      ctx
 
 serialisableAlwaysPassingValidator :: SerialisedScript
 serialisableAlwaysPassingValidator =
   serialiseCompiledCode $$(PlutusTx.compile [||mkAlwaysPassingValidatorUntyped||])
 
 {-# INLINEABLE mkAlwaysPassingPolicy #-}
-mkAlwaysPassingPolicy :: Integer -> BuiltinData -> Unsafe.ScriptContext -> Bool
+mkAlwaysPassingPolicy :: BuiltinData -> BuiltinData -> BuiltinData -> Bool
 mkAlwaysPassingPolicy _ _ _ = True
 
 {-# INLINEABLE mkAlwaysPassingPolicyUntyped #-}
@@ -60,9 +58,9 @@ mkAlwaysPassingPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> Bui
 mkAlwaysPassingPolicyUntyped seed redeemer ctx =
   check
     $ mkAlwaysPassingPolicy
-      (PlutusTx.unsafeFromBuiltinData seed)
-      (PlutusTx.unsafeFromBuiltinData redeemer)
-      (Unsafe.wrap ctx)
+      seed
+      redeemer
+      ctx
 
 serialisableAlwaysPassingPolicy :: SerialisedScript
 serialisableAlwaysPassingPolicy =

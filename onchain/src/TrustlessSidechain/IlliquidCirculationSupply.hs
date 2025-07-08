@@ -6,18 +6,27 @@ module TrustlessSidechain.IlliquidCirculationSupply (
   serialisableIlliquidCirculationSupplyValidator,
 ) where
 
-import PlutusLedgerApi.V1.Value (
+import PlutusLedgerApi.Data.V2 (
+  Address,
+  ScriptContext,
+  SerialisedScript,
+  TxInfo,
+  TxOut,
+  getDatum,
+  scriptContextTxInfo,
+  serialiseCompiledCode,
+  txOutAddress,
+  txOutDatum,
+  txOutValue,
+  pattern OutputDatum,
+  pattern TxOut,
+ )
+import PlutusLedgerApi.V1.Data.Value (
   CurrencySymbol,
   TokenName (..),
-  Value,
   lt,
  )
-import PlutusLedgerApi.V2 (
-  Address,
-  SerialisedScript,
-  getDatum,
-  serialiseCompiledCode,
- )
+import PlutusLedgerApi.V2.Data.Contexts (getContinuingOutputs)
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.ScriptId qualified as ScriptId
@@ -25,24 +34,16 @@ import TrustlessSidechain.Types (
   IlliquidCirculationSupplyRedeemer (..),
   VersionedGenericDatum,
  )
-import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Utils (oneTokenMinted)
 import TrustlessSidechain.Utils qualified as Utils
 import TrustlessSidechain.Versioning (
   VersionOracle (VersionOracle, scriptId),
   VersionOracleConfig,
-  getVersionedCurrencySymbolUnsafe,
+  getVersionedCurrencySymbol,
  )
 
 icsWithdrawalMintingPolicyTokenName :: TokenName
 icsWithdrawalMintingPolicyTokenName = TokenName emptyByteString
-
-{-# INLINEABLE getInputsAt #-}
-getInputsAt :: Unsafe.TxInfo -> Address -> [Unsafe.TxOut]
-getInputsAt txInfo address =
-  Unsafe.txInInfoResolved
-    <$> ((== address) . Unsafe.decode . Unsafe.txOutAddress . Unsafe.txInInfoResolved)
-    `filter` Unsafe.txInfoInputs txInfo
 
 -- | Error codes description follows:
 --
@@ -56,7 +57,7 @@ mkIlliquidCirculationSupplyValidator ::
   VersionOracleConfig ->
   BuiltinData ->
   IlliquidCirculationSupplyRedeemer ->
-  Unsafe.ScriptContext ->
+  ScriptContext ->
   Bool
 mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
   DepositMoreToSupply ->
@@ -66,52 +67,45 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
   WithdrawFromSupply ->
     traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-04" oneIcsWithdrawalMintingPolicyTokenIsMinted
   where
-    info :: Unsafe.TxInfo
-    info = Unsafe.scriptContextTxInfo ctx
+    info :: TxInfo
+    info = scriptContextTxInfo ctx
 
     icsWithdrawalPolicyCurrencySymbol :: CurrencySymbol
     icsWithdrawalPolicyCurrencySymbol =
-      getVersionedCurrencySymbolUnsafe
+      getVersionedCurrencySymbol
         voc
         (VersionOracle {scriptId = ScriptId.illiquidCirculationSupplyWithdrawalPolicyId})
         ctx
 
-    minted :: Value
-    minted = Unsafe.decode . Unsafe.txInfoMint $ info
-
     supplyAddress :: Address
-    supplyAddress = Unsafe.decode $ Unsafe.txOutAddress supplyOutputUtxo
+    supplyAddress = txOutAddress supplyOutputUtxo
 
-    supplyInputUtxo :: Unsafe.TxOut
+    supplyInputUtxo :: TxOut
     supplyInputUtxo =
-      Utils.fromSingleton "ERROR-ILLIQUID-CIRCULATION-SUPPLY-05"
-        $ getInputsAt info supplyAddress
+      Utils.fromSingletonData "ERROR-ILLIQUID-CIRCULATION-SUPPLY-05"
+        $ Utils.getInputsAt info supplyAddress
 
-    supplyOutputUtxo :: Unsafe.TxOut
+    supplyOutputUtxo :: TxOut
     supplyOutputUtxo =
-      Utils.fromSingleton "ERROR-ILLIQUID-CIRCULATION-SUPPLY-06"
-        $ Unsafe.getContinuingOutputs ctx
+      Utils.fromSingletonData "ERROR-ILLIQUID-CIRCULATION-SUPPLY-06"
+        $ getContinuingOutputs ctx
 
     assetsIncrease :: Bool
     assetsIncrease =
-      (Unsafe.decode . Unsafe.txOutValue $ supplyInputUtxo)
-        `lt` (Unsafe.decode . Unsafe.txOutValue $ supplyOutputUtxo)
+      (txOutValue $ supplyInputUtxo)
+        `lt` (txOutValue $ supplyOutputUtxo)
 
     oneIcsWithdrawalMintingPolicyTokenIsMinted :: Bool
     oneIcsWithdrawalMintingPolicyTokenIsMinted =
       oneTokenMinted
-        minted
+        info
         icsWithdrawalPolicyCurrencySymbol
         icsWithdrawalMintingPolicyTokenName
 
-    isDatumUnit :: Unsafe.TxOut -> Bool
-    isDatumUnit txOut =
-      isJust
-        ( getDatum
-            . Unsafe.decode
-            <$> (Unsafe.getOutputDatum . Unsafe.txOutDatum) txOut
-            >>= PlutusTx.fromBuiltinData @(VersionedGenericDatum ())
-        )
+    isDatumUnit :: TxOut -> Bool
+    isDatumUnit TxOut {txOutDatum = OutputDatum datum} =
+      isJust . PlutusTx.fromBuiltinData @(VersionedGenericDatum ()) $ getDatum datum
+    isDatumUnit _ = False
 
 mkIlliquidCirculationSupplyValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
 mkIlliquidCirculationSupplyValidatorUntyped voc rd rr ctx =
@@ -120,7 +114,7 @@ mkIlliquidCirculationSupplyValidatorUntyped voc rd rr ctx =
       (PlutusTx.unsafeFromBuiltinData voc)
       (PlutusTx.unsafeFromBuiltinData rd)
       (PlutusTx.unsafeFromBuiltinData rr)
-      (Unsafe.wrap ctx)
+      (PlutusTx.unsafeFromBuiltinData ctx)
 
 serialisableIlliquidCirculationSupplyValidator :: SerialisedScript
 serialisableIlliquidCirculationSupplyValidator =

@@ -8,13 +8,13 @@ module TrustlessSidechain.GovernedMap (
   mkMintingPolicy,
 ) where
 
-import PlutusLedgerApi.V2 (
+import PlutusLedgerApi.Data.V2 (
+  ScriptContext,
   SerialisedScript,
   serialiseCompiledCode,
  )
 import PlutusTx qualified
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 import TrustlessSidechain.Versioning (VersionOracleConfig, approvedByGovernance)
 
 -- OnChain error descriptions:
@@ -27,7 +27,7 @@ mkMintingPolicy ::
   BuiltinData ->
   VersionOracleConfig ->
   BuiltinData ->
-  Unsafe.ScriptContext ->
+  ScriptContext ->
   Bool
 mkMintingPolicy
   _scriptId
@@ -55,7 +55,7 @@ governedMapValidator ::
   VersionOracleConfig ->
   BuiltinData ->
   BuiltinData ->
-  Unsafe.ScriptContext ->
+  ScriptContext ->
   Bool
 governedMapValidator
   _scriptId
@@ -87,7 +87,7 @@ mkValidatorUntyped scriptId genesisUtxo vc dat redeemer ctx =
       (unsafeFromBuiltinData vc)
       dat
       redeemer
-      (Unsafe.wrap ctx)
+      (unsafeFromBuiltinData ctx)
 
 serialisableValidator :: SerialisedScript
 serialisableValidator =
@@ -107,7 +107,7 @@ mkMintingPolicyUntyped scriptId genesisUtxo vc redeemer ctx =
       genesisUtxo
       (unsafeFromBuiltinData vc)
       redeemer
-      (Unsafe.wrap ctx)
+      (unsafeFromBuiltinData ctx)
 
 serialisableMintingPolicy :: SerialisedScript
 serialisableMintingPolicy =

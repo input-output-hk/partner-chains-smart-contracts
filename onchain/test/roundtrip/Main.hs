@@ -4,12 +4,12 @@ module Main (main) where
 
 import GHC.Exts (fromList)
 import Laws (toDataSafeLaws', toDataUnsafeLaws')
-import PlutusLedgerApi.V1.Value (AssetClass (AssetClass), adaToken)
-import PlutusLedgerApi.V2 (
+import PlutusLedgerApi.Data.V2 (
   CurrencySymbol (CurrencySymbol),
   POSIXTime (POSIXTime),
   PubKeyHash (PubKeyHash),
  )
+import PlutusLedgerApi.V1.Data.Value (AssetClass (AssetClass), adaToken)
 import Test.QuickCheck (
   Arbitrary (arbitrary, shrink),
   Gen,
