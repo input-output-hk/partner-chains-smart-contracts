@@ -43,14 +43,16 @@ import TrustlessSidechain.HaskellPrelude (on)
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types (
-  ReserveDatum (mutableSettings, stats),
+  ImmutableReserveSettings (tokenKind),
+  MutableReserveSettings (incentiveAmount, vFunctionTotalAccrued),
+  ReserveDatum (immutableSettings, mutableSettings, stats),
   ReserveRedeemer (
     DepositToReserve,
     Handover,
     TransferToIlliquidCirculationSupply,
     UpdateReserve
   ),
-  ReserveStats (ReserveStats),
+  ReserveStats (ReserveStats, tokenTotalAmountTransferred),
   VersionedGenericDatum (datum),
  )
 import TrustlessSidechain.Types.Unsafe qualified as Unsafe
@@ -154,7 +156,7 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
         == 1
 
     tokenKind' :: AssetClass
-    !tokenKind' = get @"tokenKind" . get @"immutableSettings" $ datum inputDatum
+    !tokenKind' = tokenKind . immutableSettings $ datum inputDatum
 
     -- This function verifies that assets of a propagated unique reserve utxo
     -- change only by reserve tokens and returns the difference of reserve tokens
@@ -243,11 +245,11 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
 
     vFunctionTotalAccrued' :: CurrencySymbol
     vFunctionTotalAccrued' =
-      get @"vFunctionTotalAccrued" . get @"mutableSettings" $ datum inputDatum
+      vFunctionTotalAccrued . mutableSettings $ datum inputDatum
 
-    incentiveAmount :: Integer
-    incentiveAmount =
-      get @"incentiveAmount" . get @"mutableSettings" $ datum inputDatum
+    incentiveAmount' :: Integer
+    incentiveAmount' =
+      incentiveAmount . mutableSettings $ datum inputDatum
 
     numOfVtTokensMinted :: Integer
     numOfVtTokensMinted =
@@ -262,7 +264,7 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
 
     tokensTransferredUpUntilNow :: Integer
     tokensTransferredUpUntilNow =
-      get @"tokenTotalAmountTransferred" . get @"stats" $ datum inputDatum
+      tokenTotalAmountTransferred . stats $ datum inputDatum
 
     assetsChangeOnlyByCorrectAmountOfReserveTokens :: Bool
     assetsChangeOnlyByCorrectAmountOfReserveTokens =
@@ -285,7 +287,7 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
     correctAmountOfReserveTokensTransferredToICS :: Bool
     correctAmountOfReserveTokensTransferredToICS =
       reserveTokensOnOutputICSUtxo
-        + incentiveAmount
+        + incentiveAmount'
         == (numOfVtTokensMinted - tokensTransferredUpUntilNow)
         + reserveTokensOnICSInputUtxos
 
@@ -415,7 +417,7 @@ mkReserveAuthPolicy voc _ ctx =
 
     reserveUtxoCarriesCorrectInitialDatum :: Bool
     reserveUtxoCarriesCorrectInitialDatum =
-      get @"stats" (datum reserveUtxoDatum) == ReserveStats 0
+      stats (datum reserveUtxoDatum) == ReserveStats 0
 
     reserveUtxoCarriesOnlyAdaTokenKindAndAuthToken :: Bool
     reserveUtxoCarriesOnlyAdaTokenKindAndAuthToken =
@@ -428,7 +430,7 @@ mkReserveAuthPolicy voc _ ctx =
           if AssetClass (adaSymbol, adaToken) == tokenKind'
             then 2 -- ADA + reserve auth token
             else 3 -- ADA + reserve auth token + tokens of `tokenKind`
-        tokenKind' = get @"tokenKind" . get @"immutableSettings" $ datum reserveUtxoDatum
+        tokenKind' = tokenKind . immutableSettings $ datum reserveUtxoDatum
 
 {-# INLINEABLE mkReserveAuthPolicyUntyped #-}
 mkReserveAuthPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit

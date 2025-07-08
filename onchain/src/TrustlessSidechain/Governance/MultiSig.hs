@@ -49,9 +49,6 @@ instance UnsafeFromData MultiSigGovParams where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 MultiSigGovParams
 
--- | @since v6.1.0
-makeHasField ''MultiSigGovParams
-
 -- | N-out-of-M multisignature governance check.
 --
 -- When passed the `MultiSignatureCheck` redeemer this policy checks that the

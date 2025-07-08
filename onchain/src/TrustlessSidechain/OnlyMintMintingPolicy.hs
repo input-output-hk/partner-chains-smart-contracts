@@ -14,7 +14,7 @@ import PlutusLedgerApi.V2.Contexts (
  )
 import PlutusTx (compile)
 import TrustlessSidechain.PlutusPrelude
-import TrustlessSidechain.Utils (currencySymbolValueOf, mkUntypedMintingPolicy)
+import TrustlessSidechain.Utils (currencySymbolValueOf)
 
 -- | Dummy FUEL minting policy for testing purposes.  Allows minting a single
 --   dummy token.
@@ -23,7 +23,7 @@ import TrustlessSidechain.Utils (currencySymbolValueOf, mkUntypedMintingPolicy)
 -- wish to do so in order to allow recovering minAda.
 mkOnlyMintMintingPolicy ::
   BuiltinData ->
-  BuiltinUnit -> -- no redeemer
+  BuiltinData -> -- no redeemer
   ScriptContext ->
   Bool
 mkOnlyMintMintingPolicy _ _ (ScriptContext txInfo (Minting currSymbol)) =
@@ -42,8 +42,12 @@ mkOnlyMintMintingPolicyUntyped ::
   -- | ScriptContext
   BuiltinData ->
   BuiltinUnit
-mkOnlyMintMintingPolicyUntyped genesisUtxo =
-  mkUntypedMintingPolicy $ mkOnlyMintMintingPolicy (unsafeFromBuiltinData genesisUtxo)
+mkOnlyMintMintingPolicyUntyped genesisUtxo redeemer ctx =
+  check
+    $ mkOnlyMintMintingPolicy
+      genesisUtxo
+      redeemer
+      (unsafeFromBuiltinData ctx)
 
 serialisableOnlyMintMintingPolicy :: SerialisedScript
 serialisableOnlyMintMintingPolicy =
