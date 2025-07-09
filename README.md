@@ -2,20 +2,13 @@
 
 ## Introduction
 
-This repository is a Plutus application (off-chain code + on-chain Plutus scripts) that is part of the Partner Chain bridge backend. The goal is to support the different interactions with Cardano as a mainchain from a partner chain's perspective.
-
-This alpha release is just the beginning of the journey. It is intended to gather early feedback from the community and is provided "as is." It should not be used in live production networks. Use at your own risk. We welcome and appreciate your feedback!
-
-The repository targets the following users:
-
-* the Sidechain node operator
-* the end-user wishing to transfer assets between the mainchain and the sidechain
+This repository contains the on-chain Plutus scripts that are part of the [Partner Chain framework](https://github.com/input-output-hk/partner-chains).
 
 ## CONTRIBUTING
 
 See [CONTRIBUTING](./CONTRIBUTING.md) for guidelines on contributing code and documentation.
 
-See our [CHANGELOG](./CHANGELOG.md) for all changes over time to the tool.
+See our [CHANGELOG](./CHANGELOG.md) for all changes over time.
 
 ## LICENSING
 
