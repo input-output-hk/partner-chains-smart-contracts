@@ -4,8 +4,8 @@ module Test.TrustlessSidechain.Golden.Types (tests) where
 
 import Data.ByteString.Base16 qualified as B16
 import Data.ByteString.Char8 qualified as BC
-import PlutusLedgerApi.V1.Value qualified as Value
-import PlutusLedgerApi.V2 (POSIXTime (..), toBuiltinData)
+import PlutusLedgerApi.Data.V2 (POSIXTime (..), toBuiltinData)
+import PlutusLedgerApi.V1.Data.Value qualified as Value
 import Test.Tasty (TestTree, testGroup)
 import Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest)
 import TrustlessSidechain.Governance.MultiSig (
