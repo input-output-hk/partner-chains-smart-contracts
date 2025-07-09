@@ -32,5 +32,5 @@ allow-newer:
   , *:plutus-ledger-api
 
 constraints:
-  plutus-core == 1.40.0.0,
-  plutus-ledger-api == 1.40.0.0
+  plutus-core == 1.46.0.0,
+  plutus-ledger-api == 1.46.0.0

@@ -19,38 +19,38 @@ main =
           [ scriptFitsInto
               "mkCommitteeCandidateValidator (serialized)"
               CCV.serialisableValidator
-              350
+              402
           , scriptFitsInto
               "mkDParameterValidatorCode (DParameter) serialized"
               DParameter.serialisableValidator
-              1_582
+              1_636
           , scriptFitsInto
               "mkDParameterPolicyCode (DParameter) serialized"
               DParameter.serialisableMintingPolicy
-              2_041
+              2_101
           , scriptFitsInto
               "mkPermissionedCandidatesValidatorCode (PermissionedCandidates) serialized"
               PermissionedCandidates.serialisableValidator
-              1_645
+              1_762
           , scriptFitsInto
               "mkVersionOraclePolicyCode (Versioning) serialized"
               Versioning.serialisableVersionOraclePolicy
-              3_303
+              3_406
           , scriptFitsInto
               "mkVersionOracleValidatorCode (Versioning) serialized"
               Versioning.serialisableVersionOracleValidator
-              2_122
+              2_322
           , scriptFitsInto
               "mkReserveValidator (Reserve) serialized"
               Reserve.serialisableReserveValidator
-              6_118
+              6_347
           , scriptFitsInto
               "mkReserveAuthPolicy (Reserve) serialized"
               Reserve.serialisableReserveAuthPolicy
-              2_853
+              3_088
           , scriptFitsInto
               "mkIlliquidCirculationSupplyValidator (IlliquidCirculationSupply) serialized"
               IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyValidator
-              3_457
+              3_579
           ]
       ]

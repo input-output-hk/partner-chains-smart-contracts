@@ -1,4 +1,4 @@
-.PHONY: all onchain update-scripts check-raw-scripts
+.PHONY: all cabal-update onchain update-scripts check-raw-scripts
 
 trustless-dir := ../raw-scripts
 trustless-traced-dir := ../raw-scripts-traced
@@ -9,7 +9,10 @@ serialise-traced := cabal run trustless-sidechain-serialise-traced --
 raw-scripts := $(trustless-dir)/src/lib.rs
 raw-scripts-trace := $(trustless-traced-dir)/src/lib.rs
 
-all: onchain check-raw-scripts
+all: cabal-update onchain check-raw-scripts
+
+cabal-update:
+	cabal update
 
 onchain:
 	cabal build
