@@ -146,8 +146,6 @@ instance UnsafeFromData ImmutableReserveSettings where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 ImmutableReserveSettings
 
-makeHasField ''ImmutableReserveSettings
-
 data MutableReserveSettings = MutableReserveSettings
   { vFunctionTotalAccrued :: CurrencySymbol
   -- ^ `vFunctionTotalAccrued` is a currency symbol of a minting policy
@@ -176,8 +174,6 @@ instance UnsafeFromData MutableReserveSettings where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 MutableReserveSettings
 
-makeHasField ''MutableReserveSettings
-
 newtype ReserveStats = ReserveStats
   { tokenTotalAmountTransferred :: Integer
   -- ^ `tokenTotalAmountTransferred` is the total number
@@ -189,8 +185,6 @@ newtype ReserveStats = ReserveStats
     , TSPrelude.Show
     )
   deriving newtype (ToData, FromData, UnsafeFromData, Eq)
-
-makeHasField ''ReserveStats
 
 data ReserveDatum = ReserveDatum
   { immutableSettings :: ImmutableReserveSettings
@@ -214,8 +208,6 @@ instance FromData ReserveDatum where
 instance UnsafeFromData ReserveDatum where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData3 ReserveDatum
-
-makeHasField ''ReserveDatum
 
 data ReserveRedeemer
   = DepositToReserve

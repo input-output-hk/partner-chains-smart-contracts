@@ -6,8 +6,6 @@ module TrustlessSidechain.Utils (
   currencySymbolValueOf,
   oneTokenBurned,
   oneTokenMinted,
-  mkUntypedValidator,
-  mkUntypedMintingPolicy,
   scriptToPlutusScript,
   oneTokenMintedUnsafe,
   oneTokenBurnedUnsafe,
@@ -18,12 +16,10 @@ import TrustlessSidechain.Types.Unsafe qualified as Unsafe
 
 import Cardano.Api (PlutusScriptV2)
 import Cardano.Api.Shelley (PlutusScript (PlutusScriptSerialised))
-import Data.Kind (Type)
 import PlutusLedgerApi.Common (SerialisedScript)
 import PlutusLedgerApi.V1.Value (valueOf)
 import PlutusLedgerApi.V2 (
   CurrencySymbol,
-  ScriptContext,
   TokenName,
   Value,
   getValue,
@@ -74,32 +70,6 @@ oneTokenBurned txInfoMint cs tn =
 oneTokenBurnedUnsafe :: Unsafe.TxInfo -> CurrencySymbol -> TokenName -> Bool
 oneTokenBurnedUnsafe txInfo cs tn =
   valueOf (Unsafe.decode $ Unsafe.txInfoMint txInfo) cs tn == -1
-
--- | Convert a validator to untyped
--- The output will accept BuiltinData instead of concrete types
-{-# INLINE mkUntypedValidator #-}
-mkUntypedValidator ::
-  forall (d :: Type) (r :: Type).
-  (UnsafeFromData d, UnsafeFromData r) =>
-  (d -> r -> ScriptContext -> Bool) ->
-  (BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit)
--- We can use unsafeFromBuiltinData here as we would fail immediately anyway if
--- parsing failed
-mkUntypedValidator f d r p =
-  check $ f (unsafeFromBuiltinData d) (unsafeFromBuiltinData r) (unsafeFromBuiltinData p)
-
--- | Convert a minting policy to untyped
--- The output will accept BuiltinData instead of concrete types
-{-# INLINE mkUntypedMintingPolicy #-}
-mkUntypedMintingPolicy ::
-  forall (r :: Type).
-  (UnsafeFromData r) =>
-  (r -> ScriptContext -> Bool) ->
-  (BuiltinData -> BuiltinData -> BuiltinUnit)
--- We can use unsafeFromBuiltinData here as we would fail immediately anyway if
--- parsing failed
-mkUntypedMintingPolicy f r p =
-  check $ f (unsafeFromBuiltinData r) (unsafeFromBuiltinData p)
 
 scriptToPlutusScript :: SerialisedScript -> PlutusScript PlutusScriptV2
 scriptToPlutusScript =
