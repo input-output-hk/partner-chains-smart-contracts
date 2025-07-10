@@ -14,13 +14,16 @@ module TrustlessSidechain.Versioning (
   serialisableVersionOracleValidator,
   mkVersionOraclePolicy,
   mkVersionOracleValidator,
+  mkVersionOraclePolicyUntyped,
+  mkVersionOracleValidatorUntyped,
   getVersionedValidatorAddress,
   getVersionedCurrencySymbol,
   approvedByGovernance,
   VersionOracle (..),
   VersionOracleDatum (..),
   VersionOracleConfig (..),
-  VersionOraclePolicyRedeemer,
+  VersionOraclePolicyRedeemer (..),
+  versionOracleTokenName,
 ) where
 
 import PlutusLedgerApi.Data.V2 (
@@ -100,6 +103,7 @@ versionOracleTokenName = TokenName "Version oracle"
 --   ERROR-VERSION-POLICY-09: Transaction should be signed by the governance.
 --
 --   ERROR-VERSION-POLICY-10: Script purpose is not Minting.
+{-# INLINEABLE mkVersionOraclePolicy #-}
 mkVersionOraclePolicy ::
   TxOutRef ->
   Address ->
