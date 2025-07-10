@@ -1,7 +1,7 @@
 -- Custom repository for cardano haskell packages
 -- See https://github.com/input-output-hk/cardano-haskell-packages on how to use CHaP in a Haskell project.
 repository cardano-haskell-packages
-  url: https://input-output-hk.github.io/cardano-haskell-packages
+  url: https://chap.intersectmbo.org/
   secure: True
   root-keys:
     3e0cce471cf09815f930210f7827266fd09045445d65923e6d0238a6cd15126f
@@ -34,3 +34,18 @@ allow-newer:
 constraints:
   plutus-core == 1.46.0.0,
   plutus-ledger-api == 1.46.0.0
+
+source-repository-package
+  location: https://github.com/j-mueller/sc-tools
+  tag: fedd88a0fd8a053d1bd37faa6babc452260e88f8
+  type: git
+  subdir:
+      src/base
+      src/blockfrost
+      src/coin-selection
+      src/devnet
+      src/mockchain
+      src/node-client
+      src/optics
+      src/tx-mod
+      src/wallet
