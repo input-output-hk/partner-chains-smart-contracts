@@ -345,8 +345,6 @@ import Witherable qualified
 
 -- | Map the first argument over the list, returning the result as a pair of
 -- lists. Mainly useful for complex state, or the 'State' monad.
---
--- @since v3.0.0
 {-# INLINEABLE mapAndUnzipA #-}
 mapAndUnzipA ::
   forall (a :: Type) (b :: Type) (c :: Type) (f :: Type -> Type).
@@ -357,8 +355,6 @@ mapAndUnzipA ::
 mapAndUnzipA = Monad.mapAndUnzipM
 
 -- | Generalizes 'zipWith' to arbitrary 'Applicative's.
---
--- @since v3.0.0
 {-# INLINEABLE zipWithA #-}
 zipWithA ::
   forall (a :: Type) (b :: Type) (c :: Type) (f :: Type -> Type).
@@ -371,8 +367,6 @@ zipWithA = Monad.zipWithM
 
 -- | As 'zipWithA', but ignores the result: only the effects of @f@ are
 -- performed.
---
--- @since v3.0.0
 {-# INLINEABLE zipWithA_ #-}
 zipWithA_ ::
   forall (a :: Type) (b :: Type) (c :: Type) (f :: Type -> Type).
@@ -385,8 +379,6 @@ zipWithA_ = Monad.zipWithM_
 
 -- | @'replicateA' n act@ performs the action @act@ @'max' 0 n@ times, gathering
 -- the results.
---
--- @since v3.0.0
 {-# INLINEABLE replicateA #-}
 replicateA ::
   forall (a :: Type) (f :: Type -> Type).
@@ -398,8 +390,6 @@ replicateA = Monad.replicateM
 
 -- | As 'replicateA', but ignores the result: only the effects of @f@ are
 -- performed.
---
--- @since v3.0.0
 {-# INLINEABLE replicateA_ #-}
 replicateA_ ::
   forall (a :: Type) (f :: Type -> Type).
@@ -410,8 +400,6 @@ replicateA_ ::
 replicateA_ = Monad.replicateM_
 
 -- | Similar to 'comparing', but for 'Eq' instead of 'Ord'.
---
--- @since v3.0.0
 {-# INLINEABLE equating #-}
 equating ::
   forall (a :: Type) (b :: Type).
@@ -423,8 +411,6 @@ equating ::
 equating f x y = f x == f y
 
 -- | Needed to ensure @if@ works properly.
---
--- @since v3.0.0
 ifThenElse ::
   forall (a :: Type).
   Bool ->
@@ -435,14 +421,10 @@ ifThenElse False _ x = x
 ifThenElse True x _ = x
 
 -- | Check for evenness.
---
--- @since v3.0.0
 even :: forall (a :: Type). (Euclidean a, Ring a, Eq a) => a -> Bool
 even x = (x `rem` 2) == 0
 
 -- | Check for oddness.
---
--- @since v3.0.0
 odd :: forall (a :: Type). (Euclidean a, Ring a, Eq a) => a -> Bool
 odd x = (x `rem` 2) /= 0
 
@@ -457,8 +439,6 @@ odd x = (x `rem` 2) /= 0
 -- \'look like integers\', as it presumes there are only three signa. Thus, for
 -- something like a Gaussian integer (which have five signa) this will not work.
 -- However, we are unlikely to ever need such a type, so this works well enough.
---
--- @since v3.0.0
 signum :: forall (a :: Type). (Ord a, Ring a) => a -> a
 signum x = case compare x zero of
   LT -> negate one
@@ -470,8 +450,6 @@ signum x = case compare x zero of
 -- = Note for mathematical pedants
 --
 -- This has the same caveats on use as 'signum'.
---
--- @since v3.0.0
 abs :: forall (a :: Type). (Ord a, Ring a) => a -> a
 abs x =
   let sig = signum x

@@ -29,8 +29,6 @@ import TrustlessSidechain.PlutusPrelude
 -- `MultiSigGovParams` is used to parameterize the multi-signature governance
 -- minting policy, changing the order of elements will change the hash of the
 -- policy.
---
--- @since v6.1.0
 data MultiSigGovParams = MultiSigGovParams
   { governanceMembers :: [PubKeyHash]
   -- ^ Members of the governance
@@ -39,18 +37,15 @@ data MultiSigGovParams = MultiSigGovParams
   }
   deriving (TSPrelude.Show, TSPrelude.Eq)
 
--- | @since v6.1.0
 instance ToData MultiSigGovParams where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData (MultiSigGovParams {..}) =
     productToData2 governanceMembers requiredSignatures
 
--- | @since v6.1.0
 instance FromData MultiSigGovParams where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData = productFromData2 MultiSigGovParams
 
--- | @since v6.1.0
 instance UnsafeFromData MultiSigGovParams where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 MultiSigGovParams

@@ -46,25 +46,19 @@ import TrustlessSidechain.PlutusPrelude
 
 -- | 'PermissionedCandidatesPolicyRedeemer' signals whether transaction is supposed to mint or
 -- burn PermissionedCandidates tokens
---
--- @since v5.0.0
 data PermissionedCandidatesPolicyRedeemer
-  = -- | @since v5.0.0
-    PermissionedCandidatesMint
-  | -- | @since v5.0.0
-    PermissionedCandidatesBurn
+  = PermissionedCandidatesMint
+  | PermissionedCandidatesBurn
   deriving stock
     ( TSPrelude.Eq
     , TSPrelude.Show
     )
 
--- | @since v5.0.0
 instance ToData PermissionedCandidatesPolicyRedeemer where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData PermissionedCandidatesMint = BuiltinData $ PlutusTx.I 0
   toBuiltinData PermissionedCandidatesBurn = BuiltinData $ PlutusTx.I 1
 
--- | @since v5.0.0
 instance FromData PermissionedCandidatesPolicyRedeemer where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData x = do
@@ -74,7 +68,6 @@ instance FromData PermissionedCandidatesPolicyRedeemer where
       1 -> Just PermissionedCandidatesBurn
       _ -> Nothing
 
--- | @since v5.0.0
 instance UnsafeFromData PermissionedCandidatesPolicyRedeemer where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData x =
@@ -87,25 +80,19 @@ instance UnsafeFromData PermissionedCandidatesPolicyRedeemer where
 -- | 'PermissionedCandidatesValidatorRedeemer' signals whether transaction is
 -- supposed to update the list of permissioned candidates or remove the list
 -- altogether.
---
--- @since v5.0.0
 data PermissionedCandidatesValidatorRedeemer
-  = -- | @since v5.0.0
-    UpdatePermissionedCandidates
-  | -- | @since v5.0.0
-    RemovePermissionedCandidates
+  = UpdatePermissionedCandidates
+  | RemovePermissionedCandidates
   deriving stock
     ( TSPrelude.Eq
     , TSPrelude.Show
     )
 
--- | @since v5.0.0
 instance ToData PermissionedCandidatesValidatorRedeemer where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData UpdatePermissionedCandidates = BuiltinData $ PlutusTx.I 0
   toBuiltinData RemovePermissionedCandidates = BuiltinData $ PlutusTx.I 1
 
--- | @since v5.0.0
 instance FromData PermissionedCandidatesValidatorRedeemer where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData x = do
@@ -115,7 +102,6 @@ instance FromData PermissionedCandidatesValidatorRedeemer where
       1 -> Just RemovePermissionedCandidates
       _ -> Nothing
 
--- | @since v5.0.0
 instance UnsafeFromData PermissionedCandidatesValidatorRedeemer where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData x =
@@ -284,32 +270,25 @@ instance (UnsafeFromData a) => UnsafeFromData (VersionedGenericDatum a) where
 
 -- | Datum attached to 'VersionOraclePolicy' tokens stored on the
 -- 'VersionOracleValidator' script.
---
--- @since v5.0.0
 newtype VersionOracle = VersionOracle
   { scriptId :: Integer
   -- ^ Unique identifier of the validator.
-  -- @since v5.0.0
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
--- | @since v5.0.0
 instance ToData VersionOracle where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData VersionOracle {scriptId} =
     toBuiltinData scriptId
 
--- | @since v5.0.0
 instance FromData VersionOracle where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData x = VersionOracle <$> fromBuiltinData x
 
--- | @since v5.0.0
 instance UnsafeFromData VersionOracle where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData x = VersionOracle $ unsafeFromBuiltinData x
 
--- | @since v5.0.0
 instance Eq VersionOracle where
   VersionOracle s == VersionOracle s' = s == s'
 
@@ -318,75 +297,59 @@ instance Eq VersionOracle where
 data VersionOracleDatum = VersionOracleDatum
   { versionOracle :: VersionOracle
   -- ^ VersionOracle which identifies the script.
-  -- @since v6.0.0
   , currencySymbol :: CurrencySymbol
   -- ^ Currency Symbol of the VersioningOraclePolicy tokens.
-  -- @since v6.0.0
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
--- | @since v6.0.0
 instance ToData VersionOracleDatum where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData VersionOracleDatum {versionOracle, currencySymbol} =
     productToData2 versionOracle currencySymbol
 
--- | @since v6.0.0
 instance FromData VersionOracleDatum where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData = productFromData2 VersionOracleDatum
 
--- | @since v6.0.0
 instance UnsafeFromData VersionOracleDatum where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData2 VersionOracleDatum
 
--- | @since v6.0.0
 instance Eq VersionOracleDatum where
   VersionOracleDatum vO c == VersionOracleDatum vO' c' = vO == vO' && c == c'
 
 -- | Configuration of the versioning system.  Contains currency symbol of
 -- VersionOraclePolicy tokens.  Required to identify versioning tokens that can
 -- be trusted.
---
--- @since v5.0.0
 newtype VersionOracleConfig = VersionOracleConfig
   { versionOracleCurrencySymbol :: CurrencySymbol
   -- ^ @since v5.0.0
   }
   deriving stock (TSPrelude.Show, TSPrelude.Eq)
 
--- | @since v5.0.0
 instance ToData VersionOracleConfig where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData VersionOracleConfig {versionOracleCurrencySymbol} =
     toBuiltinData versionOracleCurrencySymbol
 
--- | @since v5.0.0
 instance FromData VersionOracleConfig where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData x = VersionOracleConfig <$> fromBuiltinData x
 
--- | @since v5.0.0
 instance UnsafeFromData VersionOracleConfig where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = VersionOracleConfig . unsafeFromBuiltinData
 
 -- | Redeemer for the versioning oracle minting policy that instructs the script
 -- whether to mint or burn versioning tokens.
---
--- @since v5.0.0
 data VersionOraclePolicyRedeemer
   = -- | Mint versioning tokens from init tokens.  Used during sidechain
     -- initialization.
-    -- @since v6.0.0
     InitializeVersionOracle VersionOracle ScriptHash
   | -- | Mint a new versioning token ensuring it contains correct datum and
     -- reference script.
-    -- @since v5.0.0
     MintVersionOracle VersionOracle ScriptHash
   | -- | Burn existing versioning token.
-    -- @since v5.0.0
     BurnVersionOracle VersionOracle
 
 PlutusTx.makeIsDataIndexed
