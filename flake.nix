@@ -70,7 +70,6 @@
           bashInteractive
           blst
           cabal-install
-          stack
           changie
           fd
           ghc
