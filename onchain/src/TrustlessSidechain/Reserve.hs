@@ -206,8 +206,9 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
 
     outputReserveUtxo :: TxOut
     outputReserveUtxo =
-      let singleOut = Utils.fromSingletonData "ERROR-RESERVE-06" $ getContinuingOutputs ctx
-       in if carriesAuthToken singleOut then singleOut else traceError "ERROR-RESERVE-25"
+      Utils.fromSingletonData "ERROR-RESERVE-06"
+        $ List.filter (traceIfFalse "ERROR-RESERVE-25" . carriesAuthToken)
+        $ getContinuingOutputs ctx
 
     inputDatum :: VersionedGenericDatum ReserveDatum
     !inputDatum = Utils.fromJust "ERROR-RESERVE-07" (extractReserveUtxoDatumUnsafe inputReserveUtxo)
