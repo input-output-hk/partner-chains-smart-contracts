@@ -78,6 +78,7 @@
           haskell-language-server
           haskellPackages.cabal-fmt
           haskellPackages.fourmolu
+          haskellPackages.hoogle
           hlint
           libsodium
           lmdb
@@ -86,6 +87,7 @@
           secp256k1
           zlib
           zip
+          blst
 
           #
           # Rust dependencies for raw-scripts crate
