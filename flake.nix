@@ -37,6 +37,7 @@
         pre-commit-check = pre-commit-hooks.lib."${system}".run {
           src = ./.;
           hooks = {
+            hlint.enable = true;
             fourmolu.enable = true;
             shellcheck.enable = true;
             cabal-fmt.enable = true;
