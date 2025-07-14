@@ -16,14 +16,21 @@ jobs:
       id-token: write
       contents: read
     runs-on: [self-hosted, Linux]
-    env:
-      # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2024-11-14"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           token: ${{ github.token }}
+
+      - name: Cache Cabal
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.local/state/cabal/store
+            onchain/dist-newstyle
+          key: cabal-${{ runner.os }}-${{ hashFiles('onchain/**/*.cabal', 'onchain/cabal.project', 'onchain/cabal.project.freeze') }}
+          restore-keys: |
+            cabal-${{ runner.os }}-
 
       - name: Add signing key for nix
         run: echo "${{ secrets.NIX_SIGNING_KEY }}" > "${{ runner.temp }}/nix-key"
