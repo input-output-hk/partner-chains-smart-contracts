@@ -92,8 +92,8 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
 
     assetsIncrease :: Bool
     assetsIncrease =
-      (txOutValue $ supplyInputUtxo)
-        `lt` (txOutValue $ supplyOutputUtxo)
+      (txOutValue supplyInputUtxo)
+        `lt` (txOutValue supplyOutputUtxo)
 
     oneIcsWithdrawalMintingPolicyTokenIsMinted :: Bool
     oneIcsWithdrawalMintingPolicyTokenIsMinted =
