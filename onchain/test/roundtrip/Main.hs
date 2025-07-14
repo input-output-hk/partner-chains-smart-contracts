@@ -161,28 +161,19 @@ shrinkVOC (VersionOracleConfig versionOracleCurrencySymbol) = do
   pure $ VersionOracleConfig sym
 
 -- | Wrapper for 'PubKeyHash' to provide QuickCheck instances.
---
--- @since v4.0.0
 newtype ArbitraryPubKeyHash = ArbitraryPubKeyHash PubKeyHash
   deriving
-    ( -- | @since v4.0.0
-      Eq
-    , -- | @since v4.0.0
-      Ord
-    , -- | @since v4.0.0
-      PTPrelude.Eq
-    , -- | @since v4.0.0
-      PTPrelude.Ord
+    ( Eq
+    , Ord
+    , PTPrelude.Eq
+    , PTPrelude.Ord
     )
     via PubKeyHash
   deriving stock
-    ( -- | @since v4.0.0
-      Show
+    ( Show
     )
 
 -- | Does not shrink, as it doesn't make much sense to.
---
--- @since v4.0.0
 instance Arbitrary ArbitraryPubKeyHash where
   arbitrary =
     ArbitraryPubKeyHash
@@ -192,29 +183,20 @@ instance Arbitrary ArbitraryPubKeyHash where
       <$> vectorOf 28 arbitrary
 
 -- | Wrapper for 'CurrencySymbol' to provide QuickCheck instances.
---
--- @since v4.0.0
 newtype ArbitraryCurrencySymbol = ArbitraryCurrencySymbol CurrencySymbol
   deriving
-    ( -- | @since v4.0.0
-      Eq
-    , -- | @since v4.0.0
-      Ord
-    , -- | @since v4.0.0
-      PTPrelude.Eq
-    , -- | @since v4.0.0
-      PTPrelude.Ord
+    ( Eq
+    , Ord
+    , PTPrelude.Eq
+    , PTPrelude.Ord
     )
     via CurrencySymbol
   deriving stock
-    ( -- | @since v4.0.0
-      Show
+    ( Show
     )
 
 -- | This does /not/ generate the ADA symbol. Does not shrink (it wouldn't make
 -- much sense to).
---
--- @since v4.0.0
 instance Arbitrary ArbitraryCurrencySymbol where
   arbitrary =
     ArbitraryCurrencySymbol

@@ -5,7 +5,6 @@ semver_pattern="^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-((0|[1-9]\d*|\d*[a-zA
 
 # shellcheck disable=SC2125
 cabalfile=onchain/*.cabal
-hsfiles=$(find onchain/src -type f -name "*.hs")
 
 if [[ -z $IN_NIX_SHELL ]]; then
 	echo "The release script must be run from inside a nix shell"
@@ -40,8 +39,6 @@ changie batch $next_version
 changie merge
 # shellcheck disable=SC2086
 sed -i -r "s/^version:(\s*)\S+$/version:\1$next_version/" $cabalfile
-# shellcheck disable=SC2086
-sed -i -r "s/@since (U|u)nreleased/@since v$next_version/" $hsfiles
 # shellcheck disable=SC2086
 cargo set-version --manifest-path raw-scripts/Cargo.toml $next_version
 # shellcheck disable=SC2086

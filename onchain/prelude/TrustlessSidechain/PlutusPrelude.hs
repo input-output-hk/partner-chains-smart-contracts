@@ -120,8 +120,6 @@ ifThenElse False _ y = y
 --   {\-# INLINEABLE unsafeFromBuiltinData #-\}
 --   unsafeFromBuiltinData = productUnsafeFromData2 Foo
 -- @
---
--- @since v4.0.0
 {-# INLINE productToData2 #-}
 productToData2 ::
   forall (a :: Type) (b :: Type).
@@ -135,8 +133,6 @@ productToData2 x y = Unsafe.mkList go
     go = step1 toBuiltinData x (done1 toBuiltinData y)
 
 -- | As 'productToData2', but for 3-products.
---
--- @since v4.0.0
 {-# INLINE productToData3 #-}
 productToData3 ::
   forall (a :: Type) (b :: Type) (c :: Type).
@@ -160,8 +156,6 @@ productToData3 x y z = Unsafe.mkList go
         )
 
 -- | As 'productToData2', but for 4-products.
---
--- @since v4.0.0
 {-# INLINE productToData4 #-}
 productToData4 ::
   forall (a :: Type) (b :: Type) (c :: Type) (d :: Type).
@@ -190,8 +184,6 @@ productToData4 x1 x2 x3 x4 = Unsafe.mkList go
         )
 
 -- | As 'productToData2', but for 5-products.
---
--- @since v4.0.0
 {-# INLINE productToData5 #-}
 productToData5 ::
   forall
@@ -230,8 +222,6 @@ productToData5 x1 x2 x3 x4 x5 = Unsafe.mkList go
         )
 
 -- | As 'productToData2', but for 6-products.
---
--- @since v4.0.0
 {-# INLINE productToData6 #-}
 productToData6 ::
   forall
@@ -290,8 +280,6 @@ productToData6 x1 x2 x3 x4 x5 x6 = Unsafe.mkList go
 --
 -- Use this function if you don't need any verification beyond the components of
 -- the product decoding successfully.
---
--- @since v4.0.0
 {-# ANN productFromData2 ("HLint: ignore Avoid lambda" :: HString.String) #-}
 {-# INLINE productFromData2 #-}
 productFromData2 ::
@@ -304,8 +292,6 @@ productFromData2 f = productFromData2' (\x y -> Just (f x y))
 
 -- | As 'productFromData2', but allows additional checks beyond the components
 -- successfully decoding.
---
--- @since v4.0.0
 {-# ANN productFromData2' ("HLint: ignore Avoid lambda" :: HString.String) #-}
 {-# INLINE productFromData2' #-}
 productFromData2' ::
@@ -337,8 +323,6 @@ productFromData2' f dat =
         )
 
 -- | As 'productFromData2', but for 3-products.
---
--- @since v4.0.0
 {-# ANN productFromData3 ("HLint: ignore Avoid lambda" :: HString.String) #-}
 {-# INLINE productFromData3 #-}
 productFromData3 ::
@@ -351,8 +335,6 @@ productFromData3 f = productFromData3' (\x y z -> Just (f x y z))
 
 -- | As 'productFromData3', but allows additional checks beyond the components
 -- successfully decoding.
---
--- @since v4.0.0
 {-# ANN productFromData3' ("HLint: ignore Avoid lambda" :: HString.String) #-}
 {-# INLINE productFromData3' #-}
 productFromData3' ::
@@ -388,8 +370,6 @@ productFromData3' f dat =
         )
 
 -- | As 'productFromData2', but for 4-products.
---
--- @since v4.0.0
 {-# ANN productFromData4 ("HLint: ignore Avoid lambda" :: HString.String) #-}
 {-# INLINE productFromData4 #-}
 productFromData4 ::
@@ -402,8 +382,6 @@ productFromData4 f = productFromData4' (\x1 x2 x3 x4 -> Just (f x1 x2 x3 x4))
 
 -- | As 'productFromData4', but allows additional checks beyond the components
 -- successfully decoding.
---
--- @since v4.0.0
 {-# ANN productFromData4' ("HLint: ignore Avoid lambda" :: HString.String) #-}
 {-# INLINE productFromData4' #-}
 productFromData4' ::
@@ -443,8 +421,6 @@ productFromData4' f dat =
         )
 
 -- | As 'productFromData2', but for 5-products.
---
--- @since v4.0.0
 {-# ANN productFromData5 ("HLint: ignore Avoid lambda" :: HString.String) #-}
 {-# INLINE productFromData5 #-}
 productFromData5 ::
@@ -470,8 +446,6 @@ productFromData5 f =
 
 -- | As 'productFromData5', but allows additional checks beyond the components
 -- successfully decoding.
---
--- @since v4.0.0
 {-# ANN productFromData5' ("HLint: ignore Avoid lambda" :: HString.String) #-}
 {-# INLINE productFromData5' #-}
 productFromData5' ::
@@ -526,8 +500,6 @@ productFromData5' f dat =
         )
 
 -- | As 'productFromData2', but for 6-products.
---
--- @since v4.0.0
 {-# ANN productFromData6 ("HLint: ignore Avoid lambda" :: HString.String) #-}
 {-# INLINE productFromData6 #-}
 productFromData6 ::
@@ -555,8 +527,6 @@ productFromData6 f =
 
 -- | As 'productFromData6', but allows additional checks beyond the components
 -- successfully decoding.
---
--- @since v4.0.0
 {-# ANN productFromData6' ("HLint: ignore Avoid lambda" :: HString.String) #-}
 {-# INLINE productFromData6' #-}
 productFromData6' ::
@@ -622,8 +592,6 @@ productFromData6' f dat =
 -- = Note
 --
 -- See 'productToData2' for examples of use, and why this is necessary.
---
--- @since v4.0.0
 {-# ANN productUnsafeFromData2 ("HLint: ignore Avoid lambda" :: HString.String) #-}
 {-# INLINE productUnsafeFromData2 #-}
 productUnsafeFromData2 ::
@@ -641,8 +609,6 @@ productUnsafeFromData2 f dat =
     (Unsafe.unsafeDataAsList dat)
 
 -- | As 'productUnsafeFromData2', but for 3-products.
---
--- @since v4.0.0
 {-# ANN productUnsafeFromData3 ("HLint: ignore Avoid lambda" :: HString.String) #-}
 {-# INLINE productUnsafeFromData3 #-}
 productUnsafeFromData3 ::
@@ -664,8 +630,6 @@ productUnsafeFromData3 f dat =
     (Unsafe.unsafeDataAsList dat)
 
 -- | As 'productUnsafeFromData2', but for 4-products.
---
--- @since v4.0.0
 {-# ANN productUnsafeFromData4 ("HLint: ignore Avoid lambda" :: HString.String) #-}
 {-# INLINE productUnsafeFromData4 #-}
 productUnsafeFromData4 ::
@@ -691,8 +655,6 @@ productUnsafeFromData4 f dat =
     (Unsafe.unsafeDataAsList dat)
 
 -- | As 'productUnsafeFromData2', but for 5-products.
---
--- @since v4.0.0
 {-# ANN productUnsafeFromData5 ("HLint: ignore Avoid lambda" :: HString.String) #-}
 {-# INLINE productUnsafeFromData5 #-}
 productUnsafeFromData5 ::
@@ -733,8 +695,6 @@ productUnsafeFromData5 f dat =
     (Unsafe.unsafeDataAsList dat)
 
 -- | As 'productUnsafeFromData2', but for 6-products.
---
--- @since v4.0.0
 {-# ANN productUnsafeFromData6 ("HLint: ignore Avoid lambda" :: HString.String) #-}
 {-# INLINE productUnsafeFromData6 #-}
 productUnsafeFromData6 ::
