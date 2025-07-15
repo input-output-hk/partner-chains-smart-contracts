@@ -1,16 +1,14 @@
 cabal-version:      3.0
 name:               trustless-sidechain
 version:            7.2.2
-synopsis:           TODO
-description:        TODO
+synopsis:           Smart contract code used by the partner-chains project.
 homepage:           https://github.com/mlabs-haskell/trustless-sidechain
 bug-reports:        https://github.com/mlabs-haskell/trustless-sidechain
-license:
-license-file:
-author:             MLabs
-maintainer:         TODO
-copyright:          TODO
-category:           TODO
+license:            Apache-2.0
+license-file:       LICENSE
+author:             Michal Jankun, Krisztian Pinter
+maintainer:         Michal Jankun, Krisztian Pinter
+copyright:          (c) 2022-2025 IOG
 build-type:         Simple
 extra-source-files: README.md
 
