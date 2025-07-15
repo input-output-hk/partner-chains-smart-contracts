@@ -206,6 +206,7 @@ test-suite trustless-sidechain-test
     Test.TrustlessSidechain.Golden.Versioning
     Test.TrustlessSidechain.GoldenTest
     Test.TrustlessSidechain.Transactions
+    Test.TrustlessSidechain.Transactions.Versioning
 
   build-depends:
     , base16-bytestring

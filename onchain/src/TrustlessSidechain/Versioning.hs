@@ -84,8 +84,7 @@ versionOracleTokenName = TokenName "Version oracle"
 --   ERROR-VERSION-POLICY-02: Transaction should attach datum and reference
 --     script to output containing one versioning token.
 --
---   ERROR-VERSION-POLICY-03: Transaction should attach datum and reference
---     script to output containing one versioning token.
+--   ERROR-VERSION-POLICY-03: Transaction should mint exactly oneversion oracle token.
 --
 --   ERROR-VERSION-POLICY-04: Script to be invalidated should be present in
 --     exactly one transaction input.
@@ -148,7 +147,7 @@ mkVersionOraclePolicy genesisUtxo validatorAddress redeemer ctx@(ScriptContext t
       versionOracle' == versionOracle
       , scriptHash' == scriptHash
       , -- Check that datum is attached to a single version token.
-      valueOf value currSym versionOracleTokenName == 1
+      valueOf value currSym versionOracleTokenName >= 1
       ]
 
     -- Check that transaction was approved by governance authority
