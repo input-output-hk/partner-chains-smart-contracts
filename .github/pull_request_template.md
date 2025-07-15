@@ -1,5 +1,4 @@
 ### Prereview checklist
 
 - [ ] Changes have been documented by running `changie new`
-- [ ] All tests pass in CI
-- [ ] PR was self-reviewed
+- [ ] `partner-chains` repo tests work against updated scripts if changes are intended as non-breaking
