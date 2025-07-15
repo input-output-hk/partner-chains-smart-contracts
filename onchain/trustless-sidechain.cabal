@@ -58,8 +58,13 @@ common common-lang
     TypeApplications
     ViewPatterns
 
-  -- DuplicateRecordFields
   default-language:   Haskell2010
+
+common common-lang-optimized-notrace
+  import:      common-lang
+  ghc-options:
+    -fplugin-opt PlutusTx.Plugin:remove-trace -fplugin-opt
+    PlutusTx.Plugin:optimize
 
 common common-lang-traced
   import:      common-lang
@@ -77,6 +82,25 @@ common common-optimized
 common common-optimized-parallel
   import:      common-optimized
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
+
+common common-other-modules
+  other-modules:
+    TrustlessSidechain.AlwaysFailingScripts
+    TrustlessSidechain.AlwaysPassingScripts
+    TrustlessSidechain.CommitteeCandidateValidator
+    TrustlessSidechain.DParameter
+    TrustlessSidechain.ExampleVFunction
+    TrustlessSidechain.Governance.MultiSig
+    TrustlessSidechain.GovernedMap
+    TrustlessSidechain.IlliquidCirculationSupply
+    TrustlessSidechain.OnlyMintMintingPolicy
+    TrustlessSidechain.PermissionedCandidates
+    TrustlessSidechain.Reserve
+    TrustlessSidechain.ScriptCache
+    TrustlessSidechain.ScriptId
+    TrustlessSidechain.Types
+    TrustlessSidechain.Utils
+    TrustlessSidechain.Versioning
 
 -- Libraries
 
@@ -142,24 +166,8 @@ library plutus-shim-prelude
 -- Executables
 
 executable trustless-sidechain-serialise
-  import:         common-lang, common-optimized-parallel
-  main-is:        Main.hs
-  build-depends:
-    , aeson
-    , base16-bytestring
-    , bytestring
-    , cardano-api
-    , casing
-    , plutus-ledger-api
-    , plutus-tx
-    , trustless-sidechain
-    , trustless-sidechain-prelude
-
-  hs-source-dirs: app/serialise
-
-executable trustless-sidechain-serialise-traced
   import:
-    common-lang-traced, common-script-lang, common-optimized-parallel
+    common-lang-optimized-notrace, common-lang, common-optimized-parallel, common-other-modules
 
   main-is:        Main.hs
   build-depends:
@@ -174,23 +182,24 @@ executable trustless-sidechain-serialise-traced
     , plutus-tx-plugin
     , trustless-sidechain-prelude
 
-  other-modules:
-    TrustlessSidechain.AlwaysFailingScripts
-    TrustlessSidechain.AlwaysPassingScripts
-    TrustlessSidechain.CommitteeCandidateValidator
-    TrustlessSidechain.DParameter
-    TrustlessSidechain.ExampleVFunction
-    TrustlessSidechain.Governance.MultiSig
-    TrustlessSidechain.GovernedMap
-    TrustlessSidechain.IlliquidCirculationSupply
-    TrustlessSidechain.OnlyMintMintingPolicy
-    TrustlessSidechain.PermissionedCandidates
-    TrustlessSidechain.Reserve
-    TrustlessSidechain.ScriptCache
-    TrustlessSidechain.ScriptId
-    TrustlessSidechain.Types
-    TrustlessSidechain.Utils
-    TrustlessSidechain.Versioning
+  hs-source-dirs: app/serialise src
+
+executable trustless-sidechain-serialise-traced
+  import:
+    common-lang-traced, common-script-lang, common-optimized-parallel, common-other-modules
+
+  main-is:        Main.hs
+  build-depends:
+    , aeson
+    , base16-bytestring
+    , bytestring
+    , cardano-api
+    , casing
+    , plutus-ledger-api
+    , plutus-shim-prelude
+    , plutus-tx
+    , plutus-tx-plugin
+    , trustless-sidechain-prelude
 
   hs-source-dirs: app/serialise src
 
@@ -222,13 +231,14 @@ test-suite trustless-sidechain-test
 
 test-suite script-size
   import:
-    common-lang , common-optimized-parallel , common-script-lang
+    common-lang , common-lang-optimized-notrace, common-optimized-parallel , common-script-lang, common-other-modules
 
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:  Sizer
   build-depends:
     , bytestring
+    , cardano-api
     , plutus-core
     , plutus-ledger-api
     , plutus-shim-prelude
@@ -239,7 +249,7 @@ test-suite script-size
     , trustless-sidechain
     , trustless-sidechain-prelude
 
-  hs-source-dirs: test/script-size
+  hs-source-dirs: test/script-size src
 
 test-suite roundtrip
   import:         common-lang, common-optimized-parallel
