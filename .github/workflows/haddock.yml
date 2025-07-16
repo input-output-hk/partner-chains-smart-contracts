@@ -1,0 +1,45 @@
+name: deploy haddock docs
+description: deploys haddock documentation output to GitHub Pages
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-x64-linux:
+    permissions:
+      id-token: write
+      contents: read
+    runs-on: [self-hosted, Linux]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+
+      - name: Cache Cabal
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.local/state/cabal/store
+            onchain/dist-newstyle
+          key: cabal-${{ runner.os }}-${{ hashFiles('onchain/**/*.cabal', 'onchain/cabal.project', 'onchain/cabal.project.freeze') }}
+          restore-keys: |
+            cabal-${{ runner.os }}-
+
+      - name: Add signing key for nix
+        run: echo "${{ secrets.NIX_SIGNING_KEY }}" > "${{ runner.temp }}/nix-key"
+
+      - name: Build docs
+        run: |
+          cd onchain
+          nix develop -c bash -c "cabal haddock"
+
+      - name: Deploy documentation
+        uses: peaceiris/actions-gh-pages@v3.9.3
+        with:
+          github_token: ${{ env.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./onchain/dist-newstyle/build/x86_64-linux/ghc-9.6.6/trustless-sidechain-7.2.2/doc/html
