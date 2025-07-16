@@ -41,6 +41,6 @@ jobs:
       - name: Deploy documentation
         uses: peaceiris/actions-gh-pages@v3.9.3
         with:
-          github_token: ${{ env.GITHUB_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
           publish_dir: ./onchain/dist-newstyle/build/x86_64-linux/ghc-9.6.6/trustless-sidechain-7.2.2/doc/html
