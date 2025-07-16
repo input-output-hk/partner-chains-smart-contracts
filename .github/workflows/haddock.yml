@@ -11,7 +11,7 @@ jobs:
   build-x64-linux:
     permissions:
       id-token: write
-      contents: read
+      contents: write
     runs-on: [self-hosted, Linux]
     steps:
       - name: Checkout code
@@ -35,11 +35,19 @@ jobs:
       - name: Build docs
         run: |
           cd onchain
+          nix develop -c bash -c "cabal update"
           nix develop -c bash -c "cabal haddock"
+
+      - name: Find Haddock output directory
+        id: find-docs-dir
+        run: |
+          DOC_PATH=$(find onchain/dist-newstyle/build -type d -path "*/doc/html" | head -n 1)
+          echo "Found doc path: $DOC_PATH"
+          echo "docs-dir=$DOC_PATH" >> $GITHUB_OUTPUT
 
       - name: Deploy documentation
         uses: peaceiris/actions-gh-pages@v3.9.3
         with:
-          github_token: ${{ env.GITHUB_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: ./onchain/dist-newstyle/build/x86_64-linux/ghc-9.6.6/trustless-sidechain-7.2.2/doc/html
+          publish_dir: ${{ steps.find-docs-dir.outputs.docs-dir }}
