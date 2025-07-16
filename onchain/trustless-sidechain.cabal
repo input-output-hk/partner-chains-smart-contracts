@@ -9,7 +9,6 @@ bug-reports:
   https://github.com/input-output-hk/partner-chains-smart-contracts
 
 license:       Apache-2.0
-license-file:  LICENSE
 author:        Michal Jankun, Krisztian Pinter
 maintainer:    Michal Jankun, Krisztian Pinter
 copyright:     (c) 2022-2025 IOG
