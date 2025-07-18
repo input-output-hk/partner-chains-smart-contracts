@@ -3,6 +3,7 @@
 {-# LANGUAGE TemplateHaskellQuotes #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Test.TrustlessSidechain.Transactions.Versioning (versioningTests, initGovernance, mkVersioningPolicyHash, mkVersioningValidatorHash, mkVersioningScriptAddress) where
 
@@ -39,12 +40,48 @@ import Test.HUnit qualified as HUnit
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 import TrustlessSidechain.Versioning qualified as Versioning
+import TrustlessSidechain.AlwaysPassingScripts qualified as AlwaysPassingScripts
 import Prelude
 
 -- | Type synonym for the test monad stack
 --
 -- @since 0.1
 type TestM = C.ExceptT (CoinSelection.BalanceTxError C.ConwayEra) (MockChain.MockchainT C.ConwayEra IO)
+
+-- | Bundles all values derived from a genesisUtxo and governance wallet for test setup
+data VersioningTestSetup = VersioningTestSetup
+  { vtsGenesisUtxo :: C.TxIn
+  , vtsVersionOraclePolicyHash :: C.ScriptHash
+  , vtsVersionOracleTokenValue :: C.Value
+  , vtsVersionOracleDatum :: Versioning.VersionOracleDatum
+  , vtsGovernanceScript :: C.SimpleScript
+  , vtsGovernanceScriptHash :: PLAV1.ScriptHash
+  , vtsInitializeOracleRedeemer :: Versioning.VersionOraclePolicyRedeemer
+  , vtsVersioningValidatorHash :: C.ScriptHash
+  , vtsVersioningScriptAddress :: C.AddressInEra C.ConwayEra
+  }
+
+mkVersioningTestSetup :: C.TxIn -> Wallet.Wallet -> VersioningTestSetup
+mkVersioningTestSetup genesisUtxo governanceWallet =
+  let versionOraclePolicyHash = mkVersioningPolicyHash genesisUtxo
+      versionOracleTokenValue = versionOracleValue versionOraclePolicyHash
+      versionOracleDatum = mkVersionOracleDatum versionOraclePolicyHash 32
+      governanceScript = mkGovernanceScript governanceWallet
+      governanceScriptHash = mkGovernanceScriptHash governanceWallet
+      initializeOracleRedeemer = Versioning.InitializeVersionOracle (Versioning.VersionOracle 32) governanceScriptHash
+      versioningValidatorHash = mkVersioningValidatorHash genesisUtxo
+      versioningScriptAddress = mkVersioningScriptAddress genesisUtxo
+  in VersioningTestSetup
+      { vtsGenesisUtxo = genesisUtxo
+      , vtsVersionOraclePolicyHash = versionOraclePolicyHash
+      , vtsVersionOracleTokenValue = versionOracleTokenValue
+      , vtsVersionOracleDatum = versionOracleDatum
+      , vtsGovernanceScript = governanceScript
+      , vtsGovernanceScriptHash = governanceScriptHash
+      , vtsInitializeOracleRedeemer = initializeOracleRedeemer
+      , vtsVersioningValidatorHash = versioningValidatorHash
+      , vtsVersioningScriptAddress = versioningScriptAddress
+      }
 
 -- | Constants
 versionOracleAssetName :: CA.AssetName
@@ -62,9 +99,9 @@ versionOracleValue versionOraclePolicyHash =
     ]
 
 -- | Construct the datum for the version oracle
-mkVersionOracleDatum :: C.ScriptHash -> Versioning.VersionOracleDatum
-mkVersionOracleDatum versionOraclePolicyHash =
-  Versioning.VersionOracleDatum (Versioning.VersionOracle 32) (Value.currencySymbol $ C.serialiseToRawBytes versionOraclePolicyHash)
+mkVersionOracleDatum :: C.ScriptHash -> Integer -> Versioning.VersionOracleDatum
+mkVersionOracleDatum versionOraclePolicyHash scriptId =
+  Versioning.VersionOracleDatum (Versioning.VersionOracle scriptId) (Value.currencySymbol $ C.serialiseToRawBytes versionOraclePolicyHash)
 
 -- | Governance script helpers
 mkGovernanceScript :: Wallet.Wallet -> C.SimpleScript
@@ -106,6 +143,20 @@ mkVersioningPolicyHash = C.hashScript . C.PlutusScript C.PlutusScriptV2 . mkVers
 mkVersioningScriptAddress :: C.TxIn -> C.AddressInEra C.ConwayEra
 mkVersioningScriptAddress genesisUtxo = Utils.scriptAddress Defaults.networkId $ mkVersioningValidator genesisUtxo
 
+mkAlwaysSucceedsPolicy :: C.PlutusScript C.PlutusScriptV2
+mkAlwaysSucceedsPolicy = CPlutusTx.compiledCodeToScript ($$(PlutusTx.compile [||AlwaysPassingScripts.mkAlwaysPassingPolicyUntyped||]) `PlutusTx.unsafeApplyCode` PlutusTx.liftCode plcVersion100 (Builtins.mkConstr 0 []))
+
+mkAlwaysSucceedsPolicyHash :: PLAV1.ScriptHash
+mkAlwaysSucceedsPolicyHash = PLAV1.ScriptHash $ Builtins.toBuiltin $ C.serialiseToRawBytes $ C.hashScript $ C.PlutusScript C.PlutusScriptV2 mkAlwaysSucceedsPolicy
+
+-- | Helper to create the initial payment and return the resulting genesisUtxo
+initGenesisUtxo :: TestM C.TxIn
+initGenesisUtxo = do
+  let initialPaymentTx = BuildTx.execBuildTx (BuildTx.payToAddress (Wallet.addressInEra Defaults.networkId Wallet.w2) (C.lovelaceToValue $ fromIntegral versionOracleAdaAmount))
+  initialPaymentResult <- MockChainCoinSelection.tryBalanceAndSubmit @C.ConwayEra mempty Wallet.w1 initialPaymentTx CoinSelection.TrailingChange []
+  let initialTxId = C.getTxId $ C.getTxBody initialPaymentResult
+  return $ C.TxIn initialTxId (C.TxIx 0)
+
 -- | Transaction tests for Versioning
 versioningTests :: TestTree
 versioningTests =
@@ -115,159 +166,202 @@ versioningTests =
     , testCase "initGovernanceFailsWithoutSpendingGenesisUtxo" initGovernanceFailsWithoutSpendingGenesisUtxo
     , testCase "initGovernanceFailsWithoutAttachingDatum" initGovernanceFailsWithoutAttachingDatum
     , testCase "initGovernanceFailsWithoutAttachingReferenceScript" initGovernanceFailsWithoutAttachingReferenceScript
-    , testCase "initGovernanceFailsWithoutMintingVersionOracleToken" initGovernanceFailsWithoutMintingVersionOracleToken
+    , testCase "initGovernanceFailsWhenMintingIncorrectAmountOfVersionOracleToken" initGovernanceFailsWhenMintingIncorrectAmountOfVersionOracleToken
+    , testCase "mintVersioningTokenFailsWithoutAttachingDatum" mintVersioningTokenFailsWithoutAttachingDatum
+    , testCase "mintVersioningTokenFailsWithoutAttachingReferenceScript" mintVersioningTokenFailsWithoutAttachingReferenceScript
+    , testCase "mintVersioningTokenFailsWhenNotSignedByGovernanceAuthority" mintVersioningTokenFailsWhenNotSignedByGovernanceAuthority
+    , testCase "mintVersioningTokenFailsWhenMintingIncorrectAmountOfVersionOracleToken" mintVersioningTokenFailsWhenMintingIncorrectAmountOfVersionOracleToken
+    , testCase "mintVersioningTokenFailsWhenGovernanceScriptUtxIsNotReferenced" mintVersioningTokenFailsWhenGovernanceScriptUtxIsNotReferenced
+    , testCase "mintVersioningTokenSucceeds" mintVersioningTokenSucceeds
     , testCase "updateGovernanceSucceeds" updateGovernanceSucceeds
     ]
 
-initGovernanceFailsWithoutSpendingGenesisUtxo :: HUnit.Assertion
-initGovernanceFailsWithoutSpendingGenesisUtxo = flip
+shouldFailWith :: String -> TestM () -> HUnit.Assertion
+shouldFailWith errorMessage m = flip
   MockChainUtils.mockchainFails
   ( \case
-      e | "ERROR-VERSION-POLICY-01" `List.isInfixOf` show e -> return ()
-      e -> error $ "Expected a ERROR-VERSION-POLICY-01, got: " ++ show e
-  )
-  $ Utils.failOnError
-  $ do
-    let initialPaymentTx = BuildTx.execBuildTx (BuildTx.payToAddress (Wallet.addressInEra Defaults.networkId Wallet.w2) (C.lovelaceToValue $ fromIntegral versionOracleAdaAmount))
-    initialPaymentResult <- MockChainCoinSelection.tryBalanceAndSubmit @C.ConwayEra mempty Wallet.w1 initialPaymentTx CoinSelection.TrailingChange []
-    let initialTxId = C.getTxId $ C.getTxBody initialPaymentResult
-        genesisUtxo = C.TxIn initialTxId (C.TxIx 0)
-        versionOraclePolicyHash = mkVersioningPolicyHash genesisUtxo
-        versionOracleTokenValue = versionOracleValue versionOraclePolicyHash
-        versionOracleDatum = mkVersionOracleDatum versionOraclePolicyHash
-        governanceScript = mkGovernanceScript Wallet.w1
-        governanceScriptHash = mkGovernanceScriptHash Wallet.w1
-        initializeOracleRedeemer = Versioning.InitializeVersionOracle (Versioning.VersionOracle 32) governanceScriptHash
-        governanceInitTx =
-          BuildTx.execBuildTx $ do
-            BuildTx.createRefScriptInlineDatum (mkVersioningScriptAddress genesisUtxo) (C.SimpleScript governanceScript) versionOracleDatum versionOracleTokenValue
-            BuildTx.mintPlutus (mkVersioningPolicy genesisUtxo) initializeOracleRedeemer versionOracleAssetName (CA.Quantity 1)
-        w2SigningKey = Operator.toShelleyWitnessSigningKey $ Operator.PESigning $ Wallet.getWallet Wallet.w2
-    _ <- MockChainCoinSelection.tryBalanceAndSubmit @C.ConwayEra mempty Wallet.w1 governanceInitTx CoinSelection.TrailingChange [w2SigningKey]
-    return ()
+      e | errorMessage `List.isInfixOf` show e -> return ()
+      e -> error $ "Expected a " ++ errorMessage ++ ", got: " ++ show e
+  ) $ Utils.failOnError m
+
+initGovernanceFailsWithoutSpendingGenesisUtxo :: HUnit.Assertion
+initGovernanceFailsWithoutSpendingGenesisUtxo = shouldFailWith "ERROR-VERSION-POLICY-01" $ do
+  genesisUtxo <- initGenesisUtxo
+  let VersioningTestSetup{..} = mkVersioningTestSetup genesisUtxo Wallet.w1
+      governanceInitTx =
+        BuildTx.execBuildTx $ do
+          BuildTx.createRefScriptInlineDatum vtsVersioningScriptAddress (C.SimpleScript vtsGovernanceScript) vtsVersionOracleDatum vtsVersionOracleTokenValue
+          BuildTx.mintPlutus (mkVersioningPolicy genesisUtxo) vtsInitializeOracleRedeemer versionOracleAssetName (CA.Quantity 1)
+      w2SigningKey = Operator.toShelleyWitnessSigningKey $ Operator.PESigning $ Wallet.getWallet Wallet.w2
+  _ <- MockChainCoinSelection.tryBalanceAndSubmit @C.ConwayEra mempty Wallet.w1 governanceInitTx CoinSelection.TrailingChange [w2SigningKey]
+  return ()
 
 initGovernanceFailsWithoutAttachingDatum :: HUnit.Assertion
-initGovernanceFailsWithoutAttachingDatum = flip
-  MockChainUtils.mockchainFails
-  ( \case
-      e | "ERROR-VERSION-POLICY-02" `List.isInfixOf` show e -> return ()
-      e -> error $ "Expected a ERROR-VERSION-POLICY-02, got: " ++ show e
-  )
-  $ Utils.failOnError
-  $ do
-    let initialPaymentTx = BuildTx.execBuildTx (BuildTx.payToAddress (Wallet.addressInEra Defaults.networkId Wallet.w2) (C.lovelaceToValue $ fromIntegral versionOracleAdaAmount))
-    initialPaymentResult <- MockChainCoinSelection.tryBalanceAndSubmit @C.ConwayEra mempty Wallet.w1 initialPaymentTx CoinSelection.TrailingChange []
-    let initialTxId = C.getTxId $ C.getTxBody initialPaymentResult
-        genesisUtxo = C.TxIn initialTxId (C.TxIx 0)
-        versionOraclePolicyHash = mkVersioningPolicyHash genesisUtxo
-        versionOracleTokenValue = versionOracleValue versionOraclePolicyHash
-        governanceScript = mkGovernanceScript Wallet.w1
-        governanceScriptHash = mkGovernanceScriptHash Wallet.w1
-        initializeOracleRedeemer = Versioning.InitializeVersionOracle (Versioning.VersionOracle 32) governanceScriptHash
-        governanceInitTx =
-          BuildTx.execBuildTx $ do
-            BuildTx.spendPublicKeyOutput @C.ConwayEra genesisUtxo
-            BuildTx.createRefScriptInlineDatum (mkVersioningScriptAddress genesisUtxo) (C.SimpleScript governanceScript) () versionOracleTokenValue
-            BuildTx.mintPlutus (mkVersioningPolicy genesisUtxo) initializeOracleRedeemer versionOracleAssetName (CA.Quantity 1)
-        w2SigningKey = Operator.toShelleyWitnessSigningKey $ Operator.PESigning $ Wallet.getWallet Wallet.w2
-    _ <- MockChainCoinSelection.tryBalanceAndSubmit @C.ConwayEra mempty Wallet.w1 governanceInitTx CoinSelection.TrailingChange [w2SigningKey]
-    return ()
-
-initGovernanceFailsWithoutAttachingReferenceScript :: HUnit.Assertion
-initGovernanceFailsWithoutAttachingReferenceScript = flip
-  MockChainUtils.mockchainFails
-  ( \case
-      e | "ERROR-VERSION-POLICY-02" `List.isInfixOf` show e -> return ()
-      e -> error $ "Expected a ERROR-VERSION-POLICY-02, got: " ++ show e
-  )
-  $ Utils.failOnError
-  $ do
-    let initialPaymentTx = BuildTx.execBuildTx (BuildTx.payToAddress (Wallet.addressInEra Defaults.networkId Wallet.w2) (C.lovelaceToValue $ fromIntegral versionOracleAdaAmount))
-    initialPaymentResult <- MockChainCoinSelection.tryBalanceAndSubmit @C.ConwayEra mempty Wallet.w1 initialPaymentTx CoinSelection.TrailingChange []
-    let initialTxId = C.getTxId $ C.getTxBody initialPaymentResult
-        genesisUtxo = C.TxIn initialTxId (C.TxIx 0)
-        versionOraclePolicyHash = mkVersioningPolicyHash genesisUtxo
-        versionOracleTokenValue = versionOracleValue versionOraclePolicyHash
-        versionOracleDatum = mkVersionOracleDatum versionOraclePolicyHash
-        governanceScriptHash = mkGovernanceScriptHash Wallet.w1
-        initializeOracleRedeemer = Versioning.InitializeVersionOracle (Versioning.VersionOracle 32) governanceScriptHash
-        governanceInitTx =
-          BuildTx.execBuildTx $ do
-            BuildTx.spendPublicKeyOutput @C.ConwayEra genesisUtxo
-            BuildTx.payToScriptInlineDatum Defaults.networkId (mkVersioningValidatorHash genesisUtxo) versionOracleDatum C.NoStakeAddress versionOracleTokenValue
-            BuildTx.mintPlutus (mkVersioningPolicy genesisUtxo) initializeOracleRedeemer versionOracleAssetName (CA.Quantity 1)
-        w2SigningKey = Operator.toShelleyWitnessSigningKey $ Operator.PESigning $ Wallet.getWallet Wallet.w2
-    _ <- MockChainCoinSelection.tryBalanceAndSubmit @C.ConwayEra mempty Wallet.w1 governanceInitTx CoinSelection.TrailingChange [w2SigningKey]
-    return ()
-
-initGovernanceFailsWithoutMintingVersionOracleToken :: HUnit.Assertion
-initGovernanceFailsWithoutMintingVersionOracleToken = flip
-  MockChainUtils.mockchainFails
-  ( \case
-      e | "ERROR-VERSION-POLICY-03" `List.isInfixOf` show e -> return ()
-      e -> error $ "Expected a ERROR-VERSION-POLICY-03, got: " ++ show e
-  )
-  $ Utils.failOnError
-  $ do
-    let initialPaymentTx = BuildTx.execBuildTx (BuildTx.payToAddress (Wallet.addressInEra Defaults.networkId Wallet.w2) (C.lovelaceToValue $ fromIntegral versionOracleAdaAmount))
-    initialPaymentResult <- MockChainCoinSelection.tryBalanceAndSubmit @C.ConwayEra mempty Wallet.w1 initialPaymentTx CoinSelection.TrailingChange []
-    let initialTxId = C.getTxId $ C.getTxBody initialPaymentResult
-        genesisUtxo = C.TxIn initialTxId (C.TxIx 0)
-        versionOraclePolicyHash = mkVersioningPolicyHash genesisUtxo
-        versionOracleTokenValue = fromList [(CA.AssetId (CA.PolicyId versionOraclePolicyHash) versionOracleAssetName, CA.Quantity 2), (CA.AdaAssetId, CA.Quantity $ fromIntegral versionOracleAdaAmount)]
-        versionOracleDatum = mkVersionOracleDatum versionOraclePolicyHash
-        governanceScript = mkGovernanceScript Wallet.w1
-        governanceScriptHash = mkGovernanceScriptHash Wallet.w1
-        initializeOracleRedeemer = Versioning.InitializeVersionOracle (Versioning.VersionOracle 32) governanceScriptHash
-        governanceInitTx =
-          BuildTx.execBuildTx $ do
-            BuildTx.spendPublicKeyOutput @C.ConwayEra genesisUtxo
-            BuildTx.createRefScriptInlineDatum (mkVersioningScriptAddress genesisUtxo) (C.SimpleScript governanceScript) versionOracleDatum versionOracleTokenValue
-            BuildTx.mintPlutus (mkVersioningPolicy genesisUtxo) initializeOracleRedeemer versionOracleAssetName (CA.Quantity 2)
-        w2SigningKey = Operator.toShelleyWitnessSigningKey $ Operator.PESigning $ Wallet.getWallet Wallet.w2
-    _ <- MockChainCoinSelection.tryBalanceAndSubmit @C.ConwayEra mempty Wallet.w1 governanceInitTx CoinSelection.TrailingChange [w2SigningKey]
-    return ()
-
--- | Initialize governance and mint the version oracle token
-initGovernance :: TestM C.TxIn
-initGovernance = do
-  let initialPaymentTx = BuildTx.execBuildTx (BuildTx.payToAddress (Wallet.addressInEra Defaults.networkId Wallet.w2) (C.lovelaceToValue $ fromIntegral versionOracleAdaAmount))
-  initialPaymentResult <- MockChainCoinSelection.tryBalanceAndSubmit @C.ConwayEra mempty Wallet.w1 initialPaymentTx CoinSelection.TrailingChange []
-  let initialTxId = C.getTxId $ C.getTxBody initialPaymentResult
-      genesisUtxo = C.TxIn initialTxId (C.TxIx 0)
-      versionOraclePolicyHash = mkVersioningPolicyHash genesisUtxo
-      versionOracleTokenValue = versionOracleValue versionOraclePolicyHash
-      versionOracleDatum = mkVersionOracleDatum versionOraclePolicyHash
-      governanceScript = mkGovernanceScript Wallet.w1
-      governanceScriptHash = mkGovernanceScriptHash Wallet.w1
-      initializeOracleRedeemer = Versioning.InitializeVersionOracle (Versioning.VersionOracle 32) governanceScriptHash
+initGovernanceFailsWithoutAttachingDatum = shouldFailWith "ERROR-VERSION-POLICY-02" $ do
+  genesisUtxo <- initGenesisUtxo
+  let VersioningTestSetup{..} = mkVersioningTestSetup genesisUtxo Wallet.w1
       governanceInitTx =
         BuildTx.execBuildTx $ do
           BuildTx.spendPublicKeyOutput @C.ConwayEra genesisUtxo
-          BuildTx.createRefScriptInlineDatum (mkVersioningScriptAddress genesisUtxo) (C.SimpleScript governanceScript) versionOracleDatum versionOracleTokenValue
-          BuildTx.mintPlutus (mkVersioningPolicy genesisUtxo) initializeOracleRedeemer versionOracleAssetName (CA.Quantity 1)
+          BuildTx.createRefScriptInlineDatum vtsVersioningScriptAddress (C.SimpleScript vtsGovernanceScript) () vtsVersionOracleTokenValue
+          BuildTx.mintPlutus (mkVersioningPolicy genesisUtxo) vtsInitializeOracleRedeemer versionOracleAssetName (CA.Quantity 1)
       w2SigningKey = Operator.toShelleyWitnessSigningKey $ Operator.PESigning $ Wallet.getWallet Wallet.w2
   _ <- MockChainCoinSelection.tryBalanceAndSubmit @C.ConwayEra mempty Wallet.w1 governanceInitTx CoinSelection.TrailingChange [w2SigningKey]
-  return genesisUtxo
+  return ()
 
-initGovernanceSucceeds :: HUnit.Assertion
-initGovernanceSucceeds = MockChainUtils.mockchainSucceeds $ Utils.failOnError $ do
-  genesisUtxo <- initGovernance
-  Utxos.UtxoSet utxoSetMap <- Class.utxosByPaymentCredentials $ Set.fromList [C.PaymentCredentialByScript $ mkVersioningValidatorHash genesisUtxo]
+initGovernanceFailsWithoutAttachingReferenceScript :: HUnit.Assertion
+initGovernanceFailsWithoutAttachingReferenceScript = shouldFailWith "ERROR-VERSION-POLICY-02" $ do
+  genesisUtxo <- initGenesisUtxo
+  let VersioningTestSetup{..} = mkVersioningTestSetup genesisUtxo Wallet.w1
+      governanceInitTx =
+        BuildTx.execBuildTx $ do
+          BuildTx.spendPublicKeyOutput @C.ConwayEra genesisUtxo
+          BuildTx.payToScriptInlineDatum Defaults.networkId vtsVersioningValidatorHash vtsVersionOracleDatum C.NoStakeAddress vtsVersionOracleTokenValue
+          BuildTx.mintPlutus (mkVersioningPolicy genesisUtxo) vtsInitializeOracleRedeemer versionOracleAssetName (CA.Quantity 1)
+      w2SigningKey = Operator.toShelleyWitnessSigningKey $ Operator.PESigning $ Wallet.getWallet Wallet.w2
+  _ <- MockChainCoinSelection.tryBalanceAndSubmit @C.ConwayEra mempty Wallet.w1 governanceInitTx CoinSelection.TrailingChange [w2SigningKey]
+  return ()
+
+initGovernanceFailsWhenMintingIncorrectAmountOfVersionOracleToken :: HUnit.Assertion
+initGovernanceFailsWhenMintingIncorrectAmountOfVersionOracleToken = shouldFailWith "ERROR-VERSION-POLICY-03" $ do
+  genesisUtxo <- initGenesisUtxo
+  let VersioningTestSetup{..} = mkVersioningTestSetup genesisUtxo Wallet.w1
+      versionOracleTokenValue = fromList [(CA.AssetId (CA.PolicyId vtsVersionOraclePolicyHash) versionOracleAssetName, CA.Quantity 2), (CA.AdaAssetId, CA.Quantity $ fromIntegral versionOracleAdaAmount)]
+      governanceInitTx =
+        BuildTx.execBuildTx $ do
+          BuildTx.spendPublicKeyOutput @C.ConwayEra genesisUtxo
+          BuildTx.createRefScriptInlineDatum vtsVersioningScriptAddress (C.SimpleScript vtsGovernanceScript) vtsVersionOracleDatum versionOracleTokenValue
+          BuildTx.mintPlutus (mkVersioningPolicy genesisUtxo) vtsInitializeOracleRedeemer versionOracleAssetName (CA.Quantity 2)
+      w2SigningKey = Operator.toShelleyWitnessSigningKey $ Operator.PESigning $ Wallet.getWallet Wallet.w2
+  _ <- MockChainCoinSelection.tryBalanceAndSubmit @C.ConwayEra mempty Wallet.w1 governanceInitTx CoinSelection.TrailingChange [w2SigningKey]
+  return ()
+
+mintVersioningTokenFailsWithoutAttachingDatum :: HUnit.Assertion
+mintVersioningTokenFailsWithoutAttachingDatum = shouldFailWith "ERROR-VERSION-POLICY-04" $ do
+  (genesisUtxo, governanceTxIn, _)<- initGovernance
+  let VersioningTestSetup{..} = mkVersioningTestSetup genesisUtxo Wallet.w1
+      redeemer = Versioning.MintVersionOracle (Versioning.VersionOracle 35) mkAlwaysSucceedsPolicyHash
+      mintVersioningTokenTx =
+        BuildTx.execBuildTx $ do
+          BuildTx.createRefScriptInlineDatum vtsVersioningScriptAddress (C.PlutusScript C.PlutusScriptV2 mkAlwaysSucceedsPolicy) () vtsVersionOracleTokenValue
+          BuildTx.mintPlutus (mkVersioningPolicy genesisUtxo) redeemer versionOracleAssetName (CA.Quantity 1)
+          BuildTx.addReference governanceTxIn
+          BuildTx.addMintWithTxBody (CA.PolicyId $ C.hashScript (C.SimpleScript vtsGovernanceScript)) (CA.AssetName "Governance Token") (CA.Quantity 1) (const $ InternalScript.SimpleScriptWitness InternalScript.SimpleScriptInConway $ InternalScript.SReferenceScript governanceTxIn)
+      w2SigningKey = Operator.toShelleyWitnessSigningKey $ Operator.PESigning $ Wallet.getWallet Wallet.w2
+  _ <- MockChainCoinSelection.tryBalanceAndSubmit @C.ConwayEra mempty Wallet.w1 mintVersioningTokenTx CoinSelection.TrailingChange [w2SigningKey]
+  return ()
+
+mintVersioningTokenFailsWithoutAttachingReferenceScript :: HUnit.Assertion
+mintVersioningTokenFailsWithoutAttachingReferenceScript = shouldFailWith "ERROR-VERSION-POLICY-04" $ do
+  (genesisUtxo, governanceTxIn, _) <- initGovernance
+  let VersioningTestSetup{..} = mkVersioningTestSetup genesisUtxo Wallet.w1
+      redeemer = Versioning.MintVersionOracle (Versioning.VersionOracle 35) mkAlwaysSucceedsPolicyHash
+      datum = mkVersionOracleDatum vtsVersionOraclePolicyHash 35
+      mintVersioningTokenTx =
+        BuildTx.execBuildTx $ do
+          BuildTx.payToScriptInlineDatum Defaults.networkId vtsVersioningValidatorHash datum C.NoStakeAddress vtsVersionOracleTokenValue
+          BuildTx.mintPlutus (mkVersioningPolicy genesisUtxo) redeemer versionOracleAssetName (CA.Quantity 1)
+          BuildTx.addReference governanceTxIn
+          BuildTx.addMintWithTxBody (CA.PolicyId $ C.hashScript (C.SimpleScript vtsGovernanceScript)) (CA.AssetName "Governance Token") (CA.Quantity 1) (const $ InternalScript.SimpleScriptWitness InternalScript.SimpleScriptInConway $ InternalScript.SReferenceScript governanceTxIn)
+      w2SigningKey = Operator.toShelleyWitnessSigningKey $ Operator.PESigning $ Wallet.getWallet Wallet.w2
+  _ <- MockChainCoinSelection.tryBalanceAndSubmit @C.ConwayEra mempty Wallet.w1 mintVersioningTokenTx CoinSelection.TrailingChange [w2SigningKey]
+  return ()
+
+mintVersioningTokenFailsWhenNotSignedByGovernanceAuthority :: HUnit.Assertion
+mintVersioningTokenFailsWhenNotSignedByGovernanceAuthority = shouldFailWith "ERROR-VERSION-POLICY-05" $ do
+  (genesisUtxo, governanceTxIn, _) <- initGovernance
+  let VersioningTestSetup{..} = mkVersioningTestSetup genesisUtxo Wallet.w1
+      redeemer = Versioning.MintVersionOracle (Versioning.VersionOracle 35) mkAlwaysSucceedsPolicyHash
+      datum = mkVersionOracleDatum vtsVersionOraclePolicyHash 35
+      mintVersioningTokenTx =
+        BuildTx.execBuildTx $ do
+          BuildTx.createRefScriptInlineDatum vtsVersioningScriptAddress (C.PlutusScript C.PlutusScriptV2 mkAlwaysSucceedsPolicy) datum vtsVersionOracleTokenValue
+          BuildTx.mintPlutus (mkVersioningPolicy genesisUtxo) redeemer versionOracleAssetName (CA.Quantity 1)
+          BuildTx.addReference governanceTxIn
+      w2SigningKey = Operator.toShelleyWitnessSigningKey $ Operator.PESigning $ Wallet.getWallet Wallet.w2
+  _ <- MockChainCoinSelection.tryBalanceAndSubmit @C.ConwayEra mempty Wallet.w1 mintVersioningTokenTx CoinSelection.TrailingChange [w2SigningKey]
+  return ()
+
+mintVersioningTokenFailsWhenMintingIncorrectAmountOfVersionOracleToken :: HUnit.Assertion
+mintVersioningTokenFailsWhenMintingIncorrectAmountOfVersionOracleToken = shouldFailWith "ERROR-VERSION-POLICY-06" $ do
+  (genesisUtxo, governanceTxIn, _) <- initGovernance
+  let VersioningTestSetup{..} = mkVersioningTestSetup genesisUtxo Wallet.w1
+      redeemer = Versioning.MintVersionOracle (Versioning.VersionOracle 35) mkAlwaysSucceedsPolicyHash
+      datum = mkVersionOracleDatum vtsVersionOraclePolicyHash 35
+      value = fromList [(CA.AssetId (CA.PolicyId vtsVersionOraclePolicyHash) versionOracleAssetName, CA.Quantity 2), (CA.AdaAssetId, CA.Quantity $ fromIntegral versionOracleAdaAmount)]
+      mintVersioningTokenTx =
+        BuildTx.execBuildTx $ do
+          BuildTx.createRefScriptInlineDatum vtsVersioningScriptAddress (C.PlutusScript C.PlutusScriptV2 mkAlwaysSucceedsPolicy) datum value
+          BuildTx.mintPlutus (mkVersioningPolicy genesisUtxo) redeemer versionOracleAssetName (CA.Quantity 2)
+          BuildTx.addReference governanceTxIn
+          BuildTx.addMintWithTxBody (CA.PolicyId $ C.hashScript (C.SimpleScript vtsGovernanceScript)) (CA.AssetName "Governance Token") (CA.Quantity 1) (const $ InternalScript.SimpleScriptWitness InternalScript.SimpleScriptInConway $ InternalScript.SReferenceScript governanceTxIn)
+      w2SigningKey = Operator.toShelleyWitnessSigningKey $ Operator.PESigning $ Wallet.getWallet Wallet.w2
+  _ <- MockChainCoinSelection.tryBalanceAndSubmit @C.ConwayEra mempty Wallet.w1 mintVersioningTokenTx CoinSelection.TrailingChange [w2SigningKey]
+  return ()
+
+mintVersioningTokenFailsWhenGovernanceScriptUtxIsNotReferenced :: HUnit.Assertion
+mintVersioningTokenFailsWhenGovernanceScriptUtxIsNotReferenced = shouldFailWith "ERROR-VERSION-CURRENCY-01" $ do
+  (genesisUtxo, governanceTxIn, _) <- initGovernance
+  let VersioningTestSetup{..} = mkVersioningTestSetup genesisUtxo Wallet.w1
+      redeemer = Versioning.MintVersionOracle (Versioning.VersionOracle 35) mkAlwaysSucceedsPolicyHash
+      datum = mkVersionOracleDatum vtsVersionOraclePolicyHash 35
+      mintVersioningTokenTx =
+        BuildTx.execBuildTx $ do
+          BuildTx.createRefScriptInlineDatum vtsVersioningScriptAddress (C.PlutusScript C.PlutusScriptV2 mkAlwaysSucceedsPolicy) datum vtsVersionOracleTokenValue
+          BuildTx.mintPlutus (mkVersioningPolicy genesisUtxo) redeemer versionOracleAssetName (CA.Quantity 1)
+          BuildTx.addMintWithTxBody (CA.PolicyId $ C.hashScript (C.SimpleScript vtsGovernanceScript)) (CA.AssetName "Governance Token") (CA.Quantity 1) (const $ InternalScript.SimpleScriptWitness InternalScript.SimpleScriptInConway $ InternalScript.SReferenceScript governanceTxIn)
+      w2SigningKey = Operator.toShelleyWitnessSigningKey $ Operator.PESigning $ Wallet.getWallet Wallet.w2
+  _ <- MockChainCoinSelection.tryBalanceAndSubmit @C.ConwayEra mempty Wallet.w1 mintVersioningTokenTx CoinSelection.TrailingChange [w2SigningKey]
+  return ()
+
+mintVersioningTokenSucceeds :: HUnit.Assertion
+mintVersioningTokenSucceeds = MockChainUtils.mockchainSucceeds $ Utils.failOnError $ do
+  (genesisUtxo, governanceTxIn, _) <- initGovernance
+  let VersioningTestSetup{..} = mkVersioningTestSetup genesisUtxo Wallet.w1
+      redeemer = Versioning.MintVersionOracle (Versioning.VersionOracle 35) mkAlwaysSucceedsPolicyHash
+      datum = mkVersionOracleDatum vtsVersionOraclePolicyHash 35
+      mintVersioningTokenTx =
+        BuildTx.execBuildTx $ do
+          BuildTx.createRefScriptInlineDatum vtsVersioningScriptAddress (C.PlutusScript C.PlutusScriptV2 mkAlwaysSucceedsPolicy) datum vtsVersionOracleTokenValue
+          BuildTx.mintPlutus (mkVersioningPolicy genesisUtxo) redeemer versionOracleAssetName (CA.Quantity 1)
+          BuildTx.addReference governanceTxIn
+          BuildTx.addMintWithTxBody (CA.PolicyId $ C.hashScript (C.SimpleScript vtsGovernanceScript)) (CA.AssetName "Governance Token") (CA.Quantity 1) (const $ InternalScript.SimpleScriptWitness InternalScript.SimpleScriptInConway $ InternalScript.SReferenceScript governanceTxIn)
+      w2SigningKey = Operator.toShelleyWitnessSigningKey $ Operator.PESigning $ Wallet.getWallet Wallet.w2
+  _ <- MockChainCoinSelection.tryBalanceAndSubmit @C.ConwayEra mempty Wallet.w1 mintVersioningTokenTx CoinSelection.TrailingChange [w2SigningKey]
+  return ()
+
+-- | Initialize governance and mint the version oracle token
+initGovernance :: TestM (C.TxIn, C.TxIn, C.SimpleScript)
+initGovernance = do
+  genesisUtxo <- initGenesisUtxo
+  let VersioningTestSetup{..} = mkVersioningTestSetup genesisUtxo Wallet.w1
+      governanceInitTx =
+        BuildTx.execBuildTx $ do
+          BuildTx.spendPublicKeyOutput @C.ConwayEra genesisUtxo
+          BuildTx.createRefScriptInlineDatum vtsVersioningScriptAddress (C.SimpleScript vtsGovernanceScript) vtsVersionOracleDatum vtsVersionOracleTokenValue
+          BuildTx.mintPlutus (mkVersioningPolicy genesisUtxo) vtsInitializeOracleRedeemer versionOracleAssetName (CA.Quantity 1)
+      w2SigningKey = Operator.toShelleyWitnessSigningKey $ Operator.PESigning $ Wallet.getWallet Wallet.w2
+  _ <- MockChainCoinSelection.tryBalanceAndSubmit @C.ConwayEra mempty Wallet.w1 governanceInitTx CoinSelection.TrailingChange [w2SigningKey]
+  Utxos.UtxoSet utxoSetMap <- Class.utxosByPaymentCredentials $ Set.fromList [C.PaymentCredentialByScript vtsVersioningValidatorHash]
   let utxoList = Map.toList utxoSetMap
-      versionOraclePolicyHash = mkVersioningPolicyHash genesisUtxo
-      versionOracleAssetId = CA.AssetId (CA.PolicyId versionOraclePolicyHash) versionOracleAssetName
+      versionOracleAssetId = CA.AssetId (CA.PolicyId vtsVersionOraclePolicyHash) versionOracleAssetName
       versionOracleUtxos =
         filter
           ( \(_, (C.InAnyCardanoEra _ (CA.TxOut _ txOutValue _ _), _)) ->
               List.find (\(assetId, _) -> assetId == versionOracleAssetId) (Exts.toList $ CA.txOutValueToValue txOutValue) == Just (versionOracleAssetId, CA.Quantity 1)
           )
           utxoList
-  governanceReferenceScript <- case versionOracleUtxos of
-    (_, (C.InAnyCardanoEra _ (CA.TxOut _ _ _ (C.ReferenceScript _ (C.ScriptInAnyLang C.SimpleScriptLanguage (C.SimpleScript governanceScript)))), _)) : _ -> return governanceScript
+  (governanceTxIn, governanceScript) <- case versionOracleUtxos of
+    (governanceTxIn, (C.InAnyCardanoEra _ (CA.TxOut _ _ _ (C.ReferenceScript _ (C.ScriptInAnyLang C.SimpleScriptLanguage (C.SimpleScript governanceScript)))), _)) : _ -> return (governanceTxIn, governanceScript)
     _ -> error $ show utxoList
+  return (genesisUtxo, governanceTxIn, governanceScript)
 
-  case governanceReferenceScript == (mkGovernanceScript Wallet.w1) of
+initGovernanceSucceeds :: HUnit.Assertion
+initGovernanceSucceeds = MockChainUtils.mockchainSucceeds $ Utils.failOnError $ do
+  (genesisUtxo, _, governanceReferenceScript) <- initGovernance
+  let VersioningTestSetup{..} = mkVersioningTestSetup genesisUtxo Wallet.w1
+
+  case governanceReferenceScript == vtsGovernanceScript of
     True -> return ()
     False -> error "Governance reference script is not the expected script"
 
@@ -276,24 +370,9 @@ initGovernanceSucceeds = MockChainUtils.mockchainSucceeds $ Utils.failOnError $ 
 -- | Test updating governance by spending the version oracle UTxO
 updateGovernanceSucceeds :: HUnit.Assertion
 updateGovernanceSucceeds = MockChainUtils.mockchainSucceeds $ Utils.failOnError $ do
-  genesisUtxo <- initGovernance
-  let versionOraclePolicyHash = mkVersioningPolicyHash genesisUtxo
-      versionOracleTokenValue = versionOracleValue versionOraclePolicyHash
-      versionOracleDatum = mkVersionOracleDatum versionOraclePolicyHash
+  (genesisUtxo, versionOracleTxIn, _) <- initGovernance
+  let VersioningTestSetup{..} = mkVersioningTestSetup genesisUtxo Wallet.w1
       w2SigningKey = Operator.toShelleyWitnessSigningKey $ Operator.PESigning $ Wallet.getWallet Wallet.w2
-      governanceScript = mkGovernanceScript Wallet.w1
-  Utxos.UtxoSet utxoSetMap <- Class.utxosByPaymentCredentials $ Set.fromList [C.PaymentCredentialByScript $ mkVersioningValidatorHash genesisUtxo]
-  let utxoList = Map.toList utxoSetMap
-      versionOracleAssetId = CA.AssetId (CA.PolicyId versionOraclePolicyHash) versionOracleAssetName
-      versionOracleUtxos =
-        filter
-          ( \(_, (C.InAnyCardanoEra _ (CA.TxOut _ txOutValue _ _), _)) ->
-              List.find (\(assetId, _) -> assetId == versionOracleAssetId) (Exts.toList $ CA.txOutValueToValue txOutValue) == Just (versionOracleAssetId, CA.Quantity 1)
-          )
-          utxoList
-  versionOracleTxIn <- case versionOracleUtxos of
-    [] -> error $ show utxoList
-    (txIn, _) : _ -> return txIn
   let newGovernanceScript = mkGovernanceScript Wallet.w2
       updateGovernanceTx =
         BuildTx.execBuildTx $ do
@@ -301,6 +380,6 @@ updateGovernanceSucceeds = MockChainUtils.mockchainSucceeds $ Utils.failOnError 
             versionOracleTxIn
             (mkVersioningValidator genesisUtxo)
             (Versioning.VersionOracle 32)
-          BuildTx.createRefScriptInlineDatum (mkVersioningScriptAddress genesisUtxo) (C.SimpleScript newGovernanceScript) versionOracleDatum versionOracleTokenValue
-          BuildTx.addMintWithTxBody (CA.PolicyId $ C.hashScript (C.SimpleScript governanceScript)) (CA.AssetName "Governance Token") (CA.Quantity 1) (const $ InternalScript.SimpleScriptWitness InternalScript.SimpleScriptInConway $ InternalScript.SReferenceScript versionOracleTxIn)
+          BuildTx.createRefScriptInlineDatum vtsVersioningScriptAddress (C.SimpleScript newGovernanceScript) vtsVersionOracleDatum vtsVersionOracleTokenValue
+          BuildTx.addMintWithTxBody (CA.PolicyId $ C.hashScript (C.SimpleScript vtsGovernanceScript)) (CA.AssetName "Governance Token") (CA.Quantity 1) (const $ InternalScript.SimpleScriptWitness InternalScript.SimpleScriptInConway $ InternalScript.SReferenceScript versionOracleTxIn)
   MockChainCoinSelection.tryBalanceAndSubmit @C.ConwayEra mempty Wallet.w1 updateGovernanceTx CoinSelection.TrailingChange [w2SigningKey]
