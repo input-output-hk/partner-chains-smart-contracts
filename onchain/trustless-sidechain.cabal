@@ -21,12 +21,11 @@ source-repository head
 
 -- Common sections
 
-
 common common-lang
   ghc-options:
     -Wall -Wcompat -Wincomplete-record-updates
-    -Wincomplete-uni-patterns -Wredundant-constraints -Werror
-    -fplugin-opt PlutusTx.Plugin:target-version=1.0.0
+    -Wincomplete-uni-patterns -Wredundant-constraints -fplugin-opt
+    PlutusTx.Plugin:target-version=1.0.0
 
   build-depends:      base
   default-extensions:
@@ -53,6 +52,7 @@ common common-lang
     PackageImports
     PatternSynonyms
     RebindableSyntax
+    RecordWildCards
     ScopedTypeVariables
     StandaloneDeriving
     TupleSections
@@ -270,3 +270,36 @@ test-suite roundtrip
     , trustless-sidechain-prelude
 
   hs-source-dirs: test/roundtrip
+
+test-suite script-specs
+  import:         common-lang, common-optimized-parallel, common-script-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  other-modules:
+    ScriptSpecUtils
+    TestValues
+    TrustlessSidechain.AlwaysFailingScripts
+    TrustlessSidechain.AlwaysPassingScripts
+    TrustlessSidechain.ScriptId
+    TrustlessSidechain.Types
+    TrustlessSidechain.Utils
+    TrustlessSidechain.Versioning
+    Versioning
+
+  build-depends:
+    , base16-bytestring
+    , bytestring
+    , cardano-api
+    , lens
+    , plutus-core
+    , plutus-ledger-api
+    , plutus-shim-prelude
+    , plutus-tx
+    , plutus-tx-plugin
+    , tasty
+    , tasty-hunit
+    , text
+    , trustless-sidechain
+    , trustless-sidechain-prelude
+
+  hs-source-dirs: test/script-spec src
