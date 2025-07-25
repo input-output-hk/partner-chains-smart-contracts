@@ -24,8 +24,8 @@ source-repository head
 common common-lang
   ghc-options:
     -Wall -Wcompat -Wincomplete-record-updates
-    -Wincomplete-uni-patterns -Wredundant-constraints -fplugin-opt
-    PlutusTx.Plugin:target-version=1.0.0
+    -Wincomplete-uni-patterns -Wredundant-constraints -Werror
+    -fplugin-opt PlutusTx.Plugin:target-version=1.0.0
 
   build-depends:      base
   default-extensions:
