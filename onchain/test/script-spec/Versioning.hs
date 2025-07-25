@@ -12,102 +12,182 @@ import TrustlessSidechain.Types
 import TrustlessSidechain.Versioning
 import Prelude
 
--- tests
+-- init redeemer
 
-versioningPolicyInitializeTestPassing :: TestTree
-versioningPolicyInitializeTestPassing =
+versioningPolicyInitializePassing :: TestTree
+versioningPolicyInitializePassing =
   expectSuccess "init versioning policy should pass" $
-    runVersioningPolicyWithParams
-      passingVersioningPolicyInitializeParams
-
-versioningPolicyInitializeTestFailing01 :: TestTree
-versioningPolicyInitializeTestFailing01 =
-  expectFail "init versioning policy should fail on empty inputs" $
-    runVersioningPolicyWithParams
-      ( passingVersioningPolicyInitializeParams
-          & (_ctx . _scriptContextTxInfo . _txInfoOutputs)
-            .~ []
+    runVersioningPolicy
+      Test.genesisUtxo
+      Test.versionValidatorAddress
+      (InitializeVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoOutRef .~ Test.genesisUtxo]
+          & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken
       )
 
-versioningPolicyInitializeTestFailing02 :: TestTree
-versioningPolicyInitializeTestFailing02 =
+versioningPolicyInitializeFailing01 :: TestTree
+versioningPolicyInitializeFailing01 =
+  expectFail "init versioning policy should fail on no genesis utxo" $
+    runVersioningPolicy
+      Test.genesisUtxo
+      Test.versionValidatorAddress
+      (InitializeVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+          -- no genesis utxo in inputs
+          & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken
+      )
+
+versioningPolicyInitializeFailing02 :: TestTree
+versioningPolicyInitializeFailing02 =
   expectFail "init versioning policy should fail on empty outputs" $
-    runVersioningPolicyWithParams
-      ( passingVersioningPolicyInitializeParams
-          & (_ctx . _scriptContextTxInfo . _txInfoInputs)
-            .~ []
+    runVersioningPolicy
+      Test.genesisUtxo
+      Test.versionValidatorAddress
+      (InitializeVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoOutRef .~ Test.genesisUtxo]
+          -- no output
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken
       )
 
-versioningPolicyInitializeTestFailing03 :: TestTree
-versioningPolicyInitializeTestFailing03 =
+versioningPolicyInitializeFailing03 :: TestTree
+versioningPolicyInitializeFailing03 =
   expectFail "init versioning policy should fail on invalid token being minted" $
-    runVersioningPolicyWithParams
-      ( passingVersioningPolicyInitializeParams
-          & (_ctx . _scriptContextTxInfo . _txInfoMint)
-            .~ V2.singleton (V2.CurrencySymbol "WRONG CurrSym") (V2.TokenName "WRONG token name") 1
+    runVersioningPolicy
+      Test.genesisUtxo
+      Test.versionValidatorAddress
+      (InitializeVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoOutRef .~ Test.genesisUtxo]
+          & _scriptContextTxInfo . _txInfoMint .~ V2.singleton (V2.CurrencySymbol "WRONG CurrSym") (V2.TokenName "WRONG token name") 1
       )
 
-versioningPolicyMintTestPassing :: TestTree
-versioningPolicyMintTestPassing =
+-- mint redeemer
+
+versioningPolicyMintPassing :: TestTree
+versioningPolicyMintPassing =
   expectSuccess "mint versioning policy should pass" $
-    runVersioningPolicyWithParams passingVersioningPolicyMintParams
-
-versioningPolicyMintTestFailing04 :: TestTree
-versioningPolicyMintTestFailing04 =
-  expectFail "mint versioning policy should fail on empty outputs" $
-    runVersioningPolicyWithParams
-      ( passingVersioningPolicyMintParams
-          & (_ctx . _scriptContextTxInfo . _txInfoInputs)
-            .~ []
+    runVersioningPolicy
+      Test.genesisUtxo
+      Test.versionValidatorAddress
+      (MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
       )
 
-versioningPolicyMintTestFailing05 :: TestTree
-versioningPolicyMintTestFailing05 =
+versioningPolicyMintFailing04 :: TestTree
+versioningPolicyMintFailing04 =
+  expectFail "mint versioning policy should fail on empty inputs" $
+    runVersioningPolicy
+      Test.genesisUtxo
+      Test.versionValidatorAddress
+      (MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+          -- no inputs provided
+          & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
+      )
+
+versioningPolicyMintFailing05 :: TestTree
+versioningPolicyMintFailing05 =
   expectFail "mint versioning policy should fail if not signed by gov auth" $
-    runVersioningPolicyWithParams
-      ( passingVersioningPolicyMintParams
-          & (_ctx . _scriptContextTxInfo . _txInfoInputs) %~ take 1
+    runVersioningPolicy
+      Test.genesisUtxo
+      Test.versionValidatorAddress
+      (MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+          -- gov token not in inputs
+          & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
       )
 
-versioningPolicyMintTestFailing06 :: TestTree
-versioningPolicyMintTestFailing06 =
+versioningPolicyMintFailing06 :: TestTree
+versioningPolicyMintFailing06 =
   expectFail "mint versioning policy should fail on invalid token being minted" $
-    runVersioningPolicyWithParams
-      ( passingVersioningPolicyMintParams
-          & (_ctx . _scriptContextTxInfo . _txInfoMint)
-            .~ V2.singleton (V2.CurrencySymbol "WRONG CurrSym") (V2.TokenName "WRONG token name") 1
+    runVersioningPolicy
+      Test.genesisUtxo
+      Test.versionValidatorAddress
+      (MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ V2.singleton (V2.CurrencySymbol "WRONG CurrSym") (V2.TokenName "WRONG token name") 1
       )
 
-versioningPolicyBurnTestPassing :: TestTree
-versioningPolicyBurnTestPassing =
-  expectSuccess "Burn versioning policy should pass" $
-    runVersioningPolicyWithParams passingVersioningPolicyBurnParams
+-- burn redeemer
 
-versioningPolicyBurnTestFailing07 :: TestTree
-versioningPolicyBurnTestFailing07 =
-  expectFail "Burn versioning policy should fail on empty outputs" $
-    runVersioningPolicyWithParams
-      ( passingVersioningPolicyBurnParams
-          & (_ctx . _scriptContextTxInfo . _txInfoInputs)
-            .~ []
+versioningPolicyBurnPassing :: TestTree
+versioningPolicyBurnPassing =
+  expectSuccess "burn versioning policy should pass" $
+    runVersioningPolicy
+      Test.genesisUtxo
+      Test.versionValidatorAddress
+      (BurnVersionOracle Test.versionOracle)
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ versioningTokenUtxo]
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
       )
 
-versioningPolicyBurnTestFailing08 :: TestTree
-versioningPolicyBurnTestFailing08 =
-  expectFail "Burn versioning policy should fail if not signed by gov auth" $
-    runVersioningPolicyWithParams
-      ( passingVersioningPolicyBurnParams
-          & (_ctx . _scriptContextTxInfo . _txInfoInputs) %~ take 1
+versioningPolicyBurnFailing07 :: TestTree
+versioningPolicyBurnFailing07 =
+  expectFail "burn versioning policy should fail on missing versioning utxo in inputs" $
+    runVersioningPolicy
+      Test.genesisUtxo
+      Test.versionValidatorAddress
+      (BurnVersionOracle Test.versionOracle)
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ governanceTokenUtxo]
+          -- no versioning utxo in inputs
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
       )
 
-versioningPolicyBurnTestFailing09 :: TestTree
-versioningPolicyBurnTestFailing09 =
-  expectFail "Burn versioning policy should fail on invalid token being Burned" $
-    runVersioningPolicyWithParams
-      ( passingVersioningPolicyBurnParams
-          & (_ctx . _scriptContextTxInfo . _txInfoMint)
-            .~ V2.singleton (V2.CurrencySymbol "WRONG CurrSym") (V2.TokenName "WRONG token name") 1
+versioningPolicyBurnFailing08 :: TestTree
+versioningPolicyBurnFailing08 =
+  expectFail "burn versioning policy should fail if versioning utxo is in output" $
+    runVersioningPolicy
+      Test.genesisUtxo
+      Test.versionValidatorAddress
+      (BurnVersionOracle Test.versionOracle)
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ versioningTokenUtxo]
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo] -- shouldn't be present
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
       )
+
+versioningPolicyBurnFailing09 :: TestTree
+versioningPolicyBurnFailing09 =
+  expectFail "burn versioning policy should fail if not signed by gov authority" $
+    runVersioningPolicy
+      Test.genesisUtxo
+      Test.versionValidatorAddress
+      (BurnVersionOracle Test.versionOracle)
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ versioningTokenUtxo]
+      )
+
+-- governance utxo input and tokens are missing
 
 versioningTokenUtxo :: V2.TxOut
 versioningTokenUtxo =
@@ -127,65 +207,10 @@ governanceTokenUtxo =
 
 -- test runner
 
-data VersioningPolicyParams = VersioningPolicyParams
-  { genesisUtxo :: V2.TxOutRef
-  , validatorAddress :: V2.Address
-  , redeemer :: VersionOraclePolicyRedeemer
-  , ctx :: V2.ScriptContext
-  }
-
-_ctx :: Lens' VersioningPolicyParams V2.ScriptContext
-_ctx f a@VersioningPolicyParams {..} =
-  fmap
-    (\ctx' -> a {ctx = ctx'})
-    (f ctx)
-
-runVersioningPolicyWithParams :: VersioningPolicyParams -> BuiltinUnit
-runVersioningPolicyWithParams VersioningPolicyParams {..} =
+runVersioningPolicy :: V2.TxOutRef -> V2.Address -> VersionOraclePolicyRedeemer -> V2.ScriptContext -> BuiltinUnit
+runVersioningPolicy genesisUtxo validatorAddress redeemer ctx =
   mkVersionOraclePolicyUntyped
     (toBuiltinData genesisUtxo)
     (toBuiltinData validatorAddress)
     (toBuiltinData redeemer)
     (toBuiltinData ctx)
-
-passingVersioningPolicyInitializeParams :: VersioningPolicyParams
-passingVersioningPolicyInitializeParams =
-  VersioningPolicyParams
-    { genesisUtxo = Test.genesisUtxo
-    , validatorAddress = Test.versionValidatorAddress
-    , redeemer = InitializeVersionOracle Test.versionOracle Test.versioningValidatorScriptHash
-    , ctx =
-        emptyScriptContext
-          & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
-          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoOutRef .~ Test.genesisUtxo]
-          & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo]
-          & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken
-    }
-
-passingVersioningPolicyMintParams :: VersioningPolicyParams
-passingVersioningPolicyMintParams =
-  VersioningPolicyParams
-    { genesisUtxo = Test.genesisUtxo
-    , validatorAddress = Test.versionValidatorAddress
-    , redeemer = MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash
-    , ctx =
-        emptyScriptContext
-          & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
-          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoOutRef .~ Test.genesisUtxo]
-          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ governanceTokenUtxo]
-          & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo]
-          & _scriptContextTxInfo . _txInfoMint <>~ (Test.versionOracleToken <> Test.governanceToken)
-    }
-
-passingVersioningPolicyBurnParams :: VersioningPolicyParams
-passingVersioningPolicyBurnParams =
-  VersioningPolicyParams
-    { genesisUtxo = Test.genesisUtxo
-    , validatorAddress = Test.versionValidatorAddress
-    , redeemer = BurnVersionOracle Test.versionOracle
-    , ctx =
-        emptyScriptContext
-          & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
-          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ governanceTokenUtxo]
-          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-    }

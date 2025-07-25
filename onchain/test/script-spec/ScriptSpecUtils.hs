@@ -95,6 +95,35 @@ expectSuccess str a = testCase str do
 
 -- lens
 
+{-
+
+Lens allow for more readable construction of `ScriptContext` objects.
+Lens are composable functions that can be used for defining a path through the fields of a compound object.
+This path can then be used for both setting and getting values in an object.
+
+To construct `ScriptContext`s for tests, one can start with an `emptyScriptContext` and set its fields with lens as needed.
+For example:
+
+emptyScriptContext & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
+
+The (&) operator is the flipped version of ($).
+Lens can be composed like regular functions (which is what they are).
+Then one can set them with different operators:
+- (.~) sets the value
+- (<>~) appends to the value
+- (%~) applies a function to the value
+
+Multiple of these setters can be chained as well. For example:
+
+emptyScriptContext
+    & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
+    & _scriptContextTxInfo . _txInfoInputs %~ take 1
+    & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+
+We prefix lens functions with underscore to make them easier to distinguish from regular functions.
+
+-}
+
 _scriptContextTxInfo :: Lens' V2.ScriptContext V2.TxInfo
 _scriptContextTxInfo f a@V2.ScriptContext {..} =
   fmap
