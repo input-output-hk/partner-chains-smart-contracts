@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module ScriptSpecUtils where
 
 import Control.Exception
@@ -125,43 +123,22 @@ We prefix lens functions with underscore to make them easier to distinguish from
 -}
 
 _scriptContextTxInfo :: Lens' V2.ScriptContext V2.TxInfo
-_scriptContextTxInfo f a@V2.ScriptContext {..} =
-  fmap
-    (\scriptContextTxInfo' -> a {V2.scriptContextTxInfo = scriptContextTxInfo'})
-    (f scriptContextTxInfo)
+_scriptContextTxInfo = lens V2.scriptContextTxInfo \a scriptContextTxInfo -> a {V2.scriptContextTxInfo = scriptContextTxInfo}
 
 _scriptContextPurpose :: Lens' V2.ScriptContext V2.ScriptPurpose
-_scriptContextPurpose f a@V2.ScriptContext {..} =
-  fmap
-    (\scriptContextPurpose' -> a {V2.scriptContextPurpose = scriptContextPurpose'})
-    (f scriptContextPurpose)
+_scriptContextPurpose = lens V2.scriptContextPurpose \a scriptContextPurpose -> a {V2.scriptContextPurpose = scriptContextPurpose}
 
 _txInfoInputs :: Lens' V2.TxInfo [V2.TxInInfo]
-_txInfoInputs f a@V2.TxInfo {..} =
-  fmap
-    (\txInfoInputs' -> a {V2.txInfoInputs = txInfoInputs'})
-    (f txInfoInputs)
+_txInfoInputs = lens V2.txInfoInputs \a txInfoInputs -> a {V2.txInfoInputs = txInfoInputs}
 
 _txInfoOutputs :: Lens' V2.TxInfo [V2.TxOut]
-_txInfoOutputs f a@V2.TxInfo {..} =
-  fmap
-    (\txInfoOutputs' -> a {V2.txInfoOutputs = txInfoOutputs'})
-    (f txInfoOutputs)
+_txInfoOutputs = lens V2.txInfoOutputs \a txInfoOutputs -> a {V2.txInfoOutputs = txInfoOutputs}
 
 _txInfoMint :: Lens' V2.TxInfo V2.Value
-_txInfoMint f a@V2.TxInfo {..} =
-  fmap
-    (\txInfoMint' -> a {V2.txInfoMint = txInfoMint'})
-    (f txInfoMint)
+_txInfoMint = lens V2.txInfoMint \a txInfoMint -> a {V2.txInfoMint = txInfoMint}
 
 _txInInfoOutRef :: Lens' V2.TxInInfo V2.TxOutRef
-_txInInfoOutRef f a@V2.TxInInfo {..} =
-  fmap
-    (\txInInfoOutRef' -> a {V2.txInInfoOutRef = txInInfoOutRef'})
-    (f txInInfoOutRef)
+_txInInfoOutRef = lens V2.txInInfoOutRef \a txInInfoOutRef -> a {V2.txInInfoOutRef = txInInfoOutRef}
 
 _txInInfoResolved :: Lens' V2.TxInInfo V2.TxOut
-_txInInfoResolved f a@V2.TxInInfo {..} =
-  fmap
-    (\txInInfoResolved' -> a {V2.txInInfoResolved = txInInfoResolved'})
-    (f txInInfoResolved)
+_txInInfoResolved = lens V2.txInInfoResolved \a txInInfoResolved -> a {V2.txInInfoResolved = txInInfoResolved}
