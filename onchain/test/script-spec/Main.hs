@@ -14,7 +14,9 @@ main =
           "versioning policy (initialize)"
           [ versioningPolicyInitializePassing
           , versioningPolicyInitializeFailing01
-          , versioningPolicyInitializeFailing02
+          , versioningPolicyInitializeFailing02NoOutput
+          , versioningPolicyInitializeFailing02NoDatum
+          , versioningPolicyInitializeFailing02InvalidDatum
           , versioningPolicyInitializeFailing03
           ]
       , testGroup

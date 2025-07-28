@@ -47,6 +47,9 @@ governanceVersionOracleDatum = Versioning.VersionOracleDatum (Versioning.Version
 governanceValidatorScriptHash :: V2.ScriptHash
 governanceValidatorScriptHash = V2.ScriptHash "governanceValidatorScriptHash"
 
+wrongToken :: V2.Value
+wrongToken = V2.singleton (V2.CurrencySymbol "WRONG CurrSym") (V2.TokenName "WRONG token name") 1
+
 -- | Takes a decoded piece of data and turns it into the wrapped `BuiltinData` equivalent
 --   provided by `asData`, to make it compatible with functions from `PlutusLedgerApi.Vn.Data` modules.
 --   TODO: Wrap our own types with `asData` and get rid of this function.

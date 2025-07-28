@@ -42,8 +42,8 @@ versioningPolicyInitializeFailing01 =
           & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken
       )
 
-versioningPolicyInitializeFailing02 :: TestTree
-versioningPolicyInitializeFailing02 =
+versioningPolicyInitializeFailing02NoOutput :: TestTree
+versioningPolicyInitializeFailing02NoOutput =
   expectFail "init versioning policy should fail on empty outputs" $
     runVersioningPolicy
       Test.genesisUtxo
@@ -56,6 +56,38 @@ versioningPolicyInitializeFailing02 =
           & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken
       )
 
+versioningPolicyInitializeFailing02NoDatum :: TestTree
+versioningPolicyInitializeFailing02NoDatum =
+  expectFail "init versioning policy should fail on no datum in output" $
+    runVersioningPolicy
+      Test.genesisUtxo
+      Test.versionValidatorAddress
+      (InitializeVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoOutRef .~ Test.genesisUtxo]
+          -- output has missing datum:
+          & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo & _txOutDatum .~ V2.NoOutputDatum]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken
+      )
+
+versioningPolicyInitializeFailing02InvalidDatum :: TestTree
+versioningPolicyInitializeFailing02InvalidDatum =
+  expectFail "init versioning policy should fail on invalid datum in output" $
+    runVersioningPolicy
+      Test.genesisUtxo
+      Test.versionValidatorAddress
+      (InitializeVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoOutRef .~ Test.genesisUtxo]
+          -- output has invalid datum:
+          & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo & _txOutDatum .~ V2.OutputDatum invalidDatum]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken
+      )
+  where
+    invalidDatum = V2.Datum $ toBuiltinData (0 :: Integer)
+
 versioningPolicyInitializeFailing03 :: TestTree
 versioningPolicyInitializeFailing03 =
   expectFail "init versioning policy should fail on invalid token being minted" $
@@ -66,7 +98,7 @@ versioningPolicyInitializeFailing03 =
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoOutRef .~ Test.genesisUtxo]
-          & _scriptContextTxInfo . _txInfoMint .~ V2.singleton (V2.CurrencySymbol "WRONG CurrSym") (V2.TokenName "WRONG token name") 1
+          & _scriptContextTxInfo . _txInfoMint .~ Test.wrongToken
       )
 
 -- mint redeemer
@@ -127,7 +159,7 @@ versioningPolicyMintFailing06 =
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo]
-          & _scriptContextTxInfo . _txInfoMint <>~ V2.singleton (V2.CurrencySymbol "WRONG CurrSym") (V2.TokenName "WRONG token name") 1
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.wrongToken
       )
 
 -- burn redeemer

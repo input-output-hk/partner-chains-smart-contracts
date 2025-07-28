@@ -142,3 +142,6 @@ _txInInfoOutRef = lens V2.txInInfoOutRef \a txInInfoOutRef -> a {V2.txInInfoOutR
 
 _txInInfoResolved :: Lens' V2.TxInInfo V2.TxOut
 _txInInfoResolved = lens V2.txInInfoResolved \a txInInfoResolved -> a {V2.txInInfoResolved = txInInfoResolved}
+
+_txOutDatum :: Lens' V2.TxOut V2.OutputDatum
+_txOutDatum = lens V2.txOutDatum \a txOutDatum -> a {V2.txOutDatum = txOutDatum}
