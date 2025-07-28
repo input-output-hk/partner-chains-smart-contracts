@@ -42,7 +42,7 @@ governanceToken :: V2.Value
 governanceToken = V2.singleton governanceCurrSym versionOracleTokenName 1
 
 governanceVersionOracleDatum :: Versioning.VersionOracleDatum
-governanceVersionOracleDatum = Versioning.VersionOracleDatum (Versioning.VersionOracle {scriptId = ScriptId.governancePolicyId}) (toAsData governanceCurrSym)
+governanceVersionOracleDatum = Versioning.VersionOracleDatum (Versioning.VersionOracle {scriptId = ScriptId.governancePolicyId}) (toAsData versioningCurrSym)
 
 governanceValidatorScriptHash :: V2.ScriptHash
 governanceValidatorScriptHash = V2.ScriptHash "governanceValidatorScriptHash"
