@@ -72,9 +72,6 @@ mkTxOut txOutAddress txOutValue datum scriptHash =
     , V2.txOutReferenceScript = Just scriptHash
     }
 
-builtinDummy :: BuiltinData
-builtinDummy = toBuiltinData ()
-
 -- test functions
 
 expectFail :: TestName -> BuiltinUnit -> TestTree

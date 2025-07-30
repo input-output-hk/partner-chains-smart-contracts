@@ -19,6 +19,7 @@ module TrustlessSidechain.Versioning (
   getVersionedValidatorAddress,
   getVersionedCurrencySymbol,
   approvedByGovernance,
+  -- TODO remove these re-exports
   VersionOracle (..),
   VersionOracleDatum (..),
   VersionOracleConfig (..),

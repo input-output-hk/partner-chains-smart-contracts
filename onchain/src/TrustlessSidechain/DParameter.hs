@@ -5,7 +5,9 @@ module TrustlessSidechain.DParameter (
   serialisableMintingPolicy,
   serialisableValidator,
   dParameterValidator,
+  mkValidatorUntyped,
   mkMintingPolicy,
+  mkMintingPolicyUntyped,
 ) where
 
 import PlutusLedgerApi.Data.V2 (

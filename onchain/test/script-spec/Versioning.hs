@@ -58,7 +58,7 @@ versioningPolicyInitializePassing =
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoOutRef .~ Test.genesisUtxo]
-          & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo]
+          & _scriptContextTxInfo . _txInfoOutputs <>~ [Test.versioningTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken
       )
 
@@ -72,7 +72,7 @@ versioningPolicyInitializeFailing01 =
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           -- no genesis utxo in inputs
-          & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo]
+          & _scriptContextTxInfo . _txInfoOutputs <>~ [Test.versioningTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken
       )
 
@@ -101,7 +101,7 @@ versioningPolicyInitializeFailing02NoDatum =
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoOutRef .~ Test.genesisUtxo]
           -- output has missing datum:
-          & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo & _txOutDatum .~ V2.NoOutputDatum]
+          & _scriptContextTxInfo . _txInfoOutputs <>~ [Test.versioningTokenUtxo & _txOutDatum .~ V2.NoOutputDatum]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken
       )
 
@@ -116,7 +116,7 @@ versioningPolicyInitializeFailing02InvalidDatum =
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoOutRef .~ Test.genesisUtxo]
           -- output has invalid datum:
-          & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo & _txOutDatum .~ V2.OutputDatum invalidDatum]
+          & _scriptContextTxInfo . _txInfoOutputs <>~ [Test.versioningTokenUtxo & _txOutDatum .~ V2.OutputDatum invalidDatum]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken
       )
   where
@@ -146,8 +146,8 @@ versioningPolicyMintPassing =
       (MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
-          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ governanceTokenUtxo]
-          & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo]
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoOutputs <>~ [Test.versioningTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
       )
@@ -161,7 +161,7 @@ versioningPolicyMintFailing04NoOutput =
       (MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
-          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           -- no outputs provided
           & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
@@ -176,9 +176,9 @@ versioningPolicyMintFailing04NoDatum =
       (MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
-          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           -- output has missing datum:
-          & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo & _txOutDatum .~ V2.NoOutputDatum]
+          & _scriptContextTxInfo . _txInfoOutputs <>~ [Test.versioningTokenUtxo & _txOutDatum .~ V2.NoOutputDatum]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
       )
@@ -192,9 +192,9 @@ versioningPolicyMintFailing04InvalidDatum =
       (MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
-          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           -- output has invalid datum:
-          & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo & _txOutDatum .~ V2.OutputDatum invalidDatum]
+          & _scriptContextTxInfo . _txInfoOutputs <>~ [Test.versioningTokenUtxo & _txOutDatum .~ V2.OutputDatum invalidDatum]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
       )
@@ -211,7 +211,7 @@ versioningPolicyMintFailing05 =
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           -- gov token not in inputs
-          & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo]
+          & _scriptContextTxInfo . _txInfoOutputs <>~ [Test.versioningTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
       )
@@ -225,8 +225,8 @@ versioningPolicyMintFailing06 =
       (MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
-          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ governanceTokenUtxo]
-          & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo]
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoOutputs <>~ [Test.versioningTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.wrongToken
       )
 
@@ -241,8 +241,8 @@ versioningPolicyBurnPassing =
       (BurnVersionOracle Test.versionOracle)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
-          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ versioningTokenUtxo]
-          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.versioningTokenUtxo]
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
       )
 
@@ -255,7 +255,7 @@ versioningPolicyBurnFailing07NoVersioningInput =
       (BurnVersionOracle Test.versionOracle)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
-          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           -- no versioning utxo in inputs
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
       )
@@ -269,9 +269,9 @@ versioningPolicyBurnFailing07VersioningInputHasNoDatum =
       (BurnVersionOracle Test.versionOracle)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
-          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           -- versioning utxo has missing datum:
-          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ (versioningTokenUtxo & _txOutDatum .~ V2.NoOutputDatum)]
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ (Test.versioningTokenUtxo & _txOutDatum .~ V2.NoOutputDatum)]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
       )
 
@@ -284,9 +284,9 @@ versioningPolicyBurnFailing07VersioningInputHasInvalidDatum =
       (BurnVersionOracle Test.versionOracle)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
-          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           -- versioning utxo has invalid datum:
-          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ (versioningTokenUtxo & _txOutDatum .~ V2.OutputDatum invalidDatum)]
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ (Test.versioningTokenUtxo & _txOutDatum .~ V2.OutputDatum invalidDatum)]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
       )
   where
@@ -301,9 +301,9 @@ versioningPolicyBurnFailing08 =
       (BurnVersionOracle Test.versionOracle)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
-          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ versioningTokenUtxo]
-          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ governanceTokenUtxo]
-          & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo] -- shouldn't be present
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.versioningTokenUtxo]
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoOutputs <>~ [Test.versioningTokenUtxo] -- shouldn't be present
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
       )
 
@@ -316,7 +316,7 @@ versioningPolicyBurnFailing09 =
       (BurnVersionOracle Test.versionOracle)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
-          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ versioningTokenUtxo]
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.versioningTokenUtxo]
       )
 
 versioningPolicyNotMintFailing :: TestTree
@@ -329,27 +329,9 @@ versioningPolicyNotMintFailing =
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Spending (V2.TxOutRef "some utxo" 0)
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoOutRef .~ Test.genesisUtxo]
-          & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo]
+          & _scriptContextTxInfo . _txInfoOutputs <>~ [Test.versioningTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken
       )
-
--- governance utxo input and tokens are missing
-
-versioningTokenUtxo :: V2.TxOut
-versioningTokenUtxo =
-  mkTxOut
-    Test.versionValidatorAddress
-    Test.versionOracleToken
-    Test.versionOracleDatum
-    Test.versioningValidatorScriptHash
-
-governanceTokenUtxo :: V2.TxOut
-governanceTokenUtxo =
-  mkTxOut
-    Test.versionValidatorAddress
-    Test.versionOracleToken
-    Test.governanceVersionOracleDatum
-    Test.governanceValidatorScriptHash
 
 -- test runner
 

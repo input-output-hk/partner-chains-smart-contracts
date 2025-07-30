@@ -3,13 +3,16 @@ module TestValues where
 import Data.String
 import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx
+import PlutusTx.Builtins
+import ScriptSpecUtils
 import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types qualified as Types
-import TrustlessSidechain.Versioning qualified as Versioning
 import Prelude
 
 genesisUtxo :: V2.TxOutRef
 genesisUtxo = V2.TxOutRef "123456" 0
+
+-- versioning
 
 versionValidatorAddress :: V2.Address
 versionValidatorAddress = V2.Address (V2.PubKeyCredential "01230123012301230123012301230123012301230123012301230123") Nothing
@@ -23,14 +26,44 @@ versionOracleTokenName = V2.TokenName "Version oracle"
 versionOracleToken :: V2.Value
 versionOracleToken = V2.singleton versioningCurrSym versionOracleTokenName 1
 
-versionOracleDatum :: Versioning.VersionOracleDatum
-versionOracleDatum = Versioning.VersionOracleDatum versionOracle (toAsData versioningCurrSym)
+versionOracleDatum :: Types.VersionOracleDatum
+versionOracleDatum = Types.VersionOracleDatum versionOracle (toAsData versioningCurrSym)
+
+versionOracleConfig :: Types.VersionOracleConfig
+versionOracleConfig = Types.VersionOracleConfig (toAsData versioningCurrSym)
 
 versioningValidatorScriptHash :: V2.ScriptHash
 versioningValidatorScriptHash = V2.ScriptHash "versioningValidatorScriptHash"
 
-versionOracle :: Versioning.VersionOracle
-versionOracle = Versioning.VersionOracle 66
+versionOracle :: Types.VersionOracle
+versionOracle = Types.VersionOracle 66
+
+versioningTokenUtxo :: V2.TxOut
+versioningTokenUtxo =
+  mkTxOut
+    versionValidatorAddress
+    versionOracleToken
+    versionOracleDatum
+    versioningValidatorScriptHash
+
+-- d-param
+
+dParameterValidatorAddress :: V2.Address
+dParameterValidatorAddress = V2.Address (V2.PubKeyCredential "45674567456745674567456745674567456745674567456745674567") Nothing
+
+dParameterCurrSym :: V2.CurrencySymbol
+dParameterCurrSym = V2.CurrencySymbol . V2.getScriptHash $ dParameterValidatorScriptHash
+
+dParameterValidatorScriptHash :: V2.ScriptHash
+dParameterValidatorScriptHash = V2.ScriptHash "dParameterValidatorScriptHash"
+
+dParameterOracleTokenName :: V2.TokenName
+dParameterOracleTokenName = V2.TokenName "dParameter oracle"
+
+dParameterOracleToken :: Integer -> V2.Value
+dParameterOracleToken = V2.singleton dParameterCurrSym dParameterOracleTokenName
+
+-- governance
 
 governanceCurrSym :: V2.CurrencySymbol
 governanceCurrSym = V2.CurrencySymbol . V2.getScriptHash $ governanceValidatorScriptHash
@@ -41,11 +74,24 @@ governanceTokenName = V2.TokenName "Version oracle"
 governanceToken :: V2.Value
 governanceToken = V2.singleton governanceCurrSym versionOracleTokenName 1
 
-governanceVersionOracleDatum :: Versioning.VersionOracleDatum
-governanceVersionOracleDatum = Versioning.VersionOracleDatum (Versioning.VersionOracle {scriptId = ScriptId.governancePolicyId}) (toAsData versioningCurrSym)
+governanceVersionOracleDatum :: Types.VersionOracleDatum
+governanceVersionOracleDatum = Types.VersionOracleDatum (Types.VersionOracle {scriptId = ScriptId.governancePolicyId}) (toAsData versioningCurrSym)
 
 governanceValidatorScriptHash :: V2.ScriptHash
 governanceValidatorScriptHash = V2.ScriptHash "governanceValidatorScriptHash"
+
+governanceTokenUtxo :: V2.TxOut
+governanceTokenUtxo =
+  mkTxOut
+    versionValidatorAddress
+    versionOracleToken
+    governanceVersionOracleDatum
+    governanceValidatorScriptHash
+
+-- other
+
+dummyBuiltinData :: V2.BuiltinData
+dummyBuiltinData = toBuiltinData (0 :: Integer)
 
 wrongToken :: V2.Value
 wrongToken = V2.singleton (V2.CurrencySymbol "WRONG CurrSym") (V2.TokenName "WRONG token name") 1
