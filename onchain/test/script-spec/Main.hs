@@ -10,5 +10,5 @@ main =
   defaultMain $
     testGroup
       "Script spec tests"
-      [ Versioning.tests
+      [ Versioning.policyTests
       ]

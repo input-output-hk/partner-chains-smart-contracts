@@ -12,8 +12,8 @@ import TrustlessSidechain.Types
 import TrustlessSidechain.Versioning
 import Prelude
 
-tests :: TestTree
-tests =
+policyTests :: TestTree
+policyTests =
   testGroup
     "versioning policy"
     [ testGroup
@@ -43,6 +43,7 @@ tests =
         , versioningPolicyBurnFailing08
         , versioningPolicyBurnFailing09
         ]
+    , versioningPolicyNotMintFailing
     ]
 
 -- init redeemer
@@ -316,6 +317,20 @@ versioningPolicyBurnFailing09 =
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ versioningTokenUtxo]
+      )
+
+versioningPolicyNotMintFailing :: TestTree
+versioningPolicyNotMintFailing =
+  expectFail "should fail if script purpose is not minting (ERROR-VERSION-POLICY-10)" $
+    runVersioningPolicy
+      Test.genesisUtxo
+      Test.versionValidatorAddress
+      (InitializeVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Spending (V2.TxOutRef "some utxo" 0)
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoOutRef .~ Test.genesisUtxo]
+          & _scriptContextTxInfo . _txInfoOutputs <>~ [versioningTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken
       )
 
 -- governance utxo input and tokens are missing
