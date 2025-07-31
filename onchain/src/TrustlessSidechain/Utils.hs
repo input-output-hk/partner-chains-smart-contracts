@@ -38,6 +38,8 @@ import PlutusTx.Data.List qualified as List
 -- | Unwrap a singleton list, or fail with a custom error.
 fromSingleton ::
   -- | Error thunk evaluated if the list is not a singleton.
+  -- We do this so the Plutus optimizer can strip out the error string when `remove-trace` is enabled.
+  -- If the string is passed directly it will be included in the CBOR output even if not used.
   (() -> a) ->
   -- | Input list
   [a] ->
@@ -51,6 +53,8 @@ fromSingleton msg _ = msg ()
 fromSingletonData ::
   (UnsafeFromData a) =>
   -- | Error thunk evaluated if the list is not a singleton.
+  -- We do this so the Plutus optimizer can strip out the error string when `remove-trace` is enabled.
+  -- If the string is passed directly it will be included in the CBOR output even if not used.
   (() -> a) ->
   -- | Plutus list
   List.List a ->
@@ -64,6 +68,8 @@ fromSingletonData msg list = case List.uncons list of
 -- | Unwrap a 'Maybe' value, or fail with a custom error.
 fromJust ::
   -- | Error thunk evaluated if the value is 'Nothing'
+  -- We do this so the Plutus optimizer can strip out the error string when `remove-trace` is enabled.
+  -- If the string is passed directly it will be included in the CBOR output even if not used.
   (() -> a) ->
   -- | Input optional value
   Maybe a ->
