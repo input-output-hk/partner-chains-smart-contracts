@@ -37,21 +37,21 @@ import PlutusTx.Data.List qualified as List
 
 -- | Unwrap a singleton list, or fail with a custom error.
 fromSingleton ::
-  -- | Error message used if the list is not a singleton.
-  BuiltinString ->
+  -- | Error thunk evaluated if the list is not a singleton.
+  (() -> a) ->
   -- | Input list
   [a] ->
   -- | The only element in the list (or error)
   a
 {-# INLINEABLE fromSingleton #-}
 fromSingleton _ [x] = x
-fromSingleton msg _ = traceError msg
+fromSingleton msg _ = msg ()
 
 -- | Unwrap a singleton Plutus list, or fail with a custom error.
 fromSingletonData ::
   (UnsafeFromData a) =>
-  -- | Error message used if the list is not a singleton.
-  BuiltinString ->
+  -- | Error thunk evaluated if the list is not a singleton.
+  (() -> a) ->
   -- | Plutus list
   List.List a ->
   -- | The only element in the list (or error)
@@ -59,12 +59,12 @@ fromSingletonData ::
 {-# INLINEABLE fromSingletonData #-}
 fromSingletonData msg list = case List.uncons list of
   Just (x, rest) | List.null rest -> x
-  _ -> traceError msg
+  _ -> msg ()
 
 -- | Unwrap a 'Maybe' value, or fail with a custom error.
 fromJust ::
-  -- | Error message used if the value is 'Nothing'
-  BuiltinString ->
+  -- | Error thunk evaluated if the value is 'Nothing'
+  (() -> a) ->
   -- | Input optional value
   Maybe a ->
   -- | The contained value (or error)
@@ -73,7 +73,7 @@ fromJust ::
 fromJust err m =
   case m of
     Just d -> d
-    Nothing -> traceError err
+    Nothing -> err ()
 
 -- | Get the total amount of a given currency symbol in a value, ignoring token names.
 currencySymbolValueOf ::

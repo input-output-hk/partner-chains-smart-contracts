@@ -199,22 +199,22 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
 
     inputReserveUtxo :: TxOut
     !inputReserveUtxo =
-      Utils.fromSingletonData "ERROR-RESERVE-05"
+      Utils.fromSingletonData (\_ -> traceError "ERROR-RESERVE-05")
         $ List.filter carriesAuthToken
         $ List.map txInInfoResolved
         $ txInfoInputs info
 
     outputReserveUtxo :: TxOut
     outputReserveUtxo =
-      Utils.fromSingletonData "ERROR-RESERVE-06"
+      Utils.fromSingletonData (\_ -> traceError "ERROR-RESERVE-06")
         $ List.filter (traceIfFalse "ERROR-RESERVE-25" . carriesAuthToken)
         $ getContinuingOutputs ctx
 
     inputDatum :: VersionedGenericDatum ReserveDatum
-    !inputDatum = Utils.fromJust "ERROR-RESERVE-07" (extractReserveUtxoDatumUnsafe inputReserveUtxo)
+    !inputDatum = Utils.fromJust (\_ -> traceError "ERROR-RESERVE-07") (extractReserveUtxoDatumUnsafe inputReserveUtxo)
 
     outputDatum :: VersionedGenericDatum ReserveDatum
-    outputDatum = Utils.fromJust "ERROR-RESERVE-08" (extractReserveUtxoDatumUnsafe outputReserveUtxo)
+    outputDatum = Utils.fromJust (\_ -> traceError "ERROR-RESERVE-08") (extractReserveUtxoDatumUnsafe outputReserveUtxo)
 
     isApprovedByGovernance :: Bool
     isApprovedByGovernance = approvedByGovernance voc ctx
@@ -247,7 +247,7 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
 
     outputIlliquidCirculationSupplyUtxo :: TxOut
     outputIlliquidCirculationSupplyUtxo =
-      Utils.fromSingletonData "ERROR-RESERVE-16"
+      Utils.fromSingletonData (\_ -> traceError "ERROR-RESERVE-16")
         $ Utils.getOutputsAt info illiquidCirculationSupplyAddress
 
     vFunctionTotalAccrued' :: CurrencySymbol
@@ -395,7 +395,7 @@ mkReserveAuthPolicy voc _ ctx =
 
     reserveUtxo :: TxOut
     reserveUtxo =
-      Utils.fromSingletonData "ERROR-RESERVE-AUTH-06"
+      Utils.fromSingletonData (\_ -> traceError "ERROR-RESERVE-AUTH-06")
         $ Utils.getOutputsAt info reserveAddress
 
     reserveUtxoValue :: Value

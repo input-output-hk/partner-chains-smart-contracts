@@ -82,12 +82,12 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
 
     supplyInputUtxo :: TxOut
     supplyInputUtxo =
-      Utils.fromSingletonData "ERROR-ILLIQUID-CIRCULATION-SUPPLY-05"
+      Utils.fromSingletonData (\_ -> traceError "ERROR-ILLIQUID-CIRCULATION-SUPPLY-05")
         $ Utils.getInputsAt info supplyAddress
 
     supplyOutputUtxo :: TxOut
     supplyOutputUtxo =
-      Utils.fromSingletonData "ERROR-ILLIQUID-CIRCULATION-SUPPLY-06"
+      Utils.fromSingletonData (\_ -> traceError "ERROR-ILLIQUID-CIRCULATION-SUPPLY-06")
         $ getContinuingOutputs ctx
 
     assetsIncrease :: Bool

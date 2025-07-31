@@ -112,14 +112,14 @@ mkVersionOraclePolicy genesisUtxo validatorAddress redeemer ctx@(ScriptContext t
   case redeemer of
     InitializeVersionOracle versionOracle scriptHash ->
       traceIfFalse "ERROR-VERSION-POLICY-01" isGenesisUtxoUsed
-        && fromSingleton "ERROR-VERSION-POLICY-02" (verifyOut versionOracle scriptHash)
+        && fromSingleton (\_ -> traceError "ERROR-VERSION-POLICY-02") (verifyOut versionOracle scriptHash)
         && traceIfFalse "ERROR-VERSION-POLICY-03" mintOneVersionToken
     MintVersionOracle newVersionOracle newScriptHash ->
-      fromSingleton "ERROR-VERSION-POLICY-04" (verifyOut newVersionOracle newScriptHash)
+      fromSingleton (\_ -> traceError "ERROR-VERSION-POLICY-04") (verifyOut newVersionOracle newScriptHash)
         && traceIfFalse "ERROR-VERSION-POLICY-05" signedByGovernanceAuthority
         && traceIfFalse "ERROR-VERSION-POLICY-06" mintOneVersionToken
     BurnVersionOracle oldVersion ->
-      fromSingleton "ERROR-VERSION-POLICY-07" (versionInputPresent oldVersion)
+      fromSingleton (\_ -> traceError "ERROR-VERSION-POLICY-07") (versionInputPresent oldVersion)
         && traceIfFalse "ERROR-VERSION-POLICY-08" versionOutputAbsent
         && traceIfFalse "ERROR-VERSION-POLICY-09" signedByGovernanceAuthority
   where
@@ -310,7 +310,7 @@ getVersionedScriptHash
   VersionOracleConfig {versionOracleCurrencySymbol}
   versionOracle
   (ScriptContext txInfo _) =
-    fromSingleton "ERROR-VERSION-CURRENCY-01"
+    fromSingleton (\_ -> traceError "ERROR-VERSION-CURRENCY-01")
       $ [ hash
         | -- Lookup reference input that:
         TxInInfo
