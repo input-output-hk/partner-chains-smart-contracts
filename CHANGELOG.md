@@ -4,6 +4,15 @@ This changelog is based on [Keep A
 Changelog](https://keepachangelog.com/en/1.1.0).
 
 
+## 8.0.0 - 2025-07-31
+### Added
+* Trace enabled version of raw-scripts rust crate
+### Changed
+* Upgraded plutus-tx to 1.46.0.0 ([this introduces a fix for the plutus script double serialization bug](https://github.com/IntersectMBO/cardano-api/commit/86ac7198cfd69730fb0f28488a7e028feb268b70))
+* Enabled plutus-tx optimization and trace removal in raw-scripts
+### Removed
+* t0 field from reserve immutable settings smart-contract
+
 ## 7.2.2 - 2025-06-02
 ### Fixed
 * Fix cyclical dependency in versioning scripts

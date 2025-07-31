@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          trustless-sidechain
-version:       7.2.2
+version:       8.0.0
 synopsis:      Smart contract code used by the partner-chains project.
 homepage:
   https://github.com/input-output-hk/partner-chains-smart-contracts
