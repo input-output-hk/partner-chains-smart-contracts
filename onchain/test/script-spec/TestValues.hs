@@ -46,23 +46,6 @@ versioningTokenUtxo =
     versionOracleDatum
     versioningValidatorScriptHash
 
--- d-param
-
-dParameterValidatorAddress :: V2.Address
-dParameterValidatorAddress = V2.Address (V2.PubKeyCredential "45674567456745674567456745674567456745674567456745674567") Nothing
-
-dParameterCurrSym :: V2.CurrencySymbol
-dParameterCurrSym = V2.CurrencySymbol . V2.getScriptHash $ dParameterValidatorScriptHash
-
-dParameterValidatorScriptHash :: V2.ScriptHash
-dParameterValidatorScriptHash = V2.ScriptHash "dParameterValidatorScriptHash"
-
-dParameterOracleTokenName :: V2.TokenName
-dParameterOracleTokenName = V2.TokenName "dParameter oracle"
-
-dParameterOracleToken :: Integer -> V2.Value
-dParameterOracleToken = V2.singleton dParameterCurrSym dParameterOracleTokenName
-
 -- governance
 
 governanceCurrSym :: V2.CurrencySymbol

@@ -30,15 +30,15 @@ dParamMintingPolicyPassing =
     runMintingPolicy
       Test.genesisUtxo
       Test.versionOracleConfig
-      Test.dParameterValidatorAddress
+      dParameterValidatorAddress
       Test.dummyBuiltinData
       ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Minting Test.dParameterCurrSym
+          & _scriptContextPurpose .~ V2.Minting dParameterCurrSym
           -- signed by governance:
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
           -- minted tokens are all sent to dParameterValidatorAddress:
-          & _scriptContextTxInfo . _txInfoMint <>~ Test.dParameterOracleToken 2
+          & _scriptContextTxInfo . _txInfoMint <>~ dParameterOracleToken 2
           & _scriptContextTxInfo . _txInfoOutputs <>~ [dParamTokenUtxo]
           & _scriptContextTxInfo . _txInfoOutputs <>~ [dParamTokenUtxo]
       )
@@ -49,14 +49,14 @@ dParamMintingPolicyFailing01 =
     runMintingPolicy
       Test.genesisUtxo
       Test.versionOracleConfig
-      Test.dParameterValidatorAddress
+      dParameterValidatorAddress
       Test.dummyBuiltinData
       ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Minting Test.dParameterCurrSym
+          & _scriptContextPurpose .~ V2.Minting dParameterCurrSym
           -- not signed by governance (token missing):
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           -- minted tokens are all sent to dParameterValidatorAddress:
-          & _scriptContextTxInfo . _txInfoMint <>~ Test.dParameterOracleToken 2
+          & _scriptContextTxInfo . _txInfoMint <>~ dParameterOracleToken 2
           & _scriptContextTxInfo . _txInfoOutputs <>~ [dParamTokenUtxo]
           & _scriptContextTxInfo . _txInfoOutputs <>~ [dParamTokenUtxo]
       )
@@ -67,15 +67,15 @@ dParamMintingPolicyFailing02 =
     runMintingPolicy
       Test.genesisUtxo
       Test.versionOracleConfig
-      Test.dParameterValidatorAddress
+      dParameterValidatorAddress
       Test.dummyBuiltinData
       ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Minting Test.dParameterCurrSym
+          & _scriptContextPurpose .~ V2.Minting dParameterCurrSym
           -- signed by governance:
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
           -- one minted token is sent to the wrong address:
-          & _scriptContextTxInfo . _txInfoMint <>~ Test.dParameterOracleToken 2
+          & _scriptContextTxInfo . _txInfoMint <>~ dParameterOracleToken 2
           & _scriptContextTxInfo . _txInfoOutputs <>~ [dParamTokenUtxo]
           & _scriptContextTxInfo . _txInfoOutputs <>~ [wrongAddressTokenUtxo]
       )
@@ -85,17 +85,17 @@ dParamMintingPolicyFailing02 =
     wrongAddressTokenUtxo =
       mkTxOut
         wrongValidatorAddress
-        (Test.dParameterOracleToken 1)
+        (dParameterOracleToken 1)
         Test.dummyBuiltinData
-        Test.dParameterValidatorScriptHash
+        dParameterValidatorScriptHash
 
 dParamTokenUtxo :: V2.TxOut
 dParamTokenUtxo =
   mkTxOut
-    Test.dParameterValidatorAddress
-    (Test.dParameterOracleToken 1)
+    dParameterValidatorAddress
+    (dParameterOracleToken 1)
     Test.dummyBuiltinData
-    Test.dParameterValidatorScriptHash
+    dParameterValidatorScriptHash
 
 dParamMintingPolicyFailing03 :: TestTree
 dParamMintingPolicyFailing03 =
@@ -103,7 +103,7 @@ dParamMintingPolicyFailing03 =
     runMintingPolicy
       Test.genesisUtxo
       Test.versionOracleConfig
-      Test.dParameterValidatorAddress
+      dParameterValidatorAddress
       Test.dummyBuiltinData
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Spending (V2.TxOutRef "some utxo" 0)
@@ -111,7 +111,7 @@ dParamMintingPolicyFailing03 =
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
           -- minted tokens are all sent to dParameterValidatorAddress:
-          & _scriptContextTxInfo . _txInfoMint <>~ Test.dParameterOracleToken 2
+          & _scriptContextTxInfo . _txInfoMint <>~ dParameterOracleToken 2
           & _scriptContextTxInfo . _txInfoOutputs <>~ [dParamTokenUtxo]
           & _scriptContextTxInfo . _txInfoOutputs <>~ [dParamTokenUtxo]
       )
@@ -122,23 +122,41 @@ validatorTests :: TestTree
 validatorTests =
   testGroup
     "d-parameter validator"
-    [ dParamValidatorPassing
+    [ dParamValidatorPassingNotSpending
+    , dParamValidatorPassingSpending
     , dParamValidatorFailing01
     ]
 
-dParamValidatorPassing :: TestTree
-dParamValidatorPassing =
-  expectSuccess "should pass" $
+dParamValidatorPassingNotSpending :: TestTree
+dParamValidatorPassingNotSpending =
+  expectSuccess "should pass if not spending" $
     runValidator
       Test.genesisUtxo
       Test.versionOracleConfig
       Test.dummyBuiltinData
       Test.dummyBuiltinData
       ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Minting Test.dParameterCurrSym
+          & _scriptContextPurpose .~ V2.Minting dParameterCurrSym
           -- signed by governance:
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
+      )
+
+dParamValidatorPassingSpending :: TestTree
+dParamValidatorPassingSpending =
+  expectSuccess "should pass if spending" $
+    runValidator
+      Test.genesisUtxo
+      Test.versionOracleConfig
+      Test.dummyBuiltinData
+      Test.dummyBuiltinData
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting dParameterCurrSym
+          -- signed by governance:
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
+          -- we spend a d-param utxo here:
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ dParamTokenUtxo]
       )
 
 dParamValidatorFailing01 :: TestTree
@@ -150,19 +168,36 @@ dParamValidatorFailing01 =
       Test.dummyBuiltinData
       Test.dummyBuiltinData
       ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Minting Test.dParameterCurrSym
+          & _scriptContextPurpose .~ V2.Minting dParameterCurrSym
           -- not signed by governance (token missing):
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
       )
 
+-- values
+
+dParameterValidatorAddress :: V2.Address
+dParameterValidatorAddress = V2.Address (V2.PubKeyCredential "45674567456745674567456745674567456745674567456745674567") Nothing
+
+dParameterCurrSym :: V2.CurrencySymbol
+dParameterCurrSym = V2.CurrencySymbol . V2.getScriptHash $ dParameterValidatorScriptHash
+
+dParameterValidatorScriptHash :: V2.ScriptHash
+dParameterValidatorScriptHash = V2.ScriptHash "dParameterValidatorScriptHash"
+
+dParameterOracleToken :: Integer -> V2.Value
+dParameterOracleToken = V2.singleton dParameterCurrSym dParameterOracleTokenName
+  where
+    dParameterOracleTokenName :: V2.TokenName
+    dParameterOracleTokenName = V2.TokenName "dParameter oracle"
+
 -- test runner
 
 runMintingPolicy :: V2.TxOutRef -> VersionOracleConfig -> V2.Address -> BuiltinData -> V2.ScriptContext -> BuiltinUnit
-runMintingPolicy genesisUtxo vc dParameterValidatorAddress redeemer ctx =
+runMintingPolicy genesisUtxo vc dParameterValidatorAddress' redeemer ctx =
   mkMintingPolicyUntyped
     (toBuiltinData genesisUtxo)
     (toBuiltinData vc)
-    (toBuiltinData dParameterValidatorAddress)
+    (toBuiltinData dParameterValidatorAddress')
     (toBuiltinData redeemer)
     (toBuiltinData ctx)
 
