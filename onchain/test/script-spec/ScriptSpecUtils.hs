@@ -72,6 +72,15 @@ mkTxOut txOutAddress txOutValue datum scriptHash =
     , V2.txOutReferenceScript = Just scriptHash
     }
 
+mkTxOutNoScriptHash :: (ToData d) => V2.Address -> V2.Value -> d -> V2.TxOut
+mkTxOutNoScriptHash txOutAddress txOutValue datum =
+  V2.TxOut
+    { V2.txOutAddress = txOutAddress
+    , V2.txOutValue = txOutValue
+    , V2.txOutDatum = V2.OutputDatum (V2.Datum $ toBuiltinData datum)
+    , V2.txOutReferenceScript = Nothing
+    }
+
 -- test functions
 
 expectFail :: TestName -> BuiltinUnit -> TestTree

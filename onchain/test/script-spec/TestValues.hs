@@ -63,6 +63,18 @@ governanceVersionOracleDatum = Types.VersionOracleDatum (Types.VersionOracle {sc
 governanceValidatorScriptHash :: V2.ScriptHash
 governanceValidatorScriptHash = V2.ScriptHash "governanceValidatorScriptHash"
 
+governedMapCurrSym :: V2.CurrencySymbol
+governedMapCurrSym = V2.CurrencySymbol "governedMapCurrSym"
+
+governedMapTokenName :: V2.TokenName
+governedMapTokenName = V2.TokenName "Governed map"
+
+governedMapToken :: Integer -> V2.Value
+governedMapToken = V2.singleton governedMapCurrSym governedMapTokenName
+
+governedMapValidatorAddress :: V2.Address
+governedMapValidatorAddress = V2.Address (V2.PubKeyCredential "01230123012301230123012301230123012301230123012301230123") Nothing
+
 governanceTokenUtxo :: V2.TxOut
 governanceTokenUtxo =
   mkTxOut
