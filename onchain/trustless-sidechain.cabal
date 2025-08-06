@@ -278,6 +278,7 @@ test-suite script-specs
   other-modules:
     DParameter
     GovernedMap
+    IlliquidCirculationSupply
     PermissionedCandidates
     ScriptSpecUtils
     TestValues
