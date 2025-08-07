@@ -281,6 +281,7 @@ test-suite script-specs
     ScriptSpecUtils
     TestValues
     Versioning
+    GovernedMap
 
   build-depends:
     , base16-bytestring

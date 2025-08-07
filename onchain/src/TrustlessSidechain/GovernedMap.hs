@@ -6,6 +6,8 @@ module TrustlessSidechain.GovernedMap (
   serialisableValidator,
   governedMapValidator,
   mkMintingPolicy,
+  mkMintingPolicyUntyped,
+  mkValidatorUntyped,
 ) where
 
 import PlutusLedgerApi.Data.V2 (
