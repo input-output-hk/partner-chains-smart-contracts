@@ -276,14 +276,9 @@ test-suite script-specs
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
+    DParameter
     ScriptSpecUtils
     TestValues
-    TrustlessSidechain.AlwaysFailingScripts
-    TrustlessSidechain.AlwaysPassingScripts
-    TrustlessSidechain.ScriptId
-    TrustlessSidechain.Types
-    TrustlessSidechain.Utils
-    TrustlessSidechain.Versioning
     Versioning
 
   build-depends:
@@ -302,4 +297,4 @@ test-suite script-specs
     , trustless-sidechain
     , trustless-sidechain-prelude
 
-  hs-source-dirs: test/script-spec src
+  hs-source-dirs: test/script-spec
