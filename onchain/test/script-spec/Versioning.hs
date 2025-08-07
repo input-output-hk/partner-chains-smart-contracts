@@ -327,7 +327,7 @@ versioningPolicyNotMintFailing =
       Test.versionValidatorAddress
       (InitializeVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Spending (V2.TxOutRef "some utxo" 0)
+          & _scriptContextPurpose .~ V2.Spending (V2.TxOutRef "abcd0123" 0)
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoOutRef .~ Test.genesisUtxo]
           & _scriptContextTxInfo . _txInfoOutputs <>~ [Test.versioningTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken
