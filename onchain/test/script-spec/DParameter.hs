@@ -89,14 +89,6 @@ dParamMintingPolicyFailing02 =
         Test.dummyBuiltinData
         dParameterValidatorScriptHash
 
-dParamTokenUtxo :: V2.TxOut
-dParamTokenUtxo =
-  mkTxOut
-    dParameterValidatorAddress
-    (dParameterOracleToken 1)
-    Test.dummyBuiltinData
-    dParameterValidatorScriptHash
-
 dParamMintingPolicyFailing03 :: TestTree
 dParamMintingPolicyFailing03 =
   expectFail "should fail if script purpose is not Minting (ERROR-DPARAMETER-POLICY-03)" $
@@ -106,7 +98,7 @@ dParamMintingPolicyFailing03 =
       dParameterValidatorAddress
       Test.dummyBuiltinData
       ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Spending (V2.TxOutRef "some utxo" 0)
+          & _scriptContextPurpose .~ V2.Spending (V2.TxOutRef "abcd0123" 0)
           -- signed by governance:
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
@@ -115,6 +107,16 @@ dParamMintingPolicyFailing03 =
           & _scriptContextTxInfo . _txInfoOutputs <>~ [dParamTokenUtxo]
           & _scriptContextTxInfo . _txInfoOutputs <>~ [dParamTokenUtxo]
       )
+
+-- values
+
+dParamTokenUtxo :: V2.TxOut
+dParamTokenUtxo =
+  mkTxOut
+    dParameterValidatorAddress
+    (dParameterOracleToken 1)
+    Test.dummyBuiltinData
+    dParameterValidatorScriptHash
 
 -- validator
 
