@@ -7,7 +7,9 @@ module TrustlessSidechain.PermissionedCandidates (
   serialisableValidator,
   serialisableMintingPolicy,
   permissionedCandidatesValidator,
+  mkValidatorUntyped,
   mkMintingPolicy,
+  mkMintingPolicyUntyped,
 ) where
 
 import PlutusLedgerApi.Common (SerialisedScript)
