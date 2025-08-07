@@ -138,7 +138,7 @@ dParamValidatorPassingNotSpending =
       Test.dummyBuiltinData
       Test.dummyBuiltinData
       ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Minting dParameterCurrSym
+          & _scriptContextPurpose .~ V2.Spending someTxOutRef
           -- signed by governance:
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
@@ -153,7 +153,7 @@ dParamValidatorPassingSpending =
       Test.dummyBuiltinData
       Test.dummyBuiltinData
       ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Minting dParameterCurrSym
+          & _scriptContextPurpose .~ V2.Spending someTxOutRef
           -- signed by governance:
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
@@ -170,12 +170,15 @@ dParamValidatorFailing01 =
       Test.dummyBuiltinData
       Test.dummyBuiltinData
       ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Minting dParameterCurrSym
+          & _scriptContextPurpose .~ V2.Spending someTxOutRef
           -- not signed by governance (token missing):
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
       )
 
 -- values
+
+someTxOutRef :: V2.TxOutRef
+someTxOutRef = V2.TxOutRef "abcd0123" 0
 
 dParameterValidatorAddress :: V2.Address
 dParameterValidatorAddress = V2.Address (V2.PubKeyCredential "45674567456745674567456745674567456745674567456745674567") Nothing
