@@ -1,10 +1,12 @@
 module Main where
 
-import DParameter qualified
 import Data.String
 import Test.Tasty
-import Versioning qualified
 import Prelude
+
+import DParameter qualified
+import PermissionedCandidates qualified
+import Versioning qualified
 
 main :: IO ()
 main =
@@ -14,4 +16,6 @@ main =
       [ Versioning.policyTests
       , DParameter.policyTests
       , DParameter.validatorTests
+      , PermissionedCandidates.policyTests
+      , PermissionedCandidates.validatorTests
       ]
