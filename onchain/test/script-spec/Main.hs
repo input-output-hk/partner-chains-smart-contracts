@@ -5,6 +5,7 @@ import Test.Tasty
 import Prelude
 
 import DParameter qualified
+import IlliquidCirculationSupply qualified
 import PermissionedCandidates qualified
 import Versioning qualified
 
@@ -18,4 +19,5 @@ main =
       , DParameter.validatorTests
       , PermissionedCandidates.policyTests
       , PermissionedCandidates.validatorTests
+      , IlliquidCirculationSupply.validatorTests
       ]

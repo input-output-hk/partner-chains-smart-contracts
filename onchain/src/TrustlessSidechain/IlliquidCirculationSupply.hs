@@ -1,10 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module TrustlessSidechain.IlliquidCirculationSupply (
-  mkIlliquidCirculationSupplyValidator,
-  mkIlliquidCirculationSupplyValidatorUntyped,
-  serialisableIlliquidCirculationSupplyValidator,
-) where
+module TrustlessSidechain.IlliquidCirculationSupply where
 
 import PlutusLedgerApi.Data.V2 (
   Address,
