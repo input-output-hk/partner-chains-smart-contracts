@@ -1,6 +1,7 @@
 module Main where
 
 import Data.String
+import GovernedMap qualified
 import Test.Tasty
 import Prelude
 
@@ -18,4 +19,6 @@ main =
       , DParameter.validatorTests
       , PermissionedCandidates.policyTests
       , PermissionedCandidates.validatorTests
+      , GovernedMap.policyTests
+      , GovernedMap.validatorTests
       ]
