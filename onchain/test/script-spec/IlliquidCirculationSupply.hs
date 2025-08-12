@@ -180,7 +180,7 @@ illiquidCirculationSupplyValidatorDepositFailing05 =
             <>~ [ emptyTxOut
                     & _txOutAddress .~ supplyAddress
                     & _txOutDatum .~ V2.OutputDatum versionedUnitDatum
-                    & _txOutValue <>~ supplyToken 5
+                    & _txOutValue <>~ supplyToken 12
                 ]
       )
 
