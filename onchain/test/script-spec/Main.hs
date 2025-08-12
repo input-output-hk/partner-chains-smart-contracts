@@ -6,6 +6,7 @@ import Test.Tasty
 import Prelude
 
 import DParameter qualified
+import IlliquidCirculationSupply qualified
 import PermissionedCandidates qualified
 import Versioning qualified
 
@@ -21,4 +22,5 @@ main =
       , PermissionedCandidates.validatorTests
       , GovernedMap.policyTests
       , GovernedMap.validatorTests
+      , IlliquidCirculationSupply.validatorTests
       ]
