@@ -149,6 +149,9 @@ _txInInfoOutRef = lens V2.txInInfoOutRef \a txInInfoOutRef -> a {V2.txInInfoOutR
 _txInInfoResolved :: Lens' V2.TxInInfo V2.TxOut
 _txInInfoResolved = lens V2.txInInfoResolved \a txInInfoResolved -> a {V2.txInInfoResolved = txInInfoResolved}
 
+_txInfoSignatories :: Lens' V2.TxInfo [V2.PubKeyHash]
+_txInfoSignatories = lens V2.txInfoSignatories \a txInfoSignatories -> a {V2.txInfoSignatories = txInfoSignatories}
+
 _txOutDatum :: Lens' V2.TxOut V2.OutputDatum
 _txOutDatum = lens V2.txOutDatum \a txOutDatum -> a {V2.txOutDatum = txOutDatum}
 

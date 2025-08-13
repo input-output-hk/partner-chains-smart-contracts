@@ -5,6 +5,7 @@ import GovernedMap qualified
 import Test.Tasty
 import Prelude
 
+import CommitteeCandidateValidator qualified
 import DParameter qualified
 import IlliquidCirculationSupply qualified
 import PermissionedCandidates qualified
@@ -23,4 +24,5 @@ main =
       , GovernedMap.policyTests
       , GovernedMap.validatorTests
       , IlliquidCirculationSupply.validatorTests
+      , CommitteeCandidateValidator.validatorTests
       ]
