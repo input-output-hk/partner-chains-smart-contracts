@@ -8,6 +8,7 @@ import Prelude
 import CommitteeCandidateValidator qualified
 import DParameter qualified
 import IlliquidCirculationSupply qualified
+import OnlyMintMintingPolicy qualified
 import PermissionedCandidates qualified
 import Reserve qualified
 import ScriptCache qualified
@@ -29,4 +30,5 @@ main =
       , CommitteeCandidateValidator.validatorTests
       , Reserve.validatorTests
       , ScriptCache.validatorTests
+      , OnlyMintMintingPolicy.policyTests
       ]
