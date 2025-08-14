@@ -27,4 +27,5 @@ main =
       , IlliquidCirculationSupply.validatorTests
       , CommitteeCandidateValidator.validatorTests
       , Reserve.validatorTests
+      , Reserve.policyTests
       ]
