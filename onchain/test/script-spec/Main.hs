@@ -10,6 +10,7 @@ import DParameter qualified
 import IlliquidCirculationSupply qualified
 import PermissionedCandidates qualified
 import Reserve qualified
+import ScriptCache qualified
 import Versioning qualified
 
 main :: IO ()
@@ -27,4 +28,5 @@ main =
       , IlliquidCirculationSupply.validatorTests
       , CommitteeCandidateValidator.validatorTests
       , Reserve.validatorTests
+      , ScriptCache.validatorTests
       ]

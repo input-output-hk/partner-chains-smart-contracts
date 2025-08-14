@@ -5,6 +5,7 @@
 -- minting policies of tokens minted during sidechain initialization.
 module TrustlessSidechain.ScriptCache (
   serialisableScriptCache,
+  mkScriptCacheUntyped,
 ) where
 
 import PlutusLedgerApi.V2 (PubKeyHash, SerialisedScript, serialiseCompiledCode)
