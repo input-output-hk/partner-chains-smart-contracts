@@ -282,6 +282,7 @@ test-suite script-specs
     IlliquidCirculationSupply
     PermissionedCandidates
     Reserve
+    ScriptCache
     ScriptSpecUtils
     TestValues
     Versioning
