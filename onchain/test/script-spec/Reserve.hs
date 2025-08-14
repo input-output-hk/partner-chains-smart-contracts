@@ -15,6 +15,62 @@ import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types qualified as Types
 import Prelude
 
+-- minting policy
+
+policyTests :: TestTree
+policyTests =
+  testGroup
+    "reserve auth policy"
+    [ reserveAuthPolicyBurnPassing
+    , reserveAuthPolicyPassing
+    ]
+
+reserveAuthPolicyBurnPassing :: TestTree
+reserveAuthPolicyBurnPassing =
+  expectSuccess "burn should pass" $
+    runMintingPolicy
+      Test.versionOracleConfig
+      Test.dummyBuiltinData
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting reserveAuthPolicyCurrencySymbol
+          -- reserve auth token burned
+          & _scriptContextTxInfo . _txInfoMint <>~ reserveAuthToken (-1)
+      )
+
+reserveAuthPolicyPassing :: TestTree
+reserveAuthPolicyPassing =
+  expectSuccess "should pass" $
+    runMintingPolicy
+      Test.versionOracleConfig
+      Test.dummyBuiltinData
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting reserveAuthPolicyCurrencySymbol
+          -- signed by governance:
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
+          -- ReserveAuthPolicy VersionOracle
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveValidatorVersionOracleUtxo]
+          -- reserve auth token minted
+          & _scriptContextTxInfo . _txInfoMint <>~ reserveAuthToken 1
+          -- [OUTPUT] Reserve UTXO:
+          & _scriptContextTxInfo . _txInfoOutputs
+            <>~ [ emptyTxOut
+                    & _txOutAddress .~ reserveAddress
+                    & _txOutDatum .~ V2.OutputDatum (wrapToVersioned initialReserveDatum)
+                    -- carries reserve auth token:
+                    & _txOutValue <>~ reserveAuthToken 1
+                    -- PC tokens:
+                    & _txOutValue <>~ partnerToken 5
+                    -- spare ADA:
+                    & _txOutValue <>~ Test.mkAdaToken 5
+                ]
+      )
+  where
+    initialReserveDatum =
+      reserveDatum
+        { Types.stats = Types.ReserveStats {tokenTotalAmountTransferred = 0}
+        }
+
 -- validator
 
 validatorTests :: TestTree
@@ -322,7 +378,16 @@ reserveUtxo :: V2.TxOutRef
 reserveUtxo = V2.TxOutRef "77777777" 0
 
 reserveAddress :: V2.Address
-reserveAddress = V2.Address (V2.PubKeyCredential "07770777077707770777077707770777077707770777077707770777") Nothing
+reserveAddress = Address.scriptHashAddress reserveValidatorScriptHash
+
+reserveValidatorVersionOracleUtxo :: V2.TxOut
+reserveValidatorVersionOracleUtxo =
+  Test.mkVersionOracleTxOut
+    ScriptId.ReserveValidator
+    reserveValidatorScriptHash
+
+reserveValidatorScriptHash :: V2.ScriptHash
+reserveValidatorScriptHash = V2.ScriptHash "reserveValidatorScriptHash"
 
 icsUtxo :: V2.TxOutRef
 icsUtxo = V2.TxOutRef "aaaaaaaa" 0
@@ -344,8 +409,9 @@ reserveAuthPolicyVersionOracleUtxo =
 
 reserveAuthToken :: Integer -> V2.Value
 reserveAuthToken = V2.singleton reserveAuthPolicyCurrencySymbol V2.adaToken
-  where
-    reserveAuthPolicyCurrencySymbol = V2.CurrencySymbol . V2.getScriptHash $ reserveAuthPolicyScriptHash
+
+reserveAuthPolicyCurrencySymbol :: V2.CurrencySymbol
+reserveAuthPolicyCurrencySymbol = V2.CurrencySymbol . V2.getScriptHash $ reserveAuthPolicyScriptHash
 
 reserveAuthPolicyScriptHash :: V2.ScriptHash
 reserveAuthPolicyScriptHash = V2.ScriptHash "reserveAuthPolicyScriptHash"
@@ -372,6 +438,13 @@ addRedundantIcsVersioningOracle :: V2.ScriptContext -> V2.ScriptContext
 addRedundantIcsVersioningOracle = _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ icsSupplyValidatorVersionOracleUtxo]
 
 -- test runner
+
+runMintingPolicy :: Types.VersionOracleConfig -> BuiltinData -> V2.ScriptContext -> BuiltinUnit
+runMintingPolicy vc redeemer ctx =
+  Reserve.mkReserveAuthPolicyUntyped
+    (toBuiltinData vc)
+    redeemer
+    (toBuiltinData ctx)
 
 runValidator :: Types.VersionOracleConfig -> BuiltinData -> Types.ReserveRedeemer -> V2.ScriptContext -> BuiltinUnit
 runValidator vc datum redeemer ctx =
