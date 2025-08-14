@@ -4,6 +4,7 @@
 
 module TrustlessSidechain.OnlyMintMintingPolicy (
   serialisableOnlyMintMintingPolicy,
+  mkOnlyMintMintingPolicyUntyped,
 ) where
 
 import PlutusLedgerApi.Common (SerialisedScript, serialiseCompiledCode)

@@ -280,6 +280,7 @@ test-suite script-specs
     DParameter
     GovernedMap
     IlliquidCirculationSupply
+    OnlyMintMintingPolicy
     PermissionedCandidates
     Reserve
     ScriptCache
