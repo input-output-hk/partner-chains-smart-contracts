@@ -26,9 +26,6 @@ versionOracleTokenName = V2.TokenName "Version oracle"
 versionOracleToken :: V2.Value
 versionOracleToken = V2.singleton versioningCurrSym versionOracleTokenName 1
 
-versionOracleDatum :: Types.VersionOracleDatum
-versionOracleDatum = Types.VersionOracleDatum versionOracle (toAsData versioningCurrSym)
-
 versionOracleConfig :: Types.VersionOracleConfig
 versionOracleConfig = Types.VersionOracleConfig (toAsData versioningCurrSym)
 
@@ -45,6 +42,24 @@ versioningTokenUtxo =
     versionOracleToken
     versionOracleDatum
     versioningValidatorScriptHash
+  where
+    versionOracleDatum =
+      Types.VersionOracleDatum
+        versionOracle
+        (toAsData versioningCurrSym)
+
+mkVersionOracleTxOut :: ScriptId.ScriptId -> V2.ScriptHash -> V2.TxOut
+mkVersionOracleTxOut scriptId validatorScriptHash =
+  mkTxOut
+    versionValidatorAddress
+    versionOracleToken
+    scriptVersionOracleDatum
+    validatorScriptHash
+  where
+    scriptVersionOracleDatum =
+      Types.VersionOracleDatum
+        (Types.VersionOracle {scriptId = ScriptId.toInteger scriptId})
+        (toAsData versioningCurrSym)
 
 -- governance
 

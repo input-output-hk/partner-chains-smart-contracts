@@ -9,6 +9,7 @@ import CommitteeCandidateValidator qualified
 import DParameter qualified
 import IlliquidCirculationSupply qualified
 import PermissionedCandidates qualified
+import Reserve qualified
 import Versioning qualified
 
 main :: IO ()
@@ -25,4 +26,5 @@ main =
       , GovernedMap.validatorTests
       , IlliquidCirculationSupply.validatorTests
       , CommitteeCandidateValidator.validatorTests
+      , Reserve.validatorTests
       ]

@@ -281,6 +281,7 @@ test-suite script-specs
     GovernedMap
     IlliquidCirculationSupply
     PermissionedCandidates
+    Reserve
     ScriptSpecUtils
     TestValues
     Versioning
