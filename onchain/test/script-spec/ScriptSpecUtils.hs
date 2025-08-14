@@ -92,9 +92,9 @@ expectFail str a = testCase str do
 
 expectSuccess :: TestName -> BuiltinUnit -> TestTree
 expectSuccess str a = testCase str do
-  res <- catch (Right <$> evaluate a) \(SomeException _) -> return $ Left ()
+  res <- catch (Right <$> evaluate a) \(SomeException e) -> return $ Left $ show e
   case res of
-    Left _ -> assertFailure ("expected pass")
+    Left e -> assertFailure ("expected pass, received:\n" <> e)
     _ -> return ()
 
 -- lens
@@ -136,6 +136,9 @@ _scriptContextPurpose = lens V2.scriptContextPurpose \a scriptContextPurpose -> 
 
 _txInfoInputs :: Lens' V2.TxInfo [V2.TxInInfo]
 _txInfoInputs = lens V2.txInfoInputs \a txInfoInputs -> a {V2.txInfoInputs = txInfoInputs}
+
+_txInfoReferenceInputs :: Lens' V2.TxInfo [V2.TxInInfo]
+_txInfoReferenceInputs = lens V2.txInfoReferenceInputs \a txInfoReferenceInputs -> a {V2.txInfoReferenceInputs = txInfoReferenceInputs}
 
 _txInfoOutputs :: Lens' V2.TxInfo [V2.TxOut]
 _txInfoOutputs = lens V2.txInfoOutputs \a txInfoOutputs -> a {V2.txInfoOutputs = txInfoOutputs}
