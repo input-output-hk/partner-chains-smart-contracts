@@ -83,25 +83,23 @@ vFunctionTotalAccruedTokenName = adaToken
 --
 --   ERROR-RESERVE-01: Governance approval is not present
 --   ERROR-RESERVE-02: Other tokens than governance token are minted or burnt
---   ERROR-RESERVE-03: Datum of a propagated reserve utxo changes
---   ERROR-RESERVE-04: Assets of a propagated reserve utxo don't increase by reserve tokens
+--   ERROR-RESERVE-03: Datum of the propagated reserve utxo changes
+--   ERROR-RESERVE-04: Assets of the propagated reserve utxo don't increase by reserve tokens
 --   ERROR-RESERVE-05: No unique input utxo carrying authentication token
 --   ERROR-RESERVE-06: No unique output utxo at the reserve address and carrying authentication token
 --   ERROR-RESERVE-07: Datum of input reserve utxo malformed
 --   ERROR-RESERVE-08: Datum of output reserve utxo malformed
---   ERROR-RESERVE-09: Datum of a propagated reserve utxo changes not only by immutable settings
---   ERROR-RESERVE-10: Assets of a propagated reserve utxo change
+--   ERROR-RESERVE-09: Datum of the propagated reserve utxo changes not only by immutable settings
+--   ERROR-RESERVE-10: Assets of the propagated reserve utxo change
 --   ERROR-RESERVE-11: V(t) tokens are not minted
 --   ERROR-RESERVE-12: Other tokens than V(t) tokens are minted or burnt
---   ERROR-RESERVE-13: Assets of a propagated reserve utxo don't decrease by reserve tokens in desired way
---   ERROR-RESERVE-14: Datum of a propagated reserve utxo changes not only by stats in desired way
+--   ERROR-RESERVE-13: Assets of the propagated reserve utxo don't decrease by reserve tokens in desired way
+--   ERROR-RESERVE-14: Datum of the propagated reserve utxo changes not only by stats in desired way
 --   ERROR-RESERVE-15: Incorrect amount of reserve tokens goes into an illiquid circulation supply
 --   ERROR-RESERVE-16: No unique output utxo at the illiquid circulation supply address
 --   ERROR-RESERVE-17: An authentication token is not burnt
 --   ERROR-RESERVE-18: Other tokens than auth token and governance token are minted or burnt
 --   ERROR-RESERVE-19: Not all reserve tokens are transferred to illiquid circulation supply
---   ERROR-RESERVE-20: Reserve utxo input exists without an authentication token
---   ERROR-RESERVE-21: Reserve utxo output exists without an authentication token
 --   ERROR-RESERVE-22: Governance approval is not present
 --   ERROR-RESERVE-23: Other tokens than governance token are minted or burnt
 --   ERROR-RESERVE-24: Governance approval is not present
