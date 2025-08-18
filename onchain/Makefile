@@ -1,4 +1,4 @@
-.PHONY: all cabal-update onchain update-scripts check-raw-scripts
+.PHONY: all cabal-update onchain update-scripts check-raw-scripts coverage
 
 trustless-dir := ../raw-scripts
 trustless-traced-dir := ../raw-scripts-traced
@@ -36,3 +36,15 @@ check-raw-scripts:
 		echo "\nError: $(raw-scripts-trace) is not up to date\n"; \
 		exit 1; \
 	fi
+
+HPCDIRS := $(shell find dist-newstyle -type d -path '*/hpc/vanilla/mix')
+
+coverage:
+	cabal test trustless-sidechain-test --enable-coverage
+	cabal test roundtrip --enable-coverage
+	cabal test script-specs --enable-coverage
+	@rm -rf combined.tix coverage
+	@find dist-newstyle -name '*.tix' | xargs hpc sum --union --output=combined.tix
+	@mkdir -p coverage
+	hpc markup $(foreach dir,$(HPCDIRS),--hpcdir=$(dir)) --destdir=coverage combined.tix
+	@echo "Coverage report generated in coverage/index.html"
