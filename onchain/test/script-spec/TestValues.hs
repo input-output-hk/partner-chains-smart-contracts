@@ -88,6 +88,9 @@ governanceTokenUtxo =
 
 -- other
 
+mkAdaToken :: Integer -> V2.Value
+mkAdaToken = V2.singleton V2.adaSymbol V2.adaToken
+
 dummyBuiltinData :: V2.BuiltinData
 dummyBuiltinData = toBuiltinData (0 :: Integer)
 

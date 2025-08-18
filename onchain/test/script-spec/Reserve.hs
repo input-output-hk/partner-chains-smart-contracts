@@ -15,6 +15,286 @@ import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types qualified as Types
 import Prelude
 
+-- minting policy
+
+policyTests :: TestTree
+policyTests =
+  testGroup
+    "reserve auth policy"
+    [ reserveAuthPolicyBurnPassing
+    , reserveAuthPolicyPassing
+    , reserveAuthPolicyFailing01
+    , reserveAuthPolicyFailing02
+    , reserveAuthPolicyFailing03
+    , reserveAuthPolicyFailing04
+    , reserveAuthPolicyFailing05
+    , reserveAuthPolicyFailing06
+    , reserveAuthPolicyFailing07
+    ]
+
+reserveAuthPolicyBurnPassing :: TestTree
+reserveAuthPolicyBurnPassing =
+  expectSuccess "burn should pass" $
+    runMintingPolicy
+      Test.versionOracleConfig
+      Test.dummyBuiltinData
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting reserveAuthPolicyCurrencySymbol
+          -- reserve auth token burned
+          & _scriptContextTxInfo . _txInfoMint <>~ reserveAuthToken (-1)
+      )
+
+reserveAuthPolicyPassing :: TestTree
+reserveAuthPolicyPassing =
+  expectSuccess "should pass" $
+    runMintingPolicy
+      Test.versionOracleConfig
+      Test.dummyBuiltinData
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting reserveAuthPolicyCurrencySymbol
+          -- signed by governance:
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
+          -- ReserveAuthPolicy VersionOracle
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveValidatorVersionOracleUtxo]
+          -- reserve auth token minted
+          & _scriptContextTxInfo . _txInfoMint <>~ reserveAuthToken 1
+          -- [OUTPUT] Reserve UTXO:
+          & _scriptContextTxInfo . _txInfoOutputs
+            <>~ [ emptyTxOut
+                    & _txOutAddress .~ reserveAddress
+                    & _txOutDatum .~ V2.OutputDatum (wrapToVersioned initialReserveDatum)
+                    -- carries reserve auth token:
+                    & _txOutValue <>~ reserveAuthToken 1
+                    -- PC tokens:
+                    & _txOutValue <>~ partnerToken 5
+                    -- spare ADA:
+                    & _txOutValue <>~ Test.mkAdaToken 5
+                ]
+      )
+
+reserveAuthPolicyFailing01 :: TestTree
+reserveAuthPolicyFailing01 =
+  expectFail "should fail if not approved by governance (ERROR-RESERVE-AUTH-01)" $
+    runMintingPolicy
+      Test.versionOracleConfig
+      Test.dummyBuiltinData
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting reserveAuthPolicyCurrencySymbol
+          -- [ERROR] Governance token missing
+          -- ReserveAuthPolicy VersionOracle
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveValidatorVersionOracleUtxo]
+          -- reserve auth token minted
+          & _scriptContextTxInfo . _txInfoMint <>~ reserveAuthToken 1
+          -- [OUTPUT] Reserve UTXO:
+          & _scriptContextTxInfo . _txInfoOutputs
+            <>~ [ emptyTxOut
+                    & _txOutAddress .~ reserveAddress
+                    & _txOutDatum .~ V2.OutputDatum (wrapToVersioned initialReserveDatum)
+                    -- carries reserve auth token:
+                    & _txOutValue <>~ reserveAuthToken 1
+                    -- PC tokens:
+                    & _txOutValue <>~ partnerToken 5
+                    -- spare ADA:
+                    & _txOutValue <>~ Test.mkAdaToken 5
+                ]
+      )
+
+reserveAuthPolicyFailing02 :: TestTree
+reserveAuthPolicyFailing02 =
+  expectFail "should fail if single reserve authentication token is not minted (ERROR-RESERVE-AUTH-02)" $
+    runMintingPolicy
+      Test.versionOracleConfig
+      Test.dummyBuiltinData
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting reserveAuthPolicyCurrencySymbol
+          -- signed by governance:
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
+          -- ReserveAuthPolicy VersionOracle
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveValidatorVersionOracleUtxo]
+          -- [ERROR] reserve auth token not minted
+          -- [OUTPUT] Reserve UTXO:
+          & _scriptContextTxInfo . _txInfoOutputs
+            <>~ [ emptyTxOut
+                    & _txOutAddress .~ reserveAddress
+                    & _txOutDatum .~ V2.OutputDatum (wrapToVersioned initialReserveDatum)
+                    -- carries reserve auth token:
+                    & _txOutValue <>~ reserveAuthToken 1
+                    -- PC tokens:
+                    & _txOutValue <>~ partnerToken 5
+                    -- spare ADA:
+                    & _txOutValue <>~ Test.mkAdaToken 5
+                ]
+      )
+
+reserveAuthPolicyFailing03 :: TestTree
+reserveAuthPolicyFailing03 =
+  expectFail "should fail if output reserve UTxO doesn't carry auth token (ERROR-RESERVE-AUTH-03)" $
+    runMintingPolicy
+      Test.versionOracleConfig
+      Test.dummyBuiltinData
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting reserveAuthPolicyCurrencySymbol
+          -- signed by governance:
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
+          -- ReserveAuthPolicy VersionOracle
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveValidatorVersionOracleUtxo]
+          -- reserve auth token minted
+          & _scriptContextTxInfo . _txInfoMint <>~ reserveAuthToken 1
+          -- [OUTPUT] Reserve UTXO:
+          & _scriptContextTxInfo . _txInfoOutputs
+            <>~ [ emptyTxOut
+                    & _txOutAddress .~ reserveAddress
+                    & _txOutDatum .~ V2.OutputDatum (wrapToVersioned initialReserveDatum)
+                    -- [ERROR] does not carry reserve auth token
+                    -- PC tokens:
+                    & _txOutValue <>~ partnerToken 5
+                    -- spare ADA:
+                    & _txOutValue <>~ Test.mkAdaToken 5
+                ]
+      )
+
+reserveAuthPolicyFailing04 :: TestTree
+reserveAuthPolicyFailing04 =
+  expectFail "should fail if output reserve UTxO doesn't carry correct initial datum (ERROR-RESERVE-AUTH-04)" $
+    runMintingPolicy
+      Test.versionOracleConfig
+      Test.dummyBuiltinData
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting reserveAuthPolicyCurrencySymbol
+          -- signed by governance:
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
+          -- ReserveAuthPolicy VersionOracle
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveValidatorVersionOracleUtxo]
+          -- reserve auth token minted
+          & _scriptContextTxInfo . _txInfoMint <>~ reserveAuthToken 1
+          -- [OUTPUT] Reserve UTXO:
+          & _scriptContextTxInfo . _txInfoOutputs
+            <>~ [ emptyTxOut
+                    & _txOutAddress .~ reserveAddress
+                    -- [ERROR] carries incorrect initial datum
+                    & _txOutDatum .~ V2.OutputDatum (wrapToVersioned incorrectInitialReserveDatum)
+                    -- carries reserve auth token:
+                    & _txOutValue <>~ reserveAuthToken 1
+                    -- PC tokens:
+                    & _txOutValue <>~ partnerToken 5
+                    -- spare ADA:
+                    & _txOutValue <>~ Test.mkAdaToken 5
+                ]
+      )
+  where
+    -- incorrect because total amount transferred is not 0
+    incorrectInitialReserveDatum :: Types.ReserveDatum
+    incorrectInitialReserveDatum =
+      reserveDatum
+        { Types.stats = Types.ReserveStats {tokenTotalAmountTransferred = 1}
+        }
+
+reserveAuthPolicyFailing05 :: TestTree
+reserveAuthPolicyFailing05 =
+  expectFail "should fail if output reserve UTxO carries other tokens (ERROR-RESERVE-AUTH-05)" $
+    runMintingPolicy
+      Test.versionOracleConfig
+      Test.dummyBuiltinData
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting reserveAuthPolicyCurrencySymbol
+          -- signed by governance:
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
+          -- ReserveAuthPolicy VersionOracle
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveValidatorVersionOracleUtxo]
+          -- reserve auth token minted
+          & _scriptContextTxInfo . _txInfoMint <>~ reserveAuthToken 1
+          -- [OUTPUT] Reserve UTXO:
+          & _scriptContextTxInfo . _txInfoOutputs
+            <>~ [ emptyTxOut
+                    & _txOutAddress .~ reserveAddress
+                    & _txOutDatum .~ V2.OutputDatum (wrapToVersioned initialReserveDatum)
+                    -- carries reserve auth token:
+                    & _txOutValue <>~ reserveAuthToken 1
+                    -- PC tokens:
+                    & _txOutValue <>~ partnerToken 5
+                    -- spare ADA:
+                    & _txOutValue <>~ Test.mkAdaToken 5
+                    -- [ERROR] carries some other token:
+                    & _txOutValue <>~ someToken 5
+                ]
+      )
+
+reserveAuthPolicyFailing06 :: TestTree
+reserveAuthPolicyFailing06 =
+  expectFail "should fail if no unique output UTxO at the reserve address (ERROR-RESERVE-AUTH-06)" $
+    runMintingPolicy
+      Test.versionOracleConfig
+      Test.dummyBuiltinData
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting reserveAuthPolicyCurrencySymbol
+          -- signed by governance:
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
+          -- ReserveAuthPolicy VersionOracle
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveValidatorVersionOracleUtxo]
+          -- reserve auth token minted
+          & _scriptContextTxInfo . _txInfoMint <>~ reserveAuthToken 1
+          -- [OUTPUT] Reserve UTXO:
+          & _scriptContextTxInfo . _txInfoOutputs
+            <>~ [ emptyTxOut
+                    & _txOutAddress .~ reserveAddress
+                    & _txOutDatum .~ V2.OutputDatum (wrapToVersioned initialReserveDatum)
+                    -- carries reserve auth token:
+                    & _txOutValue <>~ reserveAuthToken 1
+                    -- PC tokens:
+                    & _txOutValue <>~ partnerToken 5
+                    -- spare ADA:
+                    & _txOutValue <>~ Test.mkAdaToken 5
+                ]
+          -- [ERROR] Another Reserve UTXO at reserve address:
+          & _scriptContextTxInfo . _txInfoOutputs
+            <>~ [ emptyTxOut
+                    & _txOutAddress .~ reserveAddress
+                    & _txOutDatum .~ V2.OutputDatum (wrapToVersioned initialReserveDatum)
+                    -- carries reserve auth token:
+                    & _txOutValue <>~ reserveAuthToken 1
+                    -- PC tokens:
+                    & _txOutValue <>~ partnerToken 5
+                    -- spare ADA:
+                    & _txOutValue <>~ Test.mkAdaToken 5
+                ]
+      )
+
+reserveAuthPolicyFailing07 :: TestTree
+reserveAuthPolicyFailing07 =
+  expectFail "should fail if output reserve UTxO carries no inline datum or malformed datum (ERROR-RESERVE-AUTH-07)" $
+    runMintingPolicy
+      Test.versionOracleConfig
+      Test.dummyBuiltinData
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting reserveAuthPolicyCurrencySymbol
+          -- signed by governance:
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
+          -- ReserveAuthPolicy VersionOracle
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveValidatorVersionOracleUtxo]
+          -- reserve auth token minted
+          & _scriptContextTxInfo . _txInfoMint <>~ reserveAuthToken 1
+          -- [OUTPUT] Reserve UTXO:
+          & _scriptContextTxInfo . _txInfoOutputs
+            <>~ [ emptyTxOut
+                    & _txOutAddress .~ reserveAddress
+                    -- [ERROR] output Reserve UTXO carries no datum
+                    & _txOutDatum .~ V2.NoOutputDatum
+                    -- carries reserve auth token:
+                    & _txOutValue <>~ reserveAuthToken 1
+                    -- PC tokens:
+                    & _txOutValue <>~ partnerToken 5
+                    -- spare ADA:
+                    & _txOutValue <>~ Test.mkAdaToken 5
+                ]
+      )
+
 -- validator
 
 validatorTests :: TestTree
@@ -307,6 +587,12 @@ reserveDatum =
           }
     }
 
+initialReserveDatum :: Types.ReserveDatum
+initialReserveDatum =
+  reserveDatum
+    { Types.stats = Types.ReserveStats {tokenTotalAmountTransferred = 0}
+    }
+
 partnerToken :: Integer -> V2.Value
 partnerToken = V2.singleton tokenCurrSym tokenName
   where
@@ -322,7 +608,16 @@ reserveUtxo :: V2.TxOutRef
 reserveUtxo = V2.TxOutRef "77777777" 0
 
 reserveAddress :: V2.Address
-reserveAddress = V2.Address (V2.PubKeyCredential "07770777077707770777077707770777077707770777077707770777") Nothing
+reserveAddress = Address.scriptHashAddress reserveValidatorScriptHash
+
+reserveValidatorVersionOracleUtxo :: V2.TxOut
+reserveValidatorVersionOracleUtxo =
+  Test.mkVersionOracleTxOut
+    ScriptId.ReserveValidator
+    reserveValidatorScriptHash
+
+reserveValidatorScriptHash :: V2.ScriptHash
+reserveValidatorScriptHash = V2.ScriptHash "reserveValidatorScriptHash"
 
 icsUtxo :: V2.TxOutRef
 icsUtxo = V2.TxOutRef "aaaaaaaa" 0
@@ -336,6 +631,9 @@ someUtxo = V2.TxOutRef "99999999" 99
 someAddress :: V2.Address
 someAddress = V2.Address (V2.PubKeyCredential "99999999999999999999999999999999999999999999999999999999") Nothing
 
+someToken :: Integer -> V2.Value
+someToken = V2.singleton (V2.CurrencySymbol "someMintingPolicy") (V2.TokenName "#SOME")
+
 reserveAuthPolicyVersionOracleUtxo :: V2.TxOut
 reserveAuthPolicyVersionOracleUtxo =
   Test.mkVersionOracleTxOut
@@ -344,8 +642,9 @@ reserveAuthPolicyVersionOracleUtxo =
 
 reserveAuthToken :: Integer -> V2.Value
 reserveAuthToken = V2.singleton reserveAuthPolicyCurrencySymbol V2.adaToken
-  where
-    reserveAuthPolicyCurrencySymbol = V2.CurrencySymbol . V2.getScriptHash $ reserveAuthPolicyScriptHash
+
+reserveAuthPolicyCurrencySymbol :: V2.CurrencySymbol
+reserveAuthPolicyCurrencySymbol = V2.CurrencySymbol . V2.getScriptHash $ reserveAuthPolicyScriptHash
 
 reserveAuthPolicyScriptHash :: V2.ScriptHash
 reserveAuthPolicyScriptHash = V2.ScriptHash "reserveAuthPolicyScriptHash"
@@ -372,6 +671,13 @@ addRedundantIcsVersioningOracle :: V2.ScriptContext -> V2.ScriptContext
 addRedundantIcsVersioningOracle = _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ icsSupplyValidatorVersionOracleUtxo]
 
 -- test runner
+
+runMintingPolicy :: Types.VersionOracleConfig -> BuiltinData -> V2.ScriptContext -> BuiltinUnit
+runMintingPolicy vc redeemer ctx =
+  Reserve.mkReserveAuthPolicyUntyped
+    (toBuiltinData vc)
+    redeemer
+    (toBuiltinData ctx)
 
 runValidator :: Types.VersionOracleConfig -> BuiltinData -> Types.ReserveRedeemer -> V2.ScriptContext -> BuiltinUnit
 runValidator vc datum redeemer ctx =
