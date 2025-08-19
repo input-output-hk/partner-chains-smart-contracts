@@ -1,15 +1,12 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Laws (
-  toDataSafeLaws,
-  toDataUnsafeLaws,
   toDataSafeLaws',
   toDataUnsafeLaws',
 ) where
 
 import Data.String qualified as HString
 import Test.QuickCheck (
-  Arbitrary (arbitrary, shrink),
   Gen,
   Property,
   counterexample,
@@ -18,30 +15,6 @@ import Test.QuickCheck (
  )
 import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.PlutusPrelude qualified as PTPrelude
-
--- | Verifies that @'fromData' '.' 'toData'@ @=@ @'Just'@.
-toDataSafeLaws ::
-  forall (a :: Type).
-  ( Arbitrary a
-  , PTPrelude.ToData a
-  , PTPrelude.FromData a
-  , Show a
-  , Eq a
-  ) =>
-  Property
-toDataSafeLaws = toDataSafeLaws' @a arbitrary shrink show
-
--- | Verified that @'unsafeFromData' '.' 'toData'@ @=@ @'id'@.
-toDataUnsafeLaws ::
-  forall (a :: Type).
-  ( Arbitrary a
-  , PTPrelude.ToData a
-  , PTPrelude.UnsafeFromData a
-  , Show a
-  , Eq a
-  ) =>
-  Property
-toDataUnsafeLaws = toDataUnsafeLaws' @a arbitrary shrink show
 
 -- | As 'toDataSafeLaws', but allows a custom generator, shrinker and
 -- prettyprinter.
