@@ -46,5 +46,9 @@ coverage-gen:
 
 coverage: coverage-gen
 	@mkdir -p coverage
-	hpc markup $(foreach dir,$(shell find dist-newstyle -type d -path '*/hpc/vanilla/mix'),--hpcdir=$(dir)) --destdir=coverage combined.tix
+	hpc markup $(foreach dir,$(shell find dist-newstyle -type d -path '*/hpc/vanilla/mix'),--hpcdir=$(dir)) \
+		$(shell hpc report --per-module combined.tix \
+		  $(foreach dir,$(shell find dist-newstyle -type d -path '*/hpc/vanilla/mix'),--hpcdir=$(dir)) \
+		  | grep 'TrustlessSidechain\.' | sed 's/^.*\(TrustlessSidechain\.[^ ]*\)>.*/--include=\1/') \
+		--destdir=coverage combined.tix
 	@echo "Coverage report generated in coverage/"
