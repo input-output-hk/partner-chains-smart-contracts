@@ -60,3 +60,8 @@ raw-scripts/target
 raw-scripts/Cargo.lock
 raw-scripts-traced/target
 raw-scripts-traced/Cargo.lock
+
+
+# Coverage
+onchain/coverage/
+onchain/combined.tix
