@@ -66,9 +66,6 @@ mkVersionOracleTxOut scriptId validatorScriptHash =
 governanceCurrSym :: V2.CurrencySymbol
 governanceCurrSym = V2.CurrencySymbol . V2.getScriptHash $ governanceValidatorScriptHash
 
-governanceTokenName :: V2.TokenName
-governanceTokenName = V2.TokenName "Version oracle"
-
 governanceToken :: V2.Value
 governanceToken = V2.singleton governanceCurrSym versionOracleTokenName 1
 

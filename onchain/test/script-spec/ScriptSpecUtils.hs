@@ -60,9 +60,6 @@ emptyTxOut =
 emptyValue :: V2.Value
 emptyValue = V2.Value Map.empty
 
-mkMintingPurpose :: V2.BuiltinByteString -> V2.ScriptPurpose
-mkMintingPurpose currSym = V2.Minting $ V2.CurrencySymbol currSym
-
 mkTxOut :: (ToData d) => V2.Address -> V2.Value -> d -> V2.ScriptHash -> V2.TxOut
 mkTxOut txOutAddress txOutValue datum scriptHash =
   V2.TxOut
