@@ -1130,7 +1130,7 @@ reserveValidatorUpdateFailing25 =
             <>~ [ emptyTxOut
                     & _txOutAddress .~ reserveAddress
                     & _txOutDatum .~ V2.OutputDatum (wrapToVersioned updatedReserveDatum)
-                    -- [ERROR] missing reserve auth tokencarries
+                    -- [ERROR] missing reserve auth token
                     -- token amount doesn't change:
                     & _txOutValue <>~ partnerToken 10
                 ]

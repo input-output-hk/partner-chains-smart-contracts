@@ -291,7 +291,7 @@ icsTokenUtxo :: V2.TxOut
 icsTokenUtxo =
   mkTxOut
     Test.versionValidatorAddress
-    Test.versionOracleToken
+    (Test.versionOracleToken 1)
     icsVersionOracleDatum
     icsWithdrawalTokenValidatorScriptHash
   where
