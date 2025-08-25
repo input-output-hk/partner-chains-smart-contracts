@@ -14,6 +14,7 @@ The Partner Chains Toolkit provides features for maintaining and securing Substr
 
 - **Haddock API Docs**: [partner-chains-smart-contracts](https://input-output-hk.github.io/partner-chains-smart-contracts/trustless-sidechain/index.html)
 - **Changelog** [CHANGELOG.md](./CHANGELOG.md)
+- **ICS Authority Token Policy**: [docs/ICS-Authority-Token.md](./docs/ICS-Authority-Token.md)
 
 ## :rocket: Getting Started
 
