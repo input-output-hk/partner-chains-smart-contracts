@@ -27,6 +27,7 @@ main =
       , GovernedMap.policyTests
       , GovernedMap.validatorTests
       , IlliquidCirculationSupply.validatorTests
+      , IlliquidCirculationSupply.policyTests
       , CommitteeCandidateValidator.validatorTests
       , Reserve.validatorTests
       , Reserve.policyTests

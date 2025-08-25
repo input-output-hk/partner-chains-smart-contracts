@@ -5,6 +5,7 @@ module TrustlessSidechain.ScriptId (
   reserveAuthPolicyId,
   illiquidCirculationSupplyValidatorId,
   illiquidCirculationSupplyWithdrawalPolicyId,
+  illiquidCirculationSupplyAuthorityTokenPolicyId,
   governancePolicyId,
   governedMapPolicyId,
   governedMapValidatorId,
@@ -49,6 +50,7 @@ data ScriptId
   | ExampleVFunctionPolicy
   | GovernedMapPolicy
   | GovernedMapValidator
+  | IlliquidCirculationSupplyAuthorityTokenPolicy
   deriving stock (Show, Eq, Ord, Enum, Bounded)
 
 toInteger :: ScriptId -> Integer
@@ -75,6 +77,7 @@ toInteger = \case
   ExampleVFunctionPolicy -> 39
   GovernedMapPolicy -> 40
   GovernedMapValidator -> 41
+  IlliquidCirculationSupplyAuthorityTokenPolicy -> 42
 
 -- Pre-applied versions so Plutus compiler doesn't error with
 -- "Unsupported feature: Int#: unboxed integers are not supported"
@@ -99,3 +102,6 @@ governedMapPolicyId = toInteger GovernedMapPolicy
 
 governedMapValidatorId :: Integer
 governedMapValidatorId = toInteger GovernedMapValidator
+
+illiquidCirculationSupplyAuthorityTokenPolicyId :: Integer
+illiquidCirculationSupplyAuthorityTokenPolicyId = toInteger IlliquidCirculationSupplyAuthorityTokenPolicy

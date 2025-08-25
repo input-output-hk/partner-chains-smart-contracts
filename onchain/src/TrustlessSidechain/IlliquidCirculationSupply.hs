@@ -35,6 +35,7 @@ import TrustlessSidechain.Utils qualified as Utils
 import TrustlessSidechain.Versioning (
   VersionOracle (VersionOracle, scriptId),
   VersionOracleConfig,
+  approvedByGovernance,
   getVersionedCurrencySymbol,
  )
 
@@ -115,3 +116,23 @@ mkIlliquidCirculationSupplyValidatorUntyped voc rd rr ctx =
 serialisableIlliquidCirculationSupplyValidator :: SerialisedScript
 serialisableIlliquidCirculationSupplyValidator =
   serialiseCompiledCode $$(PlutusTx.compile [||mkIlliquidCirculationSupplyValidatorUntyped||])
+
+mkIlliquidCirculationSupplyAuthorityTokenPolicy :: VersionOracleConfig -> BuiltinData -> ScriptContext -> Bool
+mkIlliquidCirculationSupplyAuthorityTokenPolicy voc _ ctx =
+  traceIfFalse "ERROR-ICS-AUTH-TOKEN-01" signedByAuthority
+  where
+    signedByAuthority :: Bool
+    signedByAuthority =
+      approvedByGovernance voc ctx
+
+mkIlliquidCirculationSupplyAuthorityTokenPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
+mkIlliquidCirculationSupplyAuthorityTokenPolicyUntyped voc rd ctx =
+  check
+    $ mkIlliquidCirculationSupplyAuthorityTokenPolicy
+      (PlutusTx.unsafeFromBuiltinData voc)
+      rd
+      (PlutusTx.unsafeFromBuiltinData ctx)
+
+serialisableIlliquidCirculationSupplyAuthorityTokenPolicy :: SerialisedScript
+serialisableIlliquidCirculationSupplyAuthorityTokenPolicy =
+  serialiseCompiledCode $$(PlutusTx.compile [||mkIlliquidCirculationSupplyAuthorityTokenPolicyUntyped||])
