@@ -19,17 +19,18 @@ main =
   defaultMain $
     testGroup
       "Script spec tests"
-      [ Versioning.policyTests
+      [ CommitteeCandidateValidator.validatorTests
       , DParameter.policyTests
       , DParameter.validatorTests
-      , PermissionedCandidates.policyTests
-      , PermissionedCandidates.validatorTests
       , GovernedMap.policyTests
       , GovernedMap.validatorTests
       , IlliquidCirculationSupply.validatorTests
-      , CommitteeCandidateValidator.validatorTests
-      , Reserve.validatorTests
-      , Reserve.policyTests
-      , ScriptCache.validatorTests
       , OnlyMintMintingPolicy.policyTests
+      , PermissionedCandidates.policyTests
+      , PermissionedCandidates.validatorTests
+      , Reserve.policyTests
+      , Reserve.validatorTests
+      , ScriptCache.validatorTests
+      , Versioning.validatorTests
+      , Versioning.policyTests
       ]

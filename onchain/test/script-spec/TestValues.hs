@@ -23,8 +23,8 @@ versioningCurrSym = V2.CurrencySymbol "versioningCurrSym"
 versionOracleTokenName :: V2.TokenName
 versionOracleTokenName = V2.TokenName "Version oracle"
 
-versionOracleToken :: V2.Value
-versionOracleToken = V2.singleton versioningCurrSym versionOracleTokenName 1
+versionOracleToken :: Integer -> V2.Value
+versionOracleToken = V2.singleton versioningCurrSym versionOracleTokenName
 
 versionOracleConfig :: Types.VersionOracleConfig
 versionOracleConfig = Types.VersionOracleConfig (toAsData versioningCurrSym)
@@ -39,7 +39,7 @@ versioningTokenUtxo :: V2.TxOut
 versioningTokenUtxo =
   mkTxOut
     versionValidatorAddress
-    versionOracleToken
+    (versionOracleToken 1)
     versionOracleDatum
     versioningValidatorScriptHash
   where
@@ -52,7 +52,7 @@ mkVersionOracleTxOut :: ScriptId.ScriptId -> V2.ScriptHash -> V2.TxOut
 mkVersionOracleTxOut scriptId validatorScriptHash =
   mkTxOut
     versionValidatorAddress
-    versionOracleToken
+    (versionOracleToken 1)
     scriptVersionOracleDatum
     validatorScriptHash
   where
@@ -65,9 +65,6 @@ mkVersionOracleTxOut scriptId validatorScriptHash =
 
 governanceCurrSym :: V2.CurrencySymbol
 governanceCurrSym = V2.CurrencySymbol . V2.getScriptHash $ governanceValidatorScriptHash
-
-governanceTokenName :: V2.TokenName
-governanceTokenName = V2.TokenName "Version oracle"
 
 governanceToken :: V2.Value
 governanceToken = V2.singleton governanceCurrSym versionOracleTokenName 1
@@ -82,7 +79,7 @@ governanceTokenUtxo :: V2.TxOut
 governanceTokenUtxo =
   mkTxOut
     versionValidatorAddress
-    versionOracleToken
+    (versionOracleToken 1)
     governanceVersionOracleDatum
     governanceValidatorScriptHash
 

@@ -181,7 +181,7 @@ mkVersionOraclePolicy genesisUtxo validatorAddress redeemer ctx@(ScriptContext t
         | txOut <- List.toSOP $ txInfoOutputs txInfo
         , valueOf (txOutValue txOut) currSym versionOracleTokenName > 0
         ]
-mkVersionOraclePolicy _ _ _ _ = traceError "ERROR-ORACLE-POLICY-10"
+mkVersionOraclePolicy _ _ _ _ = traceError "ERROR-VERSION-POLICY-10"
 
 {-# INLINEABLE mkVersionOraclePolicyUntyped #-}
 mkVersionOraclePolicyUntyped ::
@@ -212,6 +212,13 @@ serialisableVersionOraclePolicy =
 -- scripts as well as a script caching system.  UTxOs on the script are managed
 -- by governance authority, with VersionOraclePolicy ensuring that tokens are
 -- minted and burned correctly.
+--
+-- OnChain error descriptions:
+--   ERROR-VERSION-VALIDATOR-01: Governance approval is not present
+--   ERROR-VERSION-VALIDATOR-02: Version oracle in the datum does not match the redeemer
+--   ERROR-VERSION-VALIDATOR-03: Transaction outputs version tokens to non-versioning address
+--   ERROR-VERSION-VALIDATOR-04: Invalid script purpose is provided
+--   ERROR-VERSION-VALIDATOR-05: Transaction does not have own input
 {-# INLINEABLE mkVersionOracleValidator #-}
 mkVersionOracleValidator ::
   BuiltinData ->
@@ -223,10 +230,10 @@ mkVersionOracleValidator
   _genesisUtxo
   (VersionOracleDatum versionOracle currencySymbol)
   versionOracle'
-  ctx@(ScriptContext txInfo (Spending _currSym)) =
-    traceIfFalse "ERROR-VERSION-ORACLE-01" signedByGovernanceAuthority
-      && traceIfFalse "ERROR-VERSION-ORACLE-02" versionOraclesMatch
-      && traceIfFalse "ERROR-VERSION-ORACLE-03" versionOutputAbsent
+  ctx@(ScriptContext txInfo (Spending _utxo)) =
+    traceIfFalse "ERROR-VERSION-VALIDATOR-01" signedByGovernanceAuthority
+      && traceIfFalse "ERROR-VERSION-VALIDATOR-02" versionOraclesMatch
+      && traceIfFalse "ERROR-VERSION-VALIDATOR-03" versionOutputAbsent
     where
       signedByGovernanceAuthority =
         approvedByGovernance (VersionOracleConfig currencySymbol) ctx
@@ -236,14 +243,14 @@ mkVersionOracleValidator
 
       ownAddress = case findOwnInput ctx of
         Just txIn -> txOutAddress $ txInInfoResolved txIn
-        _ -> traceError "ERROR-VERSION-ORACLE-05"
+        _ -> traceError "ERROR-VERSION-VALIDATOR-05"
 
       -- Check that transaction doesn't output any version tokens.
       versionOutputAbsent =
         List.all
           (\txOut -> (txOutAddress txOut == ownAddress) || valueOf (txOutValue txOut) currencySymbol versionOracleTokenName <= 0)
           (txInfoOutputs txInfo)
-mkVersionOracleValidator _ _ _ _ = traceError "ERROR-VERSION-ORACLE-04"
+mkVersionOracleValidator _ _ _ _ = traceError "ERROR-VERSION-VALIDATOR-04"
 
 {-# INLINEABLE mkVersionOracleValidatorUntyped #-}
 mkVersionOracleValidatorUntyped ::
