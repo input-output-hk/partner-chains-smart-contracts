@@ -35,6 +35,45 @@ validatorTests =
         ]
     ]
 
+policyTests :: TestTree
+policyTests =
+  testGroup
+    "illiquid circulation supply policy"
+    [ testGroup
+        "authority token policy"
+        [ illiquidCirculationSupplyAuthorityTokenPolicyPassing
+        , illiquidCirculationSupplyAuthorityTokenPolicyFailing01
+        ]
+    ]
+
+illiquidCirculationSupplyAuthorityTokenPolicyPassing :: TestTree
+illiquidCirculationSupplyAuthorityTokenPolicyPassing =
+  expectSuccess "should pass" $
+    runPolicy
+      Test.versionOracleConfig
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting icsAuthorityTokenCurrSym
+          -- signed by governance:
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
+          -- minted tokens are all sent to dParameterValidatorAddress:
+          & _scriptContextTxInfo . _txInfoMint <>~ icsAuthorityToken 2
+      )
+
+illiquidCirculationSupplyAuthorityTokenPolicyFailing01 :: TestTree
+illiquidCirculationSupplyAuthorityTokenPolicyFailing01 =
+  expectFail "should fail if not signed by the governance authority (ERROR-ICS-AUTH-TOKEN-01)" $
+    runPolicy
+      Test.versionOracleConfig
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Minting icsAuthorityTokenCurrSym
+          -- signed by governance:
+          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
+          -- & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
+          -- minted tokens are all sent to dParameterValidatorAddress:
+          & _scriptContextTxInfo . _txInfoMint <>~ icsAuthorityToken 2
+      )
+
 illiquidCirculationSupplyValidatorDepositPassing :: TestTree
 illiquidCirculationSupplyValidatorDepositPassing =
   expectSuccess "should pass" $
@@ -301,6 +340,18 @@ icsTokenUtxo =
         Types.VersionOracle {scriptId = ScriptId.illiquidCirculationSupplyWithdrawalPolicyId}
         (Test.toAsData Test.versioningCurrSym)
 
+icsAuthorityTokenScriptHash :: V2.ScriptHash
+icsAuthorityTokenScriptHash = V2.ScriptHash "icsAuthorityTokenScriptHash"
+
+icsAuthorityTokenCurrSym :: V2.CurrencySymbol
+icsAuthorityTokenCurrSym = V2.CurrencySymbol . V2.getScriptHash $ icsAuthorityTokenScriptHash
+
+icsAuthorityToken :: Integer -> V2.Value
+icsAuthorityToken = V2.singleton icsAuthorityTokenCurrSym icsAuthorityTokenName
+
+icsAuthorityTokenName :: V2.TokenName
+icsAuthorityTokenName = V2.TokenName emptyByteString
+
 -- this is fixed in the script
 icsWithdrawalTokenName :: V2.TokenName
 icsWithdrawalTokenName = V2.TokenName emptyByteString
@@ -316,4 +367,11 @@ runValidator versionOracleConfig datum redeemer ctx =
     (toBuiltinData versionOracleConfig)
     (toBuiltinData datum)
     (toBuiltinData redeemer)
+    (toBuiltinData ctx)
+
+runPolicy :: VersionOracleConfig -> V2.ScriptContext -> BuiltinUnit
+runPolicy versionOracleConfig ctx =
+  mkIlliquidCirculationSupplyAuthorityTokenPolicyUntyped
+    (toBuiltinData versionOracleConfig)
+    Test.dummyBuiltinData
     (toBuiltinData ctx)

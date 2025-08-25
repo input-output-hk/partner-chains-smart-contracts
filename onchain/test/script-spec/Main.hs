@@ -24,6 +24,7 @@ main =
       , DParameter.validatorTests
       , GovernedMap.policyTests
       , GovernedMap.validatorTests
+      , IlliquidCirculationSupply.policyTests
       , IlliquidCirculationSupply.validatorTests
       , OnlyMintMintingPolicy.policyTests
       , PermissionedCandidates.policyTests
@@ -31,6 +32,6 @@ main =
       , Reserve.policyTests
       , Reserve.validatorTests
       , ScriptCache.validatorTests
-      , Versioning.validatorTests
       , Versioning.policyTests
+      , Versioning.validatorTests
       ]
