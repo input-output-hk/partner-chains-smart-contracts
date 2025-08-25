@@ -93,6 +93,7 @@ common common-other-modules
     TrustlessSidechain.ExampleVFunction
     TrustlessSidechain.Governance.MultiSig
     TrustlessSidechain.GovernedMap
+    TrustlessSidechain.ICSAuthorityToken
     TrustlessSidechain.IlliquidCirculationSupply
     TrustlessSidechain.OnlyMintMintingPolicy
     TrustlessSidechain.PermissionedCandidates
@@ -115,6 +116,7 @@ library
     TrustlessSidechain.ExampleVFunction
     TrustlessSidechain.Governance.MultiSig
     TrustlessSidechain.GovernedMap
+    TrustlessSidechain.ICSAuthorityToken
     TrustlessSidechain.IlliquidCirculationSupply
     TrustlessSidechain.OnlyMintMintingPolicy
     TrustlessSidechain.PermissionedCandidates
@@ -279,6 +281,7 @@ test-suite script-specs
     CommitteeCandidateValidator
     DParameter
     GovernedMap
+    ICSAuthorityToken
     IlliquidCirculationSupply
     OnlyMintMintingPolicy
     PermissionedCandidates

@@ -7,6 +7,7 @@ import Prelude
 
 import CommitteeCandidateValidator qualified
 import DParameter qualified
+import ICSAuthorityToken qualified
 import IlliquidCirculationSupply qualified
 import OnlyMintMintingPolicy qualified
 import PermissionedCandidates qualified
@@ -26,6 +27,7 @@ main =
       , PermissionedCandidates.validatorTests
       , GovernedMap.policyTests
       , GovernedMap.validatorTests
+      , ICSAuthorityToken.policyTests
       , IlliquidCirculationSupply.validatorTests
       , CommitteeCandidateValidator.validatorTests
       , Reserve.validatorTests

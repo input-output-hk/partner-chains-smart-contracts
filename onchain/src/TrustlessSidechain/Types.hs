@@ -7,6 +7,7 @@
 module TrustlessSidechain.Types (
   PermissionedCandidatesPolicyRedeemer (..),
   PermissionedCandidatesValidatorRedeemer (..),
+  ICSAuthorityTokenRedeemer (..),
   ImmutableReserveSettings (..),
   MutableReserveSettings (..),
   ReserveStats (..),
@@ -109,6 +110,41 @@ instance UnsafeFromData PermissionedCandidatesValidatorRedeemer where
      in case integerValue :: Integer of
           0 -> UpdatePermissionedCandidates
           1 -> RemovePermissionedCandidates
+          _ -> error ()
+
+-- * ICS Authority Token data
+
+-- | 'ICSAuthorityTokenRedeemer' signals whether transaction is supposed to mint or
+-- burn ICS Authority tokens
+data ICSAuthorityTokenRedeemer
+  = ICSAuthorityTokenMint
+  | ICSAuthorityTokenBurn
+  deriving stock
+    ( TSPrelude.Eq
+    , TSPrelude.Show
+    )
+
+instance ToData ICSAuthorityTokenRedeemer where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData ICSAuthorityTokenMint = BuiltinData $ PlutusTx.I 0
+  toBuiltinData ICSAuthorityTokenBurn = BuiltinData $ PlutusTx.I 1
+
+instance FromData ICSAuthorityTokenRedeemer where
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData x = do
+    integerValue <- fromBuiltinData x
+    case integerValue :: Integer of
+      0 -> Just ICSAuthorityTokenMint
+      1 -> Just ICSAuthorityTokenBurn
+      _ -> Nothing
+
+instance UnsafeFromData ICSAuthorityTokenRedeemer where
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData x =
+    let integerValue = unsafeFromBuiltinData x
+     in case integerValue :: Integer of
+          0 -> ICSAuthorityTokenMint
+          1 -> ICSAuthorityTokenBurn
           _ -> error ()
 
 data ImmutableReserveSettings = ImmutableReserveSettings
