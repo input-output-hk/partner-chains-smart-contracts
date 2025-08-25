@@ -1,3 +1,4 @@
+{-# LANGUAGE RebindableSyntax #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -12,14 +13,16 @@ import PlutusLedgerApi.Common (SerialisedScript)
 import PlutusLedgerApi.Data.V2 (PubKeyHash, ScriptContext, TxInfo, scriptContextTxInfo, serialiseCompiledCode)
 import PlutusLedgerApi.V2.Data.Contexts (txSignedBy)
 import PlutusTx
-import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
-import TrustlessSidechain.PlutusPrelude
+import PlutusTx.Foldable (sum)
+import PlutusTx.List (map)
+import PlutusTx.Prelude hiding (fromInteger)
+import TrustlessSidechain.EncodeHelpers
+import TrustlessSidechain.Utils (ifThenElse)
 
--- ScriptContext
--- TxInfo
--- scriptContextTxInfo
--- txSignedBy
--- ScriptContext
+import Data.Eq qualified as Haskell
+import GHC.Exts (fromString)
+import GHC.Num (fromInteger)
+import Text.Show qualified as Haskell
 
 -- | Parameters of the security mechanism.  Note that setting
 -- `requiredSignatures` to a value greater than `length governanceMembers` will
@@ -35,7 +38,7 @@ data MultiSigGovParams = MultiSigGovParams
   , requiredSignatures :: Integer
   -- ^ Minimal required number of signatures
   }
-  deriving (TSPrelude.Show, TSPrelude.Eq)
+  deriving (Haskell.Show, Haskell.Eq)
 
 instance ToData MultiSigGovParams where
   {-# INLINEABLE toBuiltinData #-}

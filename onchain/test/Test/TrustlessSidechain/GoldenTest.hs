@@ -1,7 +1,5 @@
 module Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest) where
 
-import TrustlessSidechain.HaskellPrelude
-
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Lazy (fromStrict)
 import Data.String qualified as HString

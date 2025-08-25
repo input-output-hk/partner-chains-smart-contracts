@@ -1,7 +1,6 @@
 module GovernedMap where
 
 import Control.Lens
-import GHC.Exts (fromString)
 import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx
 import PlutusTx.Builtins.Internal (BuiltinUnit (..))
@@ -11,7 +10,6 @@ import TestValues qualified as Test
 import TrustlessSidechain.GovernedMap
 import TrustlessSidechain.ScriptId (governedMapPolicyId, governedMapValidatorId)
 import TrustlessSidechain.Versioning (VersionOracleConfig)
-import Prelude
 
 validatorTests :: TestTree
 validatorTests =

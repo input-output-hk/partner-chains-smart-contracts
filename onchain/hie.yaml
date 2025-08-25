@@ -3,12 +3,6 @@ cradle:
     - path: "./src"
       component: "lib:trustless-sidechain"
 
-    - path: "./prelude"
-      component: "lib:trustless-sidechain-prelude"
-
-    - path: "./prelude"
-      component: "lib:plutus-shim-prelude"
-
     - path: "./app/serialise"
       component: "exe:trustless-sidechain-serialise"
 

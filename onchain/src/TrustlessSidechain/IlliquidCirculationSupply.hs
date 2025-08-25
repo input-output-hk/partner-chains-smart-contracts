@@ -24,7 +24,7 @@ import PlutusLedgerApi.V1.Data.Value (
  )
 import PlutusLedgerApi.V2.Data.Contexts (getContinuingOutputs)
 import PlutusTx qualified
-import TrustlessSidechain.PlutusPrelude
+import PlutusTx.Prelude
 import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types (
   IlliquidCirculationSupplyRedeemer (..),
