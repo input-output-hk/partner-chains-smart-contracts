@@ -1,3 +1,4 @@
+{-# LANGUAGE RebindableSyntax #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -15,6 +16,9 @@ module TrustlessSidechain.Reserve (
   reserveAuthTokenTokenName,
 ) where
 
+import Data.Function (on)
+import GHC.Exts (fromString)
+import GHC.Num (fromInteger)
 import PlutusLedgerApi.Data.V2 (
   Address,
   Datum (getDatum),
@@ -47,8 +51,9 @@ import PlutusLedgerApi.V2.Data.Contexts (getContinuingOutputs, ownCurrencySymbol
 import PlutusTx qualified
 import PlutusTx.Bool
 import PlutusTx.Data.List qualified as List
-import TrustlessSidechain.HaskellPrelude (on)
-import TrustlessSidechain.PlutusPrelude
+import PlutusTx.Foldable (sum)
+import PlutusTx.List (length, sortBy)
+import PlutusTx.Prelude hiding (fromInteger)
 import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types (
   ImmutableReserveSettings (tokenKind),
@@ -64,6 +69,7 @@ import TrustlessSidechain.Types (
   VersionedGenericDatum,
   datum,
  )
+import TrustlessSidechain.Utils (ifThenElse)
 import TrustlessSidechain.Utils qualified as Utils
 import TrustlessSidechain.Versioning (
   VersionOracle (VersionOracle, scriptId),

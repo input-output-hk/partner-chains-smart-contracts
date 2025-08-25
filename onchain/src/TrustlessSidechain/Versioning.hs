@@ -59,7 +59,8 @@ import PlutusLedgerApi.V2.Data.Contexts (findOwnInput)
 import PlutusTx qualified
 import PlutusTx.Data.AssocMap (lookup, toSOPList)
 import PlutusTx.Data.List qualified as List
-import TrustlessSidechain.PlutusPrelude
+import PlutusTx.List (null)
+import PlutusTx.Prelude
 import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types
 import TrustlessSidechain.Utils (

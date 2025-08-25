@@ -2,6 +2,7 @@
 
 module Main (main) where
 
+import Data.ByteString (ByteString)
 import GHC.Exts (fromList)
 import Laws (toDataSafeLaws', toDataUnsafeLaws')
 import PlutusLedgerApi.Data.V2 (
@@ -9,6 +10,7 @@ import PlutusLedgerApi.Data.V2 (
   PubKeyHash (PubKeyHash),
  )
 import PlutusLedgerApi.V1.Data.Value (AssetClass (AssetClass), adaToken)
+import PlutusTx.Prelude qualified as PTPrelude
 import Test.QuickCheck (
   Arbitrary (arbitrary, shrink),
   Gen,
@@ -25,8 +27,6 @@ import Test.Tasty.QuickCheck (QuickCheckTests (QuickCheckTests), testProperty)
 import TrustlessSidechain.Governance.MultiSig (
   MultiSigGovParams (MultiSigGovParams),
  )
-import TrustlessSidechain.HaskellPrelude
-import TrustlessSidechain.PlutusPrelude qualified as PTPrelude
 import TrustlessSidechain.Types (
   IlliquidCirculationSupplyRedeemer (DepositMoreToSupply, WithdrawFromSupply),
   ImmutableReserveSettings (ImmutableReserveSettings),
@@ -85,8 +85,8 @@ genRD = do
   i <- arbitrary
   c <- arbitrary
 
-  pure
-    $ ReserveDatum
+  pure $
+    ReserveDatum
       (ImmutableReserveSettings (AssetClass (cs1, adaToken)))
       (MutableReserveSettings cs2 i)
       (ReserveStats c)

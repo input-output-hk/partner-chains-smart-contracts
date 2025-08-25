@@ -1,10 +1,11 @@
 module Main (main) where
 
+import Prelude
+
 import Sizer (scriptFitsInto)
 import Test.Tasty (defaultMain, testGroup)
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CCV
 import TrustlessSidechain.DParameter qualified as DParameter
-import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.IlliquidCirculationSupply qualified as IlliquidCirculationSupply
 import TrustlessSidechain.PermissionedCandidates qualified as PermissionedCandidates
 import TrustlessSidechain.Reserve qualified as Reserve

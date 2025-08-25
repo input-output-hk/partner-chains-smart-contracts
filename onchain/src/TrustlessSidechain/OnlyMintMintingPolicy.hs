@@ -14,7 +14,7 @@ import PlutusLedgerApi.V2.Contexts (
   txInfoMint,
  )
 import PlutusTx (compile)
-import TrustlessSidechain.PlutusPrelude
+import PlutusTx.Prelude
 import TrustlessSidechain.Utils (currencySymbolValueOf)
 
 -- | Dummy FUEL minting policy for testing purposes.  Allows minting a single

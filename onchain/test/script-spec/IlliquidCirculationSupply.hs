@@ -1,7 +1,6 @@
 module IlliquidCirculationSupply where
 
 import Control.Lens
-import Data.String
 import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx
 import PlutusTx.Builtins.Internal (BuiltinUnit (..), emptyByteString)
@@ -11,7 +10,6 @@ import TestValues qualified as Test
 import TrustlessSidechain.IlliquidCirculationSupply
 import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types as Types
-import Prelude
 
 -- validator
 

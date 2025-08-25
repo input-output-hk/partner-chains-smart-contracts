@@ -1,13 +1,10 @@
 module TestValues where
 
-import Data.String
 import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx
-import PlutusTx.Builtins
 import ScriptSpecUtils
 import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types qualified as Types
-import Prelude
 
 genesisUtxo :: V2.TxOutRef
 genesisUtxo = V2.TxOutRef "123456" 0

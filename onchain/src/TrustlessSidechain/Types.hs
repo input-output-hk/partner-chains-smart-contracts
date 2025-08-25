@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE RebindableSyntax #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -20,6 +21,7 @@ module TrustlessSidechain.Types (
   VersionOraclePolicyRedeemer (..),
 ) where
 
+import GHC.Num (fromInteger)
 import PlutusLedgerApi.Data.V2 (
   BuiltinData (BuiltinData),
   CurrencySymbol,
@@ -28,8 +30,11 @@ import PlutusLedgerApi.Data.V2 (
 import PlutusLedgerApi.V1.Data.Value (AssetClass)
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
-import TrustlessSidechain.HaskellPrelude qualified as TSPrelude
-import TrustlessSidechain.PlutusPrelude
+import PlutusTx.Prelude hiding (fromInteger)
+import TrustlessSidechain.EncodeHelpers
+
+import Data.Eq qualified as Haskell
+import Text.Show qualified as Haskell
 
 -- Note [Roundtrip tests]
 -- ~~~~~~~~~~~~~~~~~~~~~~
@@ -49,10 +54,7 @@ import TrustlessSidechain.PlutusPrelude
 data PermissionedCandidatesPolicyRedeemer
   = PermissionedCandidatesMint
   | PermissionedCandidatesBurn
-  deriving stock
-    ( TSPrelude.Eq
-    , TSPrelude.Show
-    )
+  deriving stock (Haskell.Eq, Haskell.Show)
 
 instance ToData PermissionedCandidatesPolicyRedeemer where
   {-# INLINEABLE toBuiltinData #-}
@@ -83,10 +85,7 @@ instance UnsafeFromData PermissionedCandidatesPolicyRedeemer where
 data PermissionedCandidatesValidatorRedeemer
   = UpdatePermissionedCandidates
   | RemovePermissionedCandidates
-  deriving stock
-    ( TSPrelude.Eq
-    , TSPrelude.Show
-    )
+  deriving stock (Haskell.Eq, Haskell.Show)
 
 instance ToData PermissionedCandidatesValidatorRedeemer where
   {-# INLINEABLE toBuiltinData #-}
@@ -116,10 +115,7 @@ data ImmutableReserveSettings = ImmutableReserveSettings
   -- ^ `tokenKind` is an asset class of tokens that a reserve
   -- UTxO is allowed to store
   }
-  deriving stock
-    ( TSPrelude.Eq
-    , TSPrelude.Show
-    )
+  deriving stock (Haskell.Eq, Haskell.Show)
 
 instance ToData ImmutableReserveSettings where
   {-# INLINEABLE toBuiltinData #-}
@@ -143,10 +139,7 @@ data MutableReserveSettings = MutableReserveSettings
   -- ^ The amount of `tokenKind` the user is allowed to claim when releasing
   -- money from the reserve
   }
-  deriving stock
-    ( TSPrelude.Eq
-    , TSPrelude.Show
-    )
+  deriving stock (Haskell.Eq, Haskell.Show)
 
 instance ToData MutableReserveSettings where
   {-# INLINEABLE toBuiltinData #-}
@@ -167,10 +160,7 @@ newtype ReserveStats = ReserveStats
   -- of tokens that already have been transferred from a reserve utxo
   -- to an illiquid circulation supply
   }
-  deriving stock
-    ( TSPrelude.Eq
-    , TSPrelude.Show
-    )
+  deriving stock (Haskell.Eq, Haskell.Show)
   deriving newtype (ToData, FromData, UnsafeFromData, Eq)
 
 data ReserveDatum = ReserveDatum
@@ -178,10 +168,7 @@ data ReserveDatum = ReserveDatum
   , mutableSettings :: MutableReserveSettings
   , stats :: ReserveStats
   }
-  deriving stock
-    ( TSPrelude.Eq
-    , TSPrelude.Show
-    )
+  deriving stock (Haskell.Eq, Haskell.Show)
 
 instance ToData ReserveDatum where
   {-# INLINEABLE toBuiltinData #-}
@@ -201,10 +188,7 @@ data ReserveRedeemer
   | TransferToIlliquidCirculationSupply
   | UpdateReserve
   | Handover
-  deriving stock
-    ( TSPrelude.Eq
-    , TSPrelude.Show
-    )
+  deriving stock (Haskell.Eq, Haskell.Show)
 
 PlutusTx.makeIsDataIndexed
   ''ReserveRedeemer
@@ -217,10 +201,7 @@ PlutusTx.makeIsDataIndexed
 data IlliquidCirculationSupplyRedeemer
   = DepositMoreToSupply
   | WithdrawFromSupply
-  deriving stock
-    ( TSPrelude.Eq
-    , TSPrelude.Show
-    )
+  deriving stock (Haskell.Eq, Haskell.Show)
 
 instance ToData IlliquidCirculationSupplyRedeemer where
   {-# INLINEABLE toBuiltinData #-}
@@ -250,10 +231,7 @@ data VersionedGenericDatum a = VersionedGenericDatum
   , genericData :: BuiltinData
   , version :: Integer
   }
-  deriving stock
-    ( TSPrelude.Eq
-    , TSPrelude.Show
-    )
+  deriving stock (Haskell.Eq, Haskell.Show)
 
 instance (ToData a) => ToData (VersionedGenericDatum a) where
   {-# INLINEABLE toBuiltinData #-}
@@ -274,7 +252,7 @@ newtype VersionOracle = VersionOracle
   { scriptId :: Integer
   -- ^ Unique identifier of the validator.
   }
-  deriving stock (TSPrelude.Show, TSPrelude.Eq)
+  deriving stock (Haskell.Show, Haskell.Eq)
 
 instance ToData VersionOracle where
   {-# INLINEABLE toBuiltinData #-}
@@ -300,7 +278,7 @@ data VersionOracleDatum = VersionOracleDatum
   , currencySymbol :: CurrencySymbol
   -- ^ Currency Symbol of the VersioningOraclePolicy tokens.
   }
-  deriving stock (TSPrelude.Show, TSPrelude.Eq)
+  deriving stock (Haskell.Show, Haskell.Eq)
 
 instance ToData VersionOracleDatum where
   {-# INLINEABLE toBuiltinData #-}
@@ -325,7 +303,7 @@ newtype VersionOracleConfig = VersionOracleConfig
   { versionOracleCurrencySymbol :: CurrencySymbol
   -- ^ @since v5.0.0
   }
-  deriving stock (TSPrelude.Show, TSPrelude.Eq)
+  deriving stock (Haskell.Show, Haskell.Eq)
 
 instance ToData VersionOracleConfig where
   {-# INLINEABLE toBuiltinData #-}

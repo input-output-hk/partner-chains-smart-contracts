@@ -11,7 +11,7 @@ module TrustlessSidechain.ScriptCache (
 import PlutusLedgerApi.V2 (PubKeyHash, SerialisedScript, serialiseCompiledCode)
 import PlutusLedgerApi.V2.Contexts (ScriptContext (ScriptContext), txSignedBy)
 import PlutusTx (compile, unsafeFromBuiltinData)
-import TrustlessSidechain.PlutusPrelude
+import PlutusTx.Prelude
 
 -- | Script cache parameterized by a public key hash.  Spending from the script
 -- is only permitted when the transaction is signed by pub key hash used as the

@@ -3,9 +3,6 @@ module Test.TrustlessSidechain.Golden.Versioning where
 import Data.ByteString (ByteString)
 import Data.ByteString.Base16 qualified as B16
 import Data.ByteString.Char8 qualified as BC
-import Data.Either (Either (..))
-import Data.String
-import GHC.Num (fromInteger)
 import PlutusLedgerApi.V1.Data.Value (currencySymbol)
 import Test.Tasty (TestTree, testGroup)
 import Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest)
@@ -13,7 +10,6 @@ import TrustlessSidechain.Versioning (
   VersionOracle (..),
   VersionOracleConfig (..),
  )
-import Prelude (error)
 
 hexToBSUnsafe :: String -> ByteString
 hexToBSUnsafe str =
