@@ -91,6 +91,9 @@ mkAdaToken = V2.singleton V2.adaSymbol V2.adaToken
 dummyBuiltinData :: V2.BuiltinData
 dummyBuiltinData = toBuiltinData (0 :: Integer)
 
+dummyAddress :: V2.Address
+dummyAddress = V2.Address (V2.PubKeyCredential "06660666066606660666066606660666066606660666066606660666") Nothing
+
 wrongToken :: V2.Value
 wrongToken = V2.singleton (V2.CurrencySymbol "WRONG CurrSym") (V2.TokenName "WRONG token name") 1
 
