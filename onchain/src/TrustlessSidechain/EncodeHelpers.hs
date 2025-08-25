@@ -1,18 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FunctionalDependencies #-}
 
-module TrustlessSidechain.PlutusPrelude (
-  module PlutusTx.Prelude,
-  module PlutusTx.List,
-  module PlutusTx.Foldable,
-  GHC.IsString (..),
-  PlutusTx.ToData (..),
-  PlutusTx.FromData (..),
-  PlutusTx.UnsafeFromData (..),
-  divideInteger,
-  ifThenElse,
-  fromInteger,
-
+module TrustlessSidechain.EncodeHelpers (
   -- * Helpers for Data encoding
 
   -- ** ToData
@@ -44,25 +33,9 @@ module TrustlessSidechain.PlutusPrelude (
 
 import Data.Kind (Type)
 import Data.String qualified as HString
-import GHC.Exts (fromString)
-import GHC.Exts qualified as GHC
-import PlutusTx (
-  FromData (fromBuiltinData),
-  ToData (toBuiltinData),
-  UnsafeFromData (unsafeFromBuiltinData),
- )
-import PlutusTx.Builtins (chooseData, divideInteger, matchList)
+import PlutusTx.Builtins (chooseData, matchList)
 import PlutusTx.Builtins.Internal qualified as Unsafe
-
-import GHC.Num (fromInteger)
-import PlutusTx.Foldable (sum)
-import PlutusTx.List
 import PlutusTx.Prelude hiding (fromInteger)
-
-{-# INLINE ifThenElse #-}
-ifThenElse :: forall (a :: Type). Bool -> a -> a -> a
-ifThenElse True x _ = x
-ifThenElse False _ y = y
 
 -- | Helper to write 'toBuiltinData' for 2-products (something isomorphic to a
 -- pair).
@@ -748,7 +721,7 @@ step ::
   (k -> Unsafe.BuiltinList BuiltinData -> Maybe r) ->
   Unsafe.BuiltinList BuiltinData ->
   Maybe r
-step f cb ell = matchList ell (\_ -> Nothing) $ \x xs ->
+step f cb ell = matchList ell (\_ -> Nothing) \x xs ->
   case f x of
     Nothing -> Nothing
     Just x' -> cb x' xs

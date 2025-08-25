@@ -23,7 +23,7 @@ import PlutusLedgerApi.V2 (
   serialiseCompiledCode,
  )
 import PlutusTx qualified
-import TrustlessSidechain.PlutusPrelude
+import PlutusTx.Prelude
 
 --------------------------------------------------------------------------------
 -- Always-Failing Validator

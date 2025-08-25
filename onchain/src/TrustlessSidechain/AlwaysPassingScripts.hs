@@ -23,13 +23,7 @@ import PlutusLedgerApi.V2 (
   serialiseCompiledCode,
  )
 import PlutusTx qualified
-import TrustlessSidechain.PlutusPrelude (
-  Bool (True),
-  BuiltinData,
-  BuiltinUnit,
-  check,
-  ($),
- )
+import PlutusTx.Prelude
 
 --------------------------------------------------------------------------------
 -- Always-Passing Validator

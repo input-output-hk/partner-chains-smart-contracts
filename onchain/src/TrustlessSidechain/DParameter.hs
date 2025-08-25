@@ -25,7 +25,8 @@ import PlutusLedgerApi.Data.V2 (
 import PlutusLedgerApi.V1.Data.Value (currencySymbolValueOf)
 import PlutusTx qualified
 import PlutusTx.Data.List qualified as List
-import TrustlessSidechain.PlutusPrelude
+import PlutusTx.Foldable (sum)
+import PlutusTx.Prelude
 import TrustlessSidechain.Versioning (VersionOracleConfig, approvedByGovernance)
 
 -- OnChain error descriptions:

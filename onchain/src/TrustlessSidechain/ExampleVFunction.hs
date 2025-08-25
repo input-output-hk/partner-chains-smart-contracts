@@ -6,6 +6,7 @@ module TrustlessSidechain.ExampleVFunction (
   serialisableVFunctionPolicy,
 ) where
 
+import GHC.Num (fromInteger)
 import PlutusLedgerApi.V1.Value (currencySymbolValueOf)
 import PlutusLedgerApi.V2 (
   Extended (Finite),
@@ -22,7 +23,8 @@ import PlutusLedgerApi.V2 (
   txInfoValidRange,
  )
 import PlutusTx qualified
-import TrustlessSidechain.PlutusPrelude
+import PlutusTx.Builtins (divideInteger)
+import PlutusTx.Prelude hiding (fromInteger)
 
 {-# INLINEABLE mkVFunctionPolicy #-}
 mkVFunctionPolicy :: Integer -> BuiltinData -> ScriptContext -> Bool

@@ -2,6 +2,9 @@
 -- This should (only) be called when the scripts are modified
 module Main (main) where
 
+import Control.Monad (when)
+import Prelude
+
 import Cardano.Api (
   serialiseToCBOR,
  )
@@ -18,7 +21,7 @@ import System.Console.GetOpt (
 import System.Console.GetOpt qualified as GetOpt
 import System.Environment qualified as Environment
 import System.Exit (die)
-import System.IO (FilePath, Handle)
+import System.IO (Handle)
 import System.IO qualified as IO
 import System.IO.Error qualified as Error
 import Text.Casing (fromHumps, toScreamingSnake)
@@ -29,7 +32,6 @@ import TrustlessSidechain.DParameter qualified as DParameter
 import TrustlessSidechain.ExampleVFunction as ExampleVFunction
 import TrustlessSidechain.Governance.MultiSig qualified as MultiSig
 import TrustlessSidechain.GovernedMap qualified as GovernedMap
-import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.IlliquidCirculationSupply qualified as IlliquidCirculationSupply
 import TrustlessSidechain.OnlyMintMintingPolicy as OnlyMintMintingPolicy
 import TrustlessSidechain.PermissionedCandidates qualified as PermissionedCandidates
@@ -67,10 +69,10 @@ getOpts =
        in case GetOpt.getOpt RequireOrder options argv of
             ([o], [], []) -> pure o
             (_, _nonOptions, errs) ->
-              Error.ioError
-                $ Error.userError
-                $ concat errs
-                <> GetOpt.usageInfo header options
+              Error.ioError $
+                Error.userError $
+                  concat errs
+                    <> GetOpt.usageInfo header options
   where
     options :: [OptDescr Options]
     options =

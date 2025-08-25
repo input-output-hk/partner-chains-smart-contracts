@@ -2,6 +2,7 @@
 
 module Test.TrustlessSidechain.Golden.Types (tests) where
 
+import Data.ByteString (ByteString)
 import Data.ByteString.Base16 qualified as B16
 import Data.ByteString.Char8 qualified as BC
 import PlutusLedgerApi.Data.V2 (toBuiltinData)
@@ -11,7 +12,6 @@ import Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest)
 import TrustlessSidechain.Governance.MultiSig (
   MultiSigGovParams (..),
  )
-import TrustlessSidechain.HaskellPrelude
 import TrustlessSidechain.Types (
   IlliquidCirculationSupplyRedeemer (
     DepositMoreToSupply,
@@ -39,7 +39,6 @@ import TrustlessSidechain.Types (
   ReserveStats (ReserveStats),
   VersionedGenericDatum (..),
  )
-import Prelude (String)
 
 -- | Tests for all data types with @IsData@ implementation
 -- Some of the data types are only checked transitively (included by some other type)

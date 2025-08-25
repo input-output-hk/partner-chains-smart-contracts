@@ -1,7 +1,6 @@
 module IlliquidCirculationSupply where
 
 import Control.Lens
-import Data.String
 import PlutusLedgerApi.V1 qualified as V1
 import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx
@@ -12,7 +11,6 @@ import TestValues qualified as Test
 import TrustlessSidechain.IlliquidCirculationSupply
 import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types as Types
-import Prelude
 
 -- minting policy
 

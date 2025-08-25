@@ -1,6 +1,5 @@
 module Test.TrustlessSidechain.Golden.Tests (tests) where
 
-import Data.String
 import Test.Tasty (TestTree, testGroup)
 import Test.TrustlessSidechain.Golden.Types qualified as Types
 import Test.TrustlessSidechain.Golden.Versioning qualified as Versioning

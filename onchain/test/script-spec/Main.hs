@@ -1,9 +1,7 @@
 module Main where
 
-import Data.String
 import GovernedMap qualified
 import Test.Tasty
-import Prelude
 
 import CommitteeCandidateValidator qualified
 import DParameter qualified

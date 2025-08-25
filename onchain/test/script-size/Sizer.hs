@@ -6,8 +6,6 @@ import Prelude
 
 import Data.ByteString.Short qualified
 import Data.Kind (Type)
-import Data.String (fromString)
-import Data.String qualified as HString
 import Data.Tagged (Tagged (Tagged))
 import GHC.Num (integerFromInt)
 import PlutusLedgerApi.Common (SerialisedScript)
@@ -21,7 +19,7 @@ import Test.Tasty.Providers (
 import Type.Reflection (Typeable)
 
 scriptFitsInto ::
-  HString.String ->
+  String ->
   SerialisedScript ->
   Integer ->
   TestTree
