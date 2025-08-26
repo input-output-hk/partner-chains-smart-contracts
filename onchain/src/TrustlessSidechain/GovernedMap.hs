@@ -16,7 +16,7 @@ import PlutusLedgerApi.Data.V2 (
   serialiseCompiledCode,
  )
 import PlutusTx qualified
-import TrustlessSidechain.PlutusPrelude
+import PlutusTx.Prelude
 import TrustlessSidechain.Versioning (VersionOracleConfig, approvedByGovernance)
 
 -- OnChain error descriptions:

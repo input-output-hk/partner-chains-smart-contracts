@@ -2,9 +2,6 @@ module ScriptSpecUtils where
 
 import Control.Exception
 import Control.Lens
-import Control.Monad
-import Data.Either
-import Data.String
 import PlutusLedgerApi.V1.Interval (interval)
 import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx
@@ -12,7 +9,6 @@ import PlutusTx.AssocMap qualified as Map
 import PlutusTx.Prelude (BuiltinUnit)
 import Test.Tasty
 import Test.Tasty.HUnit
-import Prelude
 
 emptyScriptContext :: V2.ScriptContext
 emptyScriptContext =

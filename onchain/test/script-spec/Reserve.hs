@@ -1,7 +1,6 @@
 module Reserve where
 
 import Control.Lens
-import Data.String
 import PlutusLedgerApi.V1.Address qualified as Address
 import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusLedgerApi.V2 qualified as V2
@@ -13,7 +12,6 @@ import TestValues qualified as Test
 import TrustlessSidechain.Reserve qualified as Reserve
 import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types qualified as Types
-import Prelude
 
 -- minting policy
 

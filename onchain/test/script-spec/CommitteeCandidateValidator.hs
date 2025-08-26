@@ -1,7 +1,6 @@
 module CommitteeCandidateValidator where
 
 import Control.Lens
-import Data.String
 import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx
 import PlutusTx.Builtins.Internal (BuiltinUnit (..))
@@ -10,7 +9,6 @@ import Test.Tasty
 import TestValues qualified as Test
 import TrustlessSidechain.CommitteeCandidateValidator
 import TrustlessSidechain.Types
-import Prelude
 
 validatorTests :: TestTree
 validatorTests =

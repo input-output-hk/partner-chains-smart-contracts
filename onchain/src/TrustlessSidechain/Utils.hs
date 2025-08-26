@@ -15,9 +15,11 @@ module TrustlessSidechain.Utils (
   oneTokenMinted,
   getOutputsAt,
   getInputsAt,
+  ifThenElse,
 ) where
 
-import TrustlessSidechain.PlutusPrelude
+import PlutusTx.Foldable (sum)
+import PlutusTx.Prelude
 
 import Cardano.Api (PlutusScriptV2)
 import Cardano.Api.Shelley (PlutusScript (PlutusScriptSerialised))
@@ -153,3 +155,9 @@ getInputsAt ::
 getInputsAt txInfo address =
   DataV2.txInInfoResolved
     `List.map` List.filter ((== address) . DataV2.txOutAddress . DataV2.txInInfoResolved) (DataV2.txInfoInputs txInfo)
+
+-- Needed because of RebindableSyntax
+{-# INLINE ifThenElse #-}
+ifThenElse :: forall a. Bool -> a -> a -> a
+ifThenElse True x _ = x
+ifThenElse False _ y = y

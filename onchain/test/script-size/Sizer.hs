@@ -2,8 +2,10 @@ module Sizer (
   scriptFitsInto,
 ) where
 
+import Prelude
+
 import Data.ByteString.Short qualified
-import Data.String qualified as HString
+import Data.Kind (Type)
 import Data.Tagged (Tagged (Tagged))
 import GHC.Num (integerFromInt)
 import PlutusLedgerApi.Common (SerialisedScript)
@@ -14,11 +16,10 @@ import Test.Tasty.Providers (
   testFailed,
   testPassed,
  )
-import TrustlessSidechain.HaskellPrelude
 import Type.Reflection (Typeable)
 
 scriptFitsInto ::
-  HString.String ->
+  String ->
   SerialisedScript ->
   Integer ->
   TestTree
@@ -38,21 +39,21 @@ instance (Typeable a) => IsTest (SizeTest a) where
       let diff = limit - estimate
       pure $ case signum diff of
         -1 ->
-          testFailed
-            $ "Known script size INCREASED by "
-            <> show (abs diff)
-            <> " (New size: "
-            <> show estimate
-            <> ")"
-            <> " Please make sure this is intentional!"
+          testFailed $
+            "Known script size INCREASED by "
+              <> show (abs diff)
+              <> " (New size: "
+              <> show estimate
+              <> ")"
+              <> " Please make sure this is intentional!"
         0 -> testPassed $ "Size: " <> show estimate
         _ ->
-          testFailed
-            $ "Known script size decreased by "
-            <> show diff
-            <> " (New size: "
-            <> show estimate
-            <> ")"
+          testFailed $
+            "Known script size decreased by "
+              <> show diff
+              <> " (New size: "
+              <> show estimate
+              <> ")"
 
 -- Attempt to estimate the script size.  Note that:
 --

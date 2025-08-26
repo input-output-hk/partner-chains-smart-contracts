@@ -29,7 +29,7 @@ import PlutusLedgerApi.V1.Data.Value (
 import PlutusLedgerApi.V2.Data.Contexts (findOwnInput, getContinuingOutputs, txInInfoResolved)
 import PlutusTx qualified
 import PlutusTx.Data.List qualified as List
-import TrustlessSidechain.PlutusPrelude
+import PlutusTx.Prelude
 import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types (
   IlliquidCirculationSupplyRedeemer (..),

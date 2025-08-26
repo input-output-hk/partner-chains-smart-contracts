@@ -1,7 +1,6 @@
 module OnlyMintMintingPolicy where
 
 import Control.Lens
-import Data.String
 import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx
 import PlutusTx.Builtins.Internal (BuiltinUnit (..))
@@ -9,7 +8,6 @@ import ScriptSpecUtils
 import Test.Tasty
 import TestValues qualified as Test
 import TrustlessSidechain.OnlyMintMintingPolicy
-import Prelude
 
 policyTests :: TestTree
 policyTests =

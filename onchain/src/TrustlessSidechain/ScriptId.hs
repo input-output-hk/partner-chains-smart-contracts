@@ -12,7 +12,7 @@ module TrustlessSidechain.ScriptId (
 ) where
 
 import GHC.Num.Integer (Integer)
-import Prelude (Bounded, Enum, Eq, Ord, Show, fromInteger)
+import Prelude (Bounded, Enum, Eq, Show)
 
 -- Note [Versioned script identifiers]
 -- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -51,7 +51,7 @@ data ScriptId
   | GovernedMapPolicy
   | GovernedMapValidator
   | IlliquidCirculationSupplyAuthorityTokenPolicy
-  deriving stock (Show, Eq, Ord, Enum, Bounded)
+  deriving stock (Show, Eq, Enum, Bounded)
 
 toInteger :: ScriptId -> Integer
 toInteger = \case
