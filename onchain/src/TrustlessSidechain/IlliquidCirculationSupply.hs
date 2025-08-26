@@ -71,9 +71,9 @@ mkIlliquidCirculationSupplyValidator voc reserveToken _ red ctx = case red of
     traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-01" (containsOnlyOneICSAuthorityToken supplyOutputUtxo)
       && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-02" (isDatumUnit supplyOutputUtxo)
       && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-03" assetsDoNotDecrease
-      && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-04" (reserveTokensDoNotLeakFromIcs)
+      && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-08" reserveTokensDoNotLeakFromIcs
   WithdrawFromSupply ->
-    traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-05" oneIcsWithdrawalMintingPolicyTokenIsMinted
+    traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-04" oneIcsWithdrawalMintingPolicyTokenIsMinted
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
@@ -163,18 +163,19 @@ serialisableIlliquidCirculationSupplyValidator :: SerialisedScript
 serialisableIlliquidCirculationSupplyValidator =
   serialiseCompiledCode $$(PlutusTx.compile [||mkIlliquidCirculationSupplyValidatorUntyped||])
 
-mkIlliquidCirculationSupplyAuthorityTokenPolicy :: VersionOracleConfig -> BuiltinData -> ScriptContext -> Bool
-mkIlliquidCirculationSupplyAuthorityTokenPolicy voc _ ctx =
+mkIlliquidCirculationSupplyAuthorityTokenPolicy :: BuiltinData -> VersionOracleConfig -> BuiltinData -> ScriptContext -> Bool
+mkIlliquidCirculationSupplyAuthorityTokenPolicy _scriptId voc _ ctx =
   traceIfFalse "ERROR-ICS-AUTH-TOKEN-01" signedByAuthority
   where
     signedByAuthority :: Bool
     signedByAuthority =
       approvedByGovernance voc ctx
 
-mkIlliquidCirculationSupplyAuthorityTokenPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
-mkIlliquidCirculationSupplyAuthorityTokenPolicyUntyped voc rd ctx =
+mkIlliquidCirculationSupplyAuthorityTokenPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
+mkIlliquidCirculationSupplyAuthorityTokenPolicyUntyped _scriptId voc rd ctx =
   check
     $ mkIlliquidCirculationSupplyAuthorityTokenPolicy
+      _scriptId
       (PlutusTx.unsafeFromBuiltinData voc)
       rd
       (PlutusTx.unsafeFromBuiltinData ctx)

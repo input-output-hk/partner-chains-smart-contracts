@@ -398,7 +398,7 @@ icsAuthorityTokenUtxo :: V2.TxOut
 icsAuthorityTokenUtxo =
   mkTxOut
     Test.versionValidatorAddress
-    Test.versionOracleToken
+    (Test.versionOracleToken 1)
     icsVersionOracleDatum
     icsAuthorityTokenScriptHash
   where
@@ -441,6 +441,7 @@ runValidator versionOracleConfig datum redeemer ctx =
 runPolicy :: VersionOracleConfig -> V2.ScriptContext -> BuiltinUnit
 runPolicy versionOracleConfig ctx =
   mkIlliquidCirculationSupplyAuthorityTokenPolicyUntyped
+    Test.dummyBuiltinData
     (toBuiltinData versionOracleConfig)
     Test.dummyBuiltinData
     (toBuiltinData ctx)
