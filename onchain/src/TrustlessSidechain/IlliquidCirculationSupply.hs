@@ -11,6 +11,7 @@ import PlutusLedgerApi.Data.V2 (
   getDatum,
   scriptContextTxInfo,
   serialiseCompiledCode,
+  txInfoOutputs,
   txOutAddress,
   txOutDatum,
   txOutValue,
@@ -18,12 +19,16 @@ import PlutusLedgerApi.Data.V2 (
   pattern TxOut,
  )
 import PlutusLedgerApi.V1.Data.Value (
+  AssetClass,
   CurrencySymbol,
   TokenName (..),
-  lt,
+  Value,
+  assetClassValueOf,
+  valueOf,
  )
-import PlutusLedgerApi.V2.Data.Contexts (getContinuingOutputs)
+import PlutusLedgerApi.V2.Data.Contexts (findOwnInput, getContinuingOutputs, txInInfoResolved)
 import PlutusTx qualified
+import PlutusTx.Data.List qualified as List
 import TrustlessSidechain.PlutusPrelude
 import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types (
@@ -35,31 +40,38 @@ import TrustlessSidechain.Utils qualified as Utils
 import TrustlessSidechain.Versioning (
   VersionOracle (VersionOracle, scriptId),
   VersionOracleConfig,
+  approvedByGovernance,
   getVersionedCurrencySymbol,
  )
 
 icsWithdrawalMintingPolicyTokenName :: TokenName
 icsWithdrawalMintingPolicyTokenName = TokenName emptyByteString
 
+icsAuthorityTokenName :: TokenName
+icsAuthorityTokenName = TokenName emptyByteString
+
 -- | Error codes description follows:
 --
---   ERROR-ILLIQUID-CIRCULATION-SUPPLY-01: Input UTxO has non-unit datum
+--   ERROR-ILLIQUID-CIRCULATION-SUPPLY-01: Output UTxO doesn't have exactly one ICS Authority Token
 --   ERROR-ILLIQUID-CIRCULATION-SUPPLY-02: Output UTxO has non-unit datum
 --   ERROR-ILLIQUID-CIRCULATION-SUPPLY-03: Assets of the supply UTxO decreased
---   ERROR-ILLIQUID-CIRCULATION-SUPPLY-04: Single illiquid circulation supply token is not minted
---   ERROR-ILLIQUID-CIRCULATION-SUPPLY-05: No unique input UTxO at the supply address
+--   ERROR-ILLIQUID-CIRCULATION-SUPPLY-04: Reserve tokens leak from the ICS validator
+--   ERROR-ILLIQUID-CIRCULATION-SUPPLY-05: Single illiquid circulation supply token is not minted
 --   ERROR-ILLIQUID-CIRCULATION-SUPPLY-06: No unique output UTxO at the supply address
+--   ERROR-ILLIQUID-CIRCULATION-SUPPLY-07: No own input UTxO at the supply address
 mkIlliquidCirculationSupplyValidator ::
   VersionOracleConfig ->
+  AssetClass ->
   BuiltinData ->
   IlliquidCirculationSupplyRedeemer ->
   ScriptContext ->
   Bool
-mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
+mkIlliquidCirculationSupplyValidator voc reserveToken _ red ctx = case red of
   DepositMoreToSupply ->
-    traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-01" (isDatumUnit supplyInputUtxo)
+    traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-01" (containsOnlyOneICSAuthorityToken supplyOutputUtxo)
       && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-02" (isDatumUnit supplyOutputUtxo)
-      && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-03" assetsIncrease
+      && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-03" assetsDoNotDecrease
+      && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-08" reserveTokensDoNotLeakFromIcs
   WithdrawFromSupply ->
     traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-04" oneIcsWithdrawalMintingPolicyTokenIsMinted
   where
@@ -73,23 +85,57 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
         (VersionOracle {scriptId = ScriptId.illiquidCirculationSupplyWithdrawalPolicyId})
         ctx
 
+    icsAuthorityTokenCurrencySymbol :: CurrencySymbol
+    icsAuthorityTokenCurrencySymbol =
+      getVersionedCurrencySymbol
+        voc
+        (VersionOracle {scriptId = ScriptId.illiquidCirculationSupplyAuthorityTokenPolicyId})
+        ctx
+
+    containsOnlyOneICSAuthorityToken :: TxOut -> Bool
+    containsOnlyOneICSAuthorityToken TxOut {txOutValue = value} =
+      let valueOfIcsAuthorityToken = valueOf value icsAuthorityTokenCurrencySymbol icsAuthorityTokenName
+       in valueOfIcsAuthorityToken == 1
+
     supplyAddress :: Address
     supplyAddress = txOutAddress supplyOutputUtxo
 
-    supplyInputUtxo :: TxOut
-    supplyInputUtxo =
-      Utils.fromSingletonData (\_ -> traceError "ERROR-ILLIQUID-CIRCULATION-SUPPLY-05")
-        $ Utils.getInputsAt info supplyAddress
+    supplyInputUtxos :: List.List TxOut
+    supplyInputUtxos = Utils.getInputsAt info supplyAddress
+
+    supplyInputValue :: Value
+    supplyInputValue = List.mconcat (List.map txOutValue supplyInputUtxos)
+
+    inputReserveTokens :: Integer
+    inputReserveTokens = assetClassValueOf supplyInputValue reserveToken
 
     supplyOutputUtxo :: TxOut
     supplyOutputUtxo =
       Utils.fromSingletonData (\_ -> traceError "ERROR-ILLIQUID-CIRCULATION-SUPPLY-06")
         $ getContinuingOutputs ctx
 
-    assetsIncrease :: Bool
-    assetsIncrease =
-      (txOutValue supplyInputUtxo)
-        `lt` (txOutValue supplyOutputUtxo)
+    supplyOutputReserveTokens :: Integer
+    supplyOutputReserveTokens = assetClassValueOf (txOutValue supplyOutputUtxo) reserveToken
+
+    assetsDoNotDecrease :: Bool
+    assetsDoNotDecrease = inputReserveTokens <= supplyOutputReserveTokens
+
+    ownAddress :: Address
+    ownAddress = txOutAddress $ txInInfoResolved $ case findOwnInput ctx of
+      Just txOut -> txOut
+      Nothing -> traceError "ERROR-ILLIQUID-CIRCULATION-SUPPLY-07"
+
+    reserveTokensDoNotLeakFromIcs :: Bool
+    reserveTokensDoNotLeakFromIcs =
+      List.null
+        $ List.filter
+          ( \txOut ->
+              txOutAddress txOut
+                /= ownAddress
+                && valueOf (txOutValue txOut) icsAuthorityTokenCurrencySymbol icsAuthorityTokenName
+                > 0
+          )
+        $ txInfoOutputs info
 
     oneIcsWithdrawalMintingPolicyTokenIsMinted :: Bool
     oneIcsWithdrawalMintingPolicyTokenIsMinted =
@@ -103,11 +149,12 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
       isJust . PlutusTx.fromBuiltinData @(VersionedGenericDatum ()) $ getDatum datum
     isDatumUnit _ = False
 
-mkIlliquidCirculationSupplyValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
-mkIlliquidCirculationSupplyValidatorUntyped voc rd rr ctx =
+mkIlliquidCirculationSupplyValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
+mkIlliquidCirculationSupplyValidatorUntyped voc rt rd rr ctx =
   check
     $ mkIlliquidCirculationSupplyValidator
       (PlutusTx.unsafeFromBuiltinData voc)
+      (PlutusTx.unsafeFromBuiltinData rt)
       (PlutusTx.unsafeFromBuiltinData rd)
       (PlutusTx.unsafeFromBuiltinData rr)
       (PlutusTx.unsafeFromBuiltinData ctx)
@@ -115,3 +162,24 @@ mkIlliquidCirculationSupplyValidatorUntyped voc rd rr ctx =
 serialisableIlliquidCirculationSupplyValidator :: SerialisedScript
 serialisableIlliquidCirculationSupplyValidator =
   serialiseCompiledCode $$(PlutusTx.compile [||mkIlliquidCirculationSupplyValidatorUntyped||])
+
+mkIlliquidCirculationSupplyAuthorityTokenPolicy :: BuiltinData -> VersionOracleConfig -> BuiltinData -> ScriptContext -> Bool
+mkIlliquidCirculationSupplyAuthorityTokenPolicy _scriptId voc _ ctx =
+  traceIfFalse "ERROR-ICS-AUTH-TOKEN-01" signedByAuthority
+  where
+    signedByAuthority :: Bool
+    signedByAuthority =
+      approvedByGovernance voc ctx
+
+mkIlliquidCirculationSupplyAuthorityTokenPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
+mkIlliquidCirculationSupplyAuthorityTokenPolicyUntyped _scriptId voc rd ctx =
+  check
+    $ mkIlliquidCirculationSupplyAuthorityTokenPolicy
+      _scriptId
+      (PlutusTx.unsafeFromBuiltinData voc)
+      rd
+      (PlutusTx.unsafeFromBuiltinData ctx)
+
+serialisableIlliquidCirculationSupplyAuthorityTokenPolicy :: SerialisedScript
+serialisableIlliquidCirculationSupplyAuthorityTokenPolicy =
+  serialiseCompiledCode $$(PlutusTx.compile [||mkIlliquidCirculationSupplyAuthorityTokenPolicyUntyped||])

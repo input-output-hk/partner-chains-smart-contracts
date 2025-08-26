@@ -143,6 +143,7 @@ main =
         ( IlliquidCirculationSupplyValidator
         , IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyValidator
         )
+      , (IlliquidCirculationSupplyAuthorityTokenPolicy, IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyAuthorityTokenPolicy)
       , (OnlyMintMintingPolicy, OnlyMintMintingPolicy.serialisableOnlyMintMintingPolicy)
       , (AlwaysPassingValidator, AlwaysPassing.serialisableAlwaysPassingValidator)
       , (AlwaysPassingPolicy, AlwaysPassing.serialisableAlwaysPassingPolicy)
