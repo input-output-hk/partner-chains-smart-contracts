@@ -70,8 +70,8 @@ mkIlliquidCirculationSupplyValidator voc reserveToken _ red ctx = case red of
   DepositMoreToSupply ->
     traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-01" (containsOnlyOneICSAuthorityToken supplyOutputUtxo)
       && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-02" (isDatumUnit supplyOutputUtxo)
-      && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-03" assetsNotDecrease
-      && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-04" (reserveTokensDontLeakFromIcs)
+      && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-03" assetsDoNotDecrease
+      && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-04" (reserveTokensDoNotLeakFromIcs)
   WithdrawFromSupply ->
     traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-05" oneIcsWithdrawalMintingPolicyTokenIsMinted
   where
@@ -117,16 +117,16 @@ mkIlliquidCirculationSupplyValidator voc reserveToken _ red ctx = case red of
     supplyOutputReserveTokens :: Integer
     supplyOutputReserveTokens = assetClassValueOf (txOutValue supplyOutputUtxo) reserveToken
 
-    assetsNotDecrease :: Bool
-    assetsNotDecrease = inputReserveTokens <= supplyOutputReserveTokens
+    assetsDoNotDecrease :: Bool
+    assetsDoNotDecrease = inputReserveTokens <= supplyOutputReserveTokens
 
     ownAddress :: Address
     ownAddress = txOutAddress $ txInInfoResolved $ case findOwnInput ctx of
       Just txOut -> txOut
       Nothing -> traceError "ERROR-ILLIQUID-CIRCULATION-SUPPLY-07"
 
-    reserveTokensDontLeakFromIcs :: Bool
-    reserveTokensDontLeakFromIcs =
+    reserveTokensDoNotLeakFromIcs :: Bool
+    reserveTokensDoNotLeakFromIcs =
       List.null
         $ List.filter
           ( \txOut ->
