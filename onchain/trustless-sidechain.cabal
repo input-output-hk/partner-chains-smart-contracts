@@ -83,6 +83,29 @@ common common-optimized-parallel
   import:      common-optimized
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
 
+-- trustless-sidechain-serialise, trustless-sidechain-serialise-traced and script-size only pick up
+-- Plutus plugin settings if all script modules are directly referenced through other-modules, not through a
+-- library dependency. We list them all here for convenience.
+common common-source-other-modules
+  other-modules:
+    TrustlessSidechain.AlwaysFailingScripts
+    TrustlessSidechain.AlwaysPassingScripts
+    TrustlessSidechain.CommitteeCandidateValidator
+    TrustlessSidechain.DParameter
+    TrustlessSidechain.EncodeHelpers
+    TrustlessSidechain.ExampleVFunction
+    TrustlessSidechain.Governance.MultiSig
+    TrustlessSidechain.GovernedMap
+    TrustlessSidechain.IlliquidCirculationSupply
+    TrustlessSidechain.OnlyMintMintingPolicy
+    TrustlessSidechain.PermissionedCandidates
+    TrustlessSidechain.Reserve
+    TrustlessSidechain.ScriptCache
+    TrustlessSidechain.ScriptId
+    TrustlessSidechain.Types
+    TrustlessSidechain.Utils
+    TrustlessSidechain.Versioning
+
 -- Libraries
 
 library
@@ -121,26 +144,7 @@ library
 
 executable trustless-sidechain-serialise
   import:
-    common-lang-optimized-notrace, common-lang, common-optimized-parallel
-
-  other-modules:
-    TrustlessSidechain.AlwaysFailingScripts
-    TrustlessSidechain.AlwaysPassingScripts
-    TrustlessSidechain.CommitteeCandidateValidator
-    TrustlessSidechain.DParameter
-    TrustlessSidechain.EncodeHelpers
-    TrustlessSidechain.ExampleVFunction
-    TrustlessSidechain.Governance.MultiSig
-    TrustlessSidechain.GovernedMap
-    TrustlessSidechain.IlliquidCirculationSupply
-    TrustlessSidechain.OnlyMintMintingPolicy
-    TrustlessSidechain.PermissionedCandidates
-    TrustlessSidechain.Reserve
-    TrustlessSidechain.ScriptCache
-    TrustlessSidechain.ScriptId
-    TrustlessSidechain.Types
-    TrustlessSidechain.Utils
-    TrustlessSidechain.Versioning
+    common-lang-optimized-notrace, common-lang, common-optimized-parallel, common-source-other-modules
 
   default-extensions: NoImplicitPrelude
   main-is:            Main.hs
@@ -159,26 +163,7 @@ executable trustless-sidechain-serialise
 
 executable trustless-sidechain-serialise-traced
   import:
-    common-lang-traced, common-script-lang, common-optimized-parallel
-
-  other-modules:
-    TrustlessSidechain.AlwaysFailingScripts
-    TrustlessSidechain.AlwaysPassingScripts
-    TrustlessSidechain.CommitteeCandidateValidator
-    TrustlessSidechain.DParameter
-    TrustlessSidechain.EncodeHelpers
-    TrustlessSidechain.ExampleVFunction
-    TrustlessSidechain.Governance.MultiSig
-    TrustlessSidechain.GovernedMap
-    TrustlessSidechain.IlliquidCirculationSupply
-    TrustlessSidechain.OnlyMintMintingPolicy
-    TrustlessSidechain.PermissionedCandidates
-    TrustlessSidechain.Reserve
-    TrustlessSidechain.ScriptCache
-    TrustlessSidechain.ScriptId
-    TrustlessSidechain.Types
-    TrustlessSidechain.Utils
-    TrustlessSidechain.Versioning
+    common-lang-traced, common-script-lang, common-optimized-parallel, common-source-other-modules
 
   default-extensions: NoImplicitPrelude
   main-is:            Main.hs
@@ -220,26 +205,7 @@ test-suite trustless-sidechain-test
 
 test-suite script-size
   import:
-    common-lang , common-lang-optimized-notrace, common-optimized-parallel , common-script-lang
-
-  other-modules:
-    TrustlessSidechain.AlwaysFailingScripts
-    TrustlessSidechain.AlwaysPassingScripts
-    TrustlessSidechain.CommitteeCandidateValidator
-    TrustlessSidechain.DParameter
-    TrustlessSidechain.EncodeHelpers
-    TrustlessSidechain.ExampleVFunction
-    TrustlessSidechain.Governance.MultiSig
-    TrustlessSidechain.GovernedMap
-    TrustlessSidechain.IlliquidCirculationSupply
-    TrustlessSidechain.OnlyMintMintingPolicy
-    TrustlessSidechain.PermissionedCandidates
-    TrustlessSidechain.Reserve
-    TrustlessSidechain.ScriptCache
-    TrustlessSidechain.ScriptId
-    TrustlessSidechain.Types
-    TrustlessSidechain.Utils
-    TrustlessSidechain.Versioning
+    common-lang, common-lang-optimized-notrace, common-optimized-parallel, common-script-lang, common-source-other-modules
 
   default-extensions: NoImplicitPrelude
   type:               exitcode-stdio-1.0
