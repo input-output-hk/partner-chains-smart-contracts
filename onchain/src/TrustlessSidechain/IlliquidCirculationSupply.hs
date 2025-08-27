@@ -13,14 +13,11 @@ import PlutusLedgerApi.Data.V2 (
   SerialisedScript,
   TxInfo,
   TxOut,
-  getDatum,
   scriptContextTxInfo,
   serialiseCompiledCode,
   txInfoOutputs,
   txOutAddress,
-  txOutDatum,
   txOutValue,
-  pattern OutputDatum,
   pattern TxOut,
  )
 import PlutusLedgerApi.V1.Data.Value (
@@ -38,7 +35,6 @@ import PlutusTx.Prelude
 import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types (
   IlliquidCirculationSupplyRedeemer (..),
-  VersionedGenericDatum,
  )
 import TrustlessSidechain.Utils (oneTokenMinted)
 import TrustlessSidechain.Utils qualified as Utils
@@ -58,7 +54,6 @@ icsAuthorityTokenName = TokenName emptyByteString
 -- | Error codes description follows:
 --
 --   ERROR-ILLIQUID-CIRCULATION-SUPPLY-01: Output UTxO doesn't have exactly one ICS Authority Token
---   ERROR-ILLIQUID-CIRCULATION-SUPPLY-02: Output UTxO has non-unit datum
 --   ERROR-ILLIQUID-CIRCULATION-SUPPLY-03: Assets of the supply UTxO decreased
 --   ERROR-ILLIQUID-CIRCULATION-SUPPLY-04: Reserve tokens leak from the ICS validator
 --   ERROR-ILLIQUID-CIRCULATION-SUPPLY-05: Single illiquid circulation supply token is not minted
@@ -74,7 +69,6 @@ mkIlliquidCirculationSupplyValidator ::
 mkIlliquidCirculationSupplyValidator voc reserveToken _ red ctx = case red of
   DepositMoreToSupply ->
     traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-01" (containsOnlyOneICSAuthorityToken supplyOutputUtxo)
-      && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-02" (isDatumUnit supplyOutputUtxo)
       && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-03" assetsDoNotDecrease
       && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-08" reserveTokensDoNotLeakFromIcs
   WithdrawFromSupply ->
@@ -148,11 +142,6 @@ mkIlliquidCirculationSupplyValidator voc reserveToken _ red ctx = case red of
         info
         icsWithdrawalPolicyCurrencySymbol
         icsWithdrawalMintingPolicyTokenName
-
-    isDatumUnit :: TxOut -> Bool
-    isDatumUnit TxOut {txOutDatum = OutputDatum datum} =
-      isJust . PlutusTx.fromBuiltinData @(VersionedGenericDatum ()) $ getDatum datum
-    isDatumUnit _ = False
 
 mkIlliquidCirculationSupplyValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
 mkIlliquidCirculationSupplyValidatorUntyped voc rt rd rr ctx =
