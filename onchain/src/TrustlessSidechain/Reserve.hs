@@ -51,7 +51,6 @@ import PlutusLedgerApi.V2.Data.Contexts (getContinuingOutputs, ownCurrencySymbol
 import PlutusTx qualified
 import PlutusTx.Bool
 import PlutusTx.Data.List qualified as List
-import PlutusTx.Foldable (sum)
 import PlutusTx.List (length, sortBy)
 import PlutusTx.Prelude hiding (fromInteger)
 import TrustlessSidechain.ScriptId qualified as ScriptId
@@ -291,7 +290,7 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
 
     reserveTokensOnICSInputUtxos :: Integer
     reserveTokensOnICSInputUtxos =
-      sum $ List.toSOP . List.map reserveTokensOn $ Utils.getInputsAt info illiquidCirculationSupplyAddress
+      List.foldr ((+) . reserveTokensOn) zero $ Utils.getInputsAt info illiquidCirculationSupplyAddress
 
     oneReserveAuthTokenBurnt ::
       Bool
