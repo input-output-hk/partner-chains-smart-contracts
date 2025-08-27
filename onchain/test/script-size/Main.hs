@@ -44,7 +44,7 @@ main =
           , scriptFitsInto
               "mkReserveValidator (Reserve) serialized"
               Reserve.serialisableReserveValidator
-              5666
+              5673
           , scriptFitsInto
               "mkReserveAuthPolicy (Reserve) serialized"
               Reserve.serialisableReserveAuthPolicy

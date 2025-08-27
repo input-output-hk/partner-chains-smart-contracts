@@ -1,0 +1,3 @@
+kind: Changed
+body: Reserve validator no longer needs illiquidCirculationSupplyAddress UTXO ref input for TransferToIlliquidCirculationSupply and Handover redeemers
+time: 2025-08-27T14:38:10.432716667+02:00

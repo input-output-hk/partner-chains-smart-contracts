@@ -413,8 +413,6 @@ reserveValidatorDepositPassing =
           -- signed by governance:
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-          -- IlliquidCirculationSupplyValidator VersionOracle (redundant, see comment)
-          & addRedundantIcsVersioningOracle
           -- ReserveAuthPolicy VersionOracle
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
           -- input utxo for depositing into reserve: (needed for balancing, not for validator to pass)
@@ -470,8 +468,6 @@ reserveValidatorDepositPassingWithAdaTokenKind =
           -- signed by governance:
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-          -- IlliquidCirculationSupplyValidator VersionOracle (redundant, see comment)
-          & addRedundantIcsVersioningOracle
           -- ReserveAuthPolicy VersionOracle
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
           -- input utxo for depositing into reserve: (needed for balancing, not for validator to pass)
@@ -521,8 +517,6 @@ reserveValidatorDepositFailing01 =
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Spending reserveUtxo
           -- [ERROR] NOT signed by governance
-          -- IlliquidCirculationSupplyValidator VersionOracle (redundant, see comment)
-          & addRedundantIcsVersioningOracle
           -- ReserveAuthPolicy VersionOracle
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
           -- input utxo for depositing into reserve: (needed for balancing, not for validator to pass)
@@ -574,8 +568,6 @@ reserveValidatorDepositFailing02 =
           -- signed by governance:
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-          -- IlliquidCirculationSupplyValidator VersionOracle (redundant, see comment)
-          & addRedundantIcsVersioningOracle
           -- ReserveAuthPolicy VersionOracle
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
           -- [ERROR] mints token other than governance
@@ -629,8 +621,6 @@ reserveValidatorDepositFailing03 =
           -- signed by governance:
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-          -- IlliquidCirculationSupplyValidator VersionOracle (redundant, see comment)
-          & addRedundantIcsVersioningOracle
           -- ReserveAuthPolicy VersionOracle
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
           -- input utxo for depositing into reserve: (needed for balancing, not for validator to pass)
@@ -688,8 +678,6 @@ reserveValidatorDepositFailing04 =
           -- signed by governance:
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-          -- IlliquidCirculationSupplyValidator VersionOracle (redundant, see comment)
-          & addRedundantIcsVersioningOracle
           -- ReserveAuthPolicy VersionOracle
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
           -- input utxo for depositing into reserve: (needed for balancing, not for validator to pass)
@@ -747,8 +735,6 @@ reserveValidatorUpdatePassing =
           -- signed by governance:
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-          -- IlliquidCirculationSupplyValidator VersionOracle (redundant, see comment)
-          & addRedundantIcsVersioningOracle
           -- ReserveAuthPolicy VersionOracle
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
           -- [INPUT] Reserve UTXO:
@@ -798,8 +784,6 @@ reserveValidatorUpdateFailing05 =
           -- signed by governance:
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-          -- IlliquidCirculationSupplyValidator VersionOracle (redundant, see comment)
-          & addRedundantIcsVersioningOracle
           -- ReserveAuthPolicy VersionOracle
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
           -- [INPUT] Reserve UTXO:
@@ -864,8 +848,6 @@ reserveValidatorUpdateFailing06 =
           -- signed by governance:
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-          -- IlliquidCirculationSupplyValidator VersionOracle (redundant, see comment)
-          & addRedundantIcsVersioningOracle
           -- ReserveAuthPolicy VersionOracle
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
           -- [INPUT] Reserve UTXO:
@@ -926,8 +908,6 @@ reserveValidatorUpdateFailing07 =
           -- signed by governance:
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-          -- IlliquidCirculationSupplyValidator VersionOracle (redundant, see comment)
-          & addRedundantIcsVersioningOracle
           -- ReserveAuthPolicy VersionOracle
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
           -- [INPUT] Reserve UTXO:
@@ -978,8 +958,6 @@ reserveValidatorUpdateFailing08 =
           -- signed by governance:
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-          -- IlliquidCirculationSupplyValidator VersionOracle (redundant, see comment)
-          & addRedundantIcsVersioningOracle
           -- ReserveAuthPolicy VersionOracle
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
           -- [INPUT] Reserve UTXO:
@@ -1021,8 +999,6 @@ reserveValidatorUpdateFailing09 =
           -- signed by governance:
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-          -- IlliquidCirculationSupplyValidator VersionOracle (redundant, see comment)
-          & addRedundantIcsVersioningOracle
           -- ReserveAuthPolicy VersionOracle
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
           -- [INPUT] Reserve UTXO:
@@ -1072,8 +1048,6 @@ reserveValidatorUpdateFailing10 =
           -- signed by governance:
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-          -- IlliquidCirculationSupplyValidator VersionOracle (redundant, see comment)
-          & addRedundantIcsVersioningOracle
           -- ReserveAuthPolicy VersionOracle
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
           -- [INPUT] Reserve UTXO:
@@ -1121,8 +1095,6 @@ reserveValidatorUpdateFailing22 =
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Spending reserveUtxo
           -- [ERROR] not signed by governance
-          -- IlliquidCirculationSupplyValidator VersionOracle (redundant, see comment)
-          & addRedundantIcsVersioningOracle
           -- ReserveAuthPolicy VersionOracle
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
           -- [INPUT] Reserve UTXO:
@@ -1172,8 +1144,6 @@ reserveValidatorUpdateFailing23 =
           -- signed by governance:
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-          -- IlliquidCirculationSupplyValidator VersionOracle (redundant, see comment)
-          & addRedundantIcsVersioningOracle
           -- ReserveAuthPolicy VersionOracle
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
           -- [ERROR] other token minted:
@@ -1225,8 +1195,6 @@ reserveValidatorUpdateFailing25 =
           -- signed by governance:
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-          -- IlliquidCirculationSupplyValidator VersionOracle (redundant, see comment)
-          & addRedundantIcsVersioningOracle
           -- ReserveAuthPolicy VersionOracle
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
           -- [INPUT] Reserve UTXO:
@@ -2207,12 +2175,6 @@ vFunctionToken = V2.singleton vFunctionCurrSym V2.adaToken
 
 vFunctionCurrSym :: V2.CurrencySymbol
 vFunctionCurrSym = V2.CurrencySymbol "vFunctionScriptHash"
-
--- Reserve validator always strictly evaluates illiquidCirculationSupplyAddress, even though DepositToReserve and UpdateReserve
--- does not use it. In those cases we set them through this function to draw attention to this, and also
--- to make it easier to clean up the tests in the future when we fix this.
-addRedundantIcsVersioningOracle :: V2.ScriptContext -> V2.ScriptContext
-addRedundantIcsVersioningOracle = _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ icsSupplyValidatorVersionOracleUtxo]
 
 -- test runner
 

@@ -152,11 +152,8 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
         (VersionOracle {scriptId = ScriptId.reserveAuthPolicyId})
         ctx
 
-    -- TODO: Consider removing the strict binding !, as illiquidCirculationSupplyAddress is only needed for
-    -- TransferToIlliquidCirculationSupply and Handover.
-    -- Removing it marginally increases script size but makes the transaction smaller for DepositToReserve and UpdateReserve.
     illiquidCirculationSupplyAddress :: Address
-    !illiquidCirculationSupplyAddress =
+    illiquidCirculationSupplyAddress =
       getVersionedValidatorAddress
         voc
         (VersionOracle {scriptId = ScriptId.illiquidCirculationSupplyValidatorId})
