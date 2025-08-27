@@ -51,7 +51,7 @@ main =
           , scriptFitsInto
               "Reserve.serialisableReserveValidator"
               Reserve.serialisableReserveValidator
-              5673
+              5549
           , scriptFitsInto
               "Reserve.serialisableReserveAuthPolicy"
               Reserve.serialisableReserveAuthPolicy

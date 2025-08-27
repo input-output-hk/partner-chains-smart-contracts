@@ -364,20 +364,18 @@ validatorTests =
         , reserveValidatorDepositFailing01
         , reserveValidatorDepositFailing02
         , reserveValidatorDepositFailing03
-        , reserveValidatorDepositFailing04
         ]
     , testGroup
         "update redeemer"
         [ reserveValidatorUpdatePassing
+        , reserveValidatorUpdateFailing04
         , reserveValidatorUpdateFailing05
         , reserveValidatorUpdateFailing06
         , reserveValidatorUpdateFailing07
         , reserveValidatorUpdateFailing08
         , reserveValidatorUpdateFailing09
         , reserveValidatorUpdateFailing10
-        , reserveValidatorUpdateFailing22
-        , reserveValidatorUpdateFailing23
-        , reserveValidatorUpdateFailing25
+        , reserveValidatorUpdateFailing18
         ]
     , testGroup
         "transfer to ics redeemer"
@@ -386,16 +384,13 @@ validatorTests =
         , reserveValidatorTransferToICSFailing12
         , reserveValidatorTransferToICSFailing13
         , reserveValidatorTransferToICSFailing14
-        , reserveValidatorTransferToICSFailing15
-        , reserveValidatorTransferToICSFailing16
         ]
     , testGroup
         "handover redeemer"
         [ reserveValidatorHandoverPassing
+        , reserveValidatorHandoverFailing15
+        , reserveValidatorHandoverFailing16
         , reserveValidatorHandoverFailing17
-        , reserveValidatorHandoverFailing18
-        , reserveValidatorHandoverFailing19
-        , reserveValidatorHandoverFailing24
         ]
     ]
 
@@ -558,60 +553,7 @@ reserveValidatorDepositFailing01 =
 
 reserveValidatorDepositFailing02 :: TestTree
 reserveValidatorDepositFailing02 =
-  expectFail "should fail if other tokens than governance token are minted or burnt (ERROR-RESERVE-02)" $
-    runValidator
-      Test.versionOracleConfig
-      Test.dummyBuiltinData
-      Types.DepositToReserve
-      ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Spending reserveUtxo
-          -- signed by governance:
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
-          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-          -- ReserveAuthPolicy VersionOracle
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
-          -- [ERROR] mints token other than governance
-          & _scriptContextTxInfo . _txInfoMint <>~ someToken 1
-          -- input utxo for depositing into reserve: (needed for balancing, not for validator to pass)
-          & _scriptContextTxInfo . _txInfoInputs
-            <>~ [ emptyTxInInfo
-                    & _txInInfoOutRef .~ someUtxo
-                    & _txInInfoResolved
-                      .~ ( emptyTxOut
-                            & _txOutAddress .~ someAddress
-                            -- tokens to be deposited into reserve:
-                            & _txOutValue <>~ partnerToken 50
-                         )
-                ]
-          -- [INPUT] Reserve UTXO:
-          & _scriptContextTxInfo . _txInfoInputs
-            <>~ [ emptyTxInInfo
-                    & _txInInfoOutRef .~ reserveUtxo
-                    & _txInInfoResolved
-                      .~ ( emptyTxOut
-                            & _txOutAddress .~ reserveAddress
-                            & _txOutDatum .~ V2.OutputDatum (wrapToVersioned reserveDatum)
-                            -- carries reserve auth token:
-                            & _txOutValue <>~ reserveAuthToken 1
-                            -- tokens currently in reserve:
-                            & _txOutValue <>~ partnerToken 10
-                         )
-                ]
-          -- [OUTPUT] Reserve UTXO:
-          & _scriptContextTxInfo . _txInfoOutputs
-            <>~ [ emptyTxOut
-                    & _txOutAddress .~ reserveAddress
-                    & _txOutDatum .~ V2.OutputDatum (wrapToVersioned reserveDatum)
-                    -- carries reserve auth token:
-                    & _txOutValue <>~ reserveAuthToken 1
-                    -- carries more partner tokens than the input:
-                    & _txOutValue <>~ partnerToken 60
-                ]
-      )
-
-reserveValidatorDepositFailing03 :: TestTree
-reserveValidatorDepositFailing03 =
-  expectFail "should fail if datum of the propagated reserve utxo changes (ERROR-RESERVE-03)" $
+  expectFail "should fail if datum of the propagated reserve utxo changes (ERROR-RESERVE-02)" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -666,9 +608,9 @@ reserveValidatorDepositFailing03 =
         { Types.stats = Types.ReserveStats {tokenTotalAmountTransferred = 15}
         }
 
-reserveValidatorDepositFailing04 :: TestTree
-reserveValidatorDepositFailing04 =
-  expectFail "should fail if assets of the propagated reserve utxo don't increase by reserve tokens (ERROR-RESERVE-04)" $
+reserveValidatorDepositFailing03 :: TestTree
+reserveValidatorDepositFailing03 =
+  expectFail "should fail if assets of the propagated reserve utxo don't increase by reserve tokens (ERROR-RESERVE-03)" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -772,9 +714,9 @@ reserveValidatorUpdatePassing =
               }
         }
 
-reserveValidatorUpdateFailing05 :: TestTree
-reserveValidatorUpdateFailing05 =
-  expectFail "should fail if no unique input utxo carrying authentication token (ERROR-RESERVE-05)" $
+reserveValidatorUpdateFailing04 :: TestTree
+reserveValidatorUpdateFailing04 =
+  expectFail "should fail if no unique input utxo carrying authentication token (ERROR-RESERVE-04)" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -836,9 +778,9 @@ reserveValidatorUpdateFailing05 =
               }
         }
 
-reserveValidatorUpdateFailing06 :: TestTree
-reserveValidatorUpdateFailing06 =
-  expectFail "should fail if no unique output utxo at the reserve address and carrying authentication token (ERROR-RESERVE-06)" $
+reserveValidatorUpdateFailing05 :: TestTree
+reserveValidatorUpdateFailing05 =
+  expectFail "should fail if no unique output utxo at the reserve address and carrying authentication token (ERROR-RESERVE-05)" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -896,9 +838,9 @@ reserveValidatorUpdateFailing06 =
               }
         }
 
-reserveValidatorUpdateFailing07 :: TestTree
-reserveValidatorUpdateFailing07 =
-  expectFail "should fail if datum of input reserve utxo malformed (ERROR-RESERVE-07)" $
+reserveValidatorUpdateFailing06 :: TestTree
+reserveValidatorUpdateFailing06 =
+  expectFail "should fail if datum of input reserve utxo malformed (ERROR-RESERVE-06)" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -946,9 +888,9 @@ reserveValidatorUpdateFailing07 =
               }
         }
 
-reserveValidatorUpdateFailing08 :: TestTree
-reserveValidatorUpdateFailing08 =
-  expectFail "should fail if datum of output reserve utxo malformed (ERROR-RESERVE-08)" $
+reserveValidatorUpdateFailing07 :: TestTree
+reserveValidatorUpdateFailing07 =
+  expectFail "should fail if datum of output reserve utxo malformed (ERROR-RESERVE-07)" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -986,6 +928,53 @@ reserveValidatorUpdateFailing08 =
                     & _txOutValue <>~ partnerToken 10
                 ]
       )
+
+reserveValidatorUpdateFailing08 :: TestTree
+reserveValidatorUpdateFailing08 =
+  expectFail "should fail if governance approval is not present (ERROR-RESERVE-08)" $
+    runValidator
+      Test.versionOracleConfig
+      Test.dummyBuiltinData
+      Types.UpdateReserve
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Spending reserveUtxo
+          -- [ERROR] not signed by governance
+          -- ReserveAuthPolicy VersionOracle
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
+          -- [INPUT] Reserve UTXO:
+          & _scriptContextTxInfo . _txInfoInputs
+            <>~ [ emptyTxInInfo
+                    & _txInInfoOutRef .~ reserveUtxo
+                    & _txInInfoResolved
+                      .~ ( emptyTxOut
+                            & _txOutAddress .~ reserveAddress
+                            & _txOutDatum .~ V2.OutputDatum (wrapToVersioned reserveDatum)
+                            -- carries reserve auth token:
+                            & _txOutValue <>~ reserveAuthToken 1
+                            -- tokens currently in reserve:
+                            & _txOutValue <>~ partnerToken 10
+                         )
+                ]
+          -- [OUTPUT] Reserve UTXO:
+          & _scriptContextTxInfo . _txInfoOutputs
+            <>~ [ emptyTxOut
+                    & _txOutAddress .~ reserveAddress
+                    & _txOutDatum .~ V2.OutputDatum (wrapToVersioned updatedReserveDatum)
+                    -- carries reserve auth token:
+                    & _txOutValue <>~ reserveAuthToken 1
+                    -- token amount doesn't change:
+                    & _txOutValue <>~ partnerToken 10
+                ]
+      )
+  where
+    updatedReserveDatum =
+      reserveDatum
+        { Types.mutableSettings =
+            Types.MutableReserveSettings
+              { vFunctionTotalAccrued = Test.toAsData $ V2.CurrencySymbol "newVFunctionScriptHash"
+              , incentiveAmount = 2
+              }
+        }
 
 reserveValidatorUpdateFailing09 :: TestTree
 reserveValidatorUpdateFailing09 =
@@ -1085,107 +1074,9 @@ reserveValidatorUpdateFailing10 =
               }
         }
 
-reserveValidatorUpdateFailing22 :: TestTree
-reserveValidatorUpdateFailing22 =
-  expectFail "should fail if governance approval is not present (ERROR-RESERVE-22)" $
-    runValidator
-      Test.versionOracleConfig
-      Test.dummyBuiltinData
-      Types.UpdateReserve
-      ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Spending reserveUtxo
-          -- [ERROR] not signed by governance
-          -- ReserveAuthPolicy VersionOracle
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
-          -- [INPUT] Reserve UTXO:
-          & _scriptContextTxInfo . _txInfoInputs
-            <>~ [ emptyTxInInfo
-                    & _txInInfoOutRef .~ reserveUtxo
-                    & _txInInfoResolved
-                      .~ ( emptyTxOut
-                            & _txOutAddress .~ reserveAddress
-                            & _txOutDatum .~ V2.OutputDatum (wrapToVersioned reserveDatum)
-                            -- carries reserve auth token:
-                            & _txOutValue <>~ reserveAuthToken 1
-                            -- tokens currently in reserve:
-                            & _txOutValue <>~ partnerToken 10
-                         )
-                ]
-          -- [OUTPUT] Reserve UTXO:
-          & _scriptContextTxInfo . _txInfoOutputs
-            <>~ [ emptyTxOut
-                    & _txOutAddress .~ reserveAddress
-                    & _txOutDatum .~ V2.OutputDatum (wrapToVersioned updatedReserveDatum)
-                    -- carries reserve auth token:
-                    & _txOutValue <>~ reserveAuthToken 1
-                    -- token amount doesn't change:
-                    & _txOutValue <>~ partnerToken 10
-                ]
-      )
-  where
-    updatedReserveDatum =
-      reserveDatum
-        { Types.mutableSettings =
-            Types.MutableReserveSettings
-              { vFunctionTotalAccrued = Test.toAsData $ V2.CurrencySymbol "newVFunctionScriptHash"
-              , incentiveAmount = 2
-              }
-        }
-
-reserveValidatorUpdateFailing23 :: TestTree
-reserveValidatorUpdateFailing23 =
-  expectFail "should fail if other tokens than governance token are minted or burnt (ERROR-RESERVE-23)" $
-    runValidator
-      Test.versionOracleConfig
-      Test.dummyBuiltinData
-      Types.UpdateReserve
-      ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Spending reserveUtxo
-          -- signed by governance:
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
-          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-          -- ReserveAuthPolicy VersionOracle
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
-          -- [ERROR] other token minted:
-          & _scriptContextTxInfo . _txInfoMint <>~ someToken 1
-          -- [INPUT] Reserve UTXO:
-          & _scriptContextTxInfo . _txInfoInputs
-            <>~ [ emptyTxInInfo
-                    & _txInInfoOutRef .~ reserveUtxo
-                    & _txInInfoResolved
-                      .~ ( emptyTxOut
-                            & _txOutAddress .~ reserveAddress
-                            & _txOutDatum .~ V2.OutputDatum (wrapToVersioned reserveDatum)
-                            -- carries reserve auth token:
-                            & _txOutValue <>~ reserveAuthToken 1
-                            -- tokens currently in reserve:
-                            & _txOutValue <>~ partnerToken 10
-                         )
-                ]
-          -- [OUTPUT] Reserve UTXO:
-          & _scriptContextTxInfo . _txInfoOutputs
-            <>~ [ emptyTxOut
-                    & _txOutAddress .~ reserveAddress
-                    & _txOutDatum .~ V2.OutputDatum (wrapToVersioned updatedReserveDatum)
-                    -- carries reserve auth token:
-                    & _txOutValue <>~ reserveAuthToken 1
-                    -- token amount doesn't change:
-                    & _txOutValue <>~ partnerToken 10
-                ]
-      )
-  where
-    updatedReserveDatum =
-      reserveDatum
-        { Types.mutableSettings =
-            Types.MutableReserveSettings
-              { vFunctionTotalAccrued = Test.toAsData $ V2.CurrencySymbol "newVFunctionScriptHash"
-              , incentiveAmount = 2
-              }
-        }
-
-reserveValidatorUpdateFailing25 :: TestTree
-reserveValidatorUpdateFailing25 =
-  expectFail "should fail if continuing output exists without an authentication token (ERROR-RESERVE-25)" $
+reserveValidatorUpdateFailing18 :: TestTree
+reserveValidatorUpdateFailing18 =
+  expectFail "should fail if continuing output exists without an authentication token (ERROR-RESERVE-18)" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -1310,158 +1201,7 @@ reserveValidatorTransferToICSPassing =
 
 reserveValidatorTransferToICSFailing11 :: TestTree
 reserveValidatorTransferToICSFailing11 =
-  expectFail "should fail if v(t) tokens are not minted (ERROR-RESERVE-11)" $
-    runValidator
-      Test.versionOracleConfig
-      Test.dummyBuiltinData
-      Types.TransferToIlliquidCirculationSupply
-      ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Spending reserveUtxo
-          -- ReserveAuthPolicy VersionOracle
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
-          -- IlliquidCirculationSupplyValidator VersionOracle
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ icsSupplyValidatorVersionOracleUtxo]
-          -- [ERROR] v-function tokens are NOT minted
-          -- [INPUT] ICS UTXO:
-          & _scriptContextTxInfo . _txInfoInputs
-            <>~ [ emptyTxInInfo
-                    & _txInInfoOutRef .~ icsUtxo
-                    & _txInInfoResolved
-                      .~ ( emptyTxOut
-                            & _txOutAddress .~ icsAddress
-                            -- the ICS has 5 PC tokens
-                            & _txOutValue <>~ partnerToken 5
-                         )
-                ]
-          -- [OUTPUT] ICS UTXO:
-          & _scriptContextTxInfo . _txInfoOutputs
-            <>~ [ emptyTxOut
-                    & _txOutAddress .~ icsAddress
-                    -- the ICS increases by 4 tokens (5 is released, fee is 1)
-                    & _txOutValue <>~ partnerToken 9
-                ]
-          -- [INPUT] Reserve UTXO:
-          & _scriptContextTxInfo . _txInfoInputs
-            <>~ [ emptyTxInInfo
-                    & _txInInfoOutRef .~ reserveUtxo
-                    & _txInInfoResolved
-                      .~ ( emptyTxOut
-                            & _txOutAddress .~ reserveAddress
-                            & _txOutDatum .~ V2.OutputDatum (wrapToVersioned inputReserveDatum)
-                            -- carries reserve auth token:
-                            & _txOutValue <>~ reserveAuthToken 1
-                            -- reserve has 10 PC tokens
-                            & _txOutValue <>~ partnerToken 10
-                         )
-                ]
-          -- [OUTPUT] Reserve UTXO:
-          & _scriptContextTxInfo . _txInfoOutputs
-            <>~ [ emptyTxOut
-                    & _txOutAddress .~ reserveAddress
-                    & _txOutDatum .~ V2.OutputDatum (wrapToVersioned outputReserveDatum)
-                    -- carries reserve auth token:
-                    & _txOutValue <>~ reserveAuthToken 1
-                    -- the PC tokens in the reserve decrease to 5 as 5 is released
-                    & _txOutValue <>~ partnerToken 5
-                ]
-          -- [OUTPUT] fee UTXO:
-          & _scriptContextTxInfo . _txInfoOutputs
-            <>~ [ emptyTxOut
-                    & _txOutAddress .~ someAddress
-                    -- receives 1 PC token as fee
-                    & _txOutValue <>~ partnerToken 1
-                ]
-      )
-  where
-    inputReserveDatum =
-      reserveDatum
-        { Types.stats = Types.ReserveStats {tokenTotalAmountTransferred = 10}
-        }
-    outputReserveDatum =
-      reserveDatum
-        { Types.stats = Types.ReserveStats {tokenTotalAmountTransferred = 15}
-        }
-
-reserveValidatorTransferToICSFailing12 :: TestTree
-reserveValidatorTransferToICSFailing12 =
-  expectFail "should fail if other tokens than V(t) tokens are minted or burnt (ERROR-RESERVE-12)" $
-    runValidator
-      Test.versionOracleConfig
-      Test.dummyBuiltinData
-      Types.TransferToIlliquidCirculationSupply
-      ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Spending reserveUtxo
-          -- ReserveAuthPolicy VersionOracle
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
-          -- IlliquidCirculationSupplyValidator VersionOracle
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ icsSupplyValidatorVersionOracleUtxo]
-          -- v-function tokens minted:
-          & _scriptContextTxInfo . _txInfoMint <>~ vFunctionToken 15
-          -- [ERROR] other token is minted:
-          & _scriptContextTxInfo . _txInfoMint <>~ someToken 1
-          -- [INPUT] ICS UTXO:
-          & _scriptContextTxInfo . _txInfoInputs
-            <>~ [ emptyTxInInfo
-                    & _txInInfoOutRef .~ icsUtxo
-                    & _txInInfoResolved
-                      .~ ( emptyTxOut
-                            & _txOutAddress .~ icsAddress
-                            -- the ICS has 5 PC tokens
-                            & _txOutValue <>~ partnerToken 5
-                         )
-                ]
-          -- [OUTPUT] ICS UTXO:
-          & _scriptContextTxInfo . _txInfoOutputs
-            <>~ [ emptyTxOut
-                    & _txOutAddress .~ icsAddress
-                    -- the ICS increases by 4 tokens (5 is released, fee is 1)
-                    & _txOutValue <>~ partnerToken 9
-                ]
-          -- [INPUT] Reserve UTXO:
-          & _scriptContextTxInfo . _txInfoInputs
-            <>~ [ emptyTxInInfo
-                    & _txInInfoOutRef .~ reserveUtxo
-                    & _txInInfoResolved
-                      .~ ( emptyTxOut
-                            & _txOutAddress .~ reserveAddress
-                            & _txOutDatum .~ V2.OutputDatum (wrapToVersioned inputReserveDatum)
-                            -- carries reserve auth token:
-                            & _txOutValue <>~ reserveAuthToken 1
-                            -- reserve has 10 PC tokens
-                            & _txOutValue <>~ partnerToken 10
-                         )
-                ]
-          -- [OUTPUT] Reserve UTXO:
-          & _scriptContextTxInfo . _txInfoOutputs
-            <>~ [ emptyTxOut
-                    & _txOutAddress .~ reserveAddress
-                    & _txOutDatum .~ V2.OutputDatum (wrapToVersioned outputReserveDatum)
-                    -- carries reserve auth token:
-                    & _txOutValue <>~ reserveAuthToken 1
-                    -- the PC tokens in the reserve decrease to 5 as 5 is released
-                    & _txOutValue <>~ partnerToken 5
-                ]
-          -- [OUTPUT] fee UTXO:
-          & _scriptContextTxInfo . _txInfoOutputs
-            <>~ [ emptyTxOut
-                    & _txOutAddress .~ someAddress
-                    -- receives 1 PC token as fee
-                    & _txOutValue <>~ partnerToken 1
-                ]
-      )
-  where
-    inputReserveDatum =
-      reserveDatum
-        { Types.stats = Types.ReserveStats {tokenTotalAmountTransferred = 10}
-        }
-    outputReserveDatum =
-      reserveDatum
-        { Types.stats = Types.ReserveStats {tokenTotalAmountTransferred = 15}
-        }
-
-reserveValidatorTransferToICSFailing13 :: TestTree
-reserveValidatorTransferToICSFailing13 =
-  expectFail "should fail if assets of the propagated reserve utxo don't decrease by reserve tokens in desired way (ERROR-RESERVE-13)" $
+  expectFail "should fail if assets of the propagated reserve utxo don't decrease by reserve tokens in desired way (ERROR-RESERVE-11)" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -1534,9 +1274,9 @@ reserveValidatorTransferToICSFailing13 =
         { Types.stats = Types.ReserveStats {tokenTotalAmountTransferred = 15}
         }
 
-reserveValidatorTransferToICSFailing14 :: TestTree
-reserveValidatorTransferToICSFailing14 =
-  expectFail "should fail if datum of the propagated reserve utxo changes not only by stats in desired way (ERROR-RESERVE-14)" $
+reserveValidatorTransferToICSFailing12 :: TestTree
+reserveValidatorTransferToICSFailing12 =
+  expectFail "should fail if datum of the propagated reserve utxo changes not only by stats in desired way (ERROR-RESERVE-12)" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -1615,9 +1355,9 @@ reserveValidatorTransferToICSFailing14 =
               }
         }
 
-reserveValidatorTransferToICSFailing15 :: TestTree
-reserveValidatorTransferToICSFailing15 =
-  expectFail "should fail if incorrect amount of reserve tokens goes into an illiquid circulation supply (ERROR-RESERVE-15)" $
+reserveValidatorTransferToICSFailing13 :: TestTree
+reserveValidatorTransferToICSFailing13 =
+  expectFail "should fail if incorrect amount of reserve tokens goes into an illiquid circulation supply (ERROR-RESERVE-13)" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -1690,9 +1430,9 @@ reserveValidatorTransferToICSFailing15 =
         { Types.stats = Types.ReserveStats {tokenTotalAmountTransferred = 15}
         }
 
-reserveValidatorTransferToICSFailing16 :: TestTree
-reserveValidatorTransferToICSFailing16 =
-  expectFail "should fail if no unique output utxo at the illiquid circulation supply address (ERROR-RESERVE-16)" $
+reserveValidatorTransferToICSFailing14 :: TestTree
+reserveValidatorTransferToICSFailing14 =
+  expectFail "should fail if no unique output utxo at the illiquid circulation supply address (ERROR-RESERVE-14)" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -1826,59 +1566,9 @@ reserveValidatorHandoverPassing =
                 ]
       )
 
-reserveValidatorHandoverFailing17 :: TestTree
-reserveValidatorHandoverFailing17 =
-  expectFail "should fail if an authentication token is not burnt (ERROR-RESERVE-17)" $
-    runValidator
-      Test.versionOracleConfig
-      Test.dummyBuiltinData
-      Types.Handover
-      ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Spending reserveUtxo
-          -- signed by governance:
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
-          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-          -- ReserveAuthPolicy VersionOracle
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
-          -- IlliquidCirculationSupplyValidator VersionOracle
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ icsSupplyValidatorVersionOracleUtxo]
-          -- [ERROR] reserve auth token is NOT burned
-          -- [INPUT] ICS UTXO:
-          & _scriptContextTxInfo . _txInfoInputs
-            <>~ [ emptyTxInInfo
-                    & _txInInfoOutRef .~ icsUtxo
-                    & _txInInfoResolved
-                      .~ ( emptyTxOut
-                            & _txOutAddress .~ icsAddress
-                            & _txOutValue <>~ partnerToken 5
-                         )
-                ]
-          -- [OUTPUT] ICS UTXO:
-          & _scriptContextTxInfo . _txInfoOutputs
-            <>~ [ emptyTxOut
-                    & _txOutAddress .~ icsAddress
-                    & _txOutValue <>~ partnerToken 15
-                ]
-          -- [INPUT] Reserve UTXO:
-          -- Note: There is no Reserve UTXO output
-          & _scriptContextTxInfo . _txInfoInputs
-            <>~ [ emptyTxInInfo
-                    & _txInInfoOutRef .~ reserveUtxo
-                    & _txInInfoResolved
-                      .~ ( emptyTxOut
-                            & _txOutAddress .~ reserveAddress
-                            & _txOutDatum .~ V2.OutputDatum (wrapToVersioned reserveDatum)
-                            -- carries reserve auth token:
-                            & _txOutValue <>~ reserveAuthToken 1
-                            -- tokens currently in reserve:
-                            & _txOutValue <>~ partnerToken 10
-                         )
-                ]
-      )
-
-reserveValidatorHandoverFailing18 :: TestTree
-reserveValidatorHandoverFailing18 =
-  expectFail "should fail if other tokens than auth token and governance token are minted or burnt (ERROR-RESERVE-18)" $
+reserveValidatorHandoverFailing15 :: TestTree
+reserveValidatorHandoverFailing15 =
+  expectFail "should fail if other tokens than auth token and governance token are minted or burnt (ERROR-RESERVE-15)" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -1929,9 +1619,59 @@ reserveValidatorHandoverFailing18 =
                 ]
       )
 
-reserveValidatorHandoverFailing19 :: TestTree
-reserveValidatorHandoverFailing19 =
-  expectFail "should fail if not all reserve tokens are transferred to illiquid circulation supply (ERROR-RESERVE-19)" $
+reserveValidatorHandoverFailing16 :: TestTree
+reserveValidatorHandoverFailing16 =
+  expectFail "should fail if an authentication token is not burnt (ERROR-RESERVE-16)" $
+    runValidator
+      Test.versionOracleConfig
+      Test.dummyBuiltinData
+      Types.Handover
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Spending reserveUtxo
+          -- signed by governance:
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
+          -- ReserveAuthPolicy VersionOracle
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
+          -- IlliquidCirculationSupplyValidator VersionOracle
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ icsSupplyValidatorVersionOracleUtxo]
+          -- [ERROR] reserve auth token is NOT burned
+          -- [INPUT] ICS UTXO:
+          & _scriptContextTxInfo . _txInfoInputs
+            <>~ [ emptyTxInInfo
+                    & _txInInfoOutRef .~ icsUtxo
+                    & _txInInfoResolved
+                      .~ ( emptyTxOut
+                            & _txOutAddress .~ icsAddress
+                            & _txOutValue <>~ partnerToken 5
+                         )
+                ]
+          -- [OUTPUT] ICS UTXO:
+          & _scriptContextTxInfo . _txInfoOutputs
+            <>~ [ emptyTxOut
+                    & _txOutAddress .~ icsAddress
+                    & _txOutValue <>~ partnerToken 15
+                ]
+          -- [INPUT] Reserve UTXO:
+          -- Note: There is no Reserve UTXO output
+          & _scriptContextTxInfo . _txInfoInputs
+            <>~ [ emptyTxInInfo
+                    & _txInInfoOutRef .~ reserveUtxo
+                    & _txInInfoResolved
+                      .~ ( emptyTxOut
+                            & _txOutAddress .~ reserveAddress
+                            & _txOutDatum .~ V2.OutputDatum (wrapToVersioned reserveDatum)
+                            -- carries reserve auth token:
+                            & _txOutValue <>~ reserveAuthToken 1
+                            -- tokens currently in reserve:
+                            & _txOutValue <>~ partnerToken 10
+                         )
+                ]
+      )
+
+reserveValidatorHandoverFailing17 :: TestTree
+reserveValidatorHandoverFailing17 =
+  expectFail "should fail if not all reserve tokens are transferred to illiquid circulation supply (ERROR-RESERVE-17)" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -1987,9 +1727,9 @@ reserveValidatorHandoverFailing19 =
                 ]
       )
 
-reserveValidatorHandoverFailing24 :: TestTree
-reserveValidatorHandoverFailing24 =
-  expectFail "should fail if governance approval is not present (ERROR-RESERVE-24)" $
+reserveValidatorHandoverFailing18 :: TestTree
+reserveValidatorHandoverFailing18 =
+  expectFail "should fail if governance approval is not present (ERROR-RESERVE-18)" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
