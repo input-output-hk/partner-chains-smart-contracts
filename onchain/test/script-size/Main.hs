@@ -4,11 +4,14 @@ import Prelude
 
 import Sizer (scriptFitsInto)
 import Test.Tasty (defaultMain, testGroup)
-import TrustlessSidechain.CommitteeCandidateValidator qualified as CCV
+import TrustlessSidechain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.DParameter qualified as DParameter
+import TrustlessSidechain.Governance.MultiSig qualified as MultiSig
+import TrustlessSidechain.GovernedMap qualified as GovernedMap
 import TrustlessSidechain.IlliquidCirculationSupply qualified as IlliquidCirculationSupply
 import TrustlessSidechain.PermissionedCandidates qualified as PermissionedCandidates
 import TrustlessSidechain.Reserve qualified as Reserve
+import TrustlessSidechain.ScriptCache qualified as ScriptCache
 import TrustlessSidechain.Versioning qualified as Versioning
 
 main :: IO ()
@@ -18,40 +21,64 @@ main =
     $ [ testGroup
           "Core"
           [ scriptFitsInto
-              "mkCommitteeCandidateValidator (serialized)"
-              CCV.serialisableValidator
+              "CommitteeCandidateValidator.serialisableValidator"
+              CommitteeCandidateValidator.serialisableValidator
               177
           , scriptFitsInto
-              "mkDParameterValidatorCode (DParameter) serialized"
+              "DParameter.serialisableValidator"
               DParameter.serialisableValidator
               891
           , scriptFitsInto
-              "mkDParameterPolicyCode (DParameter) serialized"
+              "DParameter.serialisableMintingPolicy"
               DParameter.serialisableMintingPolicy
               1566
           , scriptFitsInto
-              "mkPermissionedCandidatesValidatorCode (PermissionedCandidates) serialized"
+              "PermissionedCandidates.serialisableValidator"
               PermissionedCandidates.serialisableValidator
               955
           , scriptFitsInto
-              "mkVersionOraclePolicyCode (Versioning) serialized"
+              "PermissionedCandidates.serialisableMintingPolicy"
+              PermissionedCandidates.serialisableMintingPolicy
+              1819
+          , scriptFitsInto
+              "Versioning.serialisableVersionOraclePolicy"
               Versioning.serialisableVersionOraclePolicy
               2530
           , scriptFitsInto
-              "mkVersionOracleValidatorCode (Versioning) serialized"
+              "Versioning.serialisableVersionOracleValidator"
               Versioning.serialisableVersionOracleValidator
               1791
           , scriptFitsInto
-              "mkReserveValidator (Reserve) serialized"
+              "Reserve.serialisableReserveValidator"
               Reserve.serialisableReserveValidator
-              5666
+              5509
           , scriptFitsInto
-              "mkReserveAuthPolicy (Reserve) serialized"
+              "Reserve.serialisableReserveAuthPolicy"
               Reserve.serialisableReserveAuthPolicy
               2449
           , scriptFitsInto
-              "mkIlliquidCirculationSupplyValidator (IlliquidCirculationSupply) serialized"
+              "IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyValidator"
               IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyValidator
-              2974
+              2786
+          , scriptFitsInto
+              "IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyAuthorityTokenPolicy"
+              IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyAuthorityTokenPolicy
+              891
+          , scriptFitsInto
+              "ScriptCache.serialisableScriptCache"
+              ScriptCache.serialisableScriptCache
+              1867
+          , scriptFitsInto
+              "MultiSig.serialisableGovernanceMultiSigPolicy"
+              MultiSig.serialisableGovernanceMultiSigPolicy
+              299
+          , scriptFitsInto
+              "GovernedMap.serialisableMintingPolicy"
+              GovernedMap.serialisableMintingPolicy
+              891
+          , scriptFitsInto
+              "GovernedMap.serialisableValidator"
+              GovernedMap.serialisableValidator
+              892
           ]
       ]

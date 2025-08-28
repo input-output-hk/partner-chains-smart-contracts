@@ -51,7 +51,6 @@ import PlutusLedgerApi.V2.Data.Contexts (getContinuingOutputs, ownCurrencySymbol
 import PlutusTx qualified
 import PlutusTx.Bool
 import PlutusTx.Data.List qualified as List
-import PlutusTx.Foldable (sum)
 import PlutusTx.List (length, sortBy)
 import PlutusTx.Prelude hiding (fromInteger)
 import TrustlessSidechain.ScriptId qualified as ScriptId
@@ -88,28 +87,23 @@ vFunctionTotalAccruedTokenName = adaToken
 -- | Error codes description follows:
 --
 --   ERROR-RESERVE-01: Governance approval is not present
---   ERROR-RESERVE-02: Other tokens than governance token are minted or burnt
---   ERROR-RESERVE-03: Datum of the propagated reserve utxo changes
---   ERROR-RESERVE-04: Assets of the propagated reserve utxo don't increase by reserve tokens
---   ERROR-RESERVE-05: No unique input utxo carrying authentication token
---   ERROR-RESERVE-06: No unique output utxo at the reserve address and carrying authentication token
---   ERROR-RESERVE-07: Datum of input reserve utxo malformed
---   ERROR-RESERVE-08: Datum of output reserve utxo malformed
+--   ERROR-RESERVE-02: Datum of the propagated reserve utxo changes
+--   ERROR-RESERVE-03: Assets of the propagated reserve utxo don't increase by reserve tokens
+--   ERROR-RESERVE-04: No unique input utxo carrying authentication token
+--   ERROR-RESERVE-05: No unique output utxo at the reserve address and carrying authentication token
+--   ERROR-RESERVE-06: Datum of input reserve utxo malformed
+--   ERROR-RESERVE-07: Datum of output reserve utxo malformed
+--   ERROR-RESERVE-08: Governance approval is not present
 --   ERROR-RESERVE-09: Datum of the propagated reserve utxo changes not only by immutable settings
 --   ERROR-RESERVE-10: Assets of the propagated reserve utxo change
---   ERROR-RESERVE-11: V(t) tokens are not minted
---   ERROR-RESERVE-12: Other tokens than V(t) tokens are minted or burnt
---   ERROR-RESERVE-13: Assets of the propagated reserve utxo don't decrease by reserve tokens in desired way
---   ERROR-RESERVE-14: Datum of the propagated reserve utxo changes not only by stats in desired way
---   ERROR-RESERVE-15: Incorrect amount of reserve tokens goes into an illiquid circulation supply
---   ERROR-RESERVE-16: No unique output utxo at the illiquid circulation supply address
---   ERROR-RESERVE-17: An authentication token is not burnt
---   ERROR-RESERVE-18: Other tokens than auth token and governance token are minted or burnt
---   ERROR-RESERVE-19: Not all reserve tokens are transferred to illiquid circulation supply
---   ERROR-RESERVE-22: Governance approval is not present
---   ERROR-RESERVE-23: Other tokens than governance token are minted or burnt
---   ERROR-RESERVE-24: Governance approval is not present
---   ERROR-RESERVE-25: Continuing output exists without an authentication token
+--   ERROR-RESERVE-11: Assets of the propagated reserve utxo don't decrease by reserve tokens in desired way
+--   ERROR-RESERVE-12: Datum of the propagated reserve utxo changes not only by stats in desired way
+--   ERROR-RESERVE-13: Incorrect amount of reserve tokens goes into an illiquid circulation supply
+--   ERROR-RESERVE-14: No unique output utxo at the illiquid circulation supply address
+--   ERROR-RESERVE-15: Governance approval is not present
+--   ERROR-RESERVE-16: An authentication token is not burnt
+--   ERROR-RESERVE-17: Not all reserve tokens are transferred to illiquid circulation supply
+--   ERROR-RESERVE-18: Continuing output exists without an authentication token
 mkReserveValidator ::
   VersionOracleConfig ->
   BuiltinData ->
@@ -119,25 +113,20 @@ mkReserveValidator ::
 mkReserveValidator voc _ redeemer ctx = case redeemer of
   DepositToReserve ->
     traceIfFalse "ERROR-RESERVE-01" isApprovedByGovernance
-      && traceIfFalse "ERROR-RESERVE-02" noOtherTokensButGovernanceMinted
-      && traceIfFalse "ERROR-RESERVE-03" datumDoesNotChange
-      && traceIfFalse "ERROR-RESERVE-04" assetsChangeOnlyByPositiveAmountOfReserveTokens
+      && traceIfFalse "ERROR-RESERVE-02" datumDoesNotChange
+      && traceIfFalse "ERROR-RESERVE-03" assetsChangeOnlyByPositiveAmountOfReserveTokens
   UpdateReserve ->
-    traceIfFalse "ERROR-RESERVE-22" isApprovedByGovernance
-      && traceIfFalse "ERROR-RESERVE-23" noOtherTokensButGovernanceMinted
+    traceIfFalse "ERROR-RESERVE-08" isApprovedByGovernance
       && traceIfFalse "ERROR-RESERVE-09" datumChangesOnlyByMutableSettings
       && traceIfFalse "ERROR-RESERVE-10" assetsDoNotChange
   TransferToIlliquidCirculationSupply ->
-    traceIfFalse "ERROR-RESERVE-11" vtTokensAreMinted
-      && traceIfFalse "ERROR-RESERVE-12" noOtherTokensButVtMinted
-      && traceIfFalse "ERROR-RESERVE-13" assetsChangeOnlyByCorrectAmountOfReserveTokens
-      && traceIfFalse "ERROR-RESERVE-14" datumChangesOnlyByStats
-      && traceIfFalse "ERROR-RESERVE-15" correctAmountOfReserveTokensTransferredToICS
+    traceIfFalse "ERROR-RESERVE-11" assetsChangeOnlyByCorrectAmountOfReserveTokens
+      && traceIfFalse "ERROR-RESERVE-12" datumChangesOnlyByStats
+      && traceIfFalse "ERROR-RESERVE-13" correctAmountOfReserveTokensTransferredToICS
   Handover ->
-    traceIfFalse "ERROR-RESERVE-24" isApprovedByGovernance
-      && traceIfFalse "ERROR-RESERVE-17" oneReserveAuthTokenBurnt
-      && traceIfFalse "ERROR-RESERVE-18" noOtherTokensButReserveAuthBurntAndGovernanceMinted
-      && traceIfFalse "ERROR-RESERVE-19" allReserveTokensTransferredToICS
+    traceIfFalse "ERROR-RESERVE-15" isApprovedByGovernance
+      && traceIfFalse "ERROR-RESERVE-16" oneReserveAuthTokenBurnt
+      && traceIfFalse "ERROR-RESERVE-17" allReserveTokensTransferredToICS
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
@@ -152,11 +141,8 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
         (VersionOracle {scriptId = ScriptId.reserveAuthPolicyId})
         ctx
 
-    -- TODO: Consider removing the strict binding !, as illiquidCirculationSupplyAddress is only needed for
-    -- TransferToIlliquidCirculationSupply and Handover.
-    -- Removing it marginally increases script size but makes the transaction smaller for DepositToReserve and UpdateReserve.
     illiquidCirculationSupplyAddress :: Address
-    !illiquidCirculationSupplyAddress =
+    illiquidCirculationSupplyAddress =
       getVersionedValidatorAddress
         voc
         (VersionOracle {scriptId = ScriptId.illiquidCirculationSupplyValidatorId})
@@ -206,33 +192,25 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
 
     inputReserveUtxo :: TxOut
     !inputReserveUtxo =
-      Utils.fromSingletonData (\_ -> traceError "ERROR-RESERVE-05")
+      Utils.fromSingletonData (\_ -> traceError "ERROR-RESERVE-04")
         $ List.filter carriesAuthToken
         $ List.map txInInfoResolved
         $ txInfoInputs info
 
     outputReserveUtxo :: TxOut
     outputReserveUtxo =
-      Utils.fromSingletonData (\_ -> traceError "ERROR-RESERVE-06")
-        $ List.filter (traceIfFalse "ERROR-RESERVE-25" . carriesAuthToken)
+      Utils.fromSingletonData (\_ -> traceError "ERROR-RESERVE-05")
+        $ List.filter (traceIfFalse "ERROR-RESERVE-18" . carriesAuthToken)
         $ getContinuingOutputs ctx
 
     inputDatum :: VersionedGenericDatum ReserveDatum
-    !inputDatum = Utils.fromJust (\_ -> traceError "ERROR-RESERVE-07") (extractReserveUtxoDatumUnsafe inputReserveUtxo)
+    !inputDatum = Utils.fromJust (\_ -> traceError "ERROR-RESERVE-06") (extractReserveUtxoDatumUnsafe inputReserveUtxo)
 
     outputDatum :: VersionedGenericDatum ReserveDatum
-    outputDatum = Utils.fromJust (\_ -> traceError "ERROR-RESERVE-08") (extractReserveUtxoDatumUnsafe outputReserveUtxo)
+    outputDatum = Utils.fromJust (\_ -> traceError "ERROR-RESERVE-07") (extractReserveUtxoDatumUnsafe outputReserveUtxo)
 
     isApprovedByGovernance :: Bool
     isApprovedByGovernance = approvedByGovernance voc ctx
-
-    {-# INLINEABLE kindsOfTokenMinted #-}
-    kindsOfTokenMinted :: Integer -> Bool
-    kindsOfTokenMinted n = (length . flattenValue $ minted) == n
-
-    -- this is valid only if `isApprovedByGovernance` is True
-    noOtherTokensButGovernanceMinted :: Bool
-    !noOtherTokensButGovernanceMinted = kindsOfTokenMinted 1
 
     datumDoesNotChange :: Bool
     datumDoesNotChange =
@@ -254,7 +232,7 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
 
     outputIlliquidCirculationSupplyUtxo :: TxOut
     outputIlliquidCirculationSupplyUtxo =
-      Utils.fromSingletonData (\_ -> traceError "ERROR-RESERVE-16")
+      Utils.fromSingletonData (\_ -> traceError "ERROR-RESERVE-14")
         $ Utils.getOutputsAt info illiquidCirculationSupplyAddress
 
     vFunctionTotalAccrued' :: CurrencySymbol
@@ -268,13 +246,6 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
     numOfVtTokensMinted :: Integer
     numOfVtTokensMinted =
       valueOf minted vFunctionTotalAccrued' vFunctionTotalAccruedTokenName
-
-    vtTokensAreMinted :: Bool
-    vtTokensAreMinted = numOfVtTokensMinted > 0
-
-    -- this is valid only if `vtTokensAreMinted` is True
-    noOtherTokensButVtMinted :: Bool
-    noOtherTokensButVtMinted = kindsOfTokenMinted 1
 
     tokensTransferredUpUntilNow :: Integer
     tokensTransferredUpUntilNow =
@@ -319,7 +290,7 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
 
     reserveTokensOnICSInputUtxos :: Integer
     reserveTokensOnICSInputUtxos =
-      sum $ List.toSOP . List.map reserveTokensOn $ Utils.getInputsAt info illiquidCirculationSupplyAddress
+      List.foldr ((+) . reserveTokensOn) zero $ Utils.getInputsAt info illiquidCirculationSupplyAddress
 
     oneReserveAuthTokenBurnt ::
       Bool
@@ -329,11 +300,6 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
         reserveAuthCurrencySymbol
         reserveAuthTokenTokenName
         == -1
-
-    -- this is valid only if `oneReserveAuthTokenBurnt` is True
-    -- and if `isApprovedByGovernance` is True
-    noOtherTokensButReserveAuthBurntAndGovernanceMinted :: Bool
-    noOtherTokensButReserveAuthBurntAndGovernanceMinted = kindsOfTokenMinted 2
 
 mkReserveValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
 mkReserveValidatorUntyped voc rd rr ctx =
