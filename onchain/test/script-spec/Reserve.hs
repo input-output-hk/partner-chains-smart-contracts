@@ -21,13 +21,11 @@ policyTests =
     "reserve auth policy"
     [ reserveAuthPolicyBurnPassing
     , reserveAuthPolicyPassing
-    , reserveAuthPolicyPassingWithAdaTokenKind
     , reserveAuthPolicyFailing01
     , reserveAuthPolicyFailing02
     , reserveAuthPolicyFailing03
     , reserveAuthPolicyFailing04
     , reserveAuthPolicyFailing05
-    , reserveAuthPolicyFailingWithAdaTokenKind05
     , reserveAuthPolicyFailing06
     , reserveAuthPolicyFailing07
     ]
@@ -69,33 +67,6 @@ reserveAuthPolicyPassing =
                     -- PC tokens:
                     & _txOutValue <>~ partnerToken 5
                     -- spare ADA:
-                    & _txOutValue <>~ Test.mkAdaToken 5
-                ]
-      )
-
-reserveAuthPolicyPassingWithAdaTokenKind :: TestTree
-reserveAuthPolicyPassingWithAdaTokenKind =
-  expectSuccess "should pass (with ADA token kind)" $
-    runMintingPolicy
-      Test.versionOracleConfig
-      Test.dummyBuiltinData
-      ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Minting reserveAuthPolicyCurrencySymbol
-          -- signed by governance:
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
-          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-          -- ReserveAuthPolicy VersionOracle
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveValidatorVersionOracleUtxo]
-          -- reserve auth token minted
-          & _scriptContextTxInfo . _txInfoMint <>~ reserveAuthToken 1
-          -- [OUTPUT] Reserve UTXO:
-          & _scriptContextTxInfo . _txInfoOutputs
-            <>~ [ emptyTxOut
-                    & _txOutAddress .~ reserveAddress
-                    & _txOutDatum .~ V2.OutputDatum (wrapToVersioned initialReserveDatumAdaTokenKind)
-                    -- carries reserve auth token:
-                    & _txOutValue <>~ reserveAuthToken 1
-                    -- PC tokens (ADA):
                     & _txOutValue <>~ Test.mkAdaToken 5
                 ]
       )
@@ -251,35 +222,6 @@ reserveAuthPolicyFailing05 =
                 ]
       )
 
-reserveAuthPolicyFailingWithAdaTokenKind05 :: TestTree
-reserveAuthPolicyFailingWithAdaTokenKind05 =
-  expectFail "should fail if output reserve UTxO carries other tokens (with ADA token kind) (ERROR-RESERVE-AUTH-05)" $
-    runMintingPolicy
-      Test.versionOracleConfig
-      Test.dummyBuiltinData
-      ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Minting reserveAuthPolicyCurrencySymbol
-          -- signed by governance:
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
-          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-          -- ReserveAuthPolicy VersionOracle
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveValidatorVersionOracleUtxo]
-          -- reserve auth token minted
-          & _scriptContextTxInfo . _txInfoMint <>~ reserveAuthToken 1
-          -- [OUTPUT] Reserve UTXO:
-          & _scriptContextTxInfo . _txInfoOutputs
-            <>~ [ emptyTxOut
-                    & _txOutAddress .~ reserveAddress
-                    & _txOutDatum .~ V2.OutputDatum (wrapToVersioned initialReserveDatumAdaTokenKind)
-                    -- carries reserve auth token:
-                    & _txOutValue <>~ reserveAuthToken 1
-                    -- PC tokens (ADA):
-                    & _txOutValue <>~ Test.mkAdaToken 5
-                    -- [ERROR] carries some other token:
-                    & _txOutValue <>~ someToken 5
-                ]
-      )
-
 reserveAuthPolicyFailing06 :: TestTree
 reserveAuthPolicyFailing06 =
   expectFail "should fail if no unique output UTxO at the reserve address (ERROR-RESERVE-AUTH-06)" $
@@ -360,7 +302,6 @@ validatorTests =
     [ testGroup
         "deposit redeemer"
         [ reserveValidatorDepositPassing
-        , reserveValidatorDepositPassingWithAdaTokenKind
         , reserveValidatorDepositFailing01
         , reserveValidatorDepositFailing02
         , reserveValidatorDepositFailing03
@@ -448,57 +389,6 @@ reserveValidatorDepositPassing =
                     & _txOutValue <>~ partnerToken 60
                     -- spare ADA:
                     & _txOutValue <>~ Test.mkAdaToken 6
-                ]
-      )
-
-reserveValidatorDepositPassingWithAdaTokenKind :: TestTree
-reserveValidatorDepositPassingWithAdaTokenKind =
-  expectSuccess "should pass (token kind is ADA)" $
-    runValidator
-      Test.versionOracleConfig
-      Test.dummyBuiltinData
-      Types.DepositToReserve
-      ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Spending reserveUtxo
-          -- signed by governance:
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
-          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-          -- ReserveAuthPolicy VersionOracle
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
-          -- input utxo for depositing into reserve: (needed for balancing, not for validator to pass)
-          & _scriptContextTxInfo . _txInfoInputs
-            <>~ [ emptyTxInInfo
-                    & _txInInfoOutRef .~ someUtxo
-                    & _txInInfoResolved
-                      .~ ( emptyTxOut
-                            & _txOutAddress .~ someAddress
-                            -- tokens to be deposited into reserve:
-                            & _txOutValue <>~ Test.mkAdaToken 50
-                         )
-                ]
-          -- [INPUT] Reserve UTXO:
-          & _scriptContextTxInfo . _txInfoInputs
-            <>~ [ emptyTxInInfo
-                    & _txInInfoOutRef .~ reserveUtxo
-                    & _txInInfoResolved
-                      .~ ( emptyTxOut
-                            & _txOutAddress .~ reserveAddress
-                            & _txOutDatum .~ V2.OutputDatum (wrapToVersioned reserveDatumAdaTokenKind)
-                            -- carries reserve auth token:
-                            & _txOutValue <>~ reserveAuthToken 1
-                            -- tokens currently in reserve:
-                            & _txOutValue <>~ Test.mkAdaToken 10
-                         )
-                ]
-          -- [OUTPUT] Reserve UTXO:
-          & _scriptContextTxInfo . _txInfoOutputs
-            <>~ [ emptyTxOut
-                    & _txOutAddress .~ reserveAddress
-                    & _txOutDatum .~ V2.OutputDatum (wrapToVersioned reserveDatumAdaTokenKind)
-                    -- carries reserve auth token:
-                    & _txOutValue <>~ reserveAuthToken 1
-                    -- carries more partner tokens than the input:
-                    & _txOutValue <>~ Test.mkAdaToken 60
                 ]
       )
 
@@ -1802,33 +1692,9 @@ reserveDatum =
           }
     }
 
-reserveDatumAdaTokenKind :: Types.ReserveDatum
-reserveDatumAdaTokenKind =
-  Types.ReserveDatum
-    { immutableSettings =
-        Types.ImmutableReserveSettings
-          { tokenKind = Test.toAsData adaTokenAssetClass
-          }
-    , mutableSettings =
-        Types.MutableReserveSettings
-          { vFunctionTotalAccrued = Test.toAsData vFunctionCurrSym
-          , incentiveAmount = 1
-          }
-    , stats =
-        Types.ReserveStats
-          { tokenTotalAmountTransferred = 10
-          }
-    }
-
 initialReserveDatum :: Types.ReserveDatum
 initialReserveDatum =
   reserveDatum
-    { Types.stats = Types.ReserveStats {tokenTotalAmountTransferred = 0}
-    }
-
-initialReserveDatumAdaTokenKind :: Types.ReserveDatum
-initialReserveDatumAdaTokenKind =
-  reserveDatumAdaTokenKind
     { Types.stats = Types.ReserveStats {tokenTotalAmountTransferred = 0}
     }
 

@@ -16,7 +16,6 @@ module TrustlessSidechain.Reserve (
   reserveAuthTokenTokenName,
 ) where
 
-import Data.Function (on)
 import GHC.Exts (fromString)
 import GHC.Num (fromInteger)
 import PlutusLedgerApi.Data.V2 (
@@ -37,12 +36,10 @@ import PlutusLedgerApi.Data.V2 (
   pattern TxOut,
  )
 import PlutusLedgerApi.V1.Data.Value (
-  AssetClass (AssetClass, unAssetClass),
+  AssetClass (unAssetClass),
   CurrencySymbol,
-  TokenName,
+  TokenName (..),
   Value,
-  adaSymbol,
-  adaToken,
   assetClassValueOf,
   flattenValue,
   valueOf,
@@ -51,7 +48,7 @@ import PlutusLedgerApi.V2.Data.Contexts (getContinuingOutputs, ownCurrencySymbol
 import PlutusTx qualified
 import PlutusTx.Bool
 import PlutusTx.Data.List qualified as List
-import PlutusTx.List (length, sortBy)
+import PlutusTx.List (length)
 import PlutusTx.Prelude hiding (fromInteger)
 import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types (
@@ -79,10 +76,10 @@ import TrustlessSidechain.Versioning (
  )
 
 reserveAuthTokenTokenName :: TokenName
-reserveAuthTokenTokenName = adaToken
+reserveAuthTokenTokenName = TokenName emptyByteString
 
 vFunctionTotalAccruedTokenName :: TokenName
-vFunctionTotalAccruedTokenName = adaToken
+vFunctionTotalAccruedTokenName = TokenName emptyByteString
 
 -- | Error codes description follows:
 --
@@ -159,36 +156,10 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
     tokenKind' :: AssetClass
     !tokenKind' = toAsData . tokenKind . immutableSettings $ datum inputDatum
 
-    -- This function verifies that assets of a propagated unique reserve utxo
-    -- change only by reserve tokens and returns the difference of reserve tokens
-    -- wrapped in `Just`. If ADA is not a reserve token then this function allows
-    -- arbitrary change of ADA on the propagated reserve utxo.
-    -- That's to account for `minAda` changes.
-    --
-    -- If other assets besides reserve tokens change it returns `Nothing`.
-    changeOfReserveTokens :: Maybe Integer
-    changeOfReserveTokens =
-      let nestedTuples (a, b, c) = (a, (b, c)) -- use lexicographical order
-          ord = compare `on` nestedTuples
-          isAda cs tn = cs == adaSymbol && tn == adaToken
-          isReserveToken cs tn = AssetClass (cs, tn) == tokenKind'
-          diff =
-            sortBy ord
-              $ flattenValue -- sorting to have ADA at the head of the list
-              $ txOutValue outputReserveUtxo
-              - txOutValue inputReserveUtxo
-          adaAsReserveToken = tokenKind' == AssetClass (adaSymbol, adaToken)
-       in case diff of
-            -- in two following cases reserve tokens do not change
-            [] -> Just 0
-            [(cs, tn, _)] | isAda cs tn && not adaAsReserveToken -> Just 0
-            -- in two following cases reserve tokens do change
-            [(cs1, tn1, _), (cs2, tn2, num2)]
-              | isAda cs1 tn1 && isReserveToken cs2 tn2 ->
-                  Just num2
-            [(cs, tn, num)] | isReserveToken cs tn -> Just num
-            -- every other change is invalid
-            _ -> Nothing
+    changeOfReserveTokens :: Integer
+    changeOfReserveTokens = assetClassValueOf diff tokenKind'
+      where
+        diff = txOutValue outputReserveUtxo - txOutValue inputReserveUtxo
 
     inputReserveUtxo :: TxOut
     !inputReserveUtxo =
@@ -217,8 +188,7 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
       txOutDatum inputReserveUtxo == txOutDatum outputReserveUtxo
 
     assetsChangeOnlyByPositiveAmountOfReserveTokens :: Bool
-    assetsChangeOnlyByPositiveAmountOfReserveTokens =
-      maybe False (> 0) changeOfReserveTokens
+    assetsChangeOnlyByPositiveAmountOfReserveTokens = changeOfReserveTokens > 0
 
     datumChangesOnlyByMutableSettings :: Bool
     datumChangesOnlyByMutableSettings =
@@ -227,8 +197,7 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
             == toBuiltinData outputDatum
 
     assetsDoNotChange :: Bool
-    assetsDoNotChange =
-      changeOfReserveTokens == Just 0
+    assetsDoNotChange = changeOfReserveTokens == 0
 
     outputIlliquidCirculationSupplyUtxo :: TxOut
     outputIlliquidCirculationSupplyUtxo =
@@ -253,7 +222,7 @@ mkReserveValidator voc _ redeemer ctx = case redeemer of
 
     assetsChangeOnlyByCorrectAmountOfReserveTokens :: Bool
     assetsChangeOnlyByCorrectAmountOfReserveTokens =
-      changeOfReserveTokens == Just (tokensTransferredUpUntilNow - numOfVtTokensMinted)
+      changeOfReserveTokens == tokensTransferredUpUntilNow - numOfVtTokensMinted
 
     datumChangesOnlyByStats :: Bool
     datumChangesOnlyByStats =
@@ -405,10 +374,7 @@ mkReserveAuthPolicy voc _ ctx =
         && (length . flattenValue $ reserveUtxoValue)
         == expectedNumOfAssets
       where
-        expectedNumOfAssets =
-          if AssetClass (adaSymbol, adaToken) == tokenKind'
-            then 2 -- ADA + reserve auth token
-            else 3 -- ADA + reserve auth token + tokens of `tokenKind`
+        expectedNumOfAssets = 3 -- ADA + reserve auth token + tokens of `tokenKind`
         tokenKind' :: AssetClass
         tokenKind' = toAsData . tokenKind . immutableSettings $ datum reserveUtxoDatum
 

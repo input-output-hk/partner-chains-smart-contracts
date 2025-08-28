@@ -49,11 +49,11 @@ main =
           , scriptFitsInto
               "Reserve.serialisableReserveValidator"
               Reserve.serialisableReserveValidator
-              5509
+              4099
           , scriptFitsInto
               "Reserve.serialisableReserveAuthPolicy"
               Reserve.serialisableReserveAuthPolicy
-              2449
+              2409
           , scriptFitsInto
               "IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyValidator"
               IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyValidator
