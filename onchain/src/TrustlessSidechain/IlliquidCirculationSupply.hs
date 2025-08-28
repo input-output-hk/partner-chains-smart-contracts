@@ -107,13 +107,7 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
 
     relevantTokensOnInput :: Value
     relevantTokensOnInput =
-      Value
-        $ Map.unsafeFromSOPList
-        $ [ (cs, tokens)
-          | (cs, tokens) <- Map.toSOPList $ getValue supplyInputValue
-          , cs /= icsAuthorityTokenCurrencySymbol
-          , cs /= adaSymbol
-          ]
+      Value $ Map.delete icsAuthorityTokenCurrencySymbol $ Map.delete adaSymbol $ getValue supplyInputValue
 
     supplyOutputUtxo :: TxOut
     supplyOutputUtxo =
@@ -122,13 +116,7 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
 
     relevantTokensOnOutput :: Value
     relevantTokensOnOutput =
-      Value
-        $ Map.unsafeFromSOPList
-        $ [ (cs, tokens)
-          | (cs, tokens) <- Map.toSOPList $ getValue (txOutValue supplyOutputUtxo)
-          , cs /= icsAuthorityTokenCurrencySymbol
-          , cs /= adaSymbol
-          ]
+      Value $ Map.delete icsAuthorityTokenCurrencySymbol $ Map.delete adaSymbol $ getValue (txOutValue supplyOutputUtxo)
 
     assetsDoNotDecrease :: Bool
     assetsDoNotDecrease = relevantTokensOnInput `leq` relevantTokensOnOutput
