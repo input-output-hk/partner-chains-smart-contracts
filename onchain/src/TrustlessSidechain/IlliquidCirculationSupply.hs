@@ -13,6 +13,7 @@ import PlutusLedgerApi.Data.V2 (
   SerialisedScript,
   TxInfo,
   TxOut,
+  adaSymbol,
   scriptContextTxInfo,
   serialiseCompiledCode,
   txInfoOutputs,
@@ -21,15 +22,15 @@ import PlutusLedgerApi.Data.V2 (
   pattern TxOut,
  )
 import PlutusLedgerApi.V1.Data.Value (
-  AssetClass,
   CurrencySymbol,
   TokenName (..),
-  Value,
-  assetClassValueOf,
+  Value (..),
+  leq,
   valueOf,
  )
 import PlutusLedgerApi.V2.Data.Contexts (findOwnInput, getContinuingOutputs, txInInfoResolved)
 import PlutusTx qualified
+import PlutusTx.Data.AssocMap qualified as Map
 import PlutusTx.Data.List qualified as List
 import PlutusTx.Prelude
 import TrustlessSidechain.ScriptId qualified as ScriptId
@@ -61,12 +62,11 @@ icsAuthorityTokenName = TokenName emptyByteString
 --   ERROR-ILLIQUID-CIRCULATION-SUPPLY-06: No own input UTxO at the supply address
 mkIlliquidCirculationSupplyValidator ::
   VersionOracleConfig ->
-  AssetClass ->
   BuiltinData ->
   IlliquidCirculationSupplyRedeemer ->
   ScriptContext ->
   Bool
-mkIlliquidCirculationSupplyValidator voc reserveToken _ red ctx = case red of
+mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
   DepositMoreToSupply ->
     traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-01" (containsOnlyOneICSAuthorityToken supplyOutputUtxo)
       && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-02" assetsDoNotDecrease
@@ -105,19 +105,33 @@ mkIlliquidCirculationSupplyValidator voc reserveToken _ red ctx = case red of
     supplyInputValue :: Value
     supplyInputValue = List.mconcat (List.map txOutValue supplyInputUtxos)
 
-    inputReserveTokens :: Integer
-    inputReserveTokens = assetClassValueOf supplyInputValue reserveToken
+    relevantTokensOnInput :: Value
+    relevantTokensOnInput =
+      Value
+        $ Map.unsafeFromSOPList
+        $ [ (cs, tokens)
+          | (cs, tokens) <- Map.toSOPList $ getValue supplyInputValue
+          , cs /= icsAuthorityTokenCurrencySymbol
+          , cs /= adaSymbol
+          ]
 
     supplyOutputUtxo :: TxOut
     supplyOutputUtxo =
       Utils.fromSingletonData (\_ -> traceError "ERROR-ILLIQUID-CIRCULATION-SUPPLY-05")
         $ getContinuingOutputs ctx
 
-    supplyOutputReserveTokens :: Integer
-    supplyOutputReserveTokens = assetClassValueOf (txOutValue supplyOutputUtxo) reserveToken
+    relevantTokensOnOutput :: Value
+    relevantTokensOnOutput =
+      Value
+        $ Map.unsafeFromSOPList
+        $ [ (cs, tokens)
+          | (cs, tokens) <- Map.toSOPList $ getValue (txOutValue supplyOutputUtxo)
+          , cs /= icsAuthorityTokenCurrencySymbol
+          , cs /= adaSymbol
+          ]
 
     assetsDoNotDecrease :: Bool
-    assetsDoNotDecrease = inputReserveTokens <= supplyOutputReserveTokens
+    assetsDoNotDecrease = relevantTokensOnInput `leq` relevantTokensOnOutput
 
     ownAddress :: Address
     ownAddress = case findOwnInput ctx of
@@ -143,12 +157,11 @@ mkIlliquidCirculationSupplyValidator voc reserveToken _ red ctx = case red of
         icsWithdrawalPolicyCurrencySymbol
         icsWithdrawalMintingPolicyTokenName
 
-mkIlliquidCirculationSupplyValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
-mkIlliquidCirculationSupplyValidatorUntyped voc rt rd rr ctx =
+mkIlliquidCirculationSupplyValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
+mkIlliquidCirculationSupplyValidatorUntyped voc rd rr ctx =
   check
     $ mkIlliquidCirculationSupplyValidator
       (PlutusTx.unsafeFromBuiltinData voc)
-      (PlutusTx.unsafeFromBuiltinData rt)
       (PlutusTx.unsafeFromBuiltinData rd)
       (PlutusTx.unsafeFromBuiltinData rr)
       (PlutusTx.unsafeFromBuiltinData ctx)
