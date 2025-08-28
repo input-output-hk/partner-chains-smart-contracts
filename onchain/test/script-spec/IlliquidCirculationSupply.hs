@@ -1,7 +1,6 @@
 module IlliquidCirculationSupply where
 
 import Control.Lens
-import PlutusLedgerApi.V1 qualified as V1
 import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx
 import PlutusTx.Builtins.Internal (BuiltinUnit (..), emptyByteString)
@@ -405,7 +404,6 @@ runValidator :: VersionOracleConfig -> BuiltinData -> IlliquidCirculationSupplyR
 runValidator versionOracleConfig datum redeemer ctx =
   mkIlliquidCirculationSupplyValidatorUntyped
     (toBuiltinData versionOracleConfig)
-    (toBuiltinData (V1.AssetClass (supplyTokenCurrSym, supplyTokenName)))
     (toBuiltinData datum)
     (toBuiltinData redeemer)
     (toBuiltinData ctx)
