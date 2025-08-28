@@ -30,7 +30,6 @@ import TrustlessSidechain.AlwaysPassingScripts qualified as AlwaysPassing
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.DParameter qualified as DParameter
 import TrustlessSidechain.ExampleVFunction as ExampleVFunction
-import TrustlessSidechain.Governance.MultiSig qualified as MultiSig
 import TrustlessSidechain.GovernedMap qualified as GovernedMap
 import TrustlessSidechain.IlliquidCirculationSupply qualified as IlliquidCirculationSupply
 import TrustlessSidechain.PermissionedCandidates qualified as PermissionedCandidates

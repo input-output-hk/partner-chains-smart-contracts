@@ -9,9 +9,6 @@ import PlutusLedgerApi.Data.V2 (toBuiltinData)
 import PlutusLedgerApi.V1.Data.Value qualified as Value
 import Test.Tasty (TestTree, testGroup)
 import Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest)
-import TrustlessSidechain.Governance.MultiSig (
-  MultiSigGovParams (..),
- )
 import TrustlessSidechain.Types (
   IlliquidCirculationSupplyRedeemer (
     DepositMoreToSupply,
@@ -60,7 +57,6 @@ tests =
     , dataEncoderGoldenTest "ReserveRedeemer4" sampleReserveRedeemer4
     , dataEncoderGoldenTest "IlliquidCirculationSupplyRedeemer1" sampleIlliquidCirculationSupplyRedeemer1
     , dataEncoderGoldenTest "IlliquidCirculationSupplyRedeemer2" sampleIlliquidCirculationSupplyRedeemer2
-    , dataEncoderGoldenTest "MultiSigGovParams" sampleMultiSigGovParams
     ]
 
 -- * Sample data - building blocks
@@ -117,14 +113,3 @@ sampleIlliquidCirculationSupplyRedeemer1 = DepositMoreToSupply
 
 sampleIlliquidCirculationSupplyRedeemer2 :: IlliquidCirculationSupplyRedeemer
 sampleIlliquidCirculationSupplyRedeemer2 = WithdrawFromSupply
-
-sampleMultiSigGovParams :: MultiSigGovParams
-sampleMultiSigGovParams =
-  MultiSigGovParams
-    { governanceMembers =
-        [ "0f45aaf1b2959db6e5ff94dbb1f823bf257680c3c723ac2d49f97546"
-        , "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d"
-        , "4f2d6145e1700ad11dc074cad9f4194cc53b0dbab6bd25dfea6c501a"
-        ]
-    , requiredSignatures = 2
-    }

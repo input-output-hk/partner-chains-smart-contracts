@@ -15,18 +15,12 @@ import Test.QuickCheck (
   Arbitrary (arbitrary, shrink),
   Gen,
   arbitrary,
-  chooseInteger,
-  liftArbitrary,
-  liftShrink,
   oneof,
   shrink,
   vectorOf,
  )
 import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (QuickCheckTests (QuickCheckTests), testProperty)
-import TrustlessSidechain.Governance.MultiSig (
-  MultiSigGovParams (MultiSigGovParams),
- )
 import TrustlessSidechain.Types (
   IlliquidCirculationSupplyRedeemer (DepositMoreToSupply, WithdrawFromSupply),
   ImmutableReserveSettings (ImmutableReserveSettings),
@@ -61,8 +55,6 @@ main =
       , testProperty "ReserveRedeemer (unsafe)" . toDataUnsafeLaws' genRR shrinkRR $ show
       , testProperty "IlliquidCirculationSupplyRedeemer (safe)" . toDataSafeLaws' genICSR shrinkICSR $ show
       , testProperty "IlliquidCirculationSupplyRedeemer (unsafe)" . toDataUnsafeLaws' genICSR shrinkICSR $ show
-      , testProperty "MultiSigGovParams (safe)" . toDataSafeLaws' genMSGP shrinkMSGP $ show
-      , testProperty "MultiSigGovParams (unsafe)" . toDataUnsafeLaws' genMSGP shrinkMSGP $ show
       ]
   where
     go :: QuickCheckTests -> QuickCheckTests
@@ -107,14 +99,6 @@ genICSR =
     , pure WithdrawFromSupply
     ]
 
-genMSGP :: Gen MultiSigGovParams
-genMSGP = do
-  pkhs <- liftArbitrary $ do
-    ArbitraryPubKeyHash pkh <- arbitrary
-    pure pkh
-  a <- chooseInteger (1, fromIntegral $ length pkhs)
-  pure $ MultiSigGovParams pkhs a
-
 -- Generates arbitrary bytes
 genVO :: Gen VersionOracle
 genVO = VersionOracle <$> arbitrary
@@ -141,14 +125,6 @@ shrinkRR = const []
 
 shrinkICSR :: IlliquidCirculationSupplyRedeemer -> [IlliquidCirculationSupplyRedeemer]
 shrinkICSR = const []
-
-shrinkMSGP :: MultiSigGovParams -> [MultiSigGovParams]
-shrinkMSGP (MultiSigGovParams pkhs a) = do
-  pkhs' <- flip liftShrink pkhs $ \pkh -> do
-    ArbitraryPubKeyHash pkh' <- shrink (ArbitraryPubKeyHash pkh)
-    pure pkh'
-  a' <- shrink a
-  pure $ MultiSigGovParams pkhs' a'
 
 shrinkVO :: VersionOracle -> [VersionOracle]
 shrinkVO (VersionOracle scriptID) = do

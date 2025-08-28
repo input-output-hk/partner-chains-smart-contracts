@@ -40,7 +40,6 @@ data ScriptId
   | IlliquidCirculationSupplyValidator
   | IlliquidCirculationSupplyWithdrawalPolicy
   | GovernancePolicy
-  | MultiSigPolicy
   | AlwaysPassingValidator
   | AlwaysPassingPolicy
   | AlwaysFailingValidator
@@ -65,7 +64,6 @@ toInteger = \case
   IlliquidCirculationSupplyValidator -> 30
   IlliquidCirculationSupplyWithdrawalPolicy -> 31
   GovernancePolicy -> 32
-  MultiSigPolicy -> 33
   AlwaysPassingValidator -> 34
   AlwaysPassingPolicy -> 35
   AlwaysFailingValidator -> 37
