@@ -1568,24 +1568,20 @@ reserveValidatorHandoverPassing =
 
 reserveValidatorHandoverFailing15 :: TestTree
 reserveValidatorHandoverFailing15 =
-  expectFail "should fail if other tokens than auth token and governance token are minted or burnt (ERROR-RESERVE-15)" $
+  expectFail "should fail if governance approval is not present (ERROR-RESERVE-15)" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
       Types.Handover
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Spending reserveUtxo
-          -- signed by governance:
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
-          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
+          -- [ERROR] not signed by governance
           -- ReserveAuthPolicy VersionOracle
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
           -- IlliquidCirculationSupplyValidator VersionOracle
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ icsSupplyValidatorVersionOracleUtxo]
           -- reserve auth token burned
           & _scriptContextTxInfo . _txInfoMint <>~ reserveAuthToken (-1)
-          -- [ERROR] other token minted:
-          & _scriptContextTxInfo . _txInfoMint <>~ someToken 1
           -- [INPUT] ICS UTXO:
           & _scriptContextTxInfo . _txInfoInputs
             <>~ [ emptyTxInInfo

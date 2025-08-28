@@ -54,11 +54,11 @@ icsAuthorityTokenName = TokenName emptyByteString
 -- | Error codes description follows:
 --
 --   ERROR-ILLIQUID-CIRCULATION-SUPPLY-01: Output UTxO doesn't have exactly one ICS Authority Token
---   ERROR-ILLIQUID-CIRCULATION-SUPPLY-03: Assets of the supply UTxO decreased
---   ERROR-ILLIQUID-CIRCULATION-SUPPLY-04: Reserve tokens leak from the ICS validator
---   ERROR-ILLIQUID-CIRCULATION-SUPPLY-05: Single illiquid circulation supply token is not minted
---   ERROR-ILLIQUID-CIRCULATION-SUPPLY-06: No unique output UTxO at the supply address
---   ERROR-ILLIQUID-CIRCULATION-SUPPLY-07: No own input UTxO at the supply address
+--   ERROR-ILLIQUID-CIRCULATION-SUPPLY-02: Assets of the supply UTxO decreased
+--   ERROR-ILLIQUID-CIRCULATION-SUPPLY-03: ICS auth tokens leak from the ICS validator
+--   ERROR-ILLIQUID-CIRCULATION-SUPPLY-04: Single illiquid circulation supply token is not minted
+--   ERROR-ILLIQUID-CIRCULATION-SUPPLY-05: No unique output UTxO at the supply address
+--   ERROR-ILLIQUID-CIRCULATION-SUPPLY-06: No own input UTxO at the supply address
 mkIlliquidCirculationSupplyValidator ::
   VersionOracleConfig ->
   AssetClass ->
@@ -69,8 +69,8 @@ mkIlliquidCirculationSupplyValidator ::
 mkIlliquidCirculationSupplyValidator voc reserveToken _ red ctx = case red of
   DepositMoreToSupply ->
     traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-01" (containsOnlyOneICSAuthorityToken supplyOutputUtxo)
-      && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-03" assetsDoNotDecrease
-      && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-08" reserveTokensDoNotLeakFromIcs
+      && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-02" assetsDoNotDecrease
+      && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-03" icsAuthTokensDoNotLeakFromIcs
   WithdrawFromSupply ->
     traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-04" oneIcsWithdrawalMintingPolicyTokenIsMinted
   where
@@ -110,7 +110,7 @@ mkIlliquidCirculationSupplyValidator voc reserveToken _ red ctx = case red of
 
     supplyOutputUtxo :: TxOut
     supplyOutputUtxo =
-      Utils.fromSingletonData (\_ -> traceError "ERROR-ILLIQUID-CIRCULATION-SUPPLY-06")
+      Utils.fromSingletonData (\_ -> traceError "ERROR-ILLIQUID-CIRCULATION-SUPPLY-05")
         $ getContinuingOutputs ctx
 
     supplyOutputReserveTokens :: Integer
@@ -120,12 +120,12 @@ mkIlliquidCirculationSupplyValidator voc reserveToken _ red ctx = case red of
     assetsDoNotDecrease = inputReserveTokens <= supplyOutputReserveTokens
 
     ownAddress :: Address
-    ownAddress = txOutAddress $ txInInfoResolved $ case findOwnInput ctx of
-      Just txOut -> txOut
-      Nothing -> traceError "ERROR-ILLIQUID-CIRCULATION-SUPPLY-07"
+    ownAddress = case findOwnInput ctx of
+      Just txOut -> txOutAddress $ txInInfoResolved txOut
+      Nothing -> traceError "ERROR-ILLIQUID-CIRCULATION-SUPPLY-06"
 
-    reserveTokensDoNotLeakFromIcs :: Bool
-    reserveTokensDoNotLeakFromIcs =
+    icsAuthTokensDoNotLeakFromIcs :: Bool
+    icsAuthTokensDoNotLeakFromIcs =
       List.null
         $ List.filter
           ( \txOut ->
