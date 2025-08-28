@@ -6,12 +6,10 @@ import Sizer (scriptFitsInto)
 import Test.Tasty (defaultMain, testGroup)
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.DParameter qualified as DParameter
-import TrustlessSidechain.Governance.MultiSig qualified as MultiSig
 import TrustlessSidechain.GovernedMap qualified as GovernedMap
 import TrustlessSidechain.IlliquidCirculationSupply qualified as IlliquidCirculationSupply
 import TrustlessSidechain.PermissionedCandidates qualified as PermissionedCandidates
 import TrustlessSidechain.Reserve qualified as Reserve
-import TrustlessSidechain.ScriptCache qualified as ScriptCache
 import TrustlessSidechain.Versioning qualified as Versioning
 
 main :: IO ()
@@ -64,14 +62,6 @@ main =
               "IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyAuthorityTokenPolicy"
               IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyAuthorityTokenPolicy
               891
-          , scriptFitsInto
-              "ScriptCache.serialisableScriptCache"
-              ScriptCache.serialisableScriptCache
-              1867
-          , scriptFitsInto
-              "MultiSig.serialisableGovernanceMultiSigPolicy"
-              MultiSig.serialisableGovernanceMultiSigPolicy
-              299
           , scriptFitsInto
               "GovernedMap.serialisableMintingPolicy"
               GovernedMap.serialisableMintingPolicy

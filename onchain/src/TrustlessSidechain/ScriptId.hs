@@ -35,16 +35,13 @@ data ScriptId
   | DParameterValidator
   | PermissionedCandidatesPolicy
   | PermissionedCandidatesValidator
-  | ScriptCache
   | ReserveValidator
   | ReserveAuthPolicy
   | IlliquidCirculationSupplyValidator
   | IlliquidCirculationSupplyWithdrawalPolicy
   | GovernancePolicy
-  | MultiSigPolicy
   | AlwaysPassingValidator
   | AlwaysPassingPolicy
-  | OnlyMintMintingPolicy
   | AlwaysFailingValidator
   | AlwaysFailingPolicy
   | ExampleVFunctionPolicy
@@ -62,16 +59,13 @@ toInteger = \case
   DParameterValidator -> 23
   PermissionedCandidatesPolicy -> 24
   PermissionedCandidatesValidator -> 25
-  ScriptCache -> 26
   ReserveValidator -> 28
   ReserveAuthPolicy -> 29
   IlliquidCirculationSupplyValidator -> 30
   IlliquidCirculationSupplyWithdrawalPolicy -> 31
   GovernancePolicy -> 32
-  MultiSigPolicy -> 33
   AlwaysPassingValidator -> 34
   AlwaysPassingPolicy -> 35
-  OnlyMintMintingPolicy -> 36
   AlwaysFailingValidator -> 37
   AlwaysFailingPolicy -> 38
   ExampleVFunctionPolicy -> 39
