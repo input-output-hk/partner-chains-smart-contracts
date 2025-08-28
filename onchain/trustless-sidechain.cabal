@@ -94,13 +94,10 @@ common common-source-other-modules
     TrustlessSidechain.DParameter
     TrustlessSidechain.EncodeHelpers
     TrustlessSidechain.ExampleVFunction
-    TrustlessSidechain.Governance.MultiSig
     TrustlessSidechain.GovernedMap
     TrustlessSidechain.IlliquidCirculationSupply
-    TrustlessSidechain.OnlyMintMintingPolicy
     TrustlessSidechain.PermissionedCandidates
     TrustlessSidechain.Reserve
-    TrustlessSidechain.ScriptCache
     TrustlessSidechain.ScriptId
     TrustlessSidechain.Types
     TrustlessSidechain.Utils
@@ -117,13 +114,10 @@ library
     TrustlessSidechain.DParameter
     TrustlessSidechain.EncodeHelpers
     TrustlessSidechain.ExampleVFunction
-    TrustlessSidechain.Governance.MultiSig
     TrustlessSidechain.GovernedMap
     TrustlessSidechain.IlliquidCirculationSupply
-    TrustlessSidechain.OnlyMintMintingPolicy
     TrustlessSidechain.PermissionedCandidates
     TrustlessSidechain.Reserve
-    TrustlessSidechain.ScriptCache
     TrustlessSidechain.ScriptId
     TrustlessSidechain.Types
     TrustlessSidechain.Utils
@@ -251,10 +245,8 @@ test-suite script-specs
     DParameter
     GovernedMap
     IlliquidCirculationSupply
-    OnlyMintMintingPolicy
     PermissionedCandidates
     Reserve
-    ScriptCache
     ScriptSpecUtils
     TestValues
     Versioning

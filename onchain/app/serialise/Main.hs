@@ -33,10 +33,8 @@ import TrustlessSidechain.ExampleVFunction as ExampleVFunction
 import TrustlessSidechain.Governance.MultiSig qualified as MultiSig
 import TrustlessSidechain.GovernedMap qualified as GovernedMap
 import TrustlessSidechain.IlliquidCirculationSupply qualified as IlliquidCirculationSupply
-import TrustlessSidechain.OnlyMintMintingPolicy as OnlyMintMintingPolicy
 import TrustlessSidechain.PermissionedCandidates qualified as PermissionedCandidates
 import TrustlessSidechain.Reserve qualified as Reserve
-import TrustlessSidechain.ScriptCache qualified as ScriptCache
 import TrustlessSidechain.ScriptId (ScriptId (..))
 import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Utils (scriptToPlutusScript)
@@ -119,14 +117,9 @@ main =
         ( CommitteeCandidateValidator
         , CommitteeCandidateValidator.serialisableValidator
         )
-      , (ScriptCache, ScriptCache.serialisableScriptCache)
       , -- Versioning System
         (VersionOraclePolicy, Versioning.serialisableVersionOraclePolicy)
       , (VersionOracleValidator, Versioning.serialisableVersionOracleValidator)
-      ,
-        ( MultiSigPolicy
-        , MultiSig.serialisableGovernanceMultiSigPolicy
-        )
       , -- Scripts for DParameter
         (DParameterPolicy, DParameter.serialisableMintingPolicy)
       , (DParameterValidator, DParameter.serialisableValidator)
@@ -146,7 +139,6 @@ main =
         , IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyValidator
         )
       , (IlliquidCirculationSupplyAuthorityTokenPolicy, IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyAuthorityTokenPolicy)
-      , (OnlyMintMintingPolicy, OnlyMintMintingPolicy.serialisableOnlyMintMintingPolicy)
       , (AlwaysPassingValidator, AlwaysPassing.serialisableAlwaysPassingValidator)
       , (AlwaysPassingPolicy, AlwaysPassing.serialisableAlwaysPassingPolicy)
       , (AlwaysFailingValidator, AlwaysFailing.serialisableAlwaysFailingValidator)
