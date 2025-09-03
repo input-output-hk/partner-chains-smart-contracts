@@ -49,7 +49,7 @@ main =
           , scriptFitsInto
               "Reserve.serialisableReserveValidator"
               Reserve.serialisableReserveValidator
-              4099
+              4062
           , scriptFitsInto
               "Reserve.serialisableReserveAuthPolicy"
               Reserve.serialisableReserveAuthPolicy
