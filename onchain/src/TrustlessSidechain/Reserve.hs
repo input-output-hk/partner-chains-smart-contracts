@@ -41,14 +41,12 @@ import PlutusLedgerApi.V1.Data.Value (
   TokenName (..),
   Value,
   assetClassValueOf,
-  flattenValue,
   valueOf,
  )
 import PlutusLedgerApi.V2.Data.Contexts (getContinuingOutputs, ownCurrencySymbol)
 import PlutusTx qualified
 import PlutusTx.Bool
 import PlutusTx.Data.List qualified as List
-import PlutusTx.List (length)
 import PlutusTx.Prelude hiding (fromInteger)
 import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types (
@@ -300,9 +298,8 @@ extractReserveUtxoDatumUnsafe _ = Nothing
 --   ERROR-RESERVE-AUTH-02: Single reserve authentication token is not minted
 --   ERROR-RESERVE-AUTH-03: Output reserve UTxO doesn't carry auth token
 --   ERROR-RESERVE-AUTH-04: Output reserve UTxO doesn't carry correct initial datum
---   ERROR-RESERVE-AUTH-05: Output reserve UTxO carries other tokens
---   ERROR-RESERVE-AUTH-06: No unique output UTxO at the reserve address
---   ERROR-RESERVE-AUTH-07: Output reserve UTxO carries no inline datum or malformed datum
+--   ERROR-RESERVE-AUTH-05: No unique output UTxO at the reserve address
+--   ERROR-RESERVE-AUTH-06: Output reserve UTxO carries no inline datum or malformed datum
 {-# INLINEABLE mkReserveAuthPolicy #-}
 mkReserveAuthPolicy ::
   VersionOracleConfig ->
@@ -317,7 +314,6 @@ mkReserveAuthPolicy voc _ ctx =
         && traceIfFalse "ERROR-RESERVE-AUTH-02" oneReserveAuthTokenIsMinted
         && traceIfFalse "ERROR-RESERVE-AUTH-03" reserveUtxoCarriesReserveAuthToken
         && traceIfFalse "ERROR-RESERVE-AUTH-04" reserveUtxoCarriesCorrectInitialDatum
-        && traceIfFalse "ERROR-RESERVE-AUTH-05" reserveUtxoCarriesOnlyAdaTokenKindAndAuthToken
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
@@ -337,7 +333,7 @@ mkReserveAuthPolicy voc _ ctx =
 
     reserveUtxo :: TxOut
     reserveUtxo =
-      Utils.fromSingletonData (\_ -> traceError "ERROR-RESERVE-AUTH-06")
+      Utils.fromSingletonData (\_ -> traceError "ERROR-RESERVE-AUTH-05")
         $ Utils.getOutputsAt info reserveAddress
 
     reserveUtxoValue :: Value
@@ -347,7 +343,7 @@ mkReserveAuthPolicy voc _ ctx =
     reserveUtxoDatum =
       case extractReserveUtxoDatum reserveUtxo of
         Just d -> d
-        Nothing -> traceError "ERROR-RESERVE-AUTH-07"
+        Nothing -> traceError "ERROR-RESERVE-AUTH-06"
 
     isApprovedByAdminGovernance :: Bool
     isApprovedByAdminGovernance = approvedByGovernance voc ctx
@@ -366,17 +362,6 @@ mkReserveAuthPolicy voc _ ctx =
     reserveUtxoCarriesCorrectInitialDatum :: Bool
     reserveUtxoCarriesCorrectInitialDatum =
       stats (datum reserveUtxoDatum) == ReserveStats 0
-
-    reserveUtxoCarriesOnlyAdaTokenKindAndAuthToken :: Bool
-    reserveUtxoCarriesOnlyAdaTokenKindAndAuthToken =
-      assetClassValueOf reserveUtxoValue tokenKind'
-        /= 0
-        && (length . flattenValue $ reserveUtxoValue)
-        == expectedNumOfAssets
-      where
-        expectedNumOfAssets = 3 -- ADA + reserve auth token + tokens of `tokenKind`
-        tokenKind' :: AssetClass
-        tokenKind' = toAsData . tokenKind . immutableSettings $ datum reserveUtxoDatum
 
 {-# INLINEABLE mkReserveAuthPolicyUntyped #-}
 mkReserveAuthPolicyUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit

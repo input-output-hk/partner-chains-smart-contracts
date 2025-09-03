@@ -53,7 +53,7 @@ main =
           , scriptFitsInto
               "Reserve.serialisableReserveAuthPolicy"
               Reserve.serialisableReserveAuthPolicy
-              2409
+              2123
           , scriptFitsInto
               "IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyValidator"
               IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyValidator

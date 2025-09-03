@@ -27,7 +27,6 @@ policyTests =
     , reserveAuthPolicyFailing04
     , reserveAuthPolicyFailing05
     , reserveAuthPolicyFailing06
-    , reserveAuthPolicyFailing07
     ]
 
 reserveAuthPolicyBurnPassing :: TestTree
@@ -193,38 +192,7 @@ reserveAuthPolicyFailing04 =
 
 reserveAuthPolicyFailing05 :: TestTree
 reserveAuthPolicyFailing05 =
-  expectFail "should fail if output reserve UTxO carries other tokens (ERROR-RESERVE-AUTH-05)" $
-    runMintingPolicy
-      Test.versionOracleConfig
-      Test.dummyBuiltinData
-      ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Minting reserveAuthPolicyCurrencySymbol
-          -- signed by governance:
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
-          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-          -- ReserveAuthPolicy VersionOracle
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveValidatorVersionOracleUtxo]
-          -- reserve auth token minted
-          & _scriptContextTxInfo . _txInfoMint <>~ reserveAuthToken 1
-          -- [OUTPUT] Reserve UTXO:
-          & _scriptContextTxInfo . _txInfoOutputs
-            <>~ [ emptyTxOut
-                    & _txOutAddress .~ reserveAddress
-                    & _txOutDatum .~ V2.OutputDatum (wrapToVersioned initialReserveDatum)
-                    -- carries reserve auth token:
-                    & _txOutValue <>~ reserveAuthToken 1
-                    -- PC tokens:
-                    & _txOutValue <>~ partnerToken 5
-                    -- spare ADA:
-                    & _txOutValue <>~ Test.mkAdaToken 5
-                    -- [ERROR] carries some other token:
-                    & _txOutValue <>~ someToken 5
-                ]
-      )
-
-reserveAuthPolicyFailing06 :: TestTree
-reserveAuthPolicyFailing06 =
-  expectFail "should fail if no unique output UTxO at the reserve address (ERROR-RESERVE-AUTH-06)" $
+  expectFail "should fail if no unique output UTxO at the reserve address (ERROR-RESERVE-AUTH-05)" $
     runMintingPolicy
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -263,9 +231,9 @@ reserveAuthPolicyFailing06 =
                 ]
       )
 
-reserveAuthPolicyFailing07 :: TestTree
-reserveAuthPolicyFailing07 =
-  expectFail "should fail if output reserve UTxO carries no inline datum or malformed datum (ERROR-RESERVE-AUTH-07)" $
+reserveAuthPolicyFailing06 :: TestTree
+reserveAuthPolicyFailing06 =
+  expectFail "should fail if output reserve UTxO carries no inline datum or malformed datum (ERROR-RESERVE-AUTH-06)" $
     runMintingPolicy
       Test.versionOracleConfig
       Test.dummyBuiltinData
