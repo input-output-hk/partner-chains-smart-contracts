@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE RebindableSyntax #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -21,7 +20,6 @@ module TrustlessSidechain.Types (
   VersionOraclePolicyRedeemer (..),
 ) where
 
-import GHC.Num (fromInteger)
 import PlutusLedgerApi.Data.V2 (
   BuiltinData (BuiltinData),
   CurrencySymbol,
@@ -30,7 +28,7 @@ import PlutusLedgerApi.Data.V2 (
 import PlutusLedgerApi.V1.Data.Value (AssetClass)
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
-import PlutusTx.Prelude hiding (fromInteger)
+import PlutusTx.Prelude
 import TrustlessSidechain.EncodeHelpers
 
 import Data.Eq qualified as Haskell
@@ -75,8 +73,8 @@ instance UnsafeFromData PermissionedCandidatesPolicyRedeemer where
   unsafeFromBuiltinData x =
     let integerValue = unsafeFromBuiltinData x
      in case integerValue :: Integer of
-          0 -> PermissionedCandidatesMint
-          1 -> PermissionedCandidatesBurn
+          i | i == 0 -> PermissionedCandidatesMint
+          i | i == 1 -> PermissionedCandidatesBurn
           _ -> error ()
 
 -- | 'PermissionedCandidatesValidatorRedeemer' signals whether transaction is
@@ -106,8 +104,8 @@ instance UnsafeFromData PermissionedCandidatesValidatorRedeemer where
   unsafeFromBuiltinData x =
     let integerValue = unsafeFromBuiltinData x
      in case integerValue :: Integer of
-          0 -> UpdatePermissionedCandidates
-          1 -> RemovePermissionedCandidates
+          i | i == 0 -> UpdatePermissionedCandidates
+          i | i == 1 -> RemovePermissionedCandidates
           _ -> error ()
 
 data ImmutableReserveSettings = ImmutableReserveSettings
@@ -222,8 +220,8 @@ instance UnsafeFromData IlliquidCirculationSupplyRedeemer where
   unsafeFromBuiltinData x =
     let integerValue = unsafeFromBuiltinData x
      in case integerValue :: Integer of
-          0 -> DepositMoreToSupply
-          1 -> WithdrawFromSupply
+          i | i == 0 -> DepositMoreToSupply
+          i | i == 1 -> WithdrawFromSupply
           _ -> error ()
 
 data VersionedGenericDatum a = VersionedGenericDatum
