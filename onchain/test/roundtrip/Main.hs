@@ -30,8 +30,6 @@ import TrustlessSidechain.Types (
   ReserveDatum (ReserveDatum),
   ReserveRedeemer (DepositToReserve, Handover, TransferToIlliquidCirculationSupply, UpdateReserve),
   ReserveStats (ReserveStats),
- )
-import TrustlessSidechain.Versioning (
   VersionOracle (VersionOracle),
   VersionOracleConfig (VersionOracleConfig),
  )

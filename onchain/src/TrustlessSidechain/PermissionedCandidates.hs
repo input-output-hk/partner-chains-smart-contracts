@@ -37,8 +37,9 @@ import TrustlessSidechain.Types (
     RemovePermissionedCandidates,
     UpdatePermissionedCandidates
   ),
+  VersionOracleConfig,
  )
-import TrustlessSidechain.Versioning (VersionOracleConfig, approvedByGovernance)
+import TrustlessSidechain.Versioning (approvedByGovernance)
 
 -- OnChain error descriptions:
 --

@@ -60,14 +60,14 @@ import TrustlessSidechain.Types (
     UpdateReserve
   ),
   ReserveStats (ReserveStats, tokenTotalAmountTransferred),
+  VersionOracle (VersionOracle, scriptId),
+  VersionOracleConfig,
   VersionedGenericDatum,
   datum,
  )
 import TrustlessSidechain.Utils (ifThenElse)
 import TrustlessSidechain.Utils qualified as Utils
 import TrustlessSidechain.Versioning (
-  VersionOracle (VersionOracle, scriptId),
-  VersionOracleConfig,
   approvedByGovernance,
   getVersionedCurrencySymbol,
   getVersionedValidatorAddress,
