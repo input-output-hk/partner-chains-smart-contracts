@@ -9,7 +9,7 @@ import Test.Tasty
 import TestValues qualified as Test
 import TrustlessSidechain.GovernedMap
 import TrustlessSidechain.ScriptId (governedMapPolicyId, governedMapValidatorId)
-import TrustlessSidechain.Versioning (VersionOracleConfig)
+import TrustlessSidechain.Types qualified as Types
 
 validatorTests :: TestTree
 validatorTests =
@@ -99,7 +99,7 @@ governedMapTokenUtxo =
 someTxOutRef :: V2.TxOutRef
 someTxOutRef = V2.TxOutRef "abcd0123" 0
 
-runMintingPolicy :: V2.TxOutRef -> VersionOracleConfig -> BuiltinData -> V2.ScriptContext -> BuiltinUnit
+runMintingPolicy :: V2.TxOutRef -> Types.VersionOracleConfig -> BuiltinData -> V2.ScriptContext -> BuiltinUnit
 runMintingPolicy genesisUtxo vc redeemer ctx =
   mkMintingPolicyUntyped
     (toBuiltinData governedMapPolicyId)
@@ -108,7 +108,7 @@ runMintingPolicy genesisUtxo vc redeemer ctx =
     (toBuiltinData redeemer)
     (toBuiltinData ctx)
 
-runValidator :: V2.TxOutRef -> VersionOracleConfig -> BuiltinData -> BuiltinData -> V2.ScriptContext -> BuiltinUnit
+runValidator :: V2.TxOutRef -> Types.VersionOracleConfig -> BuiltinData -> BuiltinData -> V2.ScriptContext -> BuiltinUnit
 runValidator genesisUtxo vc datum redeemer ctx =
   mkValidatorUntyped
     (toBuiltinData governedMapValidatorId)

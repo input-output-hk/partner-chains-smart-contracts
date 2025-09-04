@@ -19,11 +19,6 @@ module TrustlessSidechain.Versioning (
   getVersionedValidatorAddress,
   getVersionedCurrencySymbol,
   approvedByGovernance,
-  -- TODO remove these re-exports
-  VersionOracle (..),
-  VersionOracleDatum (..),
-  VersionOracleConfig (..),
-  VersionOraclePolicyRedeemer,
 ) where
 
 import PlutusLedgerApi.Data.V2 (

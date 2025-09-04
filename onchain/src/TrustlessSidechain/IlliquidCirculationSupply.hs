@@ -36,12 +36,12 @@ import PlutusTx.Prelude
 import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types (
   IlliquidCirculationSupplyRedeemer (..),
+  VersionOracle (VersionOracle, scriptId),
+  VersionOracleConfig,
  )
 import TrustlessSidechain.Utils (oneTokenMinted)
 import TrustlessSidechain.Utils qualified as Utils
 import TrustlessSidechain.Versioning (
-  VersionOracle (VersionOracle, scriptId),
-  VersionOracleConfig,
   approvedByGovernance,
   getVersionedCurrencySymbol,
  )

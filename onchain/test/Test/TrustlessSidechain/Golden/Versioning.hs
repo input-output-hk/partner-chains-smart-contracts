@@ -6,7 +6,7 @@ import Data.ByteString.Char8 qualified as BC
 import PlutusLedgerApi.V1.Data.Value (currencySymbol)
 import Test.Tasty (TestTree, testGroup)
 import Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest)
-import TrustlessSidechain.Versioning (
+import TrustlessSidechain.Types (
   VersionOracle (..),
   VersionOracleConfig (..),
  )

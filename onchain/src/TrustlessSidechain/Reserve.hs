@@ -1,4 +1,3 @@
-{-# LANGUAGE RebindableSyntax #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -16,8 +15,6 @@ module TrustlessSidechain.Reserve (
   reserveAuthTokenTokenName,
 ) where
 
-import GHC.Exts (fromString)
-import GHC.Num (fromInteger)
 import PlutusLedgerApi.Data.V2 (
   Address,
   Datum (getDatum),
@@ -60,14 +57,13 @@ import TrustlessSidechain.Types (
     UpdateReserve
   ),
   ReserveStats (ReserveStats, tokenTotalAmountTransferred),
+  VersionOracle (VersionOracle, scriptId),
+  VersionOracleConfig,
   VersionedGenericDatum,
   datum,
  )
-import TrustlessSidechain.Utils (ifThenElse)
 import TrustlessSidechain.Utils qualified as Utils
 import TrustlessSidechain.Versioning (
-  VersionOracle (VersionOracle, scriptId),
-  VersionOracleConfig,
   approvedByGovernance,
   getVersionedCurrencySymbol,
   getVersionedValidatorAddress,
