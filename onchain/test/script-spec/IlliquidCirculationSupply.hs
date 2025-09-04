@@ -35,7 +35,7 @@ illiquidCirculationSupplyAuthorityTokenPolicyPassing =
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
           -- minted tokens are all sent to dParameterValidatorAddress:
-          & _scriptContextTxInfo . _txInfoMint <>~ icsAuthorityToken 2
+          & _scriptContextTxInfo . _txInfoMint <>~ icsAuthorityToken 1
       )
 
 illiquidCirculationSupplyAuthorityTokenPolicyFailing01 :: TestTree
@@ -71,6 +71,8 @@ validatorTests =
         "withdraw redeemer"
         [ illiquidCirculationSupplyValidatorWithdrawPassing
         , illiquidCirculationSupplyValidatorWithdrawFailing04
+        , illiquidCirculationSupplyValidatorWithdrawFailing06
+        , illiquidCirculationSupplyValidatorWithdrawFailing07
         ]
     ]
 
@@ -221,9 +223,6 @@ illiquidCirculationSupplyValidatorDepositFailing03 =
                     & _txOutValue <>~ icsAuthorityToken 1
                 ]
       )
-  where
-    someAddress :: V2.Address
-    someAddress = V2.Address (V2.PubKeyCredential "05550555055505550555055505550555055505550555055505550555") Nothing
 
 illiquidCirculationSupplyValidatorDepositFailing05 :: TestTree
 illiquidCirculationSupplyValidatorDepositFailing05 =
@@ -270,8 +269,27 @@ illiquidCirculationSupplyValidatorWithdrawPassing =
       Test.dummyBuiltinData
       WithdrawFromSupply
       ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Minting icsWithdrawalTokenCurrSym
-          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ icsTokenUtxo]
+          & _scriptContextPurpose .~ V2.Spending supplyUtxo
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ icsTokenUtxo]
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ icsAuthorityTokenUtxo]
+          & _scriptContextTxInfo . _txInfoInputs
+            <>~ [ emptyTxInInfo
+                    & _txInInfoOutRef .~ supplyUtxo
+                    & _txInInfoResolved
+                      .~ ( emptyTxOut
+                            & _txOutAddress .~ supplyAddress
+                            & _txOutValue <>~ supplyToken 3
+                            & _txOutValue <>~ icsAuthorityToken 1
+                         )
+                ]
+          & _scriptContextTxInfo . _txInfoOutputs
+            <>~ [ emptyTxOut
+                    & _txOutAddress .~ supplyAddress
+                    & _txOutValue <>~ icsAuthorityToken 1
+                , emptyTxOut
+                    & _txOutAddress .~ someAddress
+                    & _txOutValue <>~ supplyToken 3
+                ]
           & _scriptContextTxInfo . _txInfoMint <>~ icsWithdrawalToken 1
       )
 
@@ -283,10 +301,94 @@ illiquidCirculationSupplyValidatorWithdrawFailing04 =
       Test.dummyBuiltinData
       WithdrawFromSupply
       ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Minting icsWithdrawalTokenCurrSym
-          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ icsTokenUtxo]
-          -- withdrawal token minted != 0
-          & _scriptContextTxInfo . _txInfoMint <>~ icsWithdrawalToken 2
+          & _scriptContextPurpose .~ V2.Spending supplyUtxo
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ icsTokenUtxo]
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ icsAuthorityTokenUtxo]
+          & _scriptContextTxInfo . _txInfoInputs
+            <>~ [ emptyTxInInfo
+                    & _txInInfoOutRef .~ supplyUtxo
+                    & _txInInfoResolved
+                      .~ ( emptyTxOut
+                            & _txOutAddress .~ supplyAddress
+                            & _txOutValue <>~ supplyToken 3
+                            & _txOutValue <>~ icsAuthorityToken 1
+                         )
+                ]
+          & _scriptContextTxInfo . _txInfoOutputs
+            <>~ [ emptyTxOut
+                    & _txOutAddress .~ supplyAddress
+                    & _txOutValue <>~ icsAuthorityToken 1
+                , emptyTxOut
+                    & _txOutAddress .~ someAddress
+                    & _txOutValue <>~ supplyToken 3
+                ]
+      )
+
+illiquidCirculationSupplyValidatorWithdrawFailing06 :: TestTree
+illiquidCirculationSupplyValidatorWithdrawFailing06 =
+  expectFail "should fail if some ICS output does not have exactly one ICS Auth token (ERROR-ILLIQUID-CIRCULATION-SUPPLY-06)" $
+    runValidator
+      Test.versionOracleConfig
+      Test.dummyBuiltinData
+      WithdrawFromSupply
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Spending supplyUtxo
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ icsTokenUtxo]
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ icsAuthorityTokenUtxo]
+          & _scriptContextTxInfo . _txInfoInputs
+            <>~ [ emptyTxInInfo
+                    & _txInInfoOutRef .~ supplyUtxo
+                    & _txInInfoResolved
+                      .~ ( emptyTxOut
+                            & _txOutAddress .~ supplyAddress
+                            & _txOutValue <>~ supplyToken 3
+                            & _txOutValue <>~ icsAuthorityToken 1
+                         )
+                ]
+          & _scriptContextTxInfo . _txInfoOutputs
+            <>~ [ emptyTxOut
+                    & _txOutAddress .~ supplyAddress
+                    & _txOutValue <>~ icsAuthorityToken 1
+                , emptyTxOut
+                    & _txOutAddress .~ someAddress
+                    & _txOutValue <>~ supplyToken 2
+                , emptyTxOut
+                    & _txOutAddress .~ supplyAddress
+                    & _txOutValue <>~ supplyToken 1
+                ]
+          & _scriptContextTxInfo . _txInfoMint <>~ icsWithdrawalToken 1
+      )
+
+illiquidCirculationSupplyValidatorWithdrawFailing07 :: TestTree
+illiquidCirculationSupplyValidatorWithdrawFailing07 =
+  expectFail "should fail if ICS auth tokens leak from the ICS validator (ERROR-ILLIQUID-CIRCULATION-SUPPLY-07)" $
+    runValidator
+      Test.versionOracleConfig
+      Test.dummyBuiltinData
+      WithdrawFromSupply
+      ( emptyScriptContext
+          & _scriptContextPurpose .~ V2.Spending supplyUtxo
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ icsTokenUtxo]
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ icsAuthorityTokenUtxo]
+          & _scriptContextTxInfo . _txInfoInputs
+            <>~ [ emptyTxInInfo
+                    & _txInInfoOutRef .~ supplyUtxo
+                    & _txInInfoResolved
+                      .~ ( emptyTxOut
+                            & _txOutAddress .~ supplyAddress
+                            & _txOutValue <>~ supplyToken 3
+                            & _txOutValue <>~ icsAuthorityToken 1
+                         )
+                ]
+          & _scriptContextTxInfo . _txInfoOutputs
+            <>~ [ emptyTxOut
+                    & _txOutAddress .~ someAddress
+                    & _txOutValue <>~ icsAuthorityToken 1
+                , emptyTxOut
+                    & _txOutAddress .~ someAddress
+                    & _txOutValue <>~ supplyToken 3
+                ]
+          & _scriptContextTxInfo . _txInfoMint <>~ icsWithdrawalToken 1
       )
 
 -- values
@@ -299,6 +401,9 @@ supplyUtxo = V2.TxOutRef "01234abc" 0
 
 otherUtxo :: V2.TxOutRef
 otherUtxo = V2.TxOutRef "56789abc" 1
+
+someAddress :: V2.Address
+someAddress = V2.Address (V2.PubKeyCredential "05550555055505550555055505550555055505550555055505550555") Nothing
 
 supplyAddress :: V2.Address
 supplyAddress = V2.Address (V2.PubKeyCredential "06660666066606660666066606660666066606660666066606660666") Nothing

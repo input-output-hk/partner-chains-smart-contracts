@@ -61,6 +61,8 @@ icsAuthorityTokenName = TokenName emptyByteString
 --   ERROR-ILLIQUID-CIRCULATION-SUPPLY-03: ICS auth tokens leak from the ICS validator
 --   ERROR-ILLIQUID-CIRCULATION-SUPPLY-04: Single illiquid circulation supply token is not minted
 --   ERROR-ILLIQUID-CIRCULATION-SUPPLY-05: No unique output UTxO at the supply address
+--   ERROR-ILLIQUID-CIRCULATION-SUPPLY-06: Some output UTxO at the validator address that doesn't have exactly one ICS Authority Token
+--   ERROR-ILLIQUID-CIRCULATION-SUPPLY-07: ICS auth tokens leak from the ICS validator
 mkIlliquidCirculationSupplyValidator ::
   VersionOracleConfig ->
   BuiltinData ->
@@ -74,6 +76,8 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
       && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-03" icsAuthTokensDoNotLeakFromIcs
   WithdrawFromSupply ->
     traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-04" oneIcsWithdrawalMintingPolicyTokenIsMinted
+      && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-06" eachIcsOutputHasExactlyOneIcsAuthToken
+      && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-07" icsAuthTokensDoNotLeakFromIcs
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
@@ -140,6 +144,10 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
         info
         icsWithdrawalPolicyCurrencySymbol
         icsWithdrawalMintingPolicyTokenName
+
+    eachIcsOutputHasExactlyOneIcsAuthToken :: Bool
+    eachIcsOutputHasExactlyOneIcsAuthToken =
+      List.all containsOnlyOneICSAuthorityToken $ getContinuingOutputs ctx
 
 mkIlliquidCirculationSupplyValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
 mkIlliquidCirculationSupplyValidatorUntyped voc rd rr ctx =
