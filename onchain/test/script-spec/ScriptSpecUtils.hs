@@ -104,7 +104,7 @@ expectFail testName expectedTrace code = testCase testName do
       assertBool
         ("Didn't fail with expected trace. expected: " <> Text.unpack expectedTrace <> " actual: " <> show logs)
         $ expectedTrace `elem` logs
-    (Right _actual, _counting, _logs) -> assertFailure "Expected failure but script passed!"
+    (Right _actual, _counting, _logs) -> assertFailure $ "Expected failure but script passed! expected: " <> Text.unpack expectedTrace
 
 -- lens
 
