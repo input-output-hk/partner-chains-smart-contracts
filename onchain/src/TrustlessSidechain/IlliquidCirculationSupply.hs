@@ -130,14 +130,13 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
 
     icsAuthTokensDoNotLeakFromIcs :: Bool
     icsAuthTokensDoNotLeakFromIcs =
-      List.null
-        $ List.filter
-          ( \txOut ->
-              txOutAddress txOut
-                /= ownAddress
-                && valueOf (txOutValue txOut) icsAuthorityTokenCurrencySymbol icsAuthorityTokenName
-                > 0
-          )
+      List.all
+        ( \txOut ->
+            txOutAddress txOut
+              == ownAddress
+              || valueOf (txOutValue txOut) icsAuthorityTokenCurrencySymbol icsAuthorityTokenName
+              == 0
+        )
         $ txInfoOutputs info
 
     oneIcsWithdrawalMintingPolicyTokenIsMinted :: Bool
