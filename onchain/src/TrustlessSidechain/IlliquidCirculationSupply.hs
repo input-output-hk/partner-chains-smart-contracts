@@ -30,7 +30,7 @@ import PlutusLedgerApi.V1.Data.Value (
   leq,
   valueOf,
  )
-import PlutusLedgerApi.V2.Data.Contexts (getContinuingOutputs)
+import PlutusLedgerApi.V2.Data.Contexts (findOwnInput, getContinuingOutputs, txInInfoResolved)
 import PlutusTx qualified
 import PlutusTx.Data.AssocMap qualified as Map
 import PlutusTx.Data.List qualified as List
@@ -63,6 +63,7 @@ icsAuthorityTokenName = TokenName emptyByteString
 --   ERROR-ILLIQUID-CIRCULATION-SUPPLY-05: No unique output UTxO at the supply address
 --   ERROR-ILLIQUID-CIRCULATION-SUPPLY-06: Some output UTxO at the validator address that doesn't have exactly one ICS Authority Token
 --   ERROR-ILLIQUID-CIRCULATION-SUPPLY-07: ICS auth tokens leak from the ICS validator
+--   ERROR-ILLIQUID-CIRCULATION-SUPPLY-08: No own input UTxO at the supply address
 mkIlliquidCirculationSupplyValidator ::
   VersionOracleConfig ->
   BuiltinData ->
@@ -101,11 +102,8 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
       let valueOfIcsAuthorityToken = valueOf value icsAuthorityTokenCurrencySymbol icsAuthorityTokenName
        in valueOfIcsAuthorityToken == 1
 
-    supplyAddress :: Address
-    supplyAddress = txOutAddress supplyOutputUtxo
-
     supplyInputUtxos :: List.List TxOut
-    supplyInputUtxos = Utils.getInputsAt info supplyAddress
+    supplyInputUtxos = Utils.getInputsAt info ownAddress
 
     supplyInputValue :: Value
     supplyInputValue = List.mconcat (List.map txOutValue supplyInputUtxos)
@@ -116,8 +114,7 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
 
     supplyOutputUtxo :: TxOut
     supplyOutputUtxo =
-      Utils.fromSingletonData (\_ -> traceError "ERROR-ILLIQUID-CIRCULATION-SUPPLY-05")
-        $ getContinuingOutputs ctx
+      Utils.fromSingletonData (\_ -> traceError "ERROR-ILLIQUID-CIRCULATION-SUPPLY-05") continuingOutputs
 
     relevantTokensOnOutput :: Value
     relevantTokensOnOutput =
@@ -126,13 +123,18 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
     assetsDoNotDecrease :: Bool
     assetsDoNotDecrease = relevantTokensOnInput `leq` relevantTokensOnOutput
 
+    ownAddress :: Address
+    ownAddress = case findOwnInput ctx of
+      Just txOut -> txOutAddress $ txInInfoResolved txOut
+      Nothing -> traceError "ERROR-ILLIQUID-CIRCULATION-SUPPLY-08"
+
     icsAuthTokensDoNotLeakFromIcs :: Bool
     icsAuthTokensDoNotLeakFromIcs =
       List.null
         $ List.filter
           ( \txOut ->
               txOutAddress txOut
-                /= supplyAddress
+                /= ownAddress
                 && valueOf (txOutValue txOut) icsAuthorityTokenCurrencySymbol icsAuthorityTokenName
                 > 0
           )
@@ -147,7 +149,10 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
 
     eachIcsOutputHasExactlyOneIcsAuthToken :: Bool
     eachIcsOutputHasExactlyOneIcsAuthToken =
-      List.all containsOnlyOneICSAuthorityToken $ getContinuingOutputs ctx
+      List.all containsOnlyOneICSAuthorityToken continuingOutputs
+
+    continuingOutputs :: List.List TxOut
+    !continuingOutputs = getContinuingOutputs ctx
 
 mkIlliquidCirculationSupplyValidatorUntyped :: BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
 mkIlliquidCirculationSupplyValidatorUntyped voc rd rr ctx =

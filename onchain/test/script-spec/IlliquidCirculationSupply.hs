@@ -326,7 +326,7 @@ illiquidCirculationSupplyValidatorWithdrawFailing04 =
 
 illiquidCirculationSupplyValidatorWithdrawFailing06 :: TestTree
 illiquidCirculationSupplyValidatorWithdrawFailing06 =
-  expectFail "should fail if some ICS output does not have exactly one ICS Auth token (ERROR-ILLIQUID-CIRCULATION-SUPPLY-06)" $
+  expectFail "should fail if some ICS output does not have exactly one ICS Auth token" "ERROR-ILLIQUID-CIRCULATION-SUPPLY-06" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -361,7 +361,7 @@ illiquidCirculationSupplyValidatorWithdrawFailing06 =
 
 illiquidCirculationSupplyValidatorWithdrawFailing07 :: TestTree
 illiquidCirculationSupplyValidatorWithdrawFailing07 =
-  expectFail "should fail if ICS auth tokens leak from the ICS validator (ERROR-ILLIQUID-CIRCULATION-SUPPLY-07)" $
+  expectFail "should fail if ICS auth tokens leak from the ICS validator" "ERROR-ILLIQUID-CIRCULATION-SUPPLY-07" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -379,9 +379,23 @@ illiquidCirculationSupplyValidatorWithdrawFailing07 =
                             & _txOutValue <>~ supplyToken 3
                             & _txOutValue <>~ icsAuthorityToken 1
                          )
+                , emptyTxInInfo
+                    & _txInInfoOutRef .~ supplyUtxo2
+                    & _txInInfoResolved
+                      .~ ( emptyTxOut
+                            & _txOutAddress .~ supplyAddress
+                            & _txOutValue <>~ supplyToken 5
+                            & _txOutValue <>~ icsAuthorityToken 1
+                         )
                 ]
           & _scriptContextTxInfo . _txInfoOutputs
             <>~ [ emptyTxOut
+                    & _txOutAddress .~ supplyAddress
+                    & _txOutValue <>~ icsAuthorityToken 1
+                , emptyTxOut
+                    & _txOutAddress .~ supplyAddress
+                    & _txOutValue <>~ icsAuthorityToken 1
+                , emptyTxOut
                     & _txOutAddress .~ someAddress
                     & _txOutValue <>~ icsAuthorityToken 1
                 , emptyTxOut
@@ -398,6 +412,9 @@ dummyDatum = V2.Datum $ toBuiltinData (0 :: Integer)
 
 supplyUtxo :: V2.TxOutRef
 supplyUtxo = V2.TxOutRef "01234abc" 0
+
+supplyUtxo2 :: V2.TxOutRef
+supplyUtxo2 = V2.TxOutRef "01234ab2" 0
 
 otherUtxo :: V2.TxOutRef
 otherUtxo = V2.TxOutRef "56789abc" 1
