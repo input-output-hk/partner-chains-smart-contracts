@@ -57,7 +57,7 @@ main =
           , scriptFitsInto
               "IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyValidator"
               IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyValidator
-              2891
+              2877
           , scriptFitsInto
               "IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyAuthorityTokenPolicy"
               IlliquidCirculationSupply.serialisableIlliquidCirculationSupplyAuthorityTokenPolicy
