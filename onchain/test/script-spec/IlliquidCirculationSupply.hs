@@ -66,7 +66,6 @@ validatorTests =
         , illiquidCirculationSupplyValidatorDepositFailing02
         , illiquidCirculationSupplyValidatorDepositFailing03
         , illiquidCirculationSupplyValidatorDepositFailing05
-        , illiquidCirculationSupplyValidatorDepositFailing06
         ]
     , testGroup
         "withdraw redeemer"
@@ -257,35 +256,6 @@ illiquidCirculationSupplyValidatorDepositFailing05 =
             <>~ [ emptyTxOut
                     & _txOutAddress .~ supplyAddress
                     & _txOutValue <>~ supplyToken 4
-                    & _txOutValue <>~ icsAuthorityToken 1
-                ]
-      )
-
-illiquidCirculationSupplyValidatorDepositFailing06 :: TestTree
-illiquidCirculationSupplyValidatorDepositFailing06 =
-  expectFail "should fail if no own input UTxO at the supply address (ERROR-ILLIQUID-CIRCULATION-SUPPLY-06)" $
-    runValidator
-      Test.versionOracleConfig
-      Test.dummyBuiltinData
-      DepositMoreToSupply
-      ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Spending supplyUtxo
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ icsAuthorityTokenUtxo]
-          & _scriptContextTxInfo . _txInfoInputs
-            <>~ [ emptyTxInInfo
-                    -- [ERROR] no own input:
-                    & _txInInfoOutRef .~ otherUtxo
-                    & _txInInfoResolved
-                      .~ ( emptyTxOut
-                            & _txOutAddress .~ supplyAddress
-                            & _txOutValue <>~ supplyToken 3
-                            & _txOutValue <>~ icsAuthorityToken 1
-                         )
-                ]
-          & _scriptContextTxInfo . _txInfoOutputs
-            <>~ [ emptyTxOut
-                    & _txOutAddress .~ supplyAddress
-                    & _txOutValue <>~ supplyToken 5
                     & _txOutValue <>~ icsAuthorityToken 1
                 ]
       )

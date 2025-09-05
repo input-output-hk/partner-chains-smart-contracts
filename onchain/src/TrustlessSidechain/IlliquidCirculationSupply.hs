@@ -28,7 +28,7 @@ import PlutusLedgerApi.V1.Data.Value (
   leq,
   valueOf,
  )
-import PlutusLedgerApi.V2.Data.Contexts (findOwnInput, getContinuingOutputs, txInInfoResolved)
+import PlutusLedgerApi.V2.Data.Contexts (getContinuingOutputs)
 import PlutusTx qualified
 import PlutusTx.Data.AssocMap qualified as Map
 import PlutusTx.Data.List qualified as List
@@ -59,7 +59,6 @@ icsAuthorityTokenName = TokenName emptyByteString
 --   ERROR-ILLIQUID-CIRCULATION-SUPPLY-03: ICS auth tokens leak from the ICS validator
 --   ERROR-ILLIQUID-CIRCULATION-SUPPLY-04: Single illiquid circulation supply token is not minted
 --   ERROR-ILLIQUID-CIRCULATION-SUPPLY-05: No unique output UTxO at the supply address
---   ERROR-ILLIQUID-CIRCULATION-SUPPLY-06: No own input UTxO at the supply address
 mkIlliquidCirculationSupplyValidator ::
   VersionOracleConfig ->
   BuiltinData ->
@@ -121,18 +120,13 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
     assetsDoNotDecrease :: Bool
     assetsDoNotDecrease = relevantTokensOnInput `leq` relevantTokensOnOutput
 
-    ownAddress :: Address
-    ownAddress = case findOwnInput ctx of
-      Just txOut -> txOutAddress $ txInInfoResolved txOut
-      Nothing -> traceError "ERROR-ILLIQUID-CIRCULATION-SUPPLY-06"
-
     icsAuthTokensDoNotLeakFromIcs :: Bool
     icsAuthTokensDoNotLeakFromIcs =
       List.null
         $ List.filter
           ( \txOut ->
               txOutAddress txOut
-                /= ownAddress
+                /= supplyAddress
                 && valueOf (txOutValue txOut) icsAuthorityTokenCurrencySymbol icsAuthorityTokenName
                 > 0
           )
