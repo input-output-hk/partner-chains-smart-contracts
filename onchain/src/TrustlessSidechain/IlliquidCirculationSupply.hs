@@ -3,6 +3,8 @@
 module TrustlessSidechain.IlliquidCirculationSupply (
   mkIlliquidCirculationSupplyValidatorUntyped,
   mkIlliquidCirculationSupplyAuthorityTokenPolicyUntyped,
+  compiledValidator,
+  compiledAuthorityTokenPolicy,
   serialisableIlliquidCirculationSupplyValidator,
   serialisableIlliquidCirculationSupplyAuthorityTokenPolicy,
 ) where
@@ -148,9 +150,11 @@ mkIlliquidCirculationSupplyValidatorUntyped voc rd rr ctx =
       (PlutusTx.unsafeFromBuiltinData rr)
       (PlutusTx.unsafeFromBuiltinData ctx)
 
+compiledValidator :: PlutusTx.CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit)
+compiledValidator = $$(PlutusTx.compile [||mkIlliquidCirculationSupplyValidatorUntyped||])
+
 serialisableIlliquidCirculationSupplyValidator :: SerialisedScript
-serialisableIlliquidCirculationSupplyValidator =
-  serialiseCompiledCode $$(PlutusTx.compile [||mkIlliquidCirculationSupplyValidatorUntyped||])
+serialisableIlliquidCirculationSupplyValidator = serialiseCompiledCode compiledValidator
 
 mkIlliquidCirculationSupplyAuthorityTokenPolicy :: BuiltinData -> VersionOracleConfig -> BuiltinData -> ScriptContext -> Bool
 mkIlliquidCirculationSupplyAuthorityTokenPolicy _scriptId voc _ ctx =
@@ -169,6 +173,8 @@ mkIlliquidCirculationSupplyAuthorityTokenPolicyUntyped _scriptId voc rd ctx =
       rd
       (PlutusTx.unsafeFromBuiltinData ctx)
 
+compiledAuthorityTokenPolicy :: PlutusTx.CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit)
+compiledAuthorityTokenPolicy = $$(PlutusTx.compile [||mkIlliquidCirculationSupplyAuthorityTokenPolicyUntyped||])
+
 serialisableIlliquidCirculationSupplyAuthorityTokenPolicy :: SerialisedScript
-serialisableIlliquidCirculationSupplyAuthorityTokenPolicy =
-  serialiseCompiledCode $$(PlutusTx.compile [||mkIlliquidCirculationSupplyAuthorityTokenPolicyUntyped||])
+serialisableIlliquidCirculationSupplyAuthorityTokenPolicy = serialiseCompiledCode compiledAuthorityTokenPolicy

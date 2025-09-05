@@ -53,7 +53,7 @@ permissionedCandidatesPolicyMintPassing =
 
 permissionedCandidatesPolicyMintFailing01 :: TestTree
 permissionedCandidatesPolicyMintFailing01 =
-  expectFail "should fail if not signed by the governance authority (ERROR-PERMISSIONED-CANDIDATES-POLICY-01)" $
+  expectFail "should fail if not signed by the governance authority" "ERROR-PERMISSIONED-CANDIDATES-POLICY-01" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionOracleConfig
@@ -71,7 +71,7 @@ permissionedCandidatesPolicyMintFailing01 =
 
 permissionedCandidatesPolicyMintFailing02 :: TestTree
 permissionedCandidatesPolicyMintFailing02 =
-  expectFail "should fail if some tokens are not sent to permissionedCandidatesValidatorAddress (ERROR-PERMISSIONED-CANDIDATES-POLICY-02)" $
+  expectFail "should fail if some tokens are not sent to permissionedCandidatesValidatorAddress" "ERROR-PERMISSIONED-CANDIDATES-POLICY-02" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionOracleConfig
@@ -134,7 +134,7 @@ permissionedCandidatesPolicyBurnPassingWithBurn =
 
 permissionedCandidatesPolicyBurnFailing03 :: TestTree
 permissionedCandidatesPolicyBurnFailing03 =
-  expectFail "should fail if not signed by the governance authority (ERROR-PERMISSIONED-CANDIDATES-POLICY-03)" $
+  expectFail "should fail if not signed by the governance authority" "ERROR-PERMISSIONED-CANDIDATES-POLICY-03" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionOracleConfig
@@ -148,7 +148,7 @@ permissionedCandidatesPolicyBurnFailing03 =
 
 permissionedCandidatesPolicyBurnFailing04 :: TestTree
 permissionedCandidatesPolicyBurnFailing04 =
-  expectFail "should fail if outputs PermissionedCandidatesTokens (ERROR-PERMISSIONED-CANDIDATES-POLICY-04)" $
+  expectFail "should fail if outputs PermissionedCandidatesTokens" "ERROR-PERMISSIONED-CANDIDATES-POLICY-04" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionOracleConfig
@@ -166,7 +166,7 @@ permissionedCandidatesPolicyBurnFailing04 =
 
 permissionedCandidatesPolicyBurnFailing05 :: TestTree
 permissionedCandidatesPolicyBurnFailing05 =
-  expectFail "should fail if script purpose is not minting (ERROR-PERMISSIONED-CANDIDATES-POLICY-05)" $
+  expectFail "should fail if script purpose is not minting" "ERROR-PERMISSIONED-CANDIDATES-POLICY-05" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionOracleConfig
@@ -238,7 +238,7 @@ permissionedCandidatesValidatorUpdatePassingWithMintingPurpose =
 
 permissionedCandidatesValidatorUpdateFailing01 :: TestTree
 permissionedCandidatesValidatorUpdateFailing01 =
-  expectFail "should fail if not signed by the governance authority (ERROR-PERMISSIONED-CANDIDATES-VALIDATOR-01)" $
+  expectFail "should fail if not signed by the governance authority" "ERROR-PERMISSIONED-CANDIDATES-VALIDATOR-01" $
     runValidator
       Test.genesisUtxo
       Test.versionOracleConfig
@@ -267,7 +267,7 @@ permissionedCandidatesValidatorRemovePassing =
 
 permissionedCandidatesValidatorRemoveFailing02 :: TestTree
 permissionedCandidatesValidatorRemoveFailing02 =
-  expectFail "should fail if not signed by the governance authority (ERROR-PERMISSIONED-CANDIDATES-VALIDATOR-02)" $
+  expectFail "should fail if not signed by the governance authority" "ERROR-PERMISSIONED-CANDIDATES-VALIDATOR-02" $
     runValidator
       Test.genesisUtxo
       Test.versionOracleConfig
@@ -301,20 +301,20 @@ permissionedCandidatesOracleToken = V2.singleton permissionedCandidatesCurrSym p
 
 -- test runner
 
-runMintingPolicy :: V2.TxOutRef -> VersionOracleConfig -> V2.Address -> PermissionedCandidatesPolicyRedeemer -> V2.ScriptContext -> BuiltinUnit
+runMintingPolicy :: V2.TxOutRef -> VersionOracleConfig -> V2.Address -> PermissionedCandidatesPolicyRedeemer -> V2.ScriptContext -> CompiledCode BuiltinUnit
 runMintingPolicy genesisUtxo vc permissionedCandidatesValidatorAddress' redeemer ctx =
-  mkMintingPolicyUntyped
-    (toBuiltinData genesisUtxo)
-    (toBuiltinData vc)
-    (toBuiltinData permissionedCandidatesValidatorAddress')
-    (toBuiltinData redeemer)
-    (toBuiltinData ctx)
+  compiledMintingPolicy
+    `appArg` genesisUtxo
+    `appArg` vc
+    `appArg` permissionedCandidatesValidatorAddress'
+    `appArg` redeemer
+    `appArg` ctx
 
-runValidator :: V2.TxOutRef -> VersionOracleConfig -> BuiltinData -> PermissionedCandidatesValidatorRedeemer -> V2.ScriptContext -> BuiltinUnit
+runValidator :: V2.TxOutRef -> VersionOracleConfig -> BuiltinData -> PermissionedCandidatesValidatorRedeemer -> V2.ScriptContext -> CompiledCode BuiltinUnit
 runValidator genesisUtxo vc datum redeemer ctx =
-  mkValidatorUntyped
-    (toBuiltinData genesisUtxo)
-    (toBuiltinData vc)
-    (toBuiltinData datum)
-    (toBuiltinData redeemer)
-    (toBuiltinData ctx)
+  compiledValidator
+    `appArg` genesisUtxo
+    `appArg` vc
+    `appArg` datum
+    `appArg` redeemer
+    `appArg` ctx

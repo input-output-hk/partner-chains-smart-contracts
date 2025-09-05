@@ -32,7 +32,7 @@ committeeCandidateValidatorPassing =
 
 committeeCandidateValidatorFailing :: TestTree
 committeeCandidateValidatorFailing =
-  expectFail "should fail if not signed by the original submitter (ERROR-COMMITTEE-CANDIDATE-VALIDATOR-01)" $
+  expectFail "should fail if not signed by the original submitter" "ERROR-COMMITTEE-CANDIDATE-VALIDATOR-01" $
     runValidator
       Test.genesisUtxo
       committeeCandidateValidatorDatum
@@ -54,10 +54,10 @@ someTxOutRef = V2.TxOutRef "abcd0123" 0
 committeeCandidateValidatorDatum :: VersionedGenericDatum V2.PubKeyHash
 committeeCandidateValidatorDatum = VersionedGenericDatum pubKeyHash Test.dummyBuiltinData 0
 
-runValidator :: V2.TxOutRef -> VersionedGenericDatum V2.PubKeyHash -> BuiltinData -> V2.ScriptContext -> BuiltinUnit
+runValidator :: V2.TxOutRef -> VersionedGenericDatum V2.PubKeyHash -> BuiltinData -> V2.ScriptContext -> CompiledCode BuiltinUnit
 runValidator genesisUtxo datum redeemer ctx =
-  committeeCandidateValidatorUntyped
-    (toBuiltinData genesisUtxo)
-    (toBuiltinData datum)
-    (toBuiltinData redeemer)
-    (toBuiltinData ctx)
+  compiledValidator
+    `appArg` genesisUtxo
+    `appArg` datum
+    `appArg` redeemer
+    `appArg` ctx

@@ -27,7 +27,7 @@ policyTests =
 illiquidCirculationSupplyAuthorityTokenPolicyPassing :: TestTree
 illiquidCirculationSupplyAuthorityTokenPolicyPassing =
   expectSuccess "should pass" $
-    runPolicy
+    runMintingPolicy
       Test.versionOracleConfig
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting icsAuthorityTokenCurrSym
@@ -40,8 +40,8 @@ illiquidCirculationSupplyAuthorityTokenPolicyPassing =
 
 illiquidCirculationSupplyAuthorityTokenPolicyFailing01 :: TestTree
 illiquidCirculationSupplyAuthorityTokenPolicyFailing01 =
-  expectFail "should fail if not signed by the governance authority (ERROR-ICS-AUTH-TOKEN-01)" $
-    runPolicy
+  expectFail "should fail if not signed by the governance authority" "ERROR-ICS-AUTH-TOKEN-01" $
+    runMintingPolicy
       Test.versionOracleConfig
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting icsAuthorityTokenCurrSym
@@ -106,7 +106,7 @@ illiquidCirculationSupplyValidatorDepositPassing =
 
 illiquidCirculationSupplyValidatorDepositFailing01a :: TestTree
 illiquidCirculationSupplyValidatorDepositFailing01a =
-  expectFail "should fail if output UTxO has 0 ICS Authority Tokens (ERROR-ILLIQUID-CIRCULATION-SUPPLY-01)" $
+  expectFail "should fail if output UTxO has 0 ICS Authority Tokens" "ERROR-ILLIQUID-CIRCULATION-SUPPLY-01" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -135,7 +135,7 @@ illiquidCirculationSupplyValidatorDepositFailing01a =
 
 illiquidCirculationSupplyValidatorDepositFailing01b :: TestTree
 illiquidCirculationSupplyValidatorDepositFailing01b =
-  expectFail "should fail if output UTxO has 2 ICS Authority Tokens (ERROR-ILLIQUID-CIRCULATION-SUPPLY-01)" $
+  expectFail "should fail if output UTxO has 2 ICS Authority Tokens" "ERROR-ILLIQUID-CIRCULATION-SUPPLY-01" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -164,7 +164,7 @@ illiquidCirculationSupplyValidatorDepositFailing01b =
 
 illiquidCirculationSupplyValidatorDepositFailing02 :: TestTree
 illiquidCirculationSupplyValidatorDepositFailing02 =
-  expectFail "should fail if assets of the supply UTxO decreased (ERROR-ILLIQUID-CIRCULATION-SUPPLY-02)" $
+  expectFail "should fail if assets of the supply UTxO decreased" "ERROR-ILLIQUID-CIRCULATION-SUPPLY-02" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -193,7 +193,7 @@ illiquidCirculationSupplyValidatorDepositFailing02 =
 
 illiquidCirculationSupplyValidatorDepositFailing03 :: TestTree
 illiquidCirculationSupplyValidatorDepositFailing03 =
-  expectFail "should fail if ICS auth tokens leak from the ICS validator (ERROR-ILLIQUID-CIRCULATION-SUPPLY-03)" $
+  expectFail "should fail if ICS auth tokens leak from the ICS validator" "ERROR-ILLIQUID-CIRCULATION-SUPPLY-03" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -227,7 +227,7 @@ illiquidCirculationSupplyValidatorDepositFailing03 =
 
 illiquidCirculationSupplyValidatorDepositFailing05 :: TestTree
 illiquidCirculationSupplyValidatorDepositFailing05 =
-  expectFail "should fail if no unique output UTxO at the supply address (ERROR-ILLIQUID-CIRCULATION-SUPPLY-05)" $
+  expectFail "should fail if no unique output UTxO at the supply address" "ERROR-ILLIQUID-CIRCULATION-SUPPLY-05" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -277,7 +277,7 @@ illiquidCirculationSupplyValidatorWithdrawPassing =
 
 illiquidCirculationSupplyValidatorWithdrawFailing04 :: TestTree
 illiquidCirculationSupplyValidatorWithdrawFailing04 =
-  expectFail "should fail if single illiquid circulation supply token is not minted (ERROR-ILLIQUID-CIRCULATION-SUPPLY-04)" $
+  expectFail "should fail if single illiquid circulation supply token is not minted" "ERROR-ILLIQUID-CIRCULATION-SUPPLY-04" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -370,18 +370,18 @@ icsWithdrawalToken = V2.singleton icsWithdrawalTokenCurrSym icsWithdrawalTokenNa
 
 -- test runner
 
-runValidator :: VersionOracleConfig -> BuiltinData -> IlliquidCirculationSupplyRedeemer -> V2.ScriptContext -> BuiltinUnit
-runValidator versionOracleConfig datum redeemer ctx =
-  mkIlliquidCirculationSupplyValidatorUntyped
-    (toBuiltinData versionOracleConfig)
-    (toBuiltinData datum)
-    (toBuiltinData redeemer)
-    (toBuiltinData ctx)
+runMintingPolicy :: VersionOracleConfig -> V2.ScriptContext -> CompiledCode BuiltinUnit
+runMintingPolicy versionOracleConfig ctx =
+  compiledAuthorityTokenPolicy
+    `appArg` Test.dummyBuiltinData
+    `appArg` versionOracleConfig
+    `appArg` Test.dummyBuiltinData
+    `appArg` ctx
 
-runPolicy :: VersionOracleConfig -> V2.ScriptContext -> BuiltinUnit
-runPolicy versionOracleConfig ctx =
-  mkIlliquidCirculationSupplyAuthorityTokenPolicyUntyped
-    Test.dummyBuiltinData
-    (toBuiltinData versionOracleConfig)
-    Test.dummyBuiltinData
-    (toBuiltinData ctx)
+runValidator :: VersionOracleConfig -> BuiltinData -> IlliquidCirculationSupplyRedeemer -> V2.ScriptContext -> CompiledCode BuiltinUnit
+runValidator versionOracleConfig datum redeemer ctx =
+  compiledValidator
+    `appArg` versionOracleConfig
+    `appArg` datum
+    `appArg` redeemer
+    `appArg` ctx

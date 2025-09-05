@@ -65,7 +65,7 @@ versioningPolicyInitializePassing =
 
 versioningPolicyInitializeFailing01 :: TestTree
 versioningPolicyInitializeFailing01 =
-  expectFail "should fail on no genesis utxo (ERROR-VERSION-POLICY-01)" $
+  expectFail "should fail on no genesis utxo" "ERROR-VERSION-POLICY-01" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
@@ -79,7 +79,7 @@ versioningPolicyInitializeFailing01 =
 
 versioningPolicyInitializeFailing02NoOutput :: TestTree
 versioningPolicyInitializeFailing02NoOutput =
-  expectFail "should fail on empty outputs (ERROR-VERSION-POLICY-02)" $
+  expectFail "should fail on empty outputs" "ERROR-VERSION-POLICY-02" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
@@ -93,7 +93,7 @@ versioningPolicyInitializeFailing02NoOutput =
 
 versioningPolicyInitializeFailing02NoDatum :: TestTree
 versioningPolicyInitializeFailing02NoDatum =
-  expectFail "should fail on no datum in output (ERROR-VERSION-POLICY-02)" $
+  expectFail "should fail on no datum in output" "ERROR-VERSION-POLICY-02" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
@@ -108,7 +108,7 @@ versioningPolicyInitializeFailing02NoDatum =
 
 versioningPolicyInitializeFailing02InvalidDatum :: TestTree
 versioningPolicyInitializeFailing02InvalidDatum =
-  expectFail "should fail on invalid datum in output (ERROR-VERSION-POLICY-02)" $
+  expectFail "should fail on invalid datum in output" "ERROR-VERSION-POLICY-02" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
@@ -125,7 +125,7 @@ versioningPolicyInitializeFailing02InvalidDatum =
 
 versioningPolicyInitializeFailing03 :: TestTree
 versioningPolicyInitializeFailing03 =
-  expectFail "should fail on invalid token being minted (ERROR-VERSION-POLICY-03)" $
+  expectFail "should fail on invalid token being minted" "ERROR-VERSION-POLICY-03" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
@@ -133,6 +133,7 @@ versioningPolicyInitializeFailing03 =
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoOutRef .~ Test.genesisUtxo]
+          & _scriptContextTxInfo . _txInfoOutputs <>~ [Test.versioningTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint .~ Test.wrongToken
       )
 
@@ -147,86 +148,93 @@ versioningPolicyMintPassing =
       (MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+          -- governance version oracle:
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
           & _scriptContextTxInfo . _txInfoOutputs <>~ [Test.versioningTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken 1
-          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
       )
 
 versioningPolicyMintFailing04NoOutput :: TestTree
 versioningPolicyMintFailing04NoOutput =
-  expectFail "should fail on empty outputs (ERROR-VERSION-POLICY-04)" $
+  expectFail "should fail on empty outputs" "ERROR-VERSION-POLICY-04" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
       (MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+          -- governance version oracle:
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
           -- no outputs provided
           & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken 1
-          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
       )
 
 versioningPolicyMintFailing04NoDatum :: TestTree
 versioningPolicyMintFailing04NoDatum =
-  expectFail "should fail on no datum in output (ERROR-VERSION-POLICY-04)" $
+  expectFail "should fail on no datum in output" "ERROR-VERSION-POLICY-04" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
       (MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+          -- governance version oracle:
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
           -- output has missing datum:
           & _scriptContextTxInfo . _txInfoOutputs <>~ [Test.versioningTokenUtxo & _txOutDatum .~ V2.NoOutputDatum]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken 1
-          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
       )
 
 versioningPolicyMintFailing04InvalidDatum :: TestTree
 versioningPolicyMintFailing04InvalidDatum =
-  expectFail "should fail on invalid datum in output (ERROR-VERSION-POLICY-04)" $
+  expectFail "should fail on invalid datum in output" "ERROR-VERSION-POLICY-04" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
       (MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+          -- governance version oracle:
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
           -- output has invalid datum:
           & _scriptContextTxInfo . _txInfoOutputs <>~ [Test.versioningTokenUtxo & _txOutDatum .~ V2.OutputDatum invalidDatum]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken 1
-          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
       )
   where
     invalidDatum = V2.Datum $ toBuiltinData (0 :: Integer)
 
 versioningPolicyMintFailing05 :: TestTree
 versioningPolicyMintFailing05 =
-  expectFail "should fail if not signed by gov auth (ERROR-VERSION-POLICY-05)" $
+  expectFail "should fail if governance approval is not present" "ERROR-VERSION-POLICY-05" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
       (MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
-          -- gov token not in inputs
+          -- governance version oracle:
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
+          -- [ERROR] not signed by governance
           & _scriptContextTxInfo . _txInfoOutputs <>~ [Test.versioningTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.versionOracleToken 1
-          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
       )
 
 versioningPolicyMintFailing06 :: TestTree
 versioningPolicyMintFailing06 =
-  expectFail "should fail on invalid token being minted (ERROR-VERSION-POLICY-06)" $
+  expectFail "should fail on invalid token being minted" "ERROR-VERSION-POLICY-06" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
       (MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+          -- governance version oracle:
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
+          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
           & _scriptContextTxInfo . _txInfoOutputs <>~ [Test.versioningTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.wrongToken
       )
@@ -249,13 +257,14 @@ versioningPolicyBurnPassing =
 
 versioningPolicyBurnFailing07NoVersioningInput :: TestTree
 versioningPolicyBurnFailing07NoVersioningInput =
-  expectFail "should fail on missing versioning utxo in inputs (ERROR-VERSION-POLICY-07)" $
+  expectFail "should fail on missing versioning utxo in inputs" "ERROR-VERSION-POLICY-07" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
       (BurnVersionOracle Test.versionOracle)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+          -- governance version oracle:
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           -- no versioning utxo in inputs
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
@@ -263,13 +272,14 @@ versioningPolicyBurnFailing07NoVersioningInput =
 
 versioningPolicyBurnFailing07VersioningInputHasNoDatum :: TestTree
 versioningPolicyBurnFailing07VersioningInputHasNoDatum =
-  expectFail "should fail on versioning utxo with no datum in inputs (ERROR-VERSION-POLICY-07)" $
+  expectFail "should fail on versioning utxo with no datum in inputs" "ERROR-VERSION-POLICY-07" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
       (BurnVersionOracle Test.versionOracle)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+          -- governance version oracle:
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           -- versioning utxo has missing datum:
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ (Test.versioningTokenUtxo & _txOutDatum .~ V2.NoOutputDatum)]
@@ -278,13 +288,14 @@ versioningPolicyBurnFailing07VersioningInputHasNoDatum =
 
 versioningPolicyBurnFailing07VersioningInputHasInvalidDatum :: TestTree
 versioningPolicyBurnFailing07VersioningInputHasInvalidDatum =
-  expectFail "should fail on versioning utxo with invalid datum in inputs (ERROR-VERSION-POLICY-07)" $
+  expectFail "should fail on versioning utxo with invalid datum in inputs" "ERROR-VERSION-POLICY-07" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
       (BurnVersionOracle Test.versionOracle)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+          -- governance version oracle:
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           -- versioning utxo has invalid datum:
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ (Test.versioningTokenUtxo & _txOutDatum .~ V2.OutputDatum invalidDatum)]
@@ -295,7 +306,7 @@ versioningPolicyBurnFailing07VersioningInputHasInvalidDatum =
 
 versioningPolicyBurnFailing08 :: TestTree
 versioningPolicyBurnFailing08 =
-  expectFail "should fail if versioning utxo is in output (ERROR-VERSION-POLICY-08)" $
+  expectFail "should fail if versioning utxo is in output" "ERROR-VERSION-POLICY-08" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
@@ -310,19 +321,22 @@ versioningPolicyBurnFailing08 =
 
 versioningPolicyBurnFailing09 :: TestTree
 versioningPolicyBurnFailing09 =
-  expectFail "should fail if not signed by gov authority (ERROR-VERSION-POLICY-09)" $
+  expectFail "should fail if governance approval is not present" "ERROR-VERSION-POLICY-09" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
       (BurnVersionOracle Test.versionOracle)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
+          -- governance version oracle:
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
+          -- [ERROR] not signed by governance
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.versioningTokenUtxo]
       )
 
 versioningPolicyNotMintFailing :: TestTree
 versioningPolicyNotMintFailing =
-  expectFail "should fail if script purpose is not minting (ERROR-VERSION-POLICY-10)" $
+  expectFail "should fail if script purpose is not minting" "ERROR-VERSION-POLICY-10" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
@@ -385,13 +399,15 @@ versioningValidatorPassing =
 
 versioningValidatorFailing01 :: TestTree
 versioningValidatorFailing01 =
-  expectFail "should fail if governance approval is not present (ERROR-VERSION-VALIDATOR-01)" $
+  expectFail "should fail if governance approval is not present" "ERROR-VERSION-VALIDATOR-01" $
     runValidator
       Test.genesisUtxo
       versionOracleDatum
       Test.versionOracle
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Spending versioningUtxo
+          -- governance version oracle:
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           -- [ERROR] not signed by governance
           -- [INPUT] Versioning UTXO:
           & _scriptContextTxInfo . _txInfoInputs
@@ -418,7 +434,7 @@ versioningValidatorFailing01 =
 
 versioningValidatorFailing02 :: TestTree
 versioningValidatorFailing02 =
-  expectFail "should fail if version oracle in the datum does not match the redeemer (ERROR-VERSION-VALIDATOR-02)" $
+  expectFail "should fail if version oracle in the datum does not match the redeemer" "ERROR-VERSION-VALIDATOR-02" $
     runValidator
       Test.genesisUtxo
       -- [ERROR] version oracle does not match one in datum:
@@ -463,7 +479,7 @@ versioningValidatorFailing02 =
 
 versioningValidatorFailing03 :: TestTree
 versioningValidatorFailing03 =
-  expectFail "should fail if transaction outputs version tokens to non-versioning address (ERROR-VERSION-VALIDATOR-03)" $
+  expectFail "should fail if transaction outputs version tokens to non-versioning address" "ERROR-VERSION-VALIDATOR-03" $
     runValidator
       Test.genesisUtxo
       versionOracleDatum
@@ -499,7 +515,7 @@ versioningValidatorFailing03 =
 
 versioningValidatorFailing04 :: TestTree
 versioningValidatorFailing04 =
-  expectFail "should fail if invalid script purpose is provided (ERROR-VERSION-VALIDATOR-04)" $
+  expectFail "should fail if invalid script purpose is provided" "ERROR-VERSION-VALIDATOR-04" $
     runValidator
       Test.genesisUtxo
       versionOracleDatum
@@ -535,7 +551,7 @@ versioningValidatorFailing04 =
 
 versioningValidatorFailing05 :: TestTree
 versioningValidatorFailing05 =
-  expectFail "should fail if transaction does not have own input (ERROR-VERSION-VALIDATOR-05)" $
+  expectFail "should fail if transaction does not have own input" "ERROR-VERSION-VALIDATOR-05" $
     runValidator
       Test.genesisUtxo
       versionOracleDatum
@@ -579,18 +595,18 @@ someAddress = V2.Address (V2.PubKeyCredential "098709870987098709870987098709870
 
 -- test runner
 
-runMintingPolicy :: V2.TxOutRef -> V2.Address -> VersionOraclePolicyRedeemer -> V2.ScriptContext -> BuiltinUnit
+runMintingPolicy :: V2.TxOutRef -> V2.Address -> VersionOraclePolicyRedeemer -> V2.ScriptContext -> CompiledCode BuiltinUnit
 runMintingPolicy genesisUtxo validatorAddress redeemer ctx =
-  mkVersionOraclePolicyUntyped
-    (toBuiltinData genesisUtxo)
-    (toBuiltinData validatorAddress)
-    (toBuiltinData redeemer)
-    (toBuiltinData ctx)
+  compiledVersionOraclePolicy
+    `appArg` genesisUtxo
+    `appArg` validatorAddress
+    `appArg` redeemer
+    `appArg` ctx
 
-runValidator :: V2.TxOutRef -> VersionOracleDatum -> VersionOracle -> V2.ScriptContext -> BuiltinUnit
+runValidator :: V2.TxOutRef -> VersionOracleDatum -> VersionOracle -> V2.ScriptContext -> CompiledCode BuiltinUnit
 runValidator genesisUtxo datum redeemer ctx =
-  mkVersionOracleValidatorUntyped
-    (toBuiltinData genesisUtxo)
-    (toBuiltinData datum)
-    (toBuiltinData redeemer)
-    (toBuiltinData ctx)
+  compiledVersionOracleValidator
+    `appArg` genesisUtxo
+    `appArg` datum
+    `appArg` redeemer
+    `appArg` ctx

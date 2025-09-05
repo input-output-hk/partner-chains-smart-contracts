@@ -4,6 +4,8 @@
 -- | This module provides functionality for storing a list of permissioned
 -- candidates on the mainchain so that it can be accessed by the sidechain.
 module TrustlessSidechain.PermissionedCandidates (
+  compiledValidator,
+  compiledMintingPolicy,
   serialisableValidator,
   serialisableMintingPolicy,
   permissionedCandidatesValidator,
@@ -193,9 +195,11 @@ mkMintingPolicyUntyped genesisUtxo vc validatorAddress redeemer ctx =
       (unsafeFromBuiltinData redeemer)
       (unsafeFromBuiltinData ctx)
 
+compiledMintingPolicy :: PlutusTx.CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit)
+compiledMintingPolicy = $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
+
 serialisableMintingPolicy :: SerialisedScript
-serialisableMintingPolicy =
-  serialiseCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
+serialisableMintingPolicy = serialiseCompiledCode compiledMintingPolicy
 
 mkValidatorUntyped ::
   BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit
@@ -208,6 +212,8 @@ mkValidatorUntyped genesisUtxo vc datum redeemer ctx =
       (unsafeFromBuiltinData redeemer)
       (unsafeFromBuiltinData ctx)
 
+compiledValidator :: PlutusTx.CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit)
+compiledValidator = $$(PlutusTx.compile [||mkValidatorUntyped||])
+
 serialisableValidator :: SerialisedScript
-serialisableValidator =
-  serialiseCompiledCode $$(PlutusTx.compile [||mkValidatorUntyped||])
+serialisableValidator = serialiseCompiledCode compiledValidator

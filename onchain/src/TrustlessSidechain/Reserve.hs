@@ -8,9 +8,11 @@
 module TrustlessSidechain.Reserve (
   mkReserveValidator,
   mkReserveValidatorUntyped,
+  compiledValidator,
   serialisableReserveValidator,
   mkReserveAuthPolicy,
   mkReserveAuthPolicyUntyped,
+  compiledReserveAuthPolicy,
   serialisableReserveAuthPolicy,
   reserveAuthTokenTokenName,
 ) where
@@ -273,9 +275,11 @@ mkReserveValidatorUntyped voc rd rr ctx =
       (PlutusTx.unsafeFromBuiltinData rr)
       (PlutusTx.unsafeFromBuiltinData ctx)
 
+compiledValidator :: PlutusTx.CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit)
+compiledValidator = $$(PlutusTx.compile [||mkReserveValidatorUntyped||])
+
 serialisableReserveValidator :: SerialisedScript
-serialisableReserveValidator =
-  serialiseCompiledCode $$(PlutusTx.compile [||mkReserveValidatorUntyped||])
+serialisableReserveValidator = serialiseCompiledCode compiledValidator
 
 {-# INLINEABLE extractReserveUtxoDatum #-}
 extractReserveUtxoDatum :: TxOut -> Maybe (VersionedGenericDatum ReserveDatum)
@@ -368,9 +372,11 @@ mkReserveAuthPolicyUntyped voc red ctx =
       (PlutusTx.unsafeFromBuiltinData red)
       (PlutusTx.unsafeFromBuiltinData ctx)
 
+compiledReserveAuthPolicy :: PlutusTx.CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit)
+compiledReserveAuthPolicy = $$(PlutusTx.compile [||mkReserveAuthPolicyUntyped||])
+
 serialisableReserveAuthPolicy :: SerialisedScript
-serialisableReserveAuthPolicy =
-  serialiseCompiledCode $$(PlutusTx.compile [||mkReserveAuthPolicyUntyped||])
+serialisableReserveAuthPolicy = serialiseCompiledCode compiledReserveAuthPolicy
 
 -- | Takes a decoded piece of data and turns it into the wrapped `BuiltinData` equivalent
 --   provided by `asData`, to make it compatible with functions from `PlutusLedgerApi.Vn.Data` modules.

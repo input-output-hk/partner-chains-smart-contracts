@@ -45,7 +45,7 @@ governedMapPolicyPassing =
 
 governedMapPolicyFailing :: TestTree
 governedMapPolicyFailing =
-  expectFail "should fail if not signed by the governance authority (ERROR-GOVERNED-MAP-POLICY-01)" $
+  expectFail "should fail if not signed by the governance authority" "ERROR-GOVERNED-MAP-POLICY-01" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionOracleConfig
@@ -76,7 +76,7 @@ governedMapValidatorPassing =
 
 governedMapValidatorFailing :: TestTree
 governedMapValidatorFailing =
-  expectFail "should fail if not signed by the governance authority (ERROR-GOVERNED-MAP-VALIDATOR-01)" $
+  expectFail "should fail if not signed by the governance authority" "ERROR-GOVERNED-MAP-VALIDATOR-01" $
     runValidator
       Test.genesisUtxo
       Test.versionOracleConfig
@@ -99,25 +99,6 @@ governedMapTokenUtxo =
 someTxOutRef :: V2.TxOutRef
 someTxOutRef = V2.TxOutRef "abcd0123" 0
 
-runMintingPolicy :: V2.TxOutRef -> Types.VersionOracleConfig -> BuiltinData -> V2.ScriptContext -> BuiltinUnit
-runMintingPolicy genesisUtxo vc redeemer ctx =
-  mkMintingPolicyUntyped
-    (toBuiltinData governedMapPolicyId)
-    (toBuiltinData genesisUtxo)
-    (toBuiltinData vc)
-    (toBuiltinData redeemer)
-    (toBuiltinData ctx)
-
-runValidator :: V2.TxOutRef -> Types.VersionOracleConfig -> BuiltinData -> BuiltinData -> V2.ScriptContext -> BuiltinUnit
-runValidator genesisUtxo vc datum redeemer ctx =
-  mkValidatorUntyped
-    (toBuiltinData governedMapValidatorId)
-    (toBuiltinData genesisUtxo)
-    (toBuiltinData vc)
-    (toBuiltinData datum)
-    (toBuiltinData redeemer)
-    (toBuiltinData ctx)
-
 governedMapCurrSym :: V2.CurrencySymbol
 governedMapCurrSym = V2.CurrencySymbol "governedMapCurrSym"
 
@@ -129,3 +110,24 @@ governedMapToken = V2.singleton governedMapCurrSym governedMapTokenName
 
 governedMapValidatorAddress :: V2.Address
 governedMapValidatorAddress = V2.Address (V2.PubKeyCredential "01230123012301230123012301230123012301230123012301230123") Nothing
+
+-- test runner
+
+runMintingPolicy :: V2.TxOutRef -> Types.VersionOracleConfig -> BuiltinData -> V2.ScriptContext -> CompiledCode BuiltinUnit
+runMintingPolicy genesisUtxo vc redeemer ctx =
+  compiledMintingPolicy
+    `appArg` governedMapPolicyId
+    `appArg` genesisUtxo
+    `appArg` vc
+    `appArg` redeemer
+    `appArg` ctx
+
+runValidator :: V2.TxOutRef -> Types.VersionOracleConfig -> BuiltinData -> BuiltinData -> V2.ScriptContext -> CompiledCode BuiltinUnit
+runValidator genesisUtxo vc datum redeemer ctx =
+  compiledValidator
+    `appArg` governedMapValidatorId
+    `appArg` genesisUtxo
+    `appArg` vc
+    `appArg` datum
+    `appArg` redeemer
+    `appArg` ctx

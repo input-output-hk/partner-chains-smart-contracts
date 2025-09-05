@@ -2,6 +2,8 @@
 {-# OPTIONS_GHC -fno-specialise #-}
 
 module TrustlessSidechain.GovernedMap (
+  compiledMintingPolicy,
+  compiledValidator,
   serialisableMintingPolicy,
   serialisableValidator,
   governedMapValidator,
@@ -92,9 +94,20 @@ mkValidatorUntyped scriptId genesisUtxo vc dat redeemer ctx =
       redeemer
       (unsafeFromBuiltinData ctx)
 
+compiledValidator ::
+  PlutusTx.CompiledCode
+    ( BuiltinData ->
+      BuiltinData ->
+      BuiltinData ->
+      BuiltinData ->
+      BuiltinData ->
+      BuiltinData ->
+      BuiltinUnit
+    )
+compiledValidator = $$(PlutusTx.compile [||mkValidatorUntyped||])
+
 serialisableValidator :: SerialisedScript
-serialisableValidator =
-  serialiseCompiledCode $$(PlutusTx.compile [||mkValidatorUntyped||])
+serialisableValidator = serialiseCompiledCode compiledValidator
 
 mkMintingPolicyUntyped ::
   BuiltinData ->
@@ -112,6 +125,16 @@ mkMintingPolicyUntyped scriptId genesisUtxo vc redeemer ctx =
       redeemer
       (unsafeFromBuiltinData ctx)
 
+compiledMintingPolicy ::
+  PlutusTx.CompiledCode
+    ( BuiltinData ->
+      BuiltinData ->
+      BuiltinData ->
+      BuiltinData ->
+      BuiltinData ->
+      BuiltinUnit
+    )
+compiledMintingPolicy = $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
+
 serialisableMintingPolicy :: SerialisedScript
-serialisableMintingPolicy =
-  serialiseCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
+serialisableMintingPolicy = serialiseCompiledCode compiledMintingPolicy
