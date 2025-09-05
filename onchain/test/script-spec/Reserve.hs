@@ -9,7 +9,7 @@ import PlutusTx.Builtins.Internal (BuiltinUnit (..))
 import ScriptSpecUtils
 import Test.Tasty
 import TestValues qualified as Test
-import TrustlessSidechain.Reserve qualified as Reserve
+import TrustlessSidechain.Reserve
 import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types qualified as Types
 
@@ -72,12 +72,14 @@ reserveAuthPolicyPassing =
 
 reserveAuthPolicyFailing01 :: TestTree
 reserveAuthPolicyFailing01 =
-  expectFail "should fail if not approved by governance (ERROR-RESERVE-AUTH-01)" $
+  expectFail "should fail if not approved by governance" "ERROR-RESERVE-AUTH-01" $
     runMintingPolicy
       Test.versionOracleConfig
       Test.dummyBuiltinData
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting reserveAuthPolicyCurrencySymbol
+          -- governance version oracle:
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           -- [ERROR] Governance token missing
           -- ReserveAuthPolicy VersionOracle
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveValidatorVersionOracleUtxo]
@@ -99,7 +101,7 @@ reserveAuthPolicyFailing01 =
 
 reserveAuthPolicyFailing02 :: TestTree
 reserveAuthPolicyFailing02 =
-  expectFail "should fail if single reserve authentication token is not minted (ERROR-RESERVE-AUTH-02)" $
+  expectFail "should fail if single reserve authentication token is not minted" "ERROR-RESERVE-AUTH-02" $
     runMintingPolicy
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -127,7 +129,7 @@ reserveAuthPolicyFailing02 =
 
 reserveAuthPolicyFailing03 :: TestTree
 reserveAuthPolicyFailing03 =
-  expectFail "should fail if output reserve UTxO doesn't carry auth token (ERROR-RESERVE-AUTH-03)" $
+  expectFail "should fail if output reserve UTxO doesn't carry auth token" "ERROR-RESERVE-AUTH-03" $
     runMintingPolicy
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -155,7 +157,7 @@ reserveAuthPolicyFailing03 =
 
 reserveAuthPolicyFailing04 :: TestTree
 reserveAuthPolicyFailing04 =
-  expectFail "should fail if output reserve UTxO doesn't carry correct initial datum (ERROR-RESERVE-AUTH-04)" $
+  expectFail "should fail if output reserve UTxO doesn't carry correct initial datum" "ERROR-RESERVE-AUTH-04" $
     runMintingPolicy
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -192,7 +194,7 @@ reserveAuthPolicyFailing04 =
 
 reserveAuthPolicyFailing05 :: TestTree
 reserveAuthPolicyFailing05 =
-  expectFail "should fail if no unique output UTxO at the reserve address (ERROR-RESERVE-AUTH-05)" $
+  expectFail "should fail if no unique output UTxO at the reserve address" "ERROR-RESERVE-AUTH-05" $
     runMintingPolicy
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -233,7 +235,7 @@ reserveAuthPolicyFailing05 =
 
 reserveAuthPolicyFailing06 :: TestTree
 reserveAuthPolicyFailing06 =
-  expectFail "should fail if output reserve UTxO carries no inline datum or malformed datum (ERROR-RESERVE-AUTH-06)" $
+  expectFail "should fail if output reserve UTxO carries no inline datum or malformed datum" "ERROR-RESERVE-AUTH-06" $
     runMintingPolicy
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -362,13 +364,15 @@ reserveValidatorDepositPassing =
 
 reserveValidatorDepositFailing01 :: TestTree
 reserveValidatorDepositFailing01 =
-  expectFail "should fail if governance approval is not present (ERROR-RESERVE-01)" $
+  expectFail "should fail if governance approval is not present" "ERROR-RESERVE-01" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
       Types.DepositToReserve
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Spending reserveUtxo
+          -- governance version oracle:
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           -- [ERROR] NOT signed by governance
           -- ReserveAuthPolicy VersionOracle
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
@@ -411,7 +415,7 @@ reserveValidatorDepositFailing01 =
 
 reserveValidatorDepositFailing02 :: TestTree
 reserveValidatorDepositFailing02 =
-  expectFail "should fail if datum of the propagated reserve utxo changes (ERROR-RESERVE-02)" $
+  expectFail "should fail if datum of the propagated reserve utxo changes" "ERROR-RESERVE-02" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -468,7 +472,7 @@ reserveValidatorDepositFailing02 =
 
 reserveValidatorDepositFailing03 :: TestTree
 reserveValidatorDepositFailing03 =
-  expectFail "should fail if assets of the propagated reserve utxo don't increase by reserve tokens (ERROR-RESERVE-03)" $
+  expectFail "should fail if assets of the propagated reserve utxo don't increase by reserve tokens" "ERROR-RESERVE-03" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -574,7 +578,7 @@ reserveValidatorUpdatePassing =
 
 reserveValidatorUpdateFailing04 :: TestTree
 reserveValidatorUpdateFailing04 =
-  expectFail "should fail if no unique input utxo carrying authentication token (ERROR-RESERVE-04)" $
+  expectFail "should fail if no unique input utxo carrying authentication token" "ERROR-RESERVE-04" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -638,7 +642,7 @@ reserveValidatorUpdateFailing04 =
 
 reserveValidatorUpdateFailing05 :: TestTree
 reserveValidatorUpdateFailing05 =
-  expectFail "should fail if no unique output utxo at the reserve address and carrying authentication token (ERROR-RESERVE-05)" $
+  expectFail "should fail if no unique output utxo at the reserve address and carrying authentication token" "ERROR-RESERVE-05" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -698,7 +702,7 @@ reserveValidatorUpdateFailing05 =
 
 reserveValidatorUpdateFailing06 :: TestTree
 reserveValidatorUpdateFailing06 =
-  expectFail "should fail if datum of input reserve utxo malformed (ERROR-RESERVE-06)" $
+  expectFail "should fail if datum of input reserve utxo malformed" "ERROR-RESERVE-06" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -748,7 +752,7 @@ reserveValidatorUpdateFailing06 =
 
 reserveValidatorUpdateFailing07 :: TestTree
 reserveValidatorUpdateFailing07 =
-  expectFail "should fail if datum of output reserve utxo malformed (ERROR-RESERVE-07)" $
+  expectFail "should fail if datum of output reserve utxo malformed" "ERROR-RESERVE-07" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -789,13 +793,15 @@ reserveValidatorUpdateFailing07 =
 
 reserveValidatorUpdateFailing08 :: TestTree
 reserveValidatorUpdateFailing08 =
-  expectFail "should fail if governance approval is not present (ERROR-RESERVE-08)" $
+  expectFail "should fail if governance approval is not present" "ERROR-RESERVE-08" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
       Types.UpdateReserve
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Spending reserveUtxo
+          -- governance version oracle:
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           -- [ERROR] not signed by governance
           -- ReserveAuthPolicy VersionOracle
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
@@ -836,7 +842,7 @@ reserveValidatorUpdateFailing08 =
 
 reserveValidatorUpdateFailing09 :: TestTree
 reserveValidatorUpdateFailing09 =
-  expectFail "should fail if datum of the propagated reserve utxo changes not only by immutable settings (ERROR-RESERVE-09)" $
+  expectFail "should fail if datum of the propagated reserve utxo changes not only by immutable settings" "ERROR-RESERVE-09" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -885,7 +891,7 @@ reserveValidatorUpdateFailing09 =
 
 reserveValidatorUpdateFailing10 :: TestTree
 reserveValidatorUpdateFailing10 =
-  expectFail "should fail if assets of the propagated reserve utxo change (ERROR-RESERVE-10)" $
+  expectFail "should fail if assets of the propagated reserve utxo change" "ERROR-RESERVE-10" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -934,7 +940,7 @@ reserveValidatorUpdateFailing10 =
 
 reserveValidatorUpdateFailing18 :: TestTree
 reserveValidatorUpdateFailing18 =
-  expectFail "should fail if continuing output exists without an authentication token (ERROR-RESERVE-18)" $
+  expectFail "should fail if continuing output exists without an authentication token" "ERROR-RESERVE-18" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -1059,7 +1065,7 @@ reserveValidatorTransferToICSPassing =
 
 reserveValidatorTransferToICSFailing11 :: TestTree
 reserveValidatorTransferToICSFailing11 =
-  expectFail "should fail if assets of the propagated reserve utxo don't decrease by reserve tokens in desired way (ERROR-RESERVE-11)" $
+  expectFail "should fail if assets of the propagated reserve utxo don't decrease by reserve tokens in desired way" "ERROR-RESERVE-11" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -1134,7 +1140,7 @@ reserveValidatorTransferToICSFailing11 =
 
 reserveValidatorTransferToICSFailing12 :: TestTree
 reserveValidatorTransferToICSFailing12 =
-  expectFail "should fail if datum of the propagated reserve utxo changes not only by stats in desired way (ERROR-RESERVE-12)" $
+  expectFail "should fail if datum of the propagated reserve utxo changes not only by stats in desired way" "ERROR-RESERVE-12" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -1215,7 +1221,7 @@ reserveValidatorTransferToICSFailing12 =
 
 reserveValidatorTransferToICSFailing13 :: TestTree
 reserveValidatorTransferToICSFailing13 =
-  expectFail "should fail if incorrect amount of reserve tokens goes into an illiquid circulation supply (ERROR-RESERVE-13)" $
+  expectFail "should fail if incorrect amount of reserve tokens goes into an illiquid circulation supply" "ERROR-RESERVE-13" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -1290,7 +1296,7 @@ reserveValidatorTransferToICSFailing13 =
 
 reserveValidatorTransferToICSFailing14 :: TestTree
 reserveValidatorTransferToICSFailing14 =
-  expectFail "should fail if no unique output utxo at the illiquid circulation supply address (ERROR-RESERVE-14)" $
+  expectFail "should fail if no unique output utxo at the illiquid circulation supply address" "ERROR-RESERVE-14" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -1426,13 +1432,15 @@ reserveValidatorHandoverPassing =
 
 reserveValidatorHandoverFailing15 :: TestTree
 reserveValidatorHandoverFailing15 =
-  expectFail "should fail if governance approval is not present (ERROR-RESERVE-15)" $
+  expectFail "should fail if governance approval is not present" "ERROR-RESERVE-15" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
       Types.Handover
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Spending reserveUtxo
+          -- governance version oracle:
+          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           -- [ERROR] not signed by governance
           -- ReserveAuthPolicy VersionOracle
           & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
@@ -1475,7 +1483,7 @@ reserveValidatorHandoverFailing15 =
 
 reserveValidatorHandoverFailing16 :: TestTree
 reserveValidatorHandoverFailing16 =
-  expectFail "should fail if an authentication token is not burnt (ERROR-RESERVE-16)" $
+  expectFail "should fail if an authentication token is not burnt" "ERROR-RESERVE-16" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -1525,7 +1533,7 @@ reserveValidatorHandoverFailing16 =
 
 reserveValidatorHandoverFailing17 :: TestTree
 reserveValidatorHandoverFailing17 =
-  expectFail "should fail if not all reserve tokens are transferred to illiquid circulation supply (ERROR-RESERVE-17)" $
+  expectFail "should fail if not all reserve tokens are transferred to illiquid circulation supply" "ERROR-RESERVE-17" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -1583,7 +1591,7 @@ reserveValidatorHandoverFailing17 =
 
 reserveValidatorHandoverFailing18 :: TestTree
 reserveValidatorHandoverFailing18 =
-  expectFail "should fail if governance approval is not present (ERROR-RESERVE-18)" $
+  expectFail "should fail if governance approval is not present" "ERROR-RESERVE-18" $
     runValidator
       Test.versionOracleConfig
       Test.dummyBuiltinData
@@ -1748,17 +1756,17 @@ vFunctionCurrSym = V2.CurrencySymbol "vFunctionScriptHash"
 
 -- test runner
 
-runMintingPolicy :: Types.VersionOracleConfig -> BuiltinData -> V2.ScriptContext -> BuiltinUnit
+runMintingPolicy :: Types.VersionOracleConfig -> BuiltinData -> V2.ScriptContext -> CompiledCode BuiltinUnit
 runMintingPolicy vc redeemer ctx =
-  Reserve.mkReserveAuthPolicyUntyped
-    (toBuiltinData vc)
-    redeemer
-    (toBuiltinData ctx)
+  compiledReserveAuthPolicy
+    `appArg` vc
+    `appArg` redeemer
+    `appArg` ctx
 
-runValidator :: Types.VersionOracleConfig -> BuiltinData -> Types.ReserveRedeemer -> V2.ScriptContext -> BuiltinUnit
+runValidator :: Types.VersionOracleConfig -> BuiltinData -> Types.ReserveRedeemer -> V2.ScriptContext -> CompiledCode BuiltinUnit
 runValidator vc datum redeemer ctx =
-  Reserve.mkReserveValidatorUntyped
-    (toBuiltinData vc)
-    datum
-    (toBuiltinData redeemer)
-    (toBuiltinData ctx)
+  compiledValidator
+    `appArg` vc
+    `appArg` datum
+    `appArg` redeemer
+    `appArg` ctx

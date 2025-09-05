@@ -7,6 +7,7 @@
 module TrustlessSidechain.CommitteeCandidateValidator (
   mkCommitteeCandidateValidator,
   committeeCandidateValidatorUntyped,
+  compiledValidator,
   serialisableValidator,
 ) where
 
@@ -51,6 +52,8 @@ committeeCandidateValidatorUntyped genesisUtxo datum red ctx =
       red
       (unsafeFromBuiltinData ctx)
 
+compiledValidator :: PlutusTx.CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit)
+compiledValidator = $$(PlutusTx.compile [||committeeCandidateValidatorUntyped||])
+
 serialisableValidator :: SerialisedScript
-serialisableValidator =
-  serialiseCompiledCode $$(PlutusTx.compile [||committeeCandidateValidatorUntyped||])
+serialisableValidator = serialiseCompiledCode compiledValidator

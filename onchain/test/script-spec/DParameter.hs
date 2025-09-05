@@ -43,7 +43,7 @@ dParamMintingPolicyPassing =
 
 dParamMintingPolicyFailing01 :: TestTree
 dParamMintingPolicyFailing01 =
-  expectFail "should fail if not signed by the governance authority (ERROR-DPARAMETER-POLICY-01)" $
+  expectFail "should fail if not signed by the governance authority" "ERROR-DPARAMETER-POLICY-01" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionOracleConfig
@@ -61,7 +61,7 @@ dParamMintingPolicyFailing01 =
 
 dParamMintingPolicyFailing02 :: TestTree
 dParamMintingPolicyFailing02 =
-  expectFail "should fail if some tokens are not sent to dParameterValidatorAddress (ERROR-DPARAMETER-POLICY-02)" $
+  expectFail "should fail if some tokens are not sent to dParameterValidatorAddress" "ERROR-DPARAMETER-POLICY-02" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionOracleConfig
@@ -89,7 +89,7 @@ dParamMintingPolicyFailing02 =
 
 dParamMintingPolicyFailing03 :: TestTree
 dParamMintingPolicyFailing03 =
-  expectFail "should fail if script purpose is not Minting (ERROR-DPARAMETER-POLICY-03)" $
+  expectFail "should fail if script purpose is not Minting" "ERROR-DPARAMETER-POLICY-03" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionOracleConfig
@@ -161,7 +161,7 @@ dParamValidatorPassingSpending =
 
 dParamValidatorFailing01 :: TestTree
 dParamValidatorFailing01 =
-  expectFail "should fail if not signed by the governance authority (ERROR-DPARAMETER-VALIDATOR-01)" $
+  expectFail "should fail if not signed by the governance authority" "ERROR-DPARAMETER-VALIDATOR-01" $
     runValidator
       Test.genesisUtxo
       Test.versionOracleConfig
@@ -195,20 +195,20 @@ dParameterOracleToken = V2.singleton dParameterCurrSym dParameterOracleTokenName
 
 -- test runner
 
-runMintingPolicy :: V2.TxOutRef -> VersionOracleConfig -> V2.Address -> BuiltinData -> V2.ScriptContext -> BuiltinUnit
+runMintingPolicy :: V2.TxOutRef -> VersionOracleConfig -> V2.Address -> BuiltinData -> V2.ScriptContext -> CompiledCode BuiltinUnit
 runMintingPolicy genesisUtxo vc dParameterValidatorAddress' redeemer ctx =
-  mkMintingPolicyUntyped
-    (toBuiltinData genesisUtxo)
-    (toBuiltinData vc)
-    (toBuiltinData dParameterValidatorAddress')
-    (toBuiltinData redeemer)
-    (toBuiltinData ctx)
+  compiledMintingPolicy
+    `appArg` genesisUtxo
+    `appArg` vc
+    `appArg` dParameterValidatorAddress'
+    `appArg` redeemer
+    `appArg` ctx
 
-runValidator :: V2.TxOutRef -> VersionOracleConfig -> BuiltinData -> BuiltinData -> V2.ScriptContext -> BuiltinUnit
+runValidator :: V2.TxOutRef -> VersionOracleConfig -> BuiltinData -> BuiltinData -> V2.ScriptContext -> CompiledCode BuiltinUnit
 runValidator genesisUtxo vc datum redeemer ctx =
-  mkValidatorUntyped
-    (toBuiltinData genesisUtxo)
-    (toBuiltinData vc)
-    (toBuiltinData datum)
-    (toBuiltinData redeemer)
-    (toBuiltinData ctx)
+  compiledValidator
+    `appArg` genesisUtxo
+    `appArg` vc
+    `appArg` datum
+    `appArg` redeemer
+    `appArg` ctx

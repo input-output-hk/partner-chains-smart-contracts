@@ -1,7 +1,8 @@
 module ScriptSpecUtils where
 
-import Control.Exception
 import Control.Lens
+import Data.Text (Text)
+import Data.Text qualified as Text
 import PlutusLedgerApi.V1.Interval (interval)
 import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx
@@ -9,6 +10,13 @@ import PlutusTx.AssocMap qualified as Map
 import PlutusTx.Prelude (BuiltinUnit)
 import Test.Tasty
 import Test.Tasty.HUnit
+
+import PlutusCore.Default (DefaultUni (DefaultUniUnit), Some (..), ValueOf (..))
+import PlutusCore.Evaluation.Machine.ExBudgetingDefaults (defaultCekParametersForTesting)
+import PlutusCore.Version (plcVersion100)
+import UntypedPlutusCore.Core.Type (Term (Constant), progTerm)
+import UntypedPlutusCore.Evaluation.Machine.Cek (counting, logEmitter)
+import UntypedPlutusCore.Evaluation.Machine.Cek.Internal (runCekDeBruijn)
 
 emptyScriptContext :: V2.ScriptContext
 emptyScriptContext =
@@ -76,19 +84,27 @@ mkTxOutNoScriptHash txOutAddress txOutValue datum =
 
 -- test functions
 
-expectFail :: TestName -> BuiltinUnit -> TestTree
-expectFail str a = testCase str do
-  res <- catch (Right <$> evaluate a) \(SomeException _) -> return $ Left ()
-  case res of
-    Right _ -> assertFailure ("expected fail")
-    _ -> return ()
+appArg :: (ToData b) => CompiledCode (BuiltinData -> a) -> b -> CompiledCode a
+appArg a b = a `unsafeApplyCode` liftCode plcVersion100 (toBuiltinData b)
 
-expectSuccess :: TestName -> BuiltinUnit -> TestTree
-expectSuccess str a = testCase str do
-  res <- catch (Right <$> evaluate a) \(SomeException e) -> return $ Left $ show e
-  case res of
-    Left e -> assertFailure ("expected pass, received:\n" <> e)
-    _ -> return ()
+expectSuccess :: TestName -> CompiledCode BuiltinUnit -> TestTree
+expectSuccess testName code = testCase testName do
+  let plc = getPlc code ^. progTerm
+  case runCekDeBruijn defaultCekParametersForTesting counting logEmitter plc of
+    (Left ex, _counting, _logs) -> assertFailure $ show ex
+    (Right actual, _counting, _logs) -> assertEqual "Evaluation has succeeded" constUnit actual
+  where
+    constUnit = Constant () (Some (ValueOf DefaultUniUnit ()))
+
+expectFail :: TestName -> Text -> CompiledCode BuiltinUnit -> TestTree
+expectFail testName expectedTrace code = testCase testName do
+  let plc = getPlc code ^. progTerm
+  case runCekDeBruijn defaultCekParametersForTesting counting logEmitter plc of
+    (Left _ex, _counting, logs) ->
+      assertBool
+        ("Didn't fail with expected trace. expected: " <> Text.unpack expectedTrace <> " actual: " <> show logs)
+        $ expectedTrace `elem` logs
+    (Right _actual, _counting, _logs) -> assertFailure $ "Expected failure but script passed! expected: " <> Text.unpack expectedTrace
 
 -- lens
 

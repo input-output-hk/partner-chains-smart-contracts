@@ -10,6 +10,8 @@
 -- versioning tokens.  Each versioning token stores a reference script and a
 -- datum that identifies the script and its version.
 module TrustlessSidechain.Versioning (
+  compiledVersionOraclePolicy,
+  compiledVersionOracleValidator,
   serialisableVersionOraclePolicy,
   serialisableVersionOracleValidator,
   mkVersionOraclePolicy,
@@ -198,11 +200,12 @@ mkVersionOraclePolicyUntyped genesisUtxo validatorAddress redeemer ctx =
       (unsafeFromBuiltinData redeemer)
       (unsafeFromBuiltinData ctx)
 
+compiledVersionOraclePolicy :: PlutusTx.CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit)
+compiledVersionOraclePolicy = $$(PlutusTx.compile [||mkVersionOraclePolicyUntyped||])
+
 serialisableVersionOraclePolicy ::
   SerialisedScript
-serialisableVersionOraclePolicy =
-  serialiseCompiledCode
-    $$(PlutusTx.compile [||mkVersionOraclePolicyUntyped||])
+serialisableVersionOraclePolicy = serialiseCompiledCode compiledVersionOraclePolicy
 
 -- | Stores VersionOraclePolicy UTxOs, acting both as an oracle of available
 -- scripts as well as a script caching system.  UTxOs on the script are managed
@@ -267,11 +270,12 @@ mkVersionOracleValidatorUntyped genesisUtxo datum redeemer ctx =
       (PlutusTx.unsafeFromBuiltinData redeemer)
       (unsafeFromBuiltinData ctx)
 
+compiledVersionOracleValidator :: PlutusTx.CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit)
+compiledVersionOracleValidator = $$(PlutusTx.compile [||mkVersionOracleValidatorUntyped||])
+
 serialisableVersionOracleValidator ::
   SerialisedScript
-serialisableVersionOracleValidator =
-  serialiseCompiledCode
-    $$(PlutusTx.compile [||mkVersionOracleValidatorUntyped||])
+serialisableVersionOracleValidator = serialiseCompiledCode compiledVersionOracleValidator
 
 -- | Searches for a specified validator script passed as a reference input.
 -- Note that if requested script ID corresponds to a minting policy this

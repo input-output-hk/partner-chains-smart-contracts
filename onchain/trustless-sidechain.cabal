@@ -237,7 +237,9 @@ test-suite roundtrip
   hs-source-dirs: test/roundtrip
 
 test-suite script-specs
-  import:         common-lang, common-optimized-parallel, common-script-lang
+  import:
+    common-lang, common-optimized-parallel, common-script-lang, common-lang-traced
+
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:

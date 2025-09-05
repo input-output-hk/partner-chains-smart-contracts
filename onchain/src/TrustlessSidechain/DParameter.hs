@@ -2,6 +2,8 @@
 {-# OPTIONS_GHC -fno-specialise #-}
 
 module TrustlessSidechain.DParameter (
+  compiledMintingPolicy,
+  compiledValidator,
   serialisableMintingPolicy,
   serialisableValidator,
   dParameterValidator,
@@ -125,9 +127,11 @@ mkValidatorUntyped genesisUtxo vc dat redeemer ctx =
       redeemer
       (unsafeFromBuiltinData ctx)
 
+compiledValidator :: PlutusTx.CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit)
+compiledValidator = $$(PlutusTx.compile [||mkValidatorUntyped||])
+
 serialisableValidator :: SerialisedScript
-serialisableValidator =
-  serialiseCompiledCode $$(PlutusTx.compile [||mkValidatorUntyped||])
+serialisableValidator = serialiseCompiledCode compiledValidator
 
 mkMintingPolicyUntyped ::
   BuiltinData ->
@@ -145,6 +149,8 @@ mkMintingPolicyUntyped genesisUtxo vc validatorAddress redeemer ctx =
       redeemer
       (unsafeFromBuiltinData ctx)
 
+compiledMintingPolicy :: PlutusTx.CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit)
+compiledMintingPolicy = $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
+
 serialisableMintingPolicy :: SerialisedScript
-serialisableMintingPolicy =
-  serialiseCompiledCode $$(PlutusTx.compile [||mkMintingPolicyUntyped||])
+serialisableMintingPolicy = serialiseCompiledCode compiledMintingPolicy
