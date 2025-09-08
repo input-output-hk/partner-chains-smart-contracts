@@ -91,7 +91,7 @@ expectSuccess :: TestName -> CompiledCode BuiltinUnit -> TestTree
 expectSuccess testName code = testCase testName do
   let plc = getPlc code ^. progTerm
   case runCekDeBruijn defaultCekParametersForTesting counting logEmitter plc of
-    (Left ex, _counting, _logs) -> assertFailure $ show ex
+    (Left ex, _counting, logs) -> assertFailure $ "Expected success but script failed! trace: " <> show logs <> "\n" <> show ex
     (Right actual, _counting, _logs) -> assertEqual "Evaluation has succeeded" constUnit actual
   where
     constUnit = Constant () (Some (ValueOf DefaultUniUnit ()))

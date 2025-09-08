@@ -30,7 +30,7 @@ import PlutusLedgerApi.V1.Data.Value (
   leq,
   valueOf,
  )
-import PlutusLedgerApi.V2.Data.Contexts (getContinuingOutputs)
+import PlutusLedgerApi.V2.Data.Contexts (findOwnInput, getContinuingOutputs, txInInfoResolved)
 import PlutusTx qualified
 import PlutusTx.Data.AssocMap qualified as Map
 import PlutusTx.Data.List qualified as List
@@ -56,11 +56,12 @@ icsAuthorityTokenName = TokenName emptyByteString
 
 -- | Error codes description follows:
 --
---   ERROR-ILLIQUID-CIRCULATION-SUPPLY-01: Output UTxO doesn't have exactly one ICS Authority Token
+--   ERROR-ILLIQUID-CIRCULATION-SUPPLY-01: ICS Auth Tokens are not correctly assigned:
+--       Output UTxO doesn't have exactly one ICS Authority Token or ICS auth tokens leak from the ICS validator
 --   ERROR-ILLIQUID-CIRCULATION-SUPPLY-02: Assets of the supply UTxO decreased
---   ERROR-ILLIQUID-CIRCULATION-SUPPLY-03: ICS auth tokens leak from the ICS validator
---   ERROR-ILLIQUID-CIRCULATION-SUPPLY-04: Single illiquid circulation supply token is not minted
---   ERROR-ILLIQUID-CIRCULATION-SUPPLY-05: No unique output UTxO at the supply address
+--   ERROR-ILLIQUID-CIRCULATION-SUPPLY-03: Single illiquid circulation supply token is not minted
+--   ERROR-ILLIQUID-CIRCULATION-SUPPLY-04: No unique output UTxO at the supply address
+--   ERROR-ILLIQUID-CIRCULATION-SUPPLY-05: No own input UTxO at the supply address
 mkIlliquidCirculationSupplyValidator ::
   VersionOracleConfig ->
   BuiltinData ->
@@ -69,11 +70,11 @@ mkIlliquidCirculationSupplyValidator ::
   Bool
 mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
   DepositMoreToSupply ->
-    traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-01" (containsOnlyOneICSAuthorityToken supplyOutputUtxo)
+    icsAuthTokensAreCorrectlyAssigned
       && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-02" assetsDoNotDecrease
-      && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-03" icsAuthTokensDoNotLeakFromIcs
   WithdrawFromSupply ->
-    traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-04" oneIcsWithdrawalMintingPolicyTokenIsMinted
+    icsAuthTokensAreCorrectlyAssigned
+      && traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-03" oneIcsWithdrawalMintingPolicyTokenIsMinted
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx
@@ -92,16 +93,12 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
         (VersionOracle {scriptId = ScriptId.illiquidCirculationSupplyAuthorityTokenPolicyId})
         ctx
 
-    containsOnlyOneICSAuthorityToken :: TxOut -> Bool
-    containsOnlyOneICSAuthorityToken TxOut {txOutValue = value} =
-      let valueOfIcsAuthorityToken = valueOf value icsAuthorityTokenCurrencySymbol icsAuthorityTokenName
-       in valueOfIcsAuthorityToken == 1
-
-    supplyAddress :: Address
-    supplyAddress = txOutAddress supplyOutputUtxo
+    containsICSAuthorityTokens :: Integer -> TxOut -> Bool
+    containsICSAuthorityTokens n TxOut {txOutValue = value} =
+      valueOf value icsAuthorityTokenCurrencySymbol icsAuthorityTokenName == n
 
     supplyInputUtxos :: List.List TxOut
-    supplyInputUtxos = Utils.getInputsAt info supplyAddress
+    supplyInputUtxos = Utils.getInputsAt info ownAddress
 
     supplyInputValue :: Value
     supplyInputValue = List.mconcat (List.map txOutValue supplyInputUtxos)
@@ -112,8 +109,7 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
 
     supplyOutputUtxo :: TxOut
     supplyOutputUtxo =
-      Utils.fromSingletonData (\_ -> traceError "ERROR-ILLIQUID-CIRCULATION-SUPPLY-05")
-        $ getContinuingOutputs ctx
+      Utils.fromSingletonData (\_ -> traceError "ERROR-ILLIQUID-CIRCULATION-SUPPLY-04") $ getContinuingOutputs ctx
 
     relevantTokensOnOutput :: Value
     relevantTokensOnOutput =
@@ -122,15 +118,26 @@ mkIlliquidCirculationSupplyValidator voc _ red ctx = case red of
     assetsDoNotDecrease :: Bool
     assetsDoNotDecrease = relevantTokensOnInput `leq` relevantTokensOnOutput
 
-    icsAuthTokensDoNotLeakFromIcs :: Bool
-    icsAuthTokensDoNotLeakFromIcs =
-      List.null
-        $ List.filter
+    ownAddress :: Address
+    ownAddress = case findOwnInput ctx of
+      Just txOut -> txOutAddress $ txInInfoResolved txOut
+      Nothing -> traceError "ERROR-ILLIQUID-CIRCULATION-SUPPLY-05"
+
+    -- Outputs are either ICS UTXOs at the ICS validator address, carrying 1 ICS Auth token,
+    -- or are UTXOs going to another address, carrying 0 ICS Auth tokens.
+    icsAuthTokensAreCorrectlyAssigned :: Bool
+    icsAuthTokensAreCorrectlyAssigned =
+      traceIfFalse "ERROR-ILLIQUID-CIRCULATION-SUPPLY-01"
+        $ List.all
           ( \txOut ->
-              txOutAddress txOut
-                /= supplyAddress
-                && valueOf (txOutValue txOut) icsAuthorityTokenCurrencySymbol icsAuthorityTokenName
-                > 0
+              ( txOutAddress txOut
+                  == ownAddress
+                  && containsICSAuthorityTokens 1 txOut
+              )
+                || ( txOutAddress txOut
+                      /= ownAddress
+                      && containsICSAuthorityTokens 0 txOut
+                   )
           )
         $ txInfoOutputs info
 
