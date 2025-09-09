@@ -1,8 +1,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 
--- | This module provides functionality for storing a list of permissioned
--- candidates on the mainchain so that it can be accessed by the sidechain.
+{- | This module provides functionality for storing a list of permissioned
+candidates on the mainchain so that it can be accessed by the sidechain.
+-}
 module TrustlessSidechain.PermissionedCandidates (
   compiledValidator,
   compiledMintingPolicy,

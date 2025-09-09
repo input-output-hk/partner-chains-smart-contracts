@@ -4,11 +4,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
--- | 'TrustlessSidechain.Versioning' module implements script versioning system.
--- It provides VersionOraclePolicy for minting tokens that store versioned
--- scripts, as well as VersionedOracleValidator script for storing the
--- versioning tokens.  Each versioning token stores a reference script and a
--- datum that identifies the script and its version.
+{- | 'TrustlessSidechain.Versioning' module implements script versioning system.
+It provides VersionOraclePolicy for minting tokens that store versioned
+scripts, as well as VersionedOracleValidator script for storing the
+versioning tokens.  Each versioning token stores a reference script and a
+datum that identifies the script and its version.
+-}
 module TrustlessSidechain.Versioning (
   compiledVersionOraclePolicy,
   compiledVersionOracleValidator,
@@ -64,43 +65,45 @@ import TrustlessSidechain.Utils (
   fromSingleton,
  )
 
--- | Token name for versioning tokens.  Must match definition in off-chain
--- | module.
+{- | Token name for versioning tokens.  Must match definition in off-chain
+| module.
+-}
 {-# INLINEABLE versionOracleTokenName #-}
 versionOracleTokenName :: TokenName
 versionOracleTokenName = TokenName "Version oracle"
 
--- | Manages minting and burning of versioning tokens.  (Note that these are
--- ordinary tokens, not NFTs.)  No restrictions are placed on minting initial
--- versioning tokens during sidechain initialization, other than the usual
--- requirement of burning a genesis UTxO.
---
--- OnChain error descriptions:
---
---   ERROR-VERSION-POLICY-01: Transaction should burn exactly one init token.
---
---   ERROR-VERSION-POLICY-02: Transaction should attach datum and reference
---     script to output containing one versioning token.
---
---   ERROR-VERSION-POLICY-03: Transaction should attach datum and reference
---     script to output containing one versioning token.
---
---   ERROR-VERSION-POLICY-04: Script to be invalidated should be present in
---     exactly one transaction input.
---
---   ERROR-VERSION-POLICY-05: Transaction should be signed by the governance.
---
---   ERROR-VERSION-POLICY-06: Transaction should burn all versioning tokens in
---     the input.
---
---   ERROR-VERSION-POLICY-07: Transaction should attach datum and reference
---     script to output containing one versioning token.
---
---   ERROR-VERSION-POLICY-08: Script can only be used for Minting purpose.
---
---   ERROR-VERSION-POLICY-09: Transaction should be signed by the governance.
---
---   ERROR-VERSION-POLICY-10: Script purpose is not Minting.
+{- | Manages minting and burning of versioning tokens.  (Note that these are
+ordinary tokens, not NFTs.)  No restrictions are placed on minting initial
+versioning tokens during sidechain initialization, other than the usual
+requirement of burning a genesis UTxO.
+
+OnChain error descriptions:
+
+  ERROR-VERSION-POLICY-01: Transaction should burn exactly one init token.
+
+  ERROR-VERSION-POLICY-02: Transaction should attach datum and reference
+    script to output containing one versioning token.
+
+  ERROR-VERSION-POLICY-03: Transaction should attach datum and reference
+    script to output containing one versioning token.
+
+  ERROR-VERSION-POLICY-04: Script to be invalidated should be present in
+    exactly one transaction input.
+
+  ERROR-VERSION-POLICY-05: Transaction should be signed by the governance.
+
+  ERROR-VERSION-POLICY-06: Transaction should burn all versioning tokens in
+    the input.
+
+  ERROR-VERSION-POLICY-07: Transaction should attach datum and reference
+    script to output containing one versioning token.
+
+  ERROR-VERSION-POLICY-08: Script can only be used for Minting purpose.
+
+  ERROR-VERSION-POLICY-09: Transaction should be signed by the governance.
+
+  ERROR-VERSION-POLICY-10: Script purpose is not Minting.
+-}
 mkVersionOraclePolicy ::
   TxOutRef ->
   Address ->
@@ -207,17 +210,18 @@ serialisableVersionOraclePolicy ::
   SerialisedScript
 serialisableVersionOraclePolicy = serialiseCompiledCode compiledVersionOraclePolicy
 
--- | Stores VersionOraclePolicy UTxOs, acting both as an oracle of available
--- scripts as well as a script caching system.  UTxOs on the script are managed
--- by governance authority, with VersionOraclePolicy ensuring that tokens are
--- minted and burned correctly.
---
--- OnChain error descriptions:
---   ERROR-VERSION-VALIDATOR-01: Governance approval is not present
---   ERROR-VERSION-VALIDATOR-02: Version oracle in the datum does not match the redeemer
---   ERROR-VERSION-VALIDATOR-03: Transaction outputs version tokens to non-versioning address
---   ERROR-VERSION-VALIDATOR-04: Invalid script purpose is provided
---   ERROR-VERSION-VALIDATOR-05: Transaction does not have own input
+{- | Stores VersionOraclePolicy UTxOs, acting both as an oracle of available
+scripts as well as a script caching system.  UTxOs on the script are managed
+by governance authority, with VersionOraclePolicy ensuring that tokens are
+minted and burned correctly.
+
+OnChain error descriptions:
+  ERROR-VERSION-VALIDATOR-01: Governance approval is not present
+  ERROR-VERSION-VALIDATOR-02: Version oracle in the datum does not match the redeemer
+  ERROR-VERSION-VALIDATOR-03: Transaction outputs version tokens to non-versioning address
+  ERROR-VERSION-VALIDATOR-04: Invalid script purpose is provided
+  ERROR-VERSION-VALIDATOR-05: Transaction does not have own input
+-}
 {-# INLINEABLE mkVersionOracleValidator #-}
 mkVersionOracleValidator ::
   BuiltinData ->
@@ -277,9 +281,10 @@ serialisableVersionOracleValidator ::
   SerialisedScript
 serialisableVersionOracleValidator = serialiseCompiledCode compiledVersionOracleValidator
 
--- | Searches for a specified validator script passed as a reference input.
--- Note that if requested script ID corresponds to a minting policy this
--- function will return a result anyway without reporting any errors.
+{- | Searches for a specified validator script passed as a reference input.
+Note that if requested script ID corresponds to a minting policy this
+function will return a result anyway without reporting any errors.
+-}
 {-# INLINEABLE getVersionedValidatorAddress #-}
 getVersionedValidatorAddress ::
   VersionOracleConfig ->
@@ -289,9 +294,10 @@ getVersionedValidatorAddress ::
 getVersionedValidatorAddress voConfig vo =
   scriptHashAddress . ScriptHash . getVersionedScriptHash voConfig vo
 
--- | Searches for a specified minting policy passed as a reference input.  Note
--- that if requested script ID corresponds to a validator this function will
--- return a result anyway without reporting any errors.
+{- | Searches for a specified minting policy passed as a reference input.  Note
+that if requested script ID corresponds to a validator this function will
+return a result anyway without reporting any errors.
+-}
 {-# INLINEABLE getVersionedCurrencySymbol #-}
 getVersionedCurrencySymbol ::
   VersionOracleConfig ->
@@ -301,13 +307,14 @@ getVersionedCurrencySymbol ::
 getVersionedCurrencySymbol voConfig vo sc =
   CurrencySymbol (getVersionedScriptHash voConfig vo sc)
 
--- | Searches script context for a reference input containing specified script
--- as a reference input.  Said reference input must come from
--- VersionOracleValidator script address.  Returns script hash if requested
--- version exists, throws error otherwise.  Note that this function is a worker
--- for 'getVersionedCurrencySymbol' and 'getVersionedValidatorAddress', and it
--- is therefore the callers responsibility to correctly interpret the result as
--- either a validator or a minting policy.
+{- | Searches script context for a reference input containing specified script
+as a reference input.  Said reference input must come from
+VersionOracleValidator script address.  Returns script hash if requested
+version exists, throws error otherwise.  Note that this function is a worker
+for 'getVersionedCurrencySymbol' and 'getVersionedValidatorAddress', and it
+is therefore the callers responsibility to correctly interpret the result as
+either a validator or a minting policy.
+-}
 {-# INLINEABLE getVersionedScriptHash #-}
 getVersionedScriptHash ::
   VersionOracleConfig ->
@@ -337,11 +344,12 @@ getVersionedScriptHash
         valueOf value versionOracleCurrencySymbol versionOracleTokenName == 1
         ]
 
--- | Check whether a given transaction is approved by sidechain governance.  The
--- actual check is delegated to a governance minting policy stored in the
--- versioning system.  Caller specifies the requested governance version.  The
--- transaction must mint at least one token of the governance minting policy to
--- signify transaction approval.
+{- | Check whether a given transaction is approved by sidechain governance.  The
+actual check is delegated to a governance minting policy stored in the
+versioning system.  Caller specifies the requested governance version.  The
+transaction must mint at least one token of the governance minting policy to
+signify transaction approval.
+-}
 {-# INLINEABLE approvedByGovernance #-}
 approvedByGovernance ::
   VersionOracleConfig ->

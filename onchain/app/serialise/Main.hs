@@ -51,8 +51,9 @@ data Options
     -- this is 'Nothing',  we output to stdout
     }
 
--- | 'getOpts' is a high level function to convert the CLI arguments to
--- 'Options'
+{- | 'getOpts' is a high level function to convert the CLI arguments to
+'Options'
+-}
 getOpts :: IO Options
 getOpts =
   Environment.getProgName >>= \progName ->

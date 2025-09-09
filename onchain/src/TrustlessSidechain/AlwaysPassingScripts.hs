@@ -1,11 +1,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 
--- |
--- Module      : TrustlessSidechain.AlwaysPassingScripts
---
--- This module provides Plutus scripts (validator and minting policy) that always succeed.
--- These scripts are useful for integration testing in mock chains, where validation
--- success needs to be ensured regardless of inputs.
+{- |
+Module      : TrustlessSidechain.AlwaysPassingScripts
+
+This module provides Plutus scripts (validator and minting policy) that always succeed.
+These scripts are useful for integration testing in mock chains, where validation
+success needs to be ensured regardless of inputs.
+-}
 module TrustlessSidechain.AlwaysPassingScripts (
   -- * Validator
   mkAlwaysPassingValidator,
@@ -29,9 +30,10 @@ import PlutusTx.Prelude
 -- Always-Passing Validator
 --------------------------------------------------------------------------------
 
--- | A typed validator function that always passes.
---
--- All arguments  are ignored. The function always returns 'True'.
+{- | A typed validator function that always passes.
+
+All arguments  are ignored. The function always returns 'True'.
+-}
 mkAlwaysPassingValidator ::
   -- | Arbitrary seed/parameter (ignored)
   BuiltinData ->
@@ -45,9 +47,10 @@ mkAlwaysPassingValidator ::
   Bool
 mkAlwaysPassingValidator _ _ _ _ = True
 
--- | An untyped version of 'mkAlwaysPassingValidator' conforming to the Plutus script interface.
---
--- Wraps the result in 'check', which succeeds when the result is 'True'.
+{- | An untyped version of 'mkAlwaysPassingValidator' conforming to the Plutus script interface.
+
+Wraps the result in 'check', which succeeds when the result is 'True'.
+-}
 mkAlwaysPassingValidatorUntyped ::
   -- | Arbitrary seed/parameter (ignored)
   BuiltinData ->
@@ -76,9 +79,10 @@ serialisableAlwaysPassingValidator =
 -- Always-Passing Minting Policy
 --------------------------------------------------------------------------------
 
--- | A typed minting policy that always allows minting.
---
--- All arguments are ignored. The policy always returns 'True'.
+{- | A typed minting policy that always allows minting.
+
+All arguments are ignored. The policy always returns 'True'.
+-}
 {-# INLINEABLE mkAlwaysPassingPolicy #-}
 mkAlwaysPassingPolicy ::
   -- | Arbitrary seed/parameter (ignored)
@@ -91,9 +95,10 @@ mkAlwaysPassingPolicy ::
   Bool
 mkAlwaysPassingPolicy _ _ _ = True
 
--- | An untyped version of 'mkAlwaysPassingPolicy', suitable for Plutus compilation.
---
--- Wraps the result in 'check', which passes when the result is 'True'.
+{- | An untyped version of 'mkAlwaysPassingPolicy', suitable for Plutus compilation.
+
+Wraps the result in 'check', which passes when the result is 'True'.
+-}
 {-# INLINEABLE mkAlwaysPassingPolicyUntyped #-}
 mkAlwaysPassingPolicyUntyped ::
   -- | Arbitrary seed/parameter (ignored)
