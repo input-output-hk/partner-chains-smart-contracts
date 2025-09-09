@@ -1,9 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ViewPatterns #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Redundant if" #-}
 
 module TrustlessSidechain.Reserve (
   mkReserveValidator,

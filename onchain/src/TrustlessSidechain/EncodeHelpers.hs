@@ -1,6 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE FunctionalDependencies #-}
-
 module TrustlessSidechain.EncodeHelpers (
   -- * Helpers for Data encoding
 

@@ -1,8 +1,4 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module TrustlessSidechain.CommitteeCandidateValidator (
   mkCommitteeCandidateValidator,

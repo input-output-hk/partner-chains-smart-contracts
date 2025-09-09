@@ -1,8 +1,4 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
 
 {- | 'TrustlessSidechain.Versioning' module implements script versioning system.
 It provides VersionOraclePolicy for minting tokens that store versioned

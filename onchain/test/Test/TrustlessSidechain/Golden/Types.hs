@@ -1,5 +1,3 @@
-{-# LANGUAGE DuplicateRecordFields #-}
-
 module Test.TrustlessSidechain.Golden.Types (tests) where
 
 import Data.ByteString (ByteString)
