@@ -1,11 +1,23 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -fno-specialise #-}
 
+{- |
+Module      : TrustlessSidechain.IlliquidCirculationSupply
+Description : Illiquid Circulation Supply validator and auth token minting policy.
+-}
 module TrustlessSidechain.IlliquidCirculationSupply (
+  -- * Illiquid Circulation Supply (ICS) validator
+  -- $icsValidator
+  mkIlliquidCirculationSupplyValidator,
   mkIlliquidCirculationSupplyValidatorUntyped,
-  mkIlliquidCirculationSupplyAuthorityTokenPolicyUntyped,
   compiledValidator,
-  compiledAuthorityTokenPolicy,
   serialisableIlliquidCirculationSupplyValidator,
+
+  -- * ICS Auth token minting policy
+  -- $icsMintingPolicy
+  mkIlliquidCirculationSupplyAuthorityTokenPolicy,
+  mkIlliquidCirculationSupplyAuthorityTokenPolicyUntyped,
+  compiledAuthorityTokenPolicy,
   serialisableIlliquidCirculationSupplyAuthorityTokenPolicy,
 ) where
 
@@ -54,14 +66,38 @@ icsWithdrawalMintingPolicyTokenName = TokenName emptyByteString
 icsAuthorityTokenName :: TokenName
 icsAuthorityTokenName = TokenName emptyByteString
 
-{- | Error codes description follows:
+{- $icsValidator
 
-  ERROR-ILLIQUID-CIRCULATION-SUPPLY-01: ICS Auth Tokens are not correctly assigned:
-      Output UTxO doesn't have exactly one ICS Authority Token or ICS auth tokens leak from the ICS validator
-  ERROR-ILLIQUID-CIRCULATION-SUPPLY-02: Assets of the supply UTxO decreased
-  ERROR-ILLIQUID-CIRCULATION-SUPPLY-03: Single illiquid circulation supply token is not minted
-  ERROR-ILLIQUID-CIRCULATION-SUPPLY-04: No unique output UTxO at the supply address
-  ERROR-ILLIQUID-CIRCULATION-SUPPLY-05: No own input UTxO at the supply address
+There can be multiple ICS UTXOs at the validator address; they are identified by having the ICS Auth token.
+
+Redeemers:
+
+1. `DepositMoreToSupply` allows depositing native tokens into a single continuing ICS UTXO.
+
+    * Amount of native tokens in the ICS UTXO must not decrease.
+    * Outputs exactly one ICS UTXO, with a single ICS Auth token.
+    * Only outputs at the ICS validator address may receive an ICS Auth token.
+    * Required reference inputs:
+
+        * `VersionOracle` for `ScriptId.illiquidCirculationSupplyAuthorityTokenPolicyId`
+
+2. `WithdrawFromSupply` allows withdrawing native tokens from the ICS.
+
+    * May spend and output one or more ICS UTXOs.
+    * Only outputs at the ICS validator address may receive an ICS Auth token.
+    * Conditions of withdrawing tokens are encoded in the ICS supply withdrawal policy, which must exist in the
+      versioning system; one withdrawal token must be minted to prove the conditions are fulfilled.
+    * Required reference inputs:
+
+        * `VersionOracle` for `ScriptId.illiquidCirculationSupplyWithdrawalPolicyId`
+
+Error codes:
+
+* ERROR-ILLIQUID-CIRCULATION-SUPPLY-01: Output UTxO doesn't have exactly one ICS Authority Token or ICS auth tokens leak from the ICS validator
+* ERROR-ILLIQUID-CIRCULATION-SUPPLY-02: Assets of the supply UTxO decreased
+* ERROR-ILLIQUID-CIRCULATION-SUPPLY-03: Single illiquid circulation supply token is not minted
+* ERROR-ILLIQUID-CIRCULATION-SUPPLY-04: No unique output UTxO at the supply address
+* ERROR-ILLIQUID-CIRCULATION-SUPPLY-05: No own input UTxO at the supply address
 -}
 mkIlliquidCirculationSupplyValidator ::
   VersionOracleConfig ->
@@ -164,6 +200,14 @@ compiledValidator = $$(PlutusTx.compile [||mkIlliquidCirculationSupplyValidatorU
 serialisableIlliquidCirculationSupplyValidator :: SerialisedScript
 serialisableIlliquidCirculationSupplyValidator = serialiseCompiledCode compiledValidator
 
+{- $icsMintingPolicy
+
+Tokens minted with this policy are used for identifying authorized ICS UTXOs at the ICS validator address.
+
+Error codes:
+
+* ERROR-ICS-AUTH-TOKEN-01: No authority signature.
+-}
 mkIlliquidCirculationSupplyAuthorityTokenPolicy :: BuiltinData -> VersionOracleConfig -> BuiltinData -> ScriptContext -> Bool
 mkIlliquidCirculationSupplyAuthorityTokenPolicy _scriptId voc _ ctx =
   traceIfFalse "ERROR-ICS-AUTH-TOKEN-01" signedByAuthority

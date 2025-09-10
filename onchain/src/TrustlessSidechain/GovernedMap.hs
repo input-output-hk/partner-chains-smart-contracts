@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -fno-specialise #-}
 
 module TrustlessSidechain.GovernedMap (
   compiledMintingPolicy,
