@@ -1,5 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-
 module Laws (
   toDataSafeLaws',
   toDataUnsafeLaws',
@@ -16,8 +14,9 @@ import Test.QuickCheck (
   property,
  )
 
--- | As 'toDataSafeLaws', but allows a custom generator, shrinker and
--- prettyprinter.
+{- | As 'toDataSafeLaws', but allows a custom generator, shrinker and
+prettyprinter.
+-}
 toDataSafeLaws' ::
   forall (a :: Type).
   (ToData a, FromData a, Eq a) =>
@@ -40,8 +39,9 @@ toDataSafeLaws' gen shr pprint = forAllShrinkShow gen shr pprint $ \x ->
                 . property
                 $ False
 
--- | As 'toDataUnsafeLaws', but allows a custom generator, shrinker and
--- prettyprinter.
+{- | As 'toDataUnsafeLaws', but allows a custom generator, shrinker and
+prettyprinter.
+-}
 toDataUnsafeLaws' ::
   forall (a :: Type).
   (ToData a, UnsafeFromData a, Eq a) =>

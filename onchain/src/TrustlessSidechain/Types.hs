@@ -1,7 +1,4 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 
 module TrustlessSidechain.Types (
@@ -47,8 +44,9 @@ import Text.Show qualified as Haskell
 
 -- * Committee Candidate Validator data
 
--- | 'PermissionedCandidatesPolicyRedeemer' signals whether transaction is supposed to mint or
--- burn PermissionedCandidates tokens
+{- | 'PermissionedCandidatesPolicyRedeemer' signals whether transaction is supposed to mint or
+burn PermissionedCandidates tokens
+-}
 data PermissionedCandidatesPolicyRedeemer
   = PermissionedCandidatesMint
   | PermissionedCandidatesBurn
@@ -77,9 +75,10 @@ instance UnsafeFromData PermissionedCandidatesPolicyRedeemer where
           i | i == 1 -> PermissionedCandidatesBurn
           _ -> error ()
 
--- | 'PermissionedCandidatesValidatorRedeemer' signals whether transaction is
--- supposed to update the list of permissioned candidates or remove the list
--- altogether.
+{- | 'PermissionedCandidatesValidatorRedeemer' signals whether transaction is
+supposed to update the list of permissioned candidates or remove the list
+altogether.
+-}
 data PermissionedCandidatesValidatorRedeemer
   = UpdatePermissionedCandidates
   | RemovePermissionedCandidates
@@ -244,8 +243,9 @@ instance (UnsafeFromData a) => UnsafeFromData (VersionedGenericDatum a) where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = productUnsafeFromData3 VersionedGenericDatum
 
--- | Datum attached to 'VersionOraclePolicy' tokens stored on the
--- 'VersionOracleValidator' script.
+{- | Datum attached to 'VersionOraclePolicy' tokens stored on the
+'VersionOracleValidator' script.
+-}
 newtype VersionOracle = VersionOracle
   { scriptId :: Integer
   -- ^ Unique identifier of the validator.
@@ -268,8 +268,9 @@ instance UnsafeFromData VersionOracle where
 instance Eq VersionOracle where
   VersionOracle s == VersionOracle s' = s == s'
 
--- | Datum attached to 'VersionOraclePolicy' tokens stored on the
--- 'VersionOracleValidator' script.
+{- | Datum attached to 'VersionOraclePolicy' tokens stored on the
+'VersionOracleValidator' script.
+-}
 data VersionOracleDatum = VersionOracleDatum
   { versionOracle :: VersionOracle
   -- ^ VersionOracle which identifies the script.
@@ -294,9 +295,10 @@ instance UnsafeFromData VersionOracleDatum where
 instance Eq VersionOracleDatum where
   VersionOracleDatum vO c == VersionOracleDatum vO' c' = vO == vO' && c == c'
 
--- | Configuration of the versioning system.  Contains currency symbol of
--- VersionOraclePolicy tokens.  Required to identify versioning tokens that can
--- be trusted.
+{- | Configuration of the versioning system.  Contains currency symbol of
+VersionOraclePolicy tokens.  Required to identify versioning tokens that can
+be trusted.
+-}
 newtype VersionOracleConfig = VersionOracleConfig
   { versionOracleCurrencySymbol :: CurrencySymbol
   -- ^ @since v5.0.0
@@ -316,8 +318,9 @@ instance UnsafeFromData VersionOracleConfig where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = VersionOracleConfig . unsafeFromBuiltinData
 
--- | Redeemer for the versioning oracle minting policy that instructs the script
--- whether to mint or burn versioning tokens.
+{- | Redeemer for the versioning oracle minting policy that instructs the script
+whether to mint or burn versioning tokens.
+-}
 data VersionOraclePolicyRedeemer
   = -- | Mint versioning tokens from init tokens.  Used during sidechain
     -- initialization.

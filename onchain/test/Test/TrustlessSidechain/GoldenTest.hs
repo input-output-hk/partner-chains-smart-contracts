@@ -10,12 +10,13 @@ import PlutusTx.IsData.Class (ToData (toBuiltinData))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Golden (goldenVsString)
 
--- | Creating a test group with two golden tests:
--- - encoding data using `toBuiltinData`
--- - serialising BuiltinData to CBOR
---
--- Results of the tests are compared to the files under ./test/golden/*.golden
--- If no file exists for the given data type, a new one will be created automatically
+{- | Creating a test group with two golden tests:
+- encoding data using `toBuiltinData`
+- serialising BuiltinData to CBOR
+
+Results of the tests are compared to the files under ./test/golden/*.golden
+If no file exists for the given data type, a new one will be created automatically
+-}
 dataEncoderGoldenTest :: (ToData a) => HString.String -> a -> TestTree
 dataEncoderGoldenTest name sampleData =
   let builtinData = toBuiltinData sampleData

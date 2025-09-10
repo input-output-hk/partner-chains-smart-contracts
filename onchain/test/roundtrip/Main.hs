@@ -1,5 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
-
 module Main (main) where
 
 import Data.ByteString (ByteString)
@@ -169,8 +167,9 @@ newtype ArbitraryCurrencySymbol = ArbitraryCurrencySymbol CurrencySymbol
     ( Show
     )
 
--- | This does /not/ generate the ADA symbol. Does not shrink (it wouldn't make
--- much sense to).
+{- | This does /not/ generate the ADA symbol. Does not shrink (it wouldn't make
+much sense to).
+-}
 instance Arbitrary ArbitraryCurrencySymbol where
   arbitrary =
     ArbitraryCurrencySymbol

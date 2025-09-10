@@ -54,14 +54,15 @@ icsWithdrawalMintingPolicyTokenName = TokenName emptyByteString
 icsAuthorityTokenName :: TokenName
 icsAuthorityTokenName = TokenName emptyByteString
 
--- | Error codes description follows:
---
---   ERROR-ILLIQUID-CIRCULATION-SUPPLY-01: ICS Auth Tokens are not correctly assigned:
---       Output UTxO doesn't have exactly one ICS Authority Token or ICS auth tokens leak from the ICS validator
---   ERROR-ILLIQUID-CIRCULATION-SUPPLY-02: Assets of the supply UTxO decreased
---   ERROR-ILLIQUID-CIRCULATION-SUPPLY-03: Single illiquid circulation supply token is not minted
---   ERROR-ILLIQUID-CIRCULATION-SUPPLY-04: No unique output UTxO at the supply address
---   ERROR-ILLIQUID-CIRCULATION-SUPPLY-05: No own input UTxO at the supply address
+{- | Error codes description follows:
+
+  ERROR-ILLIQUID-CIRCULATION-SUPPLY-01: ICS Auth Tokens are not correctly assigned:
+      Output UTxO doesn't have exactly one ICS Authority Token or ICS auth tokens leak from the ICS validator
+  ERROR-ILLIQUID-CIRCULATION-SUPPLY-02: Assets of the supply UTxO decreased
+  ERROR-ILLIQUID-CIRCULATION-SUPPLY-03: Single illiquid circulation supply token is not minted
+  ERROR-ILLIQUID-CIRCULATION-SUPPLY-04: No unique output UTxO at the supply address
+  ERROR-ILLIQUID-CIRCULATION-SUPPLY-05: No own input UTxO at the supply address
+-}
 mkIlliquidCirculationSupplyValidator ::
   VersionOracleConfig ->
   BuiltinData ->

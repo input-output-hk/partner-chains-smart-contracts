@@ -30,31 +30,19 @@ common common-lang
   build-depends:      base
   default-extensions:
     BangPatterns
-    BinaryLiterals
     BlockArguments
     DataKinds
-    DeriveTraversable
     DerivingVia
-    EmptyCase
-    FlexibleContexts
-    FlexibleInstances
     GeneralizedNewtypeDeriving
-    HexFloatLiterals
     ImportQualifiedPost
-    InstanceSigs
     KindSignatures
     LambdaCase
-    MultiParamTypeClasses
     NamedFieldPuns
-    NoStarIsType
     NumericUnderscores
     OverloadedStrings
-    PackageImports
     PatternSynonyms
     RecordWildCards
     ScopedTypeVariables
-    StandaloneDeriving
-    TupleSections
     TypeApplications
     ViewPatterns
 

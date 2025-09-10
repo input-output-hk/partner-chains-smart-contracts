@@ -1,5 +1,3 @@
-{-# LANGUAGE DuplicateRecordFields #-}
-
 module Test.TrustlessSidechain.Golden.Types (tests) where
 
 import Data.ByteString (ByteString)
@@ -37,11 +35,12 @@ import TrustlessSidechain.Types (
   VersionedGenericDatum (..),
  )
 
--- | Tests for all data types with @IsData@ implementation
--- Some of the data types are only checked transitively (included by some other type)
---
--- In order to regenerate golden tests files, simply delete the old ones in `./test/golden`
--- or run: cabal test trustless-sidechain-test --test-options "--accept"
+{- | Tests for all data types with @IsData@ implementation
+Some of the data types are only checked transitively (included by some other type)
+
+In order to regenerate golden tests files, simply delete the old ones in `./test/golden`
+or run: cabal test trustless-sidechain-test --test-options "--accept"
+-}
 tests :: TestTree
 tests =
   testGroup

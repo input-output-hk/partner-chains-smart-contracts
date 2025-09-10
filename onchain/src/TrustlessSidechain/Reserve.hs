@@ -1,9 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ViewPatterns #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
-{-# HLINT ignore "Redundant if" #-}
 
 module TrustlessSidechain.Reserve (
   mkReserveValidator,
@@ -77,26 +72,27 @@ reserveAuthTokenTokenName = TokenName emptyByteString
 vFunctionTotalAccruedTokenName :: TokenName
 vFunctionTotalAccruedTokenName = TokenName emptyByteString
 
--- | Error codes description follows:
---
---   ERROR-RESERVE-01: Governance approval is not present
---   ERROR-RESERVE-02: Datum of the propagated reserve utxo changes
---   ERROR-RESERVE-03: Assets of the propagated reserve utxo don't increase by reserve tokens
---   ERROR-RESERVE-04: No unique input utxo carrying authentication token
---   ERROR-RESERVE-05: No unique output utxo at the reserve address and carrying authentication token
---   ERROR-RESERVE-06: Datum of input reserve utxo malformed
---   ERROR-RESERVE-07: Datum of output reserve utxo malformed
---   ERROR-RESERVE-08: Governance approval is not present
---   ERROR-RESERVE-09: Datum of the propagated reserve utxo changes not only by immutable settings
---   ERROR-RESERVE-10: Assets of the propagated reserve utxo change
---   ERROR-RESERVE-11: Assets of the propagated reserve utxo don't decrease by reserve tokens in desired way
---   ERROR-RESERVE-12: Datum of the propagated reserve utxo changes not only by stats in desired way
---   ERROR-RESERVE-13: Incorrect amount of reserve tokens goes into an illiquid circulation supply
---   ERROR-RESERVE-14: No unique output utxo at the illiquid circulation supply address
---   ERROR-RESERVE-15: Governance approval is not present
---   ERROR-RESERVE-16: An authentication token is not burnt
---   ERROR-RESERVE-17: Not all reserve tokens are transferred to illiquid circulation supply
---   ERROR-RESERVE-18: Continuing output exists without an authentication token
+{- | Error codes description follows:
+
+  ERROR-RESERVE-01: Governance approval is not present
+  ERROR-RESERVE-02: Datum of the propagated reserve utxo changes
+  ERROR-RESERVE-03: Assets of the propagated reserve utxo don't increase by reserve tokens
+  ERROR-RESERVE-04: No unique input utxo carrying authentication token
+  ERROR-RESERVE-05: No unique output utxo at the reserve address and carrying authentication token
+  ERROR-RESERVE-06: Datum of input reserve utxo malformed
+  ERROR-RESERVE-07: Datum of output reserve utxo malformed
+  ERROR-RESERVE-08: Governance approval is not present
+  ERROR-RESERVE-09: Datum of the propagated reserve utxo changes not only by immutable settings
+  ERROR-RESERVE-10: Assets of the propagated reserve utxo change
+  ERROR-RESERVE-11: Assets of the propagated reserve utxo don't decrease by reserve tokens in desired way
+  ERROR-RESERVE-12: Datum of the propagated reserve utxo changes not only by stats in desired way
+  ERROR-RESERVE-13: Incorrect amount of reserve tokens goes into an illiquid circulation supply
+  ERROR-RESERVE-14: No unique output utxo at the illiquid circulation supply address
+  ERROR-RESERVE-15: Governance approval is not present
+  ERROR-RESERVE-16: An authentication token is not burnt
+  ERROR-RESERVE-17: Not all reserve tokens are transferred to illiquid circulation supply
+  ERROR-RESERVE-18: Continuing output exists without an authentication token
+-}
 mkReserveValidator ::
   VersionOracleConfig ->
   BuiltinData ->
@@ -292,14 +288,15 @@ extractReserveUtxoDatumUnsafe :: TxOut -> Maybe (VersionedGenericDatum ReserveDa
 extractReserveUtxoDatumUnsafe TxOut {txOutDatum = OutputDatum datum} = PlutusTx.fromBuiltinData . getDatum $ datum
 extractReserveUtxoDatumUnsafe _ = Nothing
 
--- | Error codes description follows:
---
---   ERROR-RESERVE-AUTH-01: Governance approval is not present
---   ERROR-RESERVE-AUTH-02: Single reserve authentication token is not minted
---   ERROR-RESERVE-AUTH-03: Output reserve UTxO doesn't carry auth token
---   ERROR-RESERVE-AUTH-04: Output reserve UTxO doesn't carry correct initial datum
---   ERROR-RESERVE-AUTH-05: No unique output UTxO at the reserve address
---   ERROR-RESERVE-AUTH-06: Output reserve UTxO carries no inline datum or malformed datum
+{- | Error codes description follows:
+
+  ERROR-RESERVE-AUTH-01: Governance approval is not present
+  ERROR-RESERVE-AUTH-02: Single reserve authentication token is not minted
+  ERROR-RESERVE-AUTH-03: Output reserve UTxO doesn't carry auth token
+  ERROR-RESERVE-AUTH-04: Output reserve UTxO doesn't carry correct initial datum
+  ERROR-RESERVE-AUTH-05: No unique output UTxO at the reserve address
+  ERROR-RESERVE-AUTH-06: Output reserve UTxO carries no inline datum or malformed datum
+-}
 {-# INLINEABLE mkReserveAuthPolicy #-}
 mkReserveAuthPolicy ::
   VersionOracleConfig ->
@@ -378,8 +375,9 @@ compiledReserveAuthPolicy = $$(PlutusTx.compile [||mkReserveAuthPolicyUntyped||]
 serialisableReserveAuthPolicy :: SerialisedScript
 serialisableReserveAuthPolicy = serialiseCompiledCode compiledReserveAuthPolicy
 
--- | Takes a decoded piece of data and turns it into the wrapped `BuiltinData` equivalent
---   provided by `asData`, to make it compatible with functions from `PlutusLedgerApi.Vn.Data` modules.
---   TODO: Wrap our own types with `asData` and get rid of this function.
+{- | Takes a decoded piece of data and turns it into the wrapped `BuiltinData` equivalent
+  provided by `asData`, to make it compatible with functions from `PlutusLedgerApi.Vn.Data` modules.
+  TODO: Wrap our own types with `asData` and get rid of this function.
+-}
 toAsData :: (ToData a, UnsafeFromData b) => a -> b
 toAsData = unsafeFromBuiltinData . toBuiltinData
