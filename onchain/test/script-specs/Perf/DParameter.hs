@@ -1,10 +1,10 @@
-module DParameter (execCosts) where
+module Perf.DParameter (execCosts) where
 
 import Control.Lens
 import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx
 import PlutusTx.Builtins.Internal (BuiltinUnit (..))
-import ScriptPerfUtils
+import ScriptUtils
 import Test.Tasty
 import TestValues qualified as Test
 import TrustlessSidechain.DParameter

@@ -231,48 +231,22 @@ test-suite script-specs
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
-    CommitteeCandidateValidator
-    DParameter
-    GovernedMap
-    IlliquidCirculationSupply
-    PermissionedCandidates
-    Reserve
-    ScriptSpecUtils
+    Perf.CommitteeCandidateValidator
+    Perf.DParameter
+    Perf.GovernedMap
+    Perf.IlliquidCirculationSupply
+    Perf.PermissionedCandidates
+    Perf.Reserve
+    Perf.Versioning
+    ScriptUtils
+    Specs.CommitteeCandidateValidator
+    Specs.DParameter
+    Specs.GovernedMap
+    Specs.IlliquidCirculationSupply
+    Specs.PermissionedCandidates
+    Specs.Reserve
+    Specs.Versioning
     TestValues
-    Versioning
-
-  build-depends:
-    , base16-bytestring
-    , bytestring
-    , cardano-api
-    , lens
-    , plutus-core
-    , plutus-ledger-api
-    , plutus-tx
-    , plutus-tx-plugin
-    , tasty
-    , tasty-hunit
-    , text
-    , trustless-sidechain
-
-  hs-source-dirs: test/script-spec
-
-test-suite script-perf
-  import:
-    common-lang, common-optimized-parallel, common-script-lang, common-lang-traced
-
-  type:           exitcode-stdio-1.0
-  main-is:        Main.hs
-  other-modules:
-    CommitteeCandidateValidator
-    DParameter
-    GovernedMap
-    IlliquidCirculationSupply
-    PermissionedCandidates
-    Reserve
-    ScriptPerfUtils
-    TestValues
-    Versioning
 
   build-depends:
     , aeson
@@ -290,4 +264,4 @@ test-suite script-perf
     , text
     , trustless-sidechain
 
-  hs-source-dirs: test/script-perf
+  hs-source-dirs: test/script-specs

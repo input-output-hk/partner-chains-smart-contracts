@@ -12,11 +12,8 @@ cradle:
     - path: "./test/script-size"
       component: "test:script-size"
 
-    - path: "./test/script-spec"
-      component: "test:script-spec"
-
-    - path: "./test/script-perf"
-      component: "test:script-perf"
+    - path: "./test/script-specs"
+      component: "test:script-specs"
 
     - path: "./test/roundtrip"
       component: "test:roundtrip"

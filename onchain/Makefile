@@ -19,7 +19,7 @@ onchain:
 	cabal test all --test-show-details=direct
 
 update-perf:
-	cabal test script-perf --test-options "--accept"
+	cabal test script-specs --test-options "--accept"
 
 update-scripts:
 	@echo "Generating $(raw-scripts)..."

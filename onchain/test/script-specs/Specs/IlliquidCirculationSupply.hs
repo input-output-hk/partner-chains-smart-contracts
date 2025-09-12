@@ -1,10 +1,10 @@
-module IlliquidCirculationSupply where
+module Specs.IlliquidCirculationSupply where
 
 import Control.Lens
 import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx
 import PlutusTx.Builtins.Internal (BuiltinUnit (..), emptyByteString)
-import ScriptSpecUtils
+import ScriptUtils
 import Test.Tasty
 import TestValues qualified as Test
 import TrustlessSidechain.IlliquidCirculationSupply
