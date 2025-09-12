@@ -1,4 +1,7 @@
-module Specs.PermissionedCandidates where
+module Specs.PermissionedCandidates (
+  policyTests,
+  validatorTests,
+) where
 
 import ApiBuilder
 import Control.Lens
@@ -9,7 +12,7 @@ import Test.Tasty
 import TestValues qualified as Test
 import Testing
 import TrustlessSidechain.PermissionedCandidates
-import TrustlessSidechain.Types
+import TrustlessSidechain.Types qualified as Types
 
 -- minting policy
 
@@ -25,8 +28,7 @@ policyTests =
         ]
     , testGroup
         "burn redeemer"
-        [ permissionedCandidatesPolicyBurnPassingNoBurn
-        , permissionedCandidatesPolicyBurnPassingWithBurn
+        [ permissionedCandidatesPolicyBurnPassing
         , permissionedCandidatesPolicyBurnFailing03
         , permissionedCandidatesPolicyBurnFailing04
         ]
@@ -40,7 +42,7 @@ permissionedCandidatesPolicyMintPassing =
       Test.genesisUtxo
       Test.versionOracleConfig
       permissionedCandidatesValidatorAddress
-      PermissionedCandidatesMint
+      Types.PermissionedCandidatesMint
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting permissionedCandidatesCurrSym
           -- signed by governance:
@@ -59,7 +61,7 @@ permissionedCandidatesPolicyMintFailing01 =
       Test.genesisUtxo
       Test.versionOracleConfig
       permissionedCandidatesValidatorAddress
-      PermissionedCandidatesMint
+      Types.PermissionedCandidatesMint
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting permissionedCandidatesCurrSym
           -- not signed by governance (token missing):
@@ -77,7 +79,7 @@ permissionedCandidatesPolicyMintFailing02 =
       Test.genesisUtxo
       Test.versionOracleConfig
       permissionedCandidatesValidatorAddress
-      PermissionedCandidatesMint
+      Types.PermissionedCandidatesMint
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting permissionedCandidatesCurrSym
           -- signed by governance:
@@ -101,29 +103,14 @@ permissionedCandidatesPolicyMintFailing02 =
         Test.dummyBuiltinData
         wrongValidatorScriptHash
 
-permissionedCandidatesPolicyBurnPassingNoBurn :: TestTree
-permissionedCandidatesPolicyBurnPassingNoBurn =
-  expectSuccess "should pass without burning a token" $
-    runMintingPolicy
-      Test.genesisUtxo
-      Test.versionOracleConfig
-      permissionedCandidatesValidatorAddress
-      PermissionedCandidatesBurn
-      ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Minting permissionedCandidatesCurrSym
-          -- signed by governance:
-          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
-          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-      )
-
-permissionedCandidatesPolicyBurnPassingWithBurn :: TestTree
-permissionedCandidatesPolicyBurnPassingWithBurn =
+permissionedCandidatesPolicyBurnPassing :: TestTree
+permissionedCandidatesPolicyBurnPassing =
   expectSuccess "should pass with burning a token" $
     runMintingPolicy
       Test.genesisUtxo
       Test.versionOracleConfig
       permissionedCandidatesValidatorAddress
-      PermissionedCandidatesBurn
+      Types.PermissionedCandidatesBurn
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting permissionedCandidatesCurrSym
           -- signed by governance:
@@ -140,7 +127,7 @@ permissionedCandidatesPolicyBurnFailing03 =
       Test.genesisUtxo
       Test.versionOracleConfig
       permissionedCandidatesValidatorAddress
-      PermissionedCandidatesBurn
+      Types.PermissionedCandidatesBurn
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting permissionedCandidatesCurrSym
           -- not signed by governance (token missing):
@@ -154,7 +141,7 @@ permissionedCandidatesPolicyBurnFailing04 =
       Test.genesisUtxo
       Test.versionOracleConfig
       permissionedCandidatesValidatorAddress
-      PermissionedCandidatesBurn
+      Types.PermissionedCandidatesBurn
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting permissionedCandidatesCurrSym
           -- signed by governance:
@@ -172,7 +159,7 @@ permissionedCandidatesPolicyBurnFailing05 =
       Test.genesisUtxo
       Test.versionOracleConfig
       permissionedCandidatesValidatorAddress
-      PermissionedCandidatesBurn
+      Types.PermissionedCandidatesBurn
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Spending someTxOutRef
           -- signed by governance:
@@ -197,7 +184,6 @@ validatorTests =
     [ testGroup
         "update redeemer"
         [ permissionedCandidatesValidatorUpdatePassing
-        , permissionedCandidatesValidatorUpdatePassingWithMintingPurpose
         , permissionedCandidatesValidatorUpdateFailing01
         ]
     , testGroup
@@ -214,24 +200,9 @@ permissionedCandidatesValidatorUpdatePassing =
       Test.genesisUtxo
       Test.versionOracleConfig
       Test.dummyBuiltinData
-      UpdatePermissionedCandidates
+      Types.UpdatePermissionedCandidates
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Spending someTxOutRef
-          -- signed by governance:
-          & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
-          & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
-      )
-
-permissionedCandidatesValidatorUpdatePassingWithMintingPurpose :: TestTree
-permissionedCandidatesValidatorUpdatePassingWithMintingPurpose =
-  expectSuccess "should pass" $
-    runValidator
-      Test.genesisUtxo
-      Test.versionOracleConfig
-      Test.dummyBuiltinData
-      UpdatePermissionedCandidates
-      ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Minting permissionedCandidatesCurrSym
           -- signed by governance:
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.governanceTokenUtxo]
           & _scriptContextTxInfo . _txInfoMint <>~ Test.governanceToken
@@ -244,7 +215,7 @@ permissionedCandidatesValidatorUpdateFailing01 =
       Test.genesisUtxo
       Test.versionOracleConfig
       Test.dummyBuiltinData
-      UpdatePermissionedCandidates
+      Types.UpdatePermissionedCandidates
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Spending someTxOutRef
           -- not signed by governance (token missing):
@@ -258,7 +229,7 @@ permissionedCandidatesValidatorRemovePassing =
       Test.genesisUtxo
       Test.versionOracleConfig
       Test.dummyBuiltinData
-      RemovePermissionedCandidates
+      Types.RemovePermissionedCandidates
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Spending someTxOutRef
           -- signed by governance:
@@ -273,7 +244,7 @@ permissionedCandidatesValidatorRemoveFailing02 =
       Test.genesisUtxo
       Test.versionOracleConfig
       Test.dummyBuiltinData
-      RemovePermissionedCandidates
+      Types.RemovePermissionedCandidates
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Spending someTxOutRef
           -- not signed by governance (token missing):
@@ -302,7 +273,7 @@ permissionedCandidatesOracleToken = V2.singleton permissionedCandidatesCurrSym p
 
 -- test runner
 
-runMintingPolicy :: V2.TxOutRef -> VersionOracleConfig -> V2.Address -> PermissionedCandidatesPolicyRedeemer -> V2.ScriptContext -> CompiledCode BuiltinUnit
+runMintingPolicy :: V2.TxOutRef -> Types.VersionOracleConfig -> V2.Address -> Types.PermissionedCandidatesPolicyRedeemer -> V2.ScriptContext -> CompiledCode BuiltinUnit
 runMintingPolicy genesisUtxo vc permissionedCandidatesValidatorAddress' redeemer ctx =
   compiledMintingPolicy
     `appArg` genesisUtxo
@@ -311,7 +282,7 @@ runMintingPolicy genesisUtxo vc permissionedCandidatesValidatorAddress' redeemer
     `appArg` redeemer
     `appArg` ctx
 
-runValidator :: V2.TxOutRef -> VersionOracleConfig -> BuiltinData -> PermissionedCandidatesValidatorRedeemer -> V2.ScriptContext -> CompiledCode BuiltinUnit
+runValidator :: V2.TxOutRef -> Types.VersionOracleConfig -> BuiltinData -> Types.PermissionedCandidatesValidatorRedeemer -> V2.ScriptContext -> CompiledCode BuiltinUnit
 runValidator genesisUtxo vc datum redeemer ctx =
   compiledValidator
     `appArg` genesisUtxo

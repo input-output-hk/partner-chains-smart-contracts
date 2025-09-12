@@ -1,4 +1,7 @@
-module Specs.GovernedMap where
+module Specs.GovernedMap (
+  policyTests,
+  validatorTests,
+) where
 
 import ApiBuilder
 import Control.Lens
