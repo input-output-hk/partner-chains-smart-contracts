@@ -15,5 +15,8 @@ cradle:
     - path: "./test/script-spec"
       component: "test:script-spec"
 
+    - path: "./test/script-perf"
+      component: "test:script-perf"
+
     - path: "./test/roundtrip"
       component: "test:roundtrip"

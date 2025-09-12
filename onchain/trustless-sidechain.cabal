@@ -256,3 +256,38 @@ test-suite script-specs
     , trustless-sidechain
 
   hs-source-dirs: test/script-spec
+
+test-suite script-perf
+  import:
+    common-lang, common-optimized-parallel, common-script-lang, common-lang-traced
+
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  other-modules:
+    CommitteeCandidateValidator
+    DParameter
+    GovernedMap
+    IlliquidCirculationSupply
+    PermissionedCandidates
+    Reserve
+    ScriptPerfUtils
+    TestValues
+    Versioning
+
+  build-depends:
+    , aeson
+    , base16-bytestring
+    , bytestring
+    , cardano-api
+    , lens
+    , plutus-core
+    , plutus-ledger-api
+    , plutus-tx
+    , plutus-tx-plugin
+    , tasty
+    , tasty-golden
+    , tasty-hunit
+    , text
+    , trustless-sidechain
+
+  hs-source-dirs: test/script-perf
