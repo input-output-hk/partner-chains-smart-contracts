@@ -239,6 +239,7 @@ test-suite script-specs
     Perf.Reserve
     Perf.Versioning
     ScriptUtils
+    Size
     Specs.CommitteeCandidateValidator
     Specs.DParameter
     Specs.GovernedMap

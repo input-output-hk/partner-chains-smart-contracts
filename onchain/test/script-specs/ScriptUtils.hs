@@ -4,12 +4,14 @@ import Control.Exception (evaluate)
 import Control.Lens
 import Data.Aeson (FromJSON, ToJSON, decode, encode)
 import Data.ByteString.Lazy qualified as LBS
+import Data.ByteString.Short qualified as BSS
 import Data.Maybe (fromJust)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import PlutusCore.Default (DefaultUni (DefaultUniUnit), Some (..), ValueOf (..))
 import PlutusCore.Evaluation.Machine.ExBudgetingDefaults (defaultCekParametersForTesting)
 import PlutusCore.Version (plcVersion100)
+import PlutusLedgerApi.Common (SerialisedScript)
 import PlutusLedgerApi.V1.Interval (interval)
 import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx
@@ -25,6 +27,15 @@ import UntypedPlutusCore.Evaluation.Machine.Cek.Internal (runCekDeBruijn)
 
 -- test functions
 
+goldenSize :: String -> SerialisedScript -> TestTree
+goldenSize name code = goldenVsVal cmp name ("./test/perf_data/" <> name <> "-size.json") $ getSize code
+  where
+    getSize = BSS.length
+    cmp :: Int -> Int -> IO (Maybe String)
+    cmp curr' new' = simpleCmp msg curr' new'
+      where
+        msg = "Script size " <> diffStr curr' new'
+
 goldenPerf :: String -> CompiledCode BuiltinUnit -> TestTree
 goldenPerf name code = goldenVsVal cmp name ("./test/perf_data/" <> name <> "-perf.json") $ getExecutionCost code
   where
@@ -34,13 +45,15 @@ goldenPerf name code = goldenVsVal cmp name ("./test/perf_data/" <> name <> "-pe
       new'@V2.ExBudget {exBudgetCPU = V2.ExCPU newCpu, exBudgetMemory = V2.ExMemory newMem} = simpleCmp msg curr' new'
         where
           msg = "Performance changed:\n  CPU " <> diffStr currCpu newCpu <> "\n  MEM " <> diffStr currMem newMem
-          diffStr curr new
-            | curr < new = "INCREASED by " <> show (new - curr) <> " from " <> show curr <> " to " <> show new
-            | curr > new = "DECREASED by " <> show (curr - new) <> " from " <> show curr <> " to " <> show new
-            | otherwise = "did not change"
 
 simpleCmp :: (Eq a) => String -> a -> a -> IO (Maybe String)
 simpleCmp e x y = return if x == y then Nothing else Just e
+
+diffStr :: (Ord a, Show a, Num a) => a -> a -> String
+diffStr curr new
+  | curr < new = "INCREASED by " <> show (new - curr) <> " from " <> show curr <> " to " <> show new
+  | curr > new = "DECREASED by " <> show (curr - new) <> " from " <> show curr <> " to " <> show new
+  | otherwise = "did not change"
 
 goldenVsVal ::
   (FromJSON a, ToJSON a) =>

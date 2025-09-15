@@ -18,6 +18,8 @@ import Perf.PermissionedCandidates qualified
 import Perf.Reserve qualified
 import Perf.Versioning qualified
 
+import Size (sizeTests)
+
 main :: IO ()
 main =
   defaultMain $
@@ -49,4 +51,5 @@ main =
           , Perf.Reserve.execCosts
           , Perf.Versioning.execCosts
           ]
+      , sizeTests
       ]
