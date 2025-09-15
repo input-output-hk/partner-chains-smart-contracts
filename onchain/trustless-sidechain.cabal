@@ -231,6 +231,7 @@ test-suite script-specs
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
+    ApiBuilder
     Perf.CommitteeCandidateValidator
     Perf.DParameter
     Perf.GovernedMap
@@ -238,7 +239,6 @@ test-suite script-specs
     Perf.PermissionedCandidates
     Perf.Reserve
     Perf.Versioning
-    ScriptUtils
     Size
     Specs.CommitteeCandidateValidator
     Specs.DParameter
@@ -247,6 +247,7 @@ test-suite script-specs
     Specs.PermissionedCandidates
     Specs.Reserve
     Specs.Versioning
+    Testing
     TestValues
 
   build-depends:

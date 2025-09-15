@@ -1,7 +1,7 @@
 module Size (sizeTests) where
 
-import ScriptUtils
 import Test.Tasty
+import Testing
 import TrustlessSidechain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
 import TrustlessSidechain.DParameter qualified as DParameter
 import TrustlessSidechain.GovernedMap qualified as GovernedMap

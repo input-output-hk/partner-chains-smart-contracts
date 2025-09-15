@@ -1,8 +1,8 @@
 module TestValues where
 
+import ApiBuilder
 import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx
-import ScriptUtils
 import TrustlessSidechain.ScriptId qualified as ScriptId
 import TrustlessSidechain.Types qualified as Types
 
