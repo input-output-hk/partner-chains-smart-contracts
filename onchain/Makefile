@@ -18,6 +18,9 @@ onchain:
 	cabal build
 	cabal test all --test-show-details=direct
 
+update-perf:
+	cabal test script-perf --test-options "--accept"
+
 update-scripts:
 	@echo "Generating $(raw-scripts)..."
 	$(serialise) --rust-plutus-scripts=$$PWD/$(raw-scripts)

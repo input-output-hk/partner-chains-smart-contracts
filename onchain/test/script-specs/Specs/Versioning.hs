@@ -1,12 +1,13 @@
-module Versioning where
+module Specs.Versioning where
 
+import ApiBuilder
 import Control.Lens
 import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx
 import PlutusTx.Builtins.Internal (BuiltinUnit (..))
-import ScriptSpecUtils
 import Test.Tasty
 import TestValues qualified as Test
+import Testing
 import TrustlessSidechain.Types
 import TrustlessSidechain.Types qualified as Types
 import TrustlessSidechain.Versioning

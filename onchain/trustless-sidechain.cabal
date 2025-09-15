@@ -185,26 +185,44 @@ test-suite trustless-sidechain-test
 
   hs-source-dirs: test
 
-test-suite script-size
+test-suite script-perf
   import:
     common-lang, common-lang-optimized-notrace, common-optimized-parallel, common-script-lang, common-source-other-modules
 
   default-extensions: NoImplicitPrelude
   type:               exitcode-stdio-1.0
   main-is:            Main.hs
-  other-modules:      Sizer
+  other-modules:
+    ApiBuilder
+    Perf.CommitteeCandidateValidator
+    Perf.DParameter
+    Perf.GovernedMap
+    Perf.IlliquidCirculationSupply
+    Perf.PermissionedCandidates
+    Perf.Reserve
+    Perf.Versioning
+    Size
+    Testing
+    TestValues
+
   build-depends:
+    , aeson
+    , base16-bytestring
     , bytestring
     , cardano-api
+    , lens
     , plutus-core
     , plutus-ledger-api
     , plutus-tx
     , plutus-tx-plugin
     , tagged
     , tasty
+    , tasty-golden
+    , tasty-hunit
+    , text
     , trustless-sidechain
 
-  hs-source-dirs:     test/script-size src
+  hs-source-dirs:     test/common test/script-perf src
 
 test-suite roundtrip
   import:         common-lang, common-optimized-parallel
@@ -231,17 +249,19 @@ test-suite script-specs
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
-    CommitteeCandidateValidator
-    DParameter
-    GovernedMap
-    IlliquidCirculationSupply
-    PermissionedCandidates
-    Reserve
-    ScriptSpecUtils
+    ApiBuilder
+    Specs.CommitteeCandidateValidator
+    Specs.DParameter
+    Specs.GovernedMap
+    Specs.IlliquidCirculationSupply
+    Specs.PermissionedCandidates
+    Specs.Reserve
+    Specs.Versioning
+    Testing
     TestValues
-    Versioning
 
   build-depends:
+    , aeson
     , base16-bytestring
     , bytestring
     , cardano-api
@@ -251,8 +271,9 @@ test-suite script-specs
     , plutus-tx
     , plutus-tx-plugin
     , tasty
+    , tasty-golden
     , tasty-hunit
     , text
     , trustless-sidechain
 
-  hs-source-dirs: test/script-spec
+  hs-source-dirs: test/common test/script-specs
