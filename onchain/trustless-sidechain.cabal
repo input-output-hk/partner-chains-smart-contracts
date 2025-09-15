@@ -222,7 +222,7 @@ test-suite script-perf
     , text
     , trustless-sidechain
 
-  hs-source-dirs:     test/script-perf src
+  hs-source-dirs:     test/common test/script-perf src
 
 test-suite roundtrip
   import:         common-lang, common-optimized-parallel
@@ -284,4 +284,4 @@ test-suite script-specs
     , text
     , trustless-sidechain
 
-  hs-source-dirs: test/script-specs
+  hs-source-dirs: test/common test/script-specs

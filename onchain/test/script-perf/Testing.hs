@@ -8,9 +8,6 @@ import Data.Aeson (FromJSON, ToJSON, decode, encode)
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as BSS
 import Data.Maybe (fromJust)
-import Data.Text (Text)
-import Data.Text qualified as Text
-import PlutusCore.Default (DefaultUni (DefaultUniUnit), Some (..), ValueOf (..))
 import PlutusCore.Evaluation.Machine.ExBudgetingDefaults (defaultCekParametersForTesting)
 import PlutusCore.Version (plcVersion100)
 import PlutusLedgerApi.Common (SerialisedScript)
@@ -20,8 +17,7 @@ import PlutusTx.Prelude (BuiltinUnit)
 import Test.Tasty
 import Test.Tasty.Golden (createDirectoriesAndWriteFile)
 import Test.Tasty.Golden.Advanced (goldenTest)
-import Test.Tasty.HUnit
-import UntypedPlutusCore.Core.Type (Term (Constant), progTerm)
+import UntypedPlutusCore.Core.Type (progTerm)
 import UntypedPlutusCore.Evaluation.Machine.Cek (CountingSt (..), counting, logEmitter)
 import UntypedPlutusCore.Evaluation.Machine.Cek.Internal (runCekDeBruijn)
 
@@ -95,22 +91,3 @@ getExecutionCost code = do
 
 appArg :: (ToData b) => CompiledCode (BuiltinData -> a) -> b -> CompiledCode a
 appArg a b = a `unsafeApplyCode` liftCode plcVersion100 (toBuiltinData b)
-
-expectSuccess :: TestName -> CompiledCode BuiltinUnit -> TestTree
-expectSuccess testName code = testCase testName do
-  let plc = getPlc code ^. progTerm
-  case runCekDeBruijn defaultCekParametersForTesting counting logEmitter plc of
-    (Left ex, _counting, logs) -> assertFailure $ "Expected success but script failed! trace: " <> show logs <> "\n" <> show ex
-    (Right actual, _counting, _logs) -> assertEqual "Evaluation has succeeded" constUnit actual
-  where
-    constUnit = Constant () (Some (ValueOf DefaultUniUnit ()))
-
-expectFail :: TestName -> Text -> CompiledCode BuiltinUnit -> TestTree
-expectFail testName expectedTrace code = testCase testName do
-  let plc = getPlc code ^. progTerm
-  case runCekDeBruijn defaultCekParametersForTesting counting logEmitter plc of
-    (Left _ex, _counting, logs) ->
-      assertBool
-        ("Didn't fail with expected trace. expected: " <> Text.unpack expectedTrace <> " actual: " <> show logs)
-        $ expectedTrace `elem` logs
-    (Right _actual, _counting, _logs) -> assertFailure $ "Expected failure but script passed! expected: " <> Text.unpack expectedTrace
