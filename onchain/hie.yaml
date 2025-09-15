@@ -9,8 +9,8 @@ cradle:
     - path: "./test"
       component: "test:trustless-sidechain-test"
 
-    - path: "./test/script-size"
-      component: "test:script-size"
+    - path: "./test/script-perf"
+      component: "test:script-perf"
 
     - path: "./test/script-specs"
       component: "test:script-specs"
