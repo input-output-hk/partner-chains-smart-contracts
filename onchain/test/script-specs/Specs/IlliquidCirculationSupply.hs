@@ -1,4 +1,7 @@
-module Specs.IlliquidCirculationSupply where
+module Specs.IlliquidCirculationSupply (
+  policyTests,
+  validatorTests,
+) where
 
 import ApiBuilder
 import Control.Lens
@@ -20,13 +23,13 @@ policyTests =
     "illiquid circulation supply policy"
     [ testGroup
         "authority token policy"
-        [ illiquidCirculationSupplyAuthorityTokenPolicyPassing
-        , illiquidCirculationSupplyAuthorityTokenPolicyFailing01
+        [ icsAuthorityTokenPolicyPassing
+        , icsAuthorityTokenPolicyFailing01
         ]
     ]
 
-illiquidCirculationSupplyAuthorityTokenPolicyPassing :: TestTree
-illiquidCirculationSupplyAuthorityTokenPolicyPassing =
+icsAuthorityTokenPolicyPassing :: TestTree
+icsAuthorityTokenPolicyPassing =
   expectSuccess "should pass" $
     runMintingPolicy
       Test.versionOracleConfig
@@ -39,8 +42,8 @@ illiquidCirculationSupplyAuthorityTokenPolicyPassing =
           & _scriptContextTxInfo . _txInfoMint <>~ icsAuthorityToken 1
       )
 
-illiquidCirculationSupplyAuthorityTokenPolicyFailing01 :: TestTree
-illiquidCirculationSupplyAuthorityTokenPolicyFailing01 =
+icsAuthorityTokenPolicyFailing01 :: TestTree
+icsAuthorityTokenPolicyFailing01 =
   expectFail "should fail if not signed by the governance authority" "ERROR-ICS-AUTH-TOKEN-01" $
     runMintingPolicy
       Test.versionOracleConfig
@@ -61,27 +64,27 @@ validatorTests =
     "illiquid circulation supply validator"
     [ testGroup
         "deposit redeemer"
-        [ illiquidCirculationSupplyValidatorDepositPassing
-        , illiquidCirculationSupplyValidatorDepositFailing01a
-        , illiquidCirculationSupplyValidatorDepositFailing01b
-        , illiquidCirculationSupplyValidatorDepositFailing01c
-        , illiquidCirculationSupplyValidatorDepositFailing02
-        , illiquidCirculationSupplyValidatorDepositFailing04
+        [ icsValidatorDepositPassing
+        , icsValidatorDepositFailing01a
+        , icsValidatorDepositFailing01b
+        , icsValidatorDepositFailing01c
+        , icsValidatorDepositFailing02
+        , icsValidatorDepositFailing04
         ]
     , testGroup
         "withdraw redeemer"
-        [ illiquidCirculationSupplyValidatorWithdrawPassing
-        , illiquidCirculationSupplyValidatorWithdrawFailing01a
-        , illiquidCirculationSupplyValidatorWithdrawFailing01b
-        , illiquidCirculationSupplyValidatorWithdrawFailing03
-        , illiquidCirculationSupplyValidatorWithdrawFailing05
+        [ icsValidatorWithdrawPassing
+        , icsValidatorWithdrawFailing01a
+        , icsValidatorWithdrawFailing01b
+        , icsValidatorWithdrawFailing03
+        , icsValidatorWithdrawFailing05
         ]
     ]
 
 -- deposit redeemer
 
-illiquidCirculationSupplyValidatorDepositPassing :: TestTree
-illiquidCirculationSupplyValidatorDepositPassing =
+icsValidatorDepositPassing :: TestTree
+icsValidatorDepositPassing =
   expectSuccess "should pass" $
     runValidator
       Test.versionOracleConfig
@@ -108,8 +111,8 @@ illiquidCirculationSupplyValidatorDepositPassing =
                 ]
       )
 
-illiquidCirculationSupplyValidatorDepositFailing01a :: TestTree
-illiquidCirculationSupplyValidatorDepositFailing01a =
+icsValidatorDepositFailing01a :: TestTree
+icsValidatorDepositFailing01a =
   expectFail "should fail if output UTxO has 0 ICS Authority Tokens" "ERROR-ILLIQUID-CIRCULATION-SUPPLY-01" $
     runValidator
       Test.versionOracleConfig
@@ -137,8 +140,8 @@ illiquidCirculationSupplyValidatorDepositFailing01a =
                 ]
       )
 
-illiquidCirculationSupplyValidatorDepositFailing01b :: TestTree
-illiquidCirculationSupplyValidatorDepositFailing01b =
+icsValidatorDepositFailing01b :: TestTree
+icsValidatorDepositFailing01b =
   expectFail "should fail if output UTxO has 2 ICS Authority Tokens" "ERROR-ILLIQUID-CIRCULATION-SUPPLY-01" $
     runValidator
       Test.versionOracleConfig
@@ -166,8 +169,8 @@ illiquidCirculationSupplyValidatorDepositFailing01b =
                 ]
       )
 
-illiquidCirculationSupplyValidatorDepositFailing01c :: TestTree
-illiquidCirculationSupplyValidatorDepositFailing01c =
+icsValidatorDepositFailing01c :: TestTree
+icsValidatorDepositFailing01c =
   expectFail "should fail if ICS auth tokens leak from the ICS validator" "ERROR-ILLIQUID-CIRCULATION-SUPPLY-01" $
     runValidator
       Test.versionOracleConfig
@@ -197,8 +200,8 @@ illiquidCirculationSupplyValidatorDepositFailing01c =
                 ]
       )
 
-illiquidCirculationSupplyValidatorDepositFailing02 :: TestTree
-illiquidCirculationSupplyValidatorDepositFailing02 =
+icsValidatorDepositFailing02 :: TestTree
+icsValidatorDepositFailing02 =
   expectFail "should fail if assets of the supply UTxO decreased" "ERROR-ILLIQUID-CIRCULATION-SUPPLY-02" $
     runValidator
       Test.versionOracleConfig
@@ -226,8 +229,8 @@ illiquidCirculationSupplyValidatorDepositFailing02 =
                 ]
       )
 
-illiquidCirculationSupplyValidatorDepositFailing04 :: TestTree
-illiquidCirculationSupplyValidatorDepositFailing04 =
+icsValidatorDepositFailing04 :: TestTree
+icsValidatorDepositFailing04 =
   expectFail "should fail if no unique output UTxO at the supply address" "ERROR-ILLIQUID-CIRCULATION-SUPPLY-04" $
     runValidator
       Test.versionOracleConfig
@@ -263,8 +266,8 @@ illiquidCirculationSupplyValidatorDepositFailing04 =
 
 -- withdraw redeemer
 
-illiquidCirculationSupplyValidatorWithdrawPassing :: TestTree
-illiquidCirculationSupplyValidatorWithdrawPassing =
+icsValidatorWithdrawPassing :: TestTree
+icsValidatorWithdrawPassing =
   expectSuccess "should pass" $
     runValidator
       Test.versionOracleConfig
@@ -295,8 +298,8 @@ illiquidCirculationSupplyValidatorWithdrawPassing =
           & _scriptContextTxInfo . _txInfoMint <>~ icsWithdrawalToken 1
       )
 
-illiquidCirculationSupplyValidatorWithdrawFailing03 :: TestTree
-illiquidCirculationSupplyValidatorWithdrawFailing03 =
+icsValidatorWithdrawFailing03 :: TestTree
+icsValidatorWithdrawFailing03 =
   expectFail "should fail if single illiquid circulation supply token is not minted" "ERROR-ILLIQUID-CIRCULATION-SUPPLY-03" $
     runValidator
       Test.versionOracleConfig
@@ -326,8 +329,8 @@ illiquidCirculationSupplyValidatorWithdrawFailing03 =
                 ]
       )
 
-illiquidCirculationSupplyValidatorWithdrawFailing01a :: TestTree
-illiquidCirculationSupplyValidatorWithdrawFailing01a =
+icsValidatorWithdrawFailing01a :: TestTree
+icsValidatorWithdrawFailing01a =
   expectFail "should fail if some ICS output does not have exactly one ICS Auth token" "ERROR-ILLIQUID-CIRCULATION-SUPPLY-01" $
     runValidator
       Test.versionOracleConfig
@@ -361,8 +364,8 @@ illiquidCirculationSupplyValidatorWithdrawFailing01a =
           & _scriptContextTxInfo . _txInfoMint <>~ icsWithdrawalToken 1
       )
 
-illiquidCirculationSupplyValidatorWithdrawFailing01b :: TestTree
-illiquidCirculationSupplyValidatorWithdrawFailing01b =
+icsValidatorWithdrawFailing01b :: TestTree
+icsValidatorWithdrawFailing01b =
   expectFail "should fail if ICS auth tokens leak from the ICS validator" "ERROR-ILLIQUID-CIRCULATION-SUPPLY-01" $
     runValidator
       Test.versionOracleConfig
@@ -404,8 +407,8 @@ illiquidCirculationSupplyValidatorWithdrawFailing01b =
           & _scriptContextTxInfo . _txInfoMint <>~ icsWithdrawalToken 1
       )
 
-illiquidCirculationSupplyValidatorWithdrawFailing05 :: TestTree
-illiquidCirculationSupplyValidatorWithdrawFailing05 =
+icsValidatorWithdrawFailing05 :: TestTree
+icsValidatorWithdrawFailing05 =
   expectFail "should fail if no own input UTxO at the supply address" "ERROR-ILLIQUID-CIRCULATION-SUPPLY-05" $
     runValidator
       Test.versionOracleConfig
@@ -438,9 +441,6 @@ illiquidCirculationSupplyValidatorWithdrawFailing05 =
       )
 
 -- values
-
-dummyDatum :: V2.Datum
-dummyDatum = V2.Datum $ toBuiltinData (0 :: Integer)
 
 supplyUtxo :: V2.TxOutRef
 supplyUtxo = V2.TxOutRef "01234abc" 0

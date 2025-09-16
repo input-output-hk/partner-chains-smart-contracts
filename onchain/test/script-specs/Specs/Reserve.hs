@@ -1,4 +1,7 @@
-module Specs.Reserve where
+module Specs.Reserve (
+  policyTests,
+  validatorTests,
+) where
 
 import ApiBuilder
 import Control.Lens
@@ -1590,55 +1593,6 @@ reserveValidatorHandoverFailing17 =
                 ]
       )
 
-reserveValidatorHandoverFailing18 :: TestTree
-reserveValidatorHandoverFailing18 =
-  expectFail "should fail if governance approval is not present" "ERROR-RESERVE-18" $
-    runValidator
-      Test.versionOracleConfig
-      Test.dummyBuiltinData
-      Types.Handover
-      ( emptyScriptContext
-          & _scriptContextPurpose .~ V2.Spending reserveUtxo
-          -- [ERROR] not signed by governance
-          -- ReserveAuthPolicy VersionOracle
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ reserveAuthPolicyVersionOracleUtxo]
-          -- IlliquidCirculationSupplyValidator VersionOracle
-          & _scriptContextTxInfo . _txInfoReferenceInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ icsSupplyValidatorVersionOracleUtxo]
-          -- reserve auth token burned
-          & _scriptContextTxInfo . _txInfoMint <>~ reserveAuthToken (-1)
-          -- [INPUT] ICS UTXO:
-          & _scriptContextTxInfo . _txInfoInputs
-            <>~ [ emptyTxInInfo
-                    & _txInInfoOutRef .~ icsUtxo
-                    & _txInInfoResolved
-                      .~ ( emptyTxOut
-                            & _txOutAddress .~ icsAddress
-                            & _txOutValue <>~ partnerToken 5
-                         )
-                ]
-          -- [OUTPUT] ICS UTXO:
-          & _scriptContextTxInfo . _txInfoOutputs
-            <>~ [ emptyTxOut
-                    & _txOutAddress .~ icsAddress
-                    & _txOutValue <>~ partnerToken 15
-                ]
-          -- [INPUT] Reserve UTXO:
-          -- Note: There is no Reserve UTXO output
-          & _scriptContextTxInfo . _txInfoInputs
-            <>~ [ emptyTxInInfo
-                    & _txInInfoOutRef .~ reserveUtxo
-                    & _txInInfoResolved
-                      .~ ( emptyTxOut
-                            & _txOutAddress .~ reserveAddress
-                            & _txOutDatum .~ V2.OutputDatum (wrapToVersioned reserveDatum)
-                            -- carries reserve auth token:
-                            & _txOutValue <>~ reserveAuthToken 1
-                            -- tokens currently in reserve:
-                            & _txOutValue <>~ partnerToken 10
-                         )
-                ]
-      )
-
 -- values
 
 wrapToVersioned :: (ToData a) => a -> V2.Datum
@@ -1686,9 +1640,6 @@ partnerTokenAssetClass = Value.AssetClass (tokenCurrSym, tokenName)
     tokenCurrSym = V2.CurrencySymbol "partnerCoinPolicyHash"
     tokenName = V2.TokenName "#PARTNER-COIN"
 
-adaTokenAssetClass :: Value.AssetClass
-adaTokenAssetClass = Value.AssetClass (Value.adaSymbol, Value.adaToken)
-
 reserveUtxo :: V2.TxOutRef
 reserveUtxo = V2.TxOutRef "77777777" 0
 
@@ -1715,9 +1666,6 @@ someUtxo = V2.TxOutRef "99999999" 99
 
 someAddress :: V2.Address
 someAddress = V2.Address (V2.PubKeyCredential "99999999999999999999999999999999999999999999999999999999") Nothing
-
-someToken :: Integer -> V2.Value
-someToken = V2.singleton (V2.CurrencySymbol "someMintingPolicy") (V2.TokenName "#SOME")
 
 someAssetClass :: Value.AssetClass
 someAssetClass = Value.AssetClass (tokenCurrSym, tokenName)

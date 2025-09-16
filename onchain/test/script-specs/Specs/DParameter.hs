@@ -1,4 +1,7 @@
-module Specs.DParameter where
+module Specs.DParameter (
+  policyTests,
+  validatorTests,
+) where
 
 import ApiBuilder
 import Control.Lens
@@ -9,7 +12,7 @@ import Test.Tasty
 import TestValues qualified as Test
 import Testing
 import TrustlessSidechain.DParameter
-import TrustlessSidechain.Types
+import TrustlessSidechain.Types qualified as Types
 
 -- minting policy
 
@@ -196,7 +199,7 @@ dParameterOracleToken = V2.singleton dParameterCurrSym dParameterOracleTokenName
 
 -- test runner
 
-runMintingPolicy :: V2.TxOutRef -> VersionOracleConfig -> V2.Address -> BuiltinData -> V2.ScriptContext -> CompiledCode BuiltinUnit
+runMintingPolicy :: V2.TxOutRef -> Types.VersionOracleConfig -> V2.Address -> BuiltinData -> V2.ScriptContext -> CompiledCode BuiltinUnit
 runMintingPolicy genesisUtxo vc dParameterValidatorAddress' redeemer ctx =
   compiledMintingPolicy
     `appArg` genesisUtxo
@@ -205,7 +208,7 @@ runMintingPolicy genesisUtxo vc dParameterValidatorAddress' redeemer ctx =
     `appArg` redeemer
     `appArg` ctx
 
-runValidator :: V2.TxOutRef -> VersionOracleConfig -> BuiltinData -> BuiltinData -> V2.ScriptContext -> CompiledCode BuiltinUnit
+runValidator :: V2.TxOutRef -> Types.VersionOracleConfig -> BuiltinData -> BuiltinData -> V2.ScriptContext -> CompiledCode BuiltinUnit
 runValidator genesisUtxo vc datum redeemer ctx =
   compiledValidator
     `appArg` genesisUtxo

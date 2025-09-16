@@ -1,4 +1,7 @@
-module Specs.Versioning where
+module Specs.Versioning (
+  policyTests,
+  validatorTests,
+) where
 
 import ApiBuilder
 import Control.Lens
@@ -8,7 +11,6 @@ import PlutusTx.Builtins.Internal (BuiltinUnit (..))
 import Test.Tasty
 import TestValues qualified as Test
 import Testing
-import TrustlessSidechain.Types
 import TrustlessSidechain.Types qualified as Types
 import TrustlessSidechain.Versioning
 
@@ -56,7 +58,7 @@ versioningPolicyInitializePassing =
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
-      (InitializeVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      (Types.InitializeVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoOutRef .~ Test.genesisUtxo]
@@ -70,7 +72,7 @@ versioningPolicyInitializeFailing01 =
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
-      (InitializeVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      (Types.InitializeVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           -- no genesis utxo in inputs
@@ -84,7 +86,7 @@ versioningPolicyInitializeFailing02NoOutput =
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
-      (InitializeVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      (Types.InitializeVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoOutRef .~ Test.genesisUtxo]
@@ -98,7 +100,7 @@ versioningPolicyInitializeFailing02NoDatum =
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
-      (InitializeVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      (Types.InitializeVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoOutRef .~ Test.genesisUtxo]
@@ -113,7 +115,7 @@ versioningPolicyInitializeFailing02InvalidDatum =
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
-      (InitializeVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      (Types.InitializeVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoOutRef .~ Test.genesisUtxo]
@@ -130,7 +132,7 @@ versioningPolicyInitializeFailing03 =
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
-      (InitializeVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      (Types.InitializeVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoOutRef .~ Test.genesisUtxo]
@@ -146,7 +148,7 @@ versioningPolicyMintPassing =
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
-      (MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      (Types.MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           -- governance version oracle:
@@ -162,7 +164,7 @@ versioningPolicyMintFailing04NoOutput =
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
-      (MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      (Types.MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           -- governance version oracle:
@@ -178,7 +180,7 @@ versioningPolicyMintFailing04NoDatum =
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
-      (MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      (Types.MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           -- governance version oracle:
@@ -195,7 +197,7 @@ versioningPolicyMintFailing04InvalidDatum =
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
-      (MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      (Types.MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           -- governance version oracle:
@@ -214,7 +216,7 @@ versioningPolicyMintFailing05 =
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
-      (MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      (Types.MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           -- governance version oracle:
@@ -230,7 +232,7 @@ versioningPolicyMintFailing06 =
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
-      (MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      (Types.MintVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           -- governance version oracle:
@@ -248,7 +250,7 @@ versioningPolicyBurnPassing =
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
-      (BurnVersionOracle Test.versionOracle)
+      (Types.BurnVersionOracle Test.versionOracle)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.versioningTokenUtxo]
@@ -262,7 +264,7 @@ versioningPolicyBurnFailing07NoVersioningInput =
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
-      (BurnVersionOracle Test.versionOracle)
+      (Types.BurnVersionOracle Test.versionOracle)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           -- governance version oracle:
@@ -277,7 +279,7 @@ versioningPolicyBurnFailing07VersioningInputHasNoDatum =
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
-      (BurnVersionOracle Test.versionOracle)
+      (Types.BurnVersionOracle Test.versionOracle)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           -- governance version oracle:
@@ -293,7 +295,7 @@ versioningPolicyBurnFailing07VersioningInputHasInvalidDatum =
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
-      (BurnVersionOracle Test.versionOracle)
+      (Types.BurnVersionOracle Test.versionOracle)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           -- governance version oracle:
@@ -311,7 +313,7 @@ versioningPolicyBurnFailing08 =
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
-      (BurnVersionOracle Test.versionOracle)
+      (Types.BurnVersionOracle Test.versionOracle)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoResolved .~ Test.versioningTokenUtxo]
@@ -326,7 +328,7 @@ versioningPolicyBurnFailing09 =
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
-      (BurnVersionOracle Test.versionOracle)
+      (Types.BurnVersionOracle Test.versionOracle)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Minting Test.versioningCurrSym
           -- governance version oracle:
@@ -341,7 +343,7 @@ versioningPolicyNotMintFailing =
     runMintingPolicy
       Test.genesisUtxo
       Test.versionValidatorAddress
-      (InitializeVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
+      (Types.InitializeVersionOracle Test.versionOracle Test.versioningValidatorScriptHash)
       ( emptyScriptContext
           & _scriptContextPurpose .~ V2.Spending (V2.TxOutRef "abcd0123" 0)
           & _scriptContextTxInfo . _txInfoInputs <>~ [emptyTxInInfo & _txInInfoOutRef .~ Test.genesisUtxo]
@@ -469,9 +471,9 @@ versioningValidatorFailing02 =
                 ]
       )
   where
-    wrongVersionOracleDatum :: VersionOracleDatum
+    wrongVersionOracleDatum :: Types.VersionOracleDatum
     wrongVersionOracleDatum =
-      VersionOracleDatum
+      Types.VersionOracleDatum
         wrongVersionOracle
         (Test.toAsData Test.versioningCurrSym)
 
@@ -579,9 +581,9 @@ versioningValidatorFailing05 =
 
 -- test values
 
-versionOracleDatum :: VersionOracleDatum
+versionOracleDatum :: Types.VersionOracleDatum
 versionOracleDatum =
-  VersionOracleDatum
+  Types.VersionOracleDatum
     (Test.versionOracle)
     (Test.toAsData Test.versioningCurrSym)
 
@@ -596,7 +598,7 @@ someAddress = V2.Address (V2.PubKeyCredential "098709870987098709870987098709870
 
 -- test runner
 
-runMintingPolicy :: V2.TxOutRef -> V2.Address -> VersionOraclePolicyRedeemer -> V2.ScriptContext -> CompiledCode BuiltinUnit
+runMintingPolicy :: V2.TxOutRef -> V2.Address -> Types.VersionOraclePolicyRedeemer -> V2.ScriptContext -> CompiledCode BuiltinUnit
 runMintingPolicy genesisUtxo validatorAddress redeemer ctx =
   compiledVersionOraclePolicy
     `appArg` genesisUtxo
@@ -604,7 +606,7 @@ runMintingPolicy genesisUtxo validatorAddress redeemer ctx =
     `appArg` redeemer
     `appArg` ctx
 
-runValidator :: V2.TxOutRef -> VersionOracleDatum -> VersionOracle -> V2.ScriptContext -> CompiledCode BuiltinUnit
+runValidator :: V2.TxOutRef -> Types.VersionOracleDatum -> Types.VersionOracle -> V2.ScriptContext -> CompiledCode BuiltinUnit
 runValidator genesisUtxo datum redeemer ctx =
   compiledVersionOracleValidator
     `appArg` genesisUtxo

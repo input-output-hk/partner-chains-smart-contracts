@@ -1,4 +1,6 @@
-module Specs.CommitteeCandidateValidator where
+module Specs.CommitteeCandidateValidator (
+  validatorTests,
+) where
 
 import ApiBuilder
 import Control.Lens
@@ -9,7 +11,7 @@ import Test.Tasty
 import TestValues qualified as Test
 import Testing
 import TrustlessSidechain.CommitteeCandidateValidator
-import TrustlessSidechain.Types
+import TrustlessSidechain.Types qualified as Types
 
 validatorTests :: TestTree
 validatorTests =
@@ -52,10 +54,10 @@ wrongPubKeyHash = V2.PubKeyHash "01230123012301230123012301230123012301230123012
 someTxOutRef :: V2.TxOutRef
 someTxOutRef = V2.TxOutRef "abcd0123" 0
 
-committeeCandidateValidatorDatum :: VersionedGenericDatum V2.PubKeyHash
-committeeCandidateValidatorDatum = VersionedGenericDatum pubKeyHash Test.dummyBuiltinData 0
+committeeCandidateValidatorDatum :: Types.VersionedGenericDatum V2.PubKeyHash
+committeeCandidateValidatorDatum = Types.VersionedGenericDatum pubKeyHash Test.dummyBuiltinData 0
 
-runValidator :: V2.TxOutRef -> VersionedGenericDatum V2.PubKeyHash -> BuiltinData -> V2.ScriptContext -> CompiledCode BuiltinUnit
+runValidator :: V2.TxOutRef -> Types.VersionedGenericDatum V2.PubKeyHash -> BuiltinData -> V2.ScriptContext -> CompiledCode BuiltinUnit
 runValidator genesisUtxo datum redeemer ctx =
   compiledValidator
     `appArg` genesisUtxo
