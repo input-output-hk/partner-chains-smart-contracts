@@ -4,6 +4,18 @@ This changelog is based on [Keep A
 Changelog](https://keepachangelog.com/en/1.1.0).
 
 
+## 8.1.0 - 2025-09-16
+### Changed
+* Reserve validator no longer needs illiquidCirculationSupplyAddress UTXO ref input for TransferToIlliquidCirculationSupply and Handover redeemers
+* ICS validator now requires illiquidCirculationSupplyAuthorityTokenPolicyId versioning oracle ref input
+* ICS Validator does not allow to leak 'auth tokens' even if withdrawal policy token was minted
+### Removed
+* Removed checks for arbitrary token minting from Reserve validator
+* Removed support for ADA as reserve token in Reserve validator and policy
+* Removed check for other tokens from reserve minting policy
+* Removed unit datum checks from ICS validator
+* Removed unused scripts and helper functions
+
 ## 8.0.0 - 2025-07-31
 ### Added
 * Trace enabled version of raw-scripts rust crate

@@ -1,3 +1,0 @@
-kind: Changed
-body: ICS Validator does not allow to leak 'auth tokens' even if withdrawal policy token was minted.
-time: 2025-09-05T11:26:09.086098846+02:00
