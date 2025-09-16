@@ -1,4 +1,12 @@
-.PHONY: all cabal-update onchain update-scripts check-raw-scripts coverage-gen coverage
+.PHONY: requires_nix_shell all cabal-update onchain update-scripts check-raw-scripts coverage-gen coverage format
+
+# Target to use as dependency to fail if not inside nix-shell.
+requires_nix_shell:
+	@ [ "$(IN_NIX_SHELL)" ] || { \
+	echo "The $(MAKECMDGOALS) target must be run from inside a nix shell"; \
+	echo "    run 'nix develop' first"; \
+	false; \
+	}
 
 trustless-dir := ../raw-scripts
 trustless-traced-dir := ../raw-scripts-traced
@@ -51,3 +59,6 @@ coverage: coverage-gen
 	@mkdir -p coverage
 	hpc markup $(foreach dir,$(shell find dist-newstyle -type d -path '*/hpc/vanilla/mix'),--hpcdir=$(dir)) --destdir=coverage combined.tix
 	@echo "Coverage report generated in coverage/"
+
+format: requires_nix_shell
+	pre-commit run --all-files
