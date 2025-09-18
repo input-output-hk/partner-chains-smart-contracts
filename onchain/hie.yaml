@@ -1,13 +1,13 @@
 cradle:
   cabal:
     - path: "./src"
-      component: "lib:trustless-sidechain"
+      component: "lib:partner-chains-smart-contracts"
 
     - path: "./app/serialise"
-      component: "exe:trustless-sidechain-serialise"
+      component: "exe:partner-chains-smart-contracts-serialise"
 
     - path: "./test"
-      component: "test:trustless-sidechain-test"
+      component: "test:partner-chains-smart-contracts-test"
 
     - path: "./test/script-perf"
       component: "test:script-perf"

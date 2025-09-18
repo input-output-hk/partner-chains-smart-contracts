@@ -3,10 +3,10 @@ module TestValues where
 import Prelude
 
 import ApiBuilder
+import PartnerChains.ScriptId qualified as ScriptId
+import PartnerChains.Types qualified as Types
 import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx
-import TrustlessSidechain.ScriptId qualified as ScriptId
-import TrustlessSidechain.Types qualified as Types
 
 genesisUtxo :: V2.TxOutRef
 genesisUtxo = V2.TxOutRef "123456" 0

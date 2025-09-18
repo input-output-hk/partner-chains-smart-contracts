@@ -1,4 +1,4 @@
-module TrustlessSidechain.EncodeHelpers (
+module PartnerChains.EncodeHelpers (
   -- * Helpers for Data encoding
 
   -- ** ToData

@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module TrustlessSidechain.ExampleVFunction (
+module PartnerChains.Scripts.ExampleVFunction (
   mkVFunctionPolicy,
   mkVFunctionPolicyUntyped,
   serialisableVFunctionPolicy,

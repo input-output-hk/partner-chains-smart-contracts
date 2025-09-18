@@ -1,13 +1,13 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 {- |
-Module      : TrustlessSidechain.AlwaysFailingScripts
+Module      : PartnerChains.Scripts.AlwaysFailingScripts
 Description : Always-failing Plutus scripts for integration testing
 
 This module defines always-failing Plutus validator and minting policy scripts.
 These are useful for testing scenarios where script validation must fail deliberately.
 -}
-module TrustlessSidechain.AlwaysFailingScripts (
+module PartnerChains.Scripts.AlwaysFailingScripts (
   -- * Validator
   mkAlwaysFailingValidator,
   mkAlwaysFailingValidatorUntyped,

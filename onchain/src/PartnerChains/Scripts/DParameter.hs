@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 
-module TrustlessSidechain.DParameter (
+module PartnerChains.Scripts.DParameter (
   compiledMintingPolicy,
   compiledValidator,
   serialisableMintingPolicy,
@@ -12,6 +12,8 @@ module TrustlessSidechain.DParameter (
   mkMintingPolicyUntyped,
 ) where
 
+import PartnerChains.Scripts.Versioning (approvedByGovernance)
+import PartnerChains.Types (VersionOracleConfig)
 import PlutusLedgerApi.Data.V2 (
   Address,
   ScriptContext,
@@ -29,8 +31,6 @@ import PlutusTx qualified
 import PlutusTx.Data.List qualified as List
 import PlutusTx.Foldable (sum)
 import PlutusTx.Prelude
-import TrustlessSidechain.Types (VersionOracleConfig)
-import TrustlessSidechain.Versioning (approvedByGovernance)
 
 -- OnChain error descriptions:
 --

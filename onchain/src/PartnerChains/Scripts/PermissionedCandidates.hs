@@ -1,10 +1,11 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 
-{- | This module provides functionality for storing a list of permissioned
-candidates on the mainchain so that it can be accessed by the sidechain.
+{- |
+Module      : PartnerChains.Scripts.PermissionedCandidates
+Description : Permissioned Candidates validator and minting policy.
 -}
-module TrustlessSidechain.PermissionedCandidates (
+module PartnerChains.Scripts.PermissionedCandidates (
   compiledValidator,
   compiledMintingPolicy,
   serialisableValidator,
@@ -15,6 +16,18 @@ module TrustlessSidechain.PermissionedCandidates (
   mkMintingPolicyUntyped,
 ) where
 
+import PartnerChains.Scripts.Versioning (approvedByGovernance)
+import PartnerChains.Types (
+  PermissionedCandidatesPolicyRedeemer (
+    PermissionedCandidatesBurn,
+    PermissionedCandidatesMint
+  ),
+  PermissionedCandidatesValidatorRedeemer (
+    RemovePermissionedCandidates,
+    UpdatePermissionedCandidates
+  ),
+  VersionOracleConfig,
+ )
 import PlutusLedgerApi.Common (SerialisedScript)
 import PlutusLedgerApi.Data.V2 (
   Address,
@@ -31,18 +44,6 @@ import PlutusTx qualified
 import PlutusTx.Data.List qualified as List
 import PlutusTx.Foldable (sum)
 import PlutusTx.Prelude
-import TrustlessSidechain.Types (
-  PermissionedCandidatesPolicyRedeemer (
-    PermissionedCandidatesBurn,
-    PermissionedCandidatesMint
-  ),
-  PermissionedCandidatesValidatorRedeemer (
-    RemovePermissionedCandidates,
-    UpdatePermissionedCandidates
-  ),
-  VersionOracleConfig,
- )
-import TrustlessSidechain.Versioning (approvedByGovernance)
 
 -- OnChain error descriptions:
 --

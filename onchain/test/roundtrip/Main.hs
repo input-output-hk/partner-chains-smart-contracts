@@ -3,6 +3,18 @@ module Main (main) where
 import Data.ByteString (ByteString)
 import GHC.Exts (fromList)
 import Laws (toDataSafeLaws', toDataUnsafeLaws')
+import PartnerChains.Types (
+  IlliquidCirculationSupplyRedeemer (DepositMoreToSupply, WithdrawFromSupply),
+  ImmutableReserveSettings (ImmutableReserveSettings),
+  MutableReserveSettings (MutableReserveSettings),
+  PermissionedCandidatesPolicyRedeemer (PermissionedCandidatesBurn, PermissionedCandidatesMint),
+  PermissionedCandidatesValidatorRedeemer (RemovePermissionedCandidates, UpdatePermissionedCandidates),
+  ReserveDatum (ReserveDatum),
+  ReserveRedeemer (DepositToReserve, Handover, TransferToIlliquidCirculationSupply, UpdateReserve),
+  ReserveStats (ReserveStats),
+  VersionOracle (VersionOracle),
+  VersionOracleConfig (VersionOracleConfig),
+ )
 import PlutusLedgerApi.Data.V2 (
   CurrencySymbol (CurrencySymbol),
   PubKeyHash (PubKeyHash),
@@ -19,18 +31,6 @@ import Test.QuickCheck (
  )
 import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (QuickCheckTests (QuickCheckTests), testProperty)
-import TrustlessSidechain.Types (
-  IlliquidCirculationSupplyRedeemer (DepositMoreToSupply, WithdrawFromSupply),
-  ImmutableReserveSettings (ImmutableReserveSettings),
-  MutableReserveSettings (MutableReserveSettings),
-  PermissionedCandidatesPolicyRedeemer (PermissionedCandidatesBurn, PermissionedCandidatesMint),
-  PermissionedCandidatesValidatorRedeemer (RemovePermissionedCandidates, UpdatePermissionedCandidates),
-  ReserveDatum (ReserveDatum),
-  ReserveRedeemer (DepositToReserve, Handover, TransferToIlliquidCirculationSupply, UpdateReserve),
-  ReserveStats (ReserveStats),
-  VersionOracle (VersionOracle),
-  VersionOracleConfig (VersionOracleConfig),
- )
 
 main :: IO ()
 main =

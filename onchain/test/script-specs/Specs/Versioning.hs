@@ -5,14 +5,14 @@ module Specs.Versioning (
 
 import ApiBuilder
 import Control.Lens
+import PartnerChains.Scripts.Versioning
+import PartnerChains.Types qualified as Types
 import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx
 import PlutusTx.Builtins.Internal (BuiltinUnit (..))
 import Test.Tasty
 import TestValues qualified as Test
 import Testing
-import TrustlessSidechain.Types qualified as Types
-import TrustlessSidechain.Versioning
 
 -- minting policy
 

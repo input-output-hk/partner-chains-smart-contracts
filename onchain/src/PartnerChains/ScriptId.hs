@@ -1,4 +1,4 @@
-module TrustlessSidechain.ScriptId (
+module PartnerChains.ScriptId (
   ScriptId (..),
   toInteger,
   reserveValidatorId,

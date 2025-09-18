@@ -2,10 +2,10 @@
 {-# OPTIONS_GHC -fno-specialise #-}
 
 {- |
-Module      : TrustlessSidechain.IlliquidCirculationSupply
+Module      : PartnerChains.Scripts.IlliquidCirculationSupply
 Description : Illiquid Circulation Supply validator and auth token minting policy.
 -}
-module TrustlessSidechain.IlliquidCirculationSupply (
+module PartnerChains.Scripts.IlliquidCirculationSupply (
   -- * Illiquid Circulation Supply (ICS) validator
   -- $icsValidator
   mkIlliquidCirculationSupplyValidator,
@@ -21,6 +21,18 @@ module TrustlessSidechain.IlliquidCirculationSupply (
   serialisableIlliquidCirculationSupplyAuthorityTokenPolicy,
 ) where
 
+import PartnerChains.ScriptId qualified as ScriptId
+import PartnerChains.Scripts.Versioning (
+  approvedByGovernance,
+  getVersionedCurrencySymbol,
+ )
+import PartnerChains.Types (
+  IlliquidCirculationSupplyRedeemer (..),
+  VersionOracle (VersionOracle, scriptId),
+  VersionOracleConfig,
+ )
+import PartnerChains.Utils (oneTokenMinted)
+import PartnerChains.Utils qualified as Utils
 import PlutusLedgerApi.Data.V2 (
   Address,
   ScriptContext,
@@ -47,18 +59,6 @@ import PlutusTx qualified
 import PlutusTx.Data.AssocMap qualified as Map
 import PlutusTx.Data.List qualified as List
 import PlutusTx.Prelude
-import TrustlessSidechain.ScriptId qualified as ScriptId
-import TrustlessSidechain.Types (
-  IlliquidCirculationSupplyRedeemer (..),
-  VersionOracle (VersionOracle, scriptId),
-  VersionOracleConfig,
- )
-import TrustlessSidechain.Utils (oneTokenMinted)
-import TrustlessSidechain.Utils qualified as Utils
-import TrustlessSidechain.Versioning (
-  approvedByGovernance,
-  getVersionedCurrencySymbol,
- )
 
 icsWithdrawalMintingPolicyTokenName :: TokenName
 icsWithdrawalMintingPolicyTokenName = TokenName emptyByteString

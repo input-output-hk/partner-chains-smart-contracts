@@ -1,4 +1,4 @@
-module Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest) where
+module Test.PartnerChains.GoldenTest (dataEncoderGoldenTest) where
 
 import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Lazy (fromStrict)

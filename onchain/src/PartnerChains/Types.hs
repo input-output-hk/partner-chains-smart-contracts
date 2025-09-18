@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 
-module TrustlessSidechain.Types (
+module PartnerChains.Types (
   PermissionedCandidatesPolicyRedeemer (..),
   PermissionedCandidatesValidatorRedeemer (..),
   ImmutableReserveSettings (..),
@@ -17,6 +17,7 @@ module TrustlessSidechain.Types (
   VersionOraclePolicyRedeemer (..),
 ) where
 
+import PartnerChains.EncodeHelpers
 import PlutusLedgerApi.Data.V2 (
   BuiltinData (BuiltinData),
   CurrencySymbol,
@@ -26,7 +27,6 @@ import PlutusLedgerApi.V1.Data.Value (AssetClass)
 import PlutusTx (makeIsDataIndexed)
 import PlutusTx qualified
 import PlutusTx.Prelude
-import TrustlessSidechain.EncodeHelpers
 
 import Data.Eq qualified as Haskell
 import Text.Show qualified as Haskell
@@ -36,11 +36,11 @@ import Text.Show qualified as Haskell
 --
 -- Whenever new definitions in this module are added, i.e. either a new data
 -- type or a new data constructor is created, corresponding roundtrip tests need
--- to be updated.  These tests reside in Test.TrustlessSidechain.Types module in
+-- to be updated.  These tests reside in Test.PartnerChains.Types module in
 -- `tests/` directory and test correctness of serialization and deserialization
 -- using `ToData` and `FromData` instances.  Importantly, same tests are
 -- performed in the substrate-node to ensure interoperability with
--- trustless-sidechain.
+-- partner-chains-smart-contracts.
 
 -- * Committee Candidate Validator data
 

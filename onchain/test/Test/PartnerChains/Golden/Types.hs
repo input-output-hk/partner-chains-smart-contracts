@@ -1,13 +1,9 @@
-module Test.TrustlessSidechain.Golden.Types (tests) where
+module Test.PartnerChains.Golden.Types (tests) where
 
 import Data.ByteString (ByteString)
 import Data.ByteString.Base16 qualified as B16
 import Data.ByteString.Char8 qualified as BC
-import PlutusLedgerApi.Data.V2 (toBuiltinData)
-import PlutusLedgerApi.V1.Data.Value qualified as Value
-import Test.Tasty (TestTree, testGroup)
-import Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest)
-import TrustlessSidechain.Types (
+import PartnerChains.Types (
   IlliquidCirculationSupplyRedeemer (
     DepositMoreToSupply,
     WithdrawFromSupply
@@ -34,12 +30,16 @@ import TrustlessSidechain.Types (
   ReserveStats (ReserveStats),
   VersionedGenericDatum (..),
  )
+import PlutusLedgerApi.Data.V2 (toBuiltinData)
+import PlutusLedgerApi.V1.Data.Value qualified as Value
+import Test.PartnerChains.GoldenTest (dataEncoderGoldenTest)
+import Test.Tasty (TestTree, testGroup)
 
 {- | Tests for all data types with @IsData@ implementation
 Some of the data types are only checked transitively (included by some other type)
 
 In order to regenerate golden tests files, simply delete the old ones in `./test/golden`
-or run: cabal test trustless-sidechain-test --test-options "--accept"
+or run: cabal test partner-chains-smart-contracts-test --test-options "--accept"
 -}
 tests :: TestTree
 tests =

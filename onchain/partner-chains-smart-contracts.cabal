@@ -1,5 +1,5 @@
 cabal-version: 3.0
-name:          trustless-sidechain
+name:          partner-chains-smart-contracts
 version:       8.1.0
 synopsis:      Smart contract code used by the partner-chains project.
 homepage:
@@ -71,45 +71,45 @@ common common-optimized-parallel
   import:      common-optimized
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
 
--- trustless-sidechain-serialise, trustless-sidechain-serialise-traced and script-size only pick up
+-- partner-chains-smart-contracts-serialise, partner-chains-smart-contracts-serialise-traced and script-size only pick up
 -- Plutus plugin settings if all script modules are directly referenced through other-modules, not through a
 -- library dependency. We list them all here for convenience.
 common common-source-other-modules
   other-modules:
-    TrustlessSidechain.AlwaysFailingScripts
-    TrustlessSidechain.AlwaysPassingScripts
-    TrustlessSidechain.CommitteeCandidateValidator
-    TrustlessSidechain.DParameter
-    TrustlessSidechain.EncodeHelpers
-    TrustlessSidechain.ExampleVFunction
-    TrustlessSidechain.GovernedMap
-    TrustlessSidechain.IlliquidCirculationSupply
-    TrustlessSidechain.PermissionedCandidates
-    TrustlessSidechain.Reserve
-    TrustlessSidechain.ScriptId
-    TrustlessSidechain.Types
-    TrustlessSidechain.Utils
-    TrustlessSidechain.Versioning
+    PartnerChains.EncodeHelpers
+    PartnerChains.ScriptId
+    PartnerChains.Scripts.AlwaysFailingScripts
+    PartnerChains.Scripts.AlwaysPassingScripts
+    PartnerChains.Scripts.CommitteeCandidateValidator
+    PartnerChains.Scripts.DParameter
+    PartnerChains.Scripts.ExampleVFunction
+    PartnerChains.Scripts.GovernedMap
+    PartnerChains.Scripts.IlliquidCirculationSupply
+    PartnerChains.Scripts.PermissionedCandidates
+    PartnerChains.Scripts.Reserve
+    PartnerChains.Scripts.Versioning
+    PartnerChains.Types
+    PartnerChains.Utils
 
 -- Libraries
 
 library
   import:             common-lang, common-script-lang
   exposed-modules:
-    TrustlessSidechain.AlwaysFailingScripts
-    TrustlessSidechain.AlwaysPassingScripts
-    TrustlessSidechain.CommitteeCandidateValidator
-    TrustlessSidechain.DParameter
-    TrustlessSidechain.EncodeHelpers
-    TrustlessSidechain.ExampleVFunction
-    TrustlessSidechain.GovernedMap
-    TrustlessSidechain.IlliquidCirculationSupply
-    TrustlessSidechain.PermissionedCandidates
-    TrustlessSidechain.Reserve
-    TrustlessSidechain.ScriptId
-    TrustlessSidechain.Types
-    TrustlessSidechain.Utils
-    TrustlessSidechain.Versioning
+    PartnerChains.EncodeHelpers
+    PartnerChains.ScriptId
+    PartnerChains.Scripts.AlwaysFailingScripts
+    PartnerChains.Scripts.AlwaysPassingScripts
+    PartnerChains.Scripts.CommitteeCandidateValidator
+    PartnerChains.Scripts.DParameter
+    PartnerChains.Scripts.ExampleVFunction
+    PartnerChains.Scripts.GovernedMap
+    PartnerChains.Scripts.IlliquidCirculationSupply
+    PartnerChains.Scripts.PermissionedCandidates
+    PartnerChains.Scripts.Reserve
+    PartnerChains.Scripts.Versioning
+    PartnerChains.Types
+    PartnerChains.Utils
 
   default-extensions: NoImplicitPrelude
   build-depends:
@@ -124,7 +124,7 @@ library
 
 -- Executables
 
-executable trustless-sidechain-serialise
+executable partner-chains-smart-contracts-serialise
   import:
     common-lang-optimized-notrace, common-lang, common-optimized-parallel, common-source-other-modules
 
@@ -136,14 +136,14 @@ executable trustless-sidechain-serialise
     , bytestring
     , cardano-api
     , casing
+    , partner-chains-smart-contracts
     , plutus-ledger-api
     , plutus-tx
     , plutus-tx-plugin
-    , trustless-sidechain
 
   hs-source-dirs:     app/serialise src
 
-executable trustless-sidechain-serialise-traced
+executable partner-chains-smart-contracts-serialise-traced
   import:
     common-lang-traced, common-script-lang, common-optimized-parallel, common-source-other-modules
 
@@ -163,25 +163,25 @@ executable trustless-sidechain-serialise-traced
 
 -- Tests
 
-test-suite trustless-sidechain-test
+test-suite partner-chains-smart-contracts-test
   import:         common-lang, common-optimized-parallel, common-script-lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
-    Test.TrustlessSidechain.Golden.Tests
-    Test.TrustlessSidechain.Golden.Types
-    Test.TrustlessSidechain.Golden.Versioning
-    Test.TrustlessSidechain.GoldenTest
+    Test.PartnerChains.Golden.Tests
+    Test.PartnerChains.Golden.Types
+    Test.PartnerChains.Golden.Versioning
+    Test.PartnerChains.GoldenTest
 
   build-depends:
     , base16-bytestring
     , bytestring
+    , partner-chains-smart-contracts
     , plutus-ledger-api
     , plutus-tx
     , tasty
     , tasty-golden
     , text
-    , trustless-sidechain
 
   hs-source-dirs: test
 
@@ -211,6 +211,7 @@ test-suite script-perf
     , bytestring
     , cardano-api
     , lens
+    , partner-chains-smart-contracts
     , plutus-core
     , plutus-ledger-api
     , plutus-tx
@@ -220,7 +221,6 @@ test-suite script-perf
     , tasty-golden
     , tasty-hunit
     , text
-    , trustless-sidechain
 
   hs-source-dirs:     test/common test/script-perf src
 
@@ -231,6 +231,7 @@ test-suite roundtrip
   other-modules:  Laws
   build-depends:
     , bytestring
+    , partner-chains-smart-contracts
     , plutus-ledger-api
     , plutus-tx
     , plutus-tx-plugin
@@ -238,7 +239,6 @@ test-suite roundtrip
     , secp256k1-haskell
     , tasty
     , tasty-quickcheck
-    , trustless-sidechain
 
   hs-source-dirs: test/roundtrip
 
@@ -266,6 +266,7 @@ test-suite script-specs
     , bytestring
     , cardano-api
     , lens
+    , partner-chains-smart-contracts
     , plutus-core
     , plutus-ledger-api
     , plutus-tx
@@ -274,6 +275,5 @@ test-suite script-specs
     , tasty-golden
     , tasty-hunit
     , text
-    , trustless-sidechain
 
   hs-source-dirs: test/common test/script-specs

@@ -1,13 +1,13 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 {- |
-Module      : TrustlessSidechain.AlwaysPassingScripts
+Module      : PartnerChains.Scripts.AlwaysPassingScripts
 
 This module provides Plutus scripts (validator and minting policy) that always succeed.
 These scripts are useful for integration testing in mock chains, where validation
 success needs to be ensured regardless of inputs.
 -}
-module TrustlessSidechain.AlwaysPassingScripts (
+module PartnerChains.Scripts.AlwaysPassingScripts (
   -- * Validator
   mkAlwaysPassingValidator,
   mkAlwaysPassingValidatorUntyped,

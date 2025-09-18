@@ -1,12 +1,12 @@
 {-# OPTIONS_GHC -fno-specialise #-}
 
 {- |
-Module      : TrustlessSidechain.Utils
+Module      : PartnerChains.Utils
 Description : Utility functions for Plutus scripts and test logic
 
 This module provides utility functions for working with Plutus data structures.
 -}
-module TrustlessSidechain.Utils (
+module PartnerChains.Utils (
   fromSingleton,
   fromSingletonData,
   fromJust,
