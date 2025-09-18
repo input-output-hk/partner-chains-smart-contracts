@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 
-module TrustlessSidechain.DParameter (
+module TrustlessSidechain.Scripts.DParameter (
   compiledMintingPolicy,
   compiledValidator,
   serialisableMintingPolicy,
@@ -29,8 +29,8 @@ import PlutusTx qualified
 import PlutusTx.Data.List qualified as List
 import PlutusTx.Foldable (sum)
 import PlutusTx.Prelude
+import TrustlessSidechain.Scripts.Versioning (approvedByGovernance)
 import TrustlessSidechain.Types (VersionOracleConfig)
-import TrustlessSidechain.Versioning (approvedByGovernance)
 
 -- OnChain error descriptions:
 --

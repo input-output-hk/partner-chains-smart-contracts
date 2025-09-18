@@ -25,19 +25,19 @@ import System.IO (Handle)
 import System.IO qualified as IO
 import System.IO.Error qualified as Error
 import Text.Casing (fromHumps, toScreamingSnake)
-import TrustlessSidechain.AlwaysFailingScripts qualified as AlwaysFailing
-import TrustlessSidechain.AlwaysPassingScripts qualified as AlwaysPassing
-import TrustlessSidechain.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
-import TrustlessSidechain.DParameter qualified as DParameter
-import TrustlessSidechain.ExampleVFunction as ExampleVFunction
-import TrustlessSidechain.GovernedMap qualified as GovernedMap
-import TrustlessSidechain.IlliquidCirculationSupply qualified as IlliquidCirculationSupply
-import TrustlessSidechain.PermissionedCandidates qualified as PermissionedCandidates
-import TrustlessSidechain.Reserve qualified as Reserve
 import TrustlessSidechain.ScriptId (ScriptId (..))
 import TrustlessSidechain.ScriptId qualified as ScriptId
+import TrustlessSidechain.Scripts.AlwaysFailingScripts qualified as AlwaysFailing
+import TrustlessSidechain.Scripts.AlwaysPassingScripts qualified as AlwaysPassing
+import TrustlessSidechain.Scripts.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
+import TrustlessSidechain.Scripts.DParameter qualified as DParameter
+import TrustlessSidechain.Scripts.ExampleVFunction as ExampleVFunction
+import TrustlessSidechain.Scripts.GovernedMap qualified as GovernedMap
+import TrustlessSidechain.Scripts.IlliquidCirculationSupply qualified as IlliquidCirculationSupply
+import TrustlessSidechain.Scripts.PermissionedCandidates qualified as PermissionedCandidates
+import TrustlessSidechain.Scripts.Reserve qualified as Reserve
+import TrustlessSidechain.Scripts.Versioning qualified as Versioning
 import TrustlessSidechain.Utils (scriptToPlutusScript)
-import TrustlessSidechain.Versioning qualified as Versioning
 
 -- * CLI parsing
 

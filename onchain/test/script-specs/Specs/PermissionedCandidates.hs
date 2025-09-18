@@ -11,7 +11,7 @@ import PlutusTx.Builtins.Internal (BuiltinUnit (..))
 import Test.Tasty
 import TestValues qualified as Test
 import Testing
-import TrustlessSidechain.PermissionedCandidates
+import TrustlessSidechain.Scripts.PermissionedCandidates
 import TrustlessSidechain.Types qualified as Types
 
 -- minting policy

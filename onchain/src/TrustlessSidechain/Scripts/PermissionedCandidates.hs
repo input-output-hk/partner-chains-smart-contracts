@@ -1,10 +1,11 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 
-{- | This module provides functionality for storing a list of permissioned
-candidates on the mainchain so that it can be accessed by the sidechain.
+{- |
+Module      : TrustlessSidechain.Scripts.PermissionedCandidates
+Description : Permissioned Candidates validator and minting policy.
 -}
-module TrustlessSidechain.PermissionedCandidates (
+module TrustlessSidechain.Scripts.PermissionedCandidates (
   compiledValidator,
   compiledMintingPolicy,
   serialisableValidator,
@@ -31,6 +32,7 @@ import PlutusTx qualified
 import PlutusTx.Data.List qualified as List
 import PlutusTx.Foldable (sum)
 import PlutusTx.Prelude
+import TrustlessSidechain.Scripts.Versioning (approvedByGovernance)
 import TrustlessSidechain.Types (
   PermissionedCandidatesPolicyRedeemer (
     PermissionedCandidatesBurn,
@@ -42,7 +44,6 @@ import TrustlessSidechain.Types (
   ),
   VersionOracleConfig,
  )
-import TrustlessSidechain.Versioning (approvedByGovernance)
 
 -- OnChain error descriptions:
 --

@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 
-module TrustlessSidechain.GovernedMap (
+module TrustlessSidechain.Scripts.GovernedMap (
   compiledMintingPolicy,
   compiledValidator,
   serialisableMintingPolicy,
@@ -19,8 +19,8 @@ import PlutusLedgerApi.Data.V2 (
  )
 import PlutusTx qualified
 import PlutusTx.Prelude
+import TrustlessSidechain.Scripts.Versioning (approvedByGovernance)
 import TrustlessSidechain.Types (VersionOracleConfig)
-import TrustlessSidechain.Versioning (approvedByGovernance)
 
 -- OnChain error descriptions:
 --

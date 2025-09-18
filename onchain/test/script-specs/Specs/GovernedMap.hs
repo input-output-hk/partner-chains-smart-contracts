@@ -11,8 +11,8 @@ import PlutusTx.Builtins.Internal (BuiltinUnit (..))
 import Test.Tasty
 import TestValues qualified as Test
 import Testing
-import TrustlessSidechain.GovernedMap
 import TrustlessSidechain.ScriptId (governedMapPolicyId, governedMapValidatorId)
+import TrustlessSidechain.Scripts.GovernedMap
 import TrustlessSidechain.Types qualified as Types
 
 validatorTests :: TestTree

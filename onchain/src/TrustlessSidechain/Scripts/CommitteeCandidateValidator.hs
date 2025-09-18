@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module TrustlessSidechain.CommitteeCandidateValidator (
+module TrustlessSidechain.Scripts.CommitteeCandidateValidator (
   mkCommitteeCandidateValidator,
   committeeCandidateValidatorUntyped,
   compiledValidator,

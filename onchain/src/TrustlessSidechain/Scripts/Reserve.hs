@@ -2,10 +2,10 @@
 {-# OPTIONS_GHC -fno-specialise #-}
 
 {- |
-Module      : TrustlessSidechain.Reserve
+Module      : TrustlessSidechain.Scripts.Reserve
 Description : Reserve validator and auth token minting policy.
 -}
-module TrustlessSidechain.Reserve (
+module TrustlessSidechain.Scripts.Reserve (
   -- * Reserve validator
   -- $reserveValidator
   mkReserveValidator,
@@ -53,6 +53,11 @@ import PlutusTx.Bool
 import PlutusTx.Data.List qualified as List
 import PlutusTx.Prelude hiding (fromInteger)
 import TrustlessSidechain.ScriptId qualified as ScriptId
+import TrustlessSidechain.Scripts.Versioning (
+  approvedByGovernance,
+  getVersionedCurrencySymbol,
+  getVersionedValidatorAddress,
+ )
 import TrustlessSidechain.Types (
   ImmutableReserveSettings (tokenKind),
   MutableReserveSettings (incentiveAmount, vFunctionTotalAccrued),
@@ -70,11 +75,6 @@ import TrustlessSidechain.Types (
   datum,
  )
 import TrustlessSidechain.Utils qualified as Utils
-import TrustlessSidechain.Versioning (
-  approvedByGovernance,
-  getVersionedCurrencySymbol,
-  getVersionedValidatorAddress,
- )
 
 reserveAuthTokenTokenName :: TokenName
 reserveAuthTokenTokenName = TokenName emptyByteString

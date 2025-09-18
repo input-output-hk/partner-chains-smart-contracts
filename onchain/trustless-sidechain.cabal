@@ -76,40 +76,40 @@ common common-optimized-parallel
 -- library dependency. We list them all here for convenience.
 common common-source-other-modules
   other-modules:
-    TrustlessSidechain.AlwaysFailingScripts
-    TrustlessSidechain.AlwaysPassingScripts
-    TrustlessSidechain.CommitteeCandidateValidator
-    TrustlessSidechain.DParameter
     TrustlessSidechain.EncodeHelpers
-    TrustlessSidechain.ExampleVFunction
-    TrustlessSidechain.GovernedMap
-    TrustlessSidechain.IlliquidCirculationSupply
-    TrustlessSidechain.PermissionedCandidates
-    TrustlessSidechain.Reserve
     TrustlessSidechain.ScriptId
+    TrustlessSidechain.Scripts.AlwaysFailingScripts
+    TrustlessSidechain.Scripts.AlwaysPassingScripts
+    TrustlessSidechain.Scripts.CommitteeCandidateValidator
+    TrustlessSidechain.Scripts.DParameter
+    TrustlessSidechain.Scripts.ExampleVFunction
+    TrustlessSidechain.Scripts.GovernedMap
+    TrustlessSidechain.Scripts.IlliquidCirculationSupply
+    TrustlessSidechain.Scripts.PermissionedCandidates
+    TrustlessSidechain.Scripts.Reserve
+    TrustlessSidechain.Scripts.Versioning
     TrustlessSidechain.Types
     TrustlessSidechain.Utils
-    TrustlessSidechain.Versioning
 
 -- Libraries
 
 library
   import:             common-lang, common-script-lang
   exposed-modules:
-    TrustlessSidechain.AlwaysFailingScripts
-    TrustlessSidechain.AlwaysPassingScripts
-    TrustlessSidechain.CommitteeCandidateValidator
-    TrustlessSidechain.DParameter
     TrustlessSidechain.EncodeHelpers
-    TrustlessSidechain.ExampleVFunction
-    TrustlessSidechain.GovernedMap
-    TrustlessSidechain.IlliquidCirculationSupply
-    TrustlessSidechain.PermissionedCandidates
-    TrustlessSidechain.Reserve
     TrustlessSidechain.ScriptId
+    TrustlessSidechain.Scripts.AlwaysFailingScripts
+    TrustlessSidechain.Scripts.AlwaysPassingScripts
+    TrustlessSidechain.Scripts.CommitteeCandidateValidator
+    TrustlessSidechain.Scripts.DParameter
+    TrustlessSidechain.Scripts.ExampleVFunction
+    TrustlessSidechain.Scripts.GovernedMap
+    TrustlessSidechain.Scripts.IlliquidCirculationSupply
+    TrustlessSidechain.Scripts.PermissionedCandidates
+    TrustlessSidechain.Scripts.Reserve
+    TrustlessSidechain.Scripts.Versioning
     TrustlessSidechain.Types
     TrustlessSidechain.Utils
-    TrustlessSidechain.Versioning
 
   default-extensions: NoImplicitPrelude
   build-depends:

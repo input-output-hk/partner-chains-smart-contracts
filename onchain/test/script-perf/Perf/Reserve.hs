@@ -12,8 +12,8 @@ import PlutusTx.Builtins.Internal (BuiltinUnit (..))
 import Test.Tasty
 import TestValues qualified as Test
 import Testing
-import TrustlessSidechain.Reserve
 import TrustlessSidechain.ScriptId qualified as ScriptId
+import TrustlessSidechain.Scripts.Reserve
 import TrustlessSidechain.Types qualified as Types
 
 execCosts :: TestTree

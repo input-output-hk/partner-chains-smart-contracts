@@ -2,10 +2,10 @@
 {-# OPTIONS_GHC -fno-specialise #-}
 
 {- |
-Module      : TrustlessSidechain.IlliquidCirculationSupply
+Module      : TrustlessSidechain.Scripts.IlliquidCirculationSupply
 Description : Illiquid Circulation Supply validator and auth token minting policy.
 -}
-module TrustlessSidechain.IlliquidCirculationSupply (
+module TrustlessSidechain.Scripts.IlliquidCirculationSupply (
   -- * Illiquid Circulation Supply (ICS) validator
   -- $icsValidator
   mkIlliquidCirculationSupplyValidator,
@@ -48,6 +48,10 @@ import PlutusTx.Data.AssocMap qualified as Map
 import PlutusTx.Data.List qualified as List
 import PlutusTx.Prelude
 import TrustlessSidechain.ScriptId qualified as ScriptId
+import TrustlessSidechain.Scripts.Versioning (
+  approvedByGovernance,
+  getVersionedCurrencySymbol,
+ )
 import TrustlessSidechain.Types (
   IlliquidCirculationSupplyRedeemer (..),
   VersionOracle (VersionOracle, scriptId),
@@ -55,10 +59,6 @@ import TrustlessSidechain.Types (
  )
 import TrustlessSidechain.Utils (oneTokenMinted)
 import TrustlessSidechain.Utils qualified as Utils
-import TrustlessSidechain.Versioning (
-  approvedByGovernance,
-  getVersionedCurrencySymbol,
- )
 
 icsWithdrawalMintingPolicyTokenName :: TokenName
 icsWithdrawalMintingPolicyTokenName = TokenName emptyByteString

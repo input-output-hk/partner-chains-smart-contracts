@@ -6,7 +6,7 @@ scripts, as well as VersionedOracleValidator script for storing the
 versioning tokens.  Each versioning token stores a reference script and a
 datum that identifies the script and its version.
 -}
-module TrustlessSidechain.Versioning (
+module TrustlessSidechain.Scripts.Versioning (
   compiledVersionOraclePolicy,
   compiledVersionOracleValidator,
   serialisableVersionOraclePolicy,
