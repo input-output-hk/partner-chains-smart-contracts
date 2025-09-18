@@ -15,6 +15,8 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     pre-commit-hooks.url = "github:cachix/git-hooks.nix";
+    aiken.url = "github:aiken-lang/aiken/v1.1.19";
+    aiken.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs =
@@ -22,6 +24,7 @@
     , nixpkgs
     , flake-utils
     , pre-commit-hooks
+    , aiken
     }:
     flake-utils.lib.eachDefaultSystem (system:
     let
@@ -96,6 +99,8 @@
           rust-analyzer
           rustfmt
           cargo-edit
+
+          aiken.packages."${system}".aiken
         ];
         shellHook = ''
           # LD_LIBRARY_PATH is required for cabal to find libraries
