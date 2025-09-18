@@ -2,10 +2,10 @@
 {-# OPTIONS_GHC -fno-specialise #-}
 
 {- |
-Module      : TrustlessSidechain.Scripts.PermissionedCandidates
+Module      : PartnerChains.Scripts.PermissionedCandidates
 Description : Permissioned Candidates validator and minting policy.
 -}
-module TrustlessSidechain.Scripts.PermissionedCandidates (
+module PartnerChains.Scripts.PermissionedCandidates (
   compiledValidator,
   compiledMintingPolicy,
   serialisableValidator,
@@ -16,6 +16,18 @@ module TrustlessSidechain.Scripts.PermissionedCandidates (
   mkMintingPolicyUntyped,
 ) where
 
+import PartnerChains.Scripts.Versioning (approvedByGovernance)
+import PartnerChains.Types (
+  PermissionedCandidatesPolicyRedeemer (
+    PermissionedCandidatesBurn,
+    PermissionedCandidatesMint
+  ),
+  PermissionedCandidatesValidatorRedeemer (
+    RemovePermissionedCandidates,
+    UpdatePermissionedCandidates
+  ),
+  VersionOracleConfig,
+ )
 import PlutusLedgerApi.Common (SerialisedScript)
 import PlutusLedgerApi.Data.V2 (
   Address,
@@ -32,18 +44,6 @@ import PlutusTx qualified
 import PlutusTx.Data.List qualified as List
 import PlutusTx.Foldable (sum)
 import PlutusTx.Prelude
-import TrustlessSidechain.Scripts.Versioning (approvedByGovernance)
-import TrustlessSidechain.Types (
-  PermissionedCandidatesPolicyRedeemer (
-    PermissionedCandidatesBurn,
-    PermissionedCandidatesMint
-  ),
-  PermissionedCandidatesValidatorRedeemer (
-    RemovePermissionedCandidates,
-    UpdatePermissionedCandidates
-  ),
-  VersionOracleConfig,
- )
 
 -- OnChain error descriptions:
 --

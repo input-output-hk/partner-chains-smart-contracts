@@ -1,15 +1,15 @@
-module Test.TrustlessSidechain.Golden.Versioning where
+module Test.PartnerChains.Golden.Versioning where
 
 import Data.ByteString (ByteString)
 import Data.ByteString.Base16 qualified as B16
 import Data.ByteString.Char8 qualified as BC
-import PlutusLedgerApi.V1.Data.Value (currencySymbol)
-import Test.Tasty (TestTree, testGroup)
-import Test.TrustlessSidechain.GoldenTest (dataEncoderGoldenTest)
-import TrustlessSidechain.Types (
+import PartnerChains.Types (
   VersionOracle (..),
   VersionOracleConfig (..),
  )
+import PlutusLedgerApi.V1.Data.Value (currencySymbol)
+import Test.PartnerChains.GoldenTest (dataEncoderGoldenTest)
+import Test.Tasty (TestTree, testGroup)
 
 hexToBSUnsafe :: String -> ByteString
 hexToBSUnsafe str =

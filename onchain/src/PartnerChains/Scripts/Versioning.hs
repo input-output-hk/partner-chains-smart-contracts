@@ -1,12 +1,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-{- | 'TrustlessSidechain.Versioning' module implements script versioning system.
+{- | 'PartnerChains.Versioning' module implements script versioning system.
 It provides VersionOraclePolicy for minting tokens that store versioned
 scripts, as well as VersionedOracleValidator script for storing the
 versioning tokens.  Each versioning token stores a reference script and a
 datum that identifies the script and its version.
 -}
-module TrustlessSidechain.Scripts.Versioning (
+module PartnerChains.Scripts.Versioning (
   compiledVersionOraclePolicy,
   compiledVersionOracleValidator,
   serialisableVersionOraclePolicy,
@@ -20,6 +20,11 @@ module TrustlessSidechain.Scripts.Versioning (
   approvedByGovernance,
 ) where
 
+import PartnerChains.ScriptId qualified as ScriptId
+import PartnerChains.Types
+import PartnerChains.Utils (
+  fromSingleton,
+ )
 import PlutusLedgerApi.Data.V2 (
   Address,
   CurrencySymbol (CurrencySymbol),
@@ -55,11 +60,6 @@ import PlutusTx.Data.AssocMap (lookup, toSOPList)
 import PlutusTx.Data.List qualified as List
 import PlutusTx.List (null)
 import PlutusTx.Prelude
-import TrustlessSidechain.ScriptId qualified as ScriptId
-import TrustlessSidechain.Types
-import TrustlessSidechain.Utils (
-  fromSingleton,
- )
 
 {- | Token name for versioning tokens.  Must match definition in off-chain
 | module.

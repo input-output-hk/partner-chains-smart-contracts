@@ -2,10 +2,10 @@
 {-# OPTIONS_GHC -fno-specialise #-}
 
 {- |
-Module      : TrustlessSidechain.Scripts.Reserve
+Module      : PartnerChains.Scripts.Reserve
 Description : Reserve validator and auth token minting policy.
 -}
-module TrustlessSidechain.Scripts.Reserve (
+module PartnerChains.Scripts.Reserve (
   -- * Reserve validator
   -- $reserveValidator
   mkReserveValidator,
@@ -22,6 +22,29 @@ module TrustlessSidechain.Scripts.Reserve (
   reserveAuthTokenTokenName,
 ) where
 
+import PartnerChains.ScriptId qualified as ScriptId
+import PartnerChains.Scripts.Versioning (
+  approvedByGovernance,
+  getVersionedCurrencySymbol,
+  getVersionedValidatorAddress,
+ )
+import PartnerChains.Types (
+  ImmutableReserveSettings (tokenKind),
+  MutableReserveSettings (incentiveAmount, vFunctionTotalAccrued),
+  ReserveDatum (immutableSettings, mutableSettings, stats),
+  ReserveRedeemer (
+    DepositToReserve,
+    Handover,
+    TransferToIlliquidCirculationSupply,
+    UpdateReserve
+  ),
+  ReserveStats (ReserveStats, tokenTotalAmountTransferred),
+  VersionOracle (VersionOracle, scriptId),
+  VersionOracleConfig,
+  VersionedGenericDatum,
+  datum,
+ )
+import PartnerChains.Utils qualified as Utils
 import PlutusLedgerApi.Data.V2 (
   Address,
   Datum (getDatum),
@@ -52,29 +75,6 @@ import PlutusTx qualified
 import PlutusTx.Bool
 import PlutusTx.Data.List qualified as List
 import PlutusTx.Prelude hiding (fromInteger)
-import TrustlessSidechain.ScriptId qualified as ScriptId
-import TrustlessSidechain.Scripts.Versioning (
-  approvedByGovernance,
-  getVersionedCurrencySymbol,
-  getVersionedValidatorAddress,
- )
-import TrustlessSidechain.Types (
-  ImmutableReserveSettings (tokenKind),
-  MutableReserveSettings (incentiveAmount, vFunctionTotalAccrued),
-  ReserveDatum (immutableSettings, mutableSettings, stats),
-  ReserveRedeemer (
-    DepositToReserve,
-    Handover,
-    TransferToIlliquidCirculationSupply,
-    UpdateReserve
-  ),
-  ReserveStats (ReserveStats, tokenTotalAmountTransferred),
-  VersionOracle (VersionOracle, scriptId),
-  VersionOracleConfig,
-  VersionedGenericDatum,
-  datum,
- )
-import TrustlessSidechain.Utils qualified as Utils
 
 reserveAuthTokenTokenName :: TokenName
 reserveAuthTokenTokenName = TokenName emptyByteString

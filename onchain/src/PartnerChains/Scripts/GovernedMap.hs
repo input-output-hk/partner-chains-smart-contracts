@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 
-module TrustlessSidechain.Scripts.GovernedMap (
+module PartnerChains.Scripts.GovernedMap (
   compiledMintingPolicy,
   compiledValidator,
   serialisableMintingPolicy,
@@ -12,6 +12,8 @@ module TrustlessSidechain.Scripts.GovernedMap (
   mkValidatorUntyped,
 ) where
 
+import PartnerChains.Scripts.Versioning (approvedByGovernance)
+import PartnerChains.Types (VersionOracleConfig)
 import PlutusLedgerApi.Data.V2 (
   ScriptContext,
   SerialisedScript,
@@ -19,8 +21,6 @@ import PlutusLedgerApi.Data.V2 (
  )
 import PlutusTx qualified
 import PlutusTx.Prelude
-import TrustlessSidechain.Scripts.Versioning (approvedByGovernance)
-import TrustlessSidechain.Types (VersionOracleConfig)
 
 -- OnChain error descriptions:
 --

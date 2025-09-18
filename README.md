@@ -3,7 +3,7 @@
 [![Build Status](https://github.com/input-output-hk/partner-chains-smart-contracts/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/input-output-hk/partner-chains-smart-contracts/actions/workflows/ci.yml)
 [![Made with Haskell](https://img.shields.io/badge/Made%20with-Haskell-5e5086?logo=haskell)](https://www.haskell.org/)
 [![Built with Nix](https://img.shields.io/badge/Built%20with-Nix-5277C3?logo=nixos)](https://nixos.org/)
-[![Haddock Docs](https://img.shields.io/badge/docs-haddock-blue)](https://input-output-hk.github.io/partner-chains-smart-contracts/trustless-sidechain/index.html)
+[![Haddock Docs](https://img.shields.io/badge/docs-haddock-blue)](https://input-output-hk.github.io/partner-chains-smart-contracts/partner-chains-smart-contracts/index.html)
 
 ## :book: Overview
 
@@ -12,7 +12,7 @@ The Partner Chains Toolkit provides features for maintaining and securing Substr
 
 ## :books: Documentation
 
-- **Haddock API Docs**: [partner-chains-smart-contracts](https://input-output-hk.github.io/partner-chains-smart-contracts/trustless-sidechain/index.html)
+- **Haddock API Docs**: [partner-chains-smart-contracts](https://input-output-hk.github.io/partner-chains-smart-contracts/partner-chains-smart-contracts/index.html)
 - **Changelog** [CHANGELOG.md](./CHANGELOG.md)
 
 ## :rocket: Getting Started

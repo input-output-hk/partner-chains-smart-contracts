@@ -12,6 +12,19 @@ import Data.ByteString qualified as ByteString
 import Data.ByteString.Base16 qualified as Base16
 import Data.Foldable qualified as Foldable
 import Data.List qualified as List
+import PartnerChains.ScriptId (ScriptId (..))
+import PartnerChains.ScriptId qualified as ScriptId
+import PartnerChains.Scripts.AlwaysFailingScripts qualified as AlwaysFailing
+import PartnerChains.Scripts.AlwaysPassingScripts qualified as AlwaysPassing
+import PartnerChains.Scripts.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
+import PartnerChains.Scripts.DParameter qualified as DParameter
+import PartnerChains.Scripts.ExampleVFunction as ExampleVFunction
+import PartnerChains.Scripts.GovernedMap qualified as GovernedMap
+import PartnerChains.Scripts.IlliquidCirculationSupply qualified as IlliquidCirculationSupply
+import PartnerChains.Scripts.PermissionedCandidates qualified as PermissionedCandidates
+import PartnerChains.Scripts.Reserve qualified as Reserve
+import PartnerChains.Scripts.Versioning qualified as Versioning
+import PartnerChains.Utils (scriptToPlutusScript)
 import PlutusLedgerApi.Common (SerialisedScript)
 import System.Console.GetOpt (
   ArgDescr (OptArg),
@@ -25,19 +38,6 @@ import System.IO (Handle)
 import System.IO qualified as IO
 import System.IO.Error qualified as Error
 import Text.Casing (fromHumps, toScreamingSnake)
-import TrustlessSidechain.ScriptId (ScriptId (..))
-import TrustlessSidechain.ScriptId qualified as ScriptId
-import TrustlessSidechain.Scripts.AlwaysFailingScripts qualified as AlwaysFailing
-import TrustlessSidechain.Scripts.AlwaysPassingScripts qualified as AlwaysPassing
-import TrustlessSidechain.Scripts.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
-import TrustlessSidechain.Scripts.DParameter qualified as DParameter
-import TrustlessSidechain.Scripts.ExampleVFunction as ExampleVFunction
-import TrustlessSidechain.Scripts.GovernedMap qualified as GovernedMap
-import TrustlessSidechain.Scripts.IlliquidCirculationSupply qualified as IlliquidCirculationSupply
-import TrustlessSidechain.Scripts.PermissionedCandidates qualified as PermissionedCandidates
-import TrustlessSidechain.Scripts.Reserve qualified as Reserve
-import TrustlessSidechain.Scripts.Versioning qualified as Versioning
-import TrustlessSidechain.Utils (scriptToPlutusScript)
 
 -- * CLI parsing
 
@@ -89,7 +89,7 @@ getOpts =
 --
 -- The names used when serializing scripts must match the names of data
 -- constructors in ScriptId data type from the
--- TrustlessSidechain.Versioning.ScriptId module in off-chain.  This required
+-- PartnerChains.Versioning.ScriptId module in off-chain.  This required
 -- for this serializer to correctly build a map from ScriptId data constructors
 -- to serialized scripts.
 

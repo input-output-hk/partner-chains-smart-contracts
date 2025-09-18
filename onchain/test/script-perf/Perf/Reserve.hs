@@ -4,6 +4,9 @@ import Prelude
 
 import ApiBuilder
 import Control.Lens
+import PartnerChains.ScriptId qualified as ScriptId
+import PartnerChains.Scripts.Reserve
+import PartnerChains.Types qualified as Types
 import PlutusLedgerApi.V1.Address qualified as Address
 import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusLedgerApi.V2 qualified as V2
@@ -12,9 +15,6 @@ import PlutusTx.Builtins.Internal (BuiltinUnit (..))
 import Test.Tasty
 import TestValues qualified as Test
 import Testing
-import TrustlessSidechain.ScriptId qualified as ScriptId
-import TrustlessSidechain.Scripts.Reserve
-import TrustlessSidechain.Types qualified as Types
 
 execCosts :: TestTree
 execCosts =

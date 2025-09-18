@@ -1,7 +1,7 @@
 module Main (main) where
 
+import Test.PartnerChains.Golden.Tests qualified as Golden
 import Test.Tasty (TestTree, defaultMain, testGroup)
-import Test.TrustlessSidechain.Golden.Tests qualified as Golden
 
 main :: IO ()
 main = defaultMain tests
@@ -10,6 +10,6 @@ main = defaultMain tests
 tests :: TestTree
 tests =
   testGroup
-    "TrustlessSidechain"
+    "PartnerChains"
     [ Golden.tests
     ]

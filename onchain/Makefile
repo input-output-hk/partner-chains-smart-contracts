@@ -8,14 +8,14 @@ requires_nix_shell:
 	false; \
 	}
 
-trustless-dir := ../raw-scripts
-trustless-traced-dir := ../raw-scripts-traced
+raw-scripts-dir := ../raw-scripts
+raw-scripts-traced-dir := ../raw-scripts-traced
 
-serialise        := cabal run trustless-sidechain-serialise --
-serialise-traced := cabal run trustless-sidechain-serialise-traced --
+serialise        := cabal run partner-chains-smart-contracts-serialise --
+serialise-traced := cabal run partner-chains-smart-contracts-serialise-traced --
 
-raw-scripts := $(trustless-dir)/src/lib.rs
-raw-scripts-trace := $(trustless-traced-dir)/src/lib.rs
+raw-scripts := $(raw-scripts-dir)/src/lib.rs
+raw-scripts-trace := $(raw-scripts-traced-dir)/src/lib.rs
 
 all: cabal-update onchain check-raw-scripts
 
@@ -49,7 +49,7 @@ check-raw-scripts:
 	fi
 
 coverage-gen:
-	cabal test trustless-sidechain-test --enable-coverage
+	cabal test partner-chains-smart-contracts-test --enable-coverage
 	cabal test roundtrip --enable-coverage
 	cabal test script-specs --enable-coverage
 	@rm -rf combined.tix coverage

@@ -1,14 +1,14 @@
 module Size (sizeTests) where
 
+import PartnerChains.Scripts.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
+import PartnerChains.Scripts.DParameter qualified as DParameter
+import PartnerChains.Scripts.GovernedMap qualified as GovernedMap
+import PartnerChains.Scripts.IlliquidCirculationSupply qualified as IlliquidCirculationSupply
+import PartnerChains.Scripts.PermissionedCandidates qualified as PermissionedCandidates
+import PartnerChains.Scripts.Reserve qualified as Reserve
+import PartnerChains.Scripts.Versioning qualified as Versioning
 import Test.Tasty
 import Testing
-import TrustlessSidechain.Scripts.CommitteeCandidateValidator qualified as CommitteeCandidateValidator
-import TrustlessSidechain.Scripts.DParameter qualified as DParameter
-import TrustlessSidechain.Scripts.GovernedMap qualified as GovernedMap
-import TrustlessSidechain.Scripts.IlliquidCirculationSupply qualified as IlliquidCirculationSupply
-import TrustlessSidechain.Scripts.PermissionedCandidates qualified as PermissionedCandidates
-import TrustlessSidechain.Scripts.Reserve qualified as Reserve
-import TrustlessSidechain.Scripts.Versioning qualified as Versioning
 
 sizeTests :: TestTree
 sizeTests =

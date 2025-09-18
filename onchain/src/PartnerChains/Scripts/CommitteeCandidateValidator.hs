@@ -1,18 +1,18 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module TrustlessSidechain.Scripts.CommitteeCandidateValidator (
+module PartnerChains.Scripts.CommitteeCandidateValidator (
   mkCommitteeCandidateValidator,
   committeeCandidateValidatorUntyped,
   compiledValidator,
   serialisableValidator,
 ) where
 
+import PartnerChains.Types (VersionedGenericDatum (..))
 import PlutusLedgerApi.Common (SerialisedScript)
 import PlutusLedgerApi.Data.V2 (PubKeyHash, ScriptContext, TxInfo, scriptContextTxInfo, serialiseCompiledCode)
 import PlutusLedgerApi.V2.Data.Contexts (txSignedBy)
 import PlutusTx qualified
 import PlutusTx.Prelude
-import TrustlessSidechain.Types (VersionedGenericDatum (..))
 
 {-# INLINEABLE mkCommitteeCandidateValidator #-}
 -- OnChain error descriptions:
