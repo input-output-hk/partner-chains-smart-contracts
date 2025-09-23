@@ -5,8 +5,10 @@
 // > Manually run `make update-scripts` in the `$project/onchain/` directory
 
 use hex_literal::hex;
+use num_enum::TryFromPrimitive;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, TryFromPrimitive)]
+#[repr(u32)]
 pub enum ScriptId {
   CommitteeCandidateValidator = 3,
   VersionOraclePolicy = 15,

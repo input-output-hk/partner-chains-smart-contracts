@@ -176,8 +176,10 @@ serialiseScriptsToRust plutusScripts idOnlyPlutusScripts handle = do
   putLn "// > Manually run `make update-scripts` in the `$project/onchain/` directory"
   putLn ""
   putLn "use hex_literal::hex;"
+  putLn "use num_enum::TryFromPrimitive;"
   putLn ""
-  putLn "#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]"
+  putLn "#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, TryFromPrimitive)]"
+  putLn "#[repr(u32)]"
   putLn "pub enum ScriptId {"
 
   Foldable.for_ sortedScriptIds \(scriptId, scriptIdInt) -> do
