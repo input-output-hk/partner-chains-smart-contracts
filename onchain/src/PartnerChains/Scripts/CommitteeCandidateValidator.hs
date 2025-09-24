@@ -1,6 +1,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 
+{- |
+Module      : PartnerChains.Scripts.CommitteeCandidateValidator
+Description : Committee candidate validator.
+-}
 module PartnerChains.Scripts.CommitteeCandidateValidator (
+  -- * Committee candidate validator
+  -- $committeeCandidateValidator
   mkCommitteeCandidateValidator,
   committeeCandidateValidatorUntyped,
   compiledValidator,
@@ -14,11 +20,16 @@ import PlutusLedgerApi.V2.Data.Contexts (txSignedBy)
 import PlutusTx qualified
 import PlutusTx.Prelude
 
+{- $committeeCandidateValidator
+
+Validator storing committee candidate UTXOs. Each UTXO stores the `PubKeyHash` of
+the candidate. Transaction must be signed by the candidate.
+
+Error codes:
+
+* ERROR-COMMITTEE-CANDIDATE-VALIDATOR-01: Transaction not signed by the original submitter.
+-}
 {-# INLINEABLE mkCommitteeCandidateValidator #-}
--- OnChain error descriptions:
---
---   ERROR-COMMITTEE-CANDIDATE-VALIDATOR-01: Transaction not signed by the
---   original submitter.
 mkCommitteeCandidateValidator ::
   BuiltinData ->
   VersionedGenericDatum PubKeyHash ->

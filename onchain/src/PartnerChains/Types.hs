@@ -75,13 +75,10 @@ instance UnsafeFromData PermissionedCandidatesPolicyRedeemer where
           i | i == 1 -> PermissionedCandidatesBurn
           _ -> error ()
 
-{- | 'PermissionedCandidatesValidatorRedeemer' signals whether transaction is
-supposed to update the list of permissioned candidates or remove the list
-altogether.
--}
 data PermissionedCandidatesValidatorRedeemer
   = UpdatePermissionedCandidates
-  | RemovePermissionedCandidates
+  | -- | Unused
+    RemovePermissionedCandidates
   deriving stock (Haskell.Eq, Haskell.Show)
 
 instance ToData PermissionedCandidatesValidatorRedeemer where
@@ -223,10 +220,14 @@ instance UnsafeFromData IlliquidCirculationSupplyRedeemer where
           i | i == 1 -> WithdrawFromSupply
           _ -> error ()
 
+-- | `VersionedGenericDatum` allows creation of flexible datums.
 data VersionedGenericDatum a = VersionedGenericDatum
   { datum :: a
-  , genericData :: BuiltinData
+  -- ^ Typed portion for on-chain use.
+  , appendix :: BuiltinData
+  -- ^ Untyped portion for off-chain use, may be arbitrary as it is not meant to be decoded by smart contracts.
   , version :: Integer
+  -- ^ Version number of the appendix.
   }
   deriving stock (Haskell.Eq, Haskell.Show)
 
@@ -301,7 +302,6 @@ be trusted.
 -}
 newtype VersionOracleConfig = VersionOracleConfig
   { versionOracleCurrencySymbol :: CurrencySymbol
-  -- ^ @since v5.0.0
   }
   deriving stock (Haskell.Show, Haskell.Eq)
 
@@ -322,8 +322,7 @@ instance UnsafeFromData VersionOracleConfig where
 whether to mint or burn versioning tokens.
 -}
 data VersionOraclePolicyRedeemer
-  = -- | Mint versioning tokens from init tokens.  Used during sidechain
-    -- initialization.
+  = -- | Mint initial versioning token. Used during Partner Chain initialization.
     InitializeVersionOracle VersionOracle ScriptHash
   | -- | Mint a new versioning token ensuring it contains correct datum and
     -- reference script.

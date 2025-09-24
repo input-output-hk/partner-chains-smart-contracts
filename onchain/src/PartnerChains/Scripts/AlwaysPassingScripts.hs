@@ -2,6 +2,7 @@
 
 {- |
 Module      : PartnerChains.Scripts.AlwaysPassingScripts
+Description : Always-passing Plutus scripts for integration testing.
 
 This module provides Plutus scripts (validator and minting policy) that always succeed.
 These scripts are useful for integration testing in mock chains, where validation

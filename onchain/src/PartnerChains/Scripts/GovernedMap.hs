@@ -1,15 +1,26 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 
+{- |
+Module      : PartnerChains.Scripts.GovernedMap
+Description : GovernedMap validator and minting policy.
+
+Governed map is a key-value store on-chain managed by the governance authority.
+-}
 module PartnerChains.Scripts.GovernedMap (
-  compiledMintingPolicy,
-  compiledValidator,
-  serialisableMintingPolicy,
-  serialisableValidator,
+  -- * Governed map validator
+  -- $governedMapValidator
   governedMapValidator,
+  mkValidatorUntyped,
+  compiledValidator,
+  serialisableValidator,
+
+  -- * Governed map minting policy
+  -- $mkMintingPolicy
   mkMintingPolicy,
   mkMintingPolicyUntyped,
-  mkValidatorUntyped,
+  compiledMintingPolicy,
+  serialisableMintingPolicy,
 ) where
 
 import PartnerChains.Scripts.Versioning (approvedByGovernance)
@@ -22,11 +33,14 @@ import PlutusLedgerApi.Data.V2 (
 import PlutusTx qualified
 import PlutusTx.Prelude
 
--- OnChain error descriptions:
---
---   ERROR-GOVERNED-MAP-POLICY-01: transaction not signed by the governance
---   authority
---
+{- $mkMintingPolicy
+
+Minting a Governed Map token is a governance action (see `approvedByGovernance`).
+
+Error codes:
+
+* ERROR-GOVERNED-MAP-POLICY-01: transaction not signed by the governance authority
+-}
 mkMintingPolicy ::
   BuiltinData ->
   BuiltinData ->
@@ -48,11 +62,14 @@ mkMintingPolicy
      in
       traceIfFalse "ERROR-GOVERNED-MAP-POLICY-01" signedByGovernanceAuthority
 
--- OnChain error descriptions:
---
---   ERROR-GOVERNED-MAP-VALIDATOR-01: transaction not signed by the governance
---   authority
---
+{- $governedMapValidator
+
+Spending from the Governed Map validator is a governance action (see `approvedByGovernance`).
+
+Error codes:
+
+* ERROR-GOVERNED-MAP-VALIDATOR-01: transaction not signed by the governance authority
+-}
 {-# INLINEABLE governedMapValidator #-}
 governedMapValidator ::
   BuiltinData ->

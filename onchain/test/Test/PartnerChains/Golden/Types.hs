@@ -91,7 +91,7 @@ sampleReserveDatum =
               MutableReserveSettings (Value.currencySymbol (hexToBSUnsafe "726551f3f61ebd8f53198f7c137c646ae0bd57fb180c59759919174d")) 0
           , stats = ReserveStats 15
           }
-    , genericData = toBuiltinData ()
+    , appendix = toBuiltinData ()
     , version = 0
     }
 
