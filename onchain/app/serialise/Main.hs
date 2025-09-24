@@ -189,6 +189,26 @@ serialiseScriptsToRust plutusScripts idOnlyPlutusScripts handle = do
 
   putLn "}"
   putLn ""
+
+  putLn "impl TryFrom<u32> for ScriptId {"
+  putLn "  type Error = ();"
+  putLn "  fn try_from(value: u32) -> Result<Self, Self::Error> {"
+  putLn "    match value {"
+
+  Foldable.for_ sortedScriptIds \(scriptId, scriptIdInt) -> do
+    put "      "
+    put $ show scriptIdInt
+    put " => Ok(Self::"
+    put $ show scriptId
+    putLn "),"
+
+  putLn "      _ => Err(()),"
+  putLn "    }"
+  putLn "  }"
+  putLn "}"
+
+  putLn ""
+
   putLn "pub struct RawScript(pub &'static [u8]);"
   putLn ""
 
