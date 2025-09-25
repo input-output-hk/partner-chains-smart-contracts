@@ -4,6 +4,12 @@ This changelog is based on [Keep A
 Changelog](https://keepachangelog.com/en/1.1.0).
 
 
+## 8.2.0 - 2025-09-25
+### Added
+* Added TryFrom<u32> for ScriptId implementation in raw-crates
+### Fixed
+* Rust crates now include licenses in metadata
+
 ## 8.1.0 - 2025-09-16
 ### Changed
 * Reserve validator no longer needs illiquidCirculationSupplyAddress UTXO ref input for TransferToIlliquidCirculationSupply and Handover redeemers
