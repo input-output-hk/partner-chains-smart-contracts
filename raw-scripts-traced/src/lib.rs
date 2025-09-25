@@ -30,6 +30,35 @@ pub enum ScriptId {
   IlliquidCirculationSupplyAuthorityTokenPolicy = 42,
 }
 
+impl TryFrom<u32> for ScriptId {
+  type Error = ();
+  fn try_from(value: u32) -> Result<Self, Self::Error> {
+    match value {
+      3 => Ok(Self::CommitteeCandidateValidator),
+      15 => Ok(Self::VersionOraclePolicy),
+      16 => Ok(Self::VersionOracleValidator),
+      22 => Ok(Self::DParameterPolicy),
+      23 => Ok(Self::DParameterValidator),
+      24 => Ok(Self::PermissionedCandidatesPolicy),
+      25 => Ok(Self::PermissionedCandidatesValidator),
+      28 => Ok(Self::ReserveValidator),
+      29 => Ok(Self::ReserveAuthPolicy),
+      30 => Ok(Self::IlliquidCirculationSupplyValidator),
+      31 => Ok(Self::IlliquidCirculationSupplyWithdrawalPolicy),
+      32 => Ok(Self::GovernancePolicy),
+      34 => Ok(Self::AlwaysPassingValidator),
+      35 => Ok(Self::AlwaysPassingPolicy),
+      37 => Ok(Self::AlwaysFailingValidator),
+      38 => Ok(Self::AlwaysFailingPolicy),
+      39 => Ok(Self::ExampleVFunctionPolicy),
+      40 => Ok(Self::GovernedMapPolicy),
+      41 => Ok(Self::GovernedMapValidator),
+      42 => Ok(Self::IlliquidCirculationSupplyAuthorityTokenPolicy),
+      _ => Err(()),
+    }
+  }
+}
+
 pub struct RawScript(pub &'static [u8]);
 
 pub const COMMITTEE_CANDIDATE_VALIDATOR: RawScript = RawScript(&hex!("58e80100002222533533223535323233322212333001004003002375c6ae84008d5d08009bad357426ae88004d5d10009bac005222123330010040030022322253355335300337586ae84d5d11aba2357446ae88d5d11aba2357446ae88d55cf1baa357426aae78dd50039080388028803099ab9c491264552524f522d434f4d4d49545445452d43414e4449444154452d56414c494441544f522d3031000053230010012253335573e0022244002264a66a666ae68cdc780200080300288911801001899198020020009aba2002375c6ae8400448800848800452613263357389210350543500120011"));
