@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          partner-chains-smart-contracts
-version:       8.1.0
+version:       8.2.0
 synopsis:      Smart contract code used by the partner-chains project.
 homepage:
   https://github.com/input-output-hk/partner-chains-smart-contracts
