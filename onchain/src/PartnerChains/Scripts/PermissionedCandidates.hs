@@ -6,14 +6,19 @@ Module      : PartnerChains.Scripts.PermissionedCandidates
 Description : Permissioned Candidates validator and minting policy.
 -}
 module PartnerChains.Scripts.PermissionedCandidates (
-  compiledValidator,
-  compiledMintingPolicy,
-  serialisableValidator,
-  serialisableMintingPolicy,
-  permissionedCandidatesValidator,
-  mkValidatorUntyped,
+  -- * Permissioned candidates minting policy
+  -- $mkMintingPolicy
   mkMintingPolicy,
   mkMintingPolicyUntyped,
+  compiledMintingPolicy,
+  serialisableValidator,
+
+  -- * Permissioned candidates validator
+  -- $permissionedCandidatesValidator
+  permissionedCandidatesValidator,
+  mkValidatorUntyped,
+  compiledValidator,
+  serialisableMintingPolicy,
 ) where
 
 import PartnerChains.Scripts.Versioning (approvedByGovernance)
@@ -45,22 +50,30 @@ import PlutusTx.Data.List qualified as List
 import PlutusTx.Foldable (sum)
 import PlutusTx.Prelude
 
--- OnChain error descriptions:
---
---   ERROR-PERMISSIONED-CANDIDATES-POLICY-01: transaction not signed by the
---   governance authority
---
---   ERROR-PERMISSIONED-CANDIDATES-POLICY-02: some tokens were not sent to the
---   PermissionedCandidatesValidatorAddress
---
---   ERROR-PERMISSIONED-CANDIDATES-POLICY-03: transaction not signed by the
---   governance authority
---
---   ERROR-PERMISSIONED-CANDIDATES-POLICY-04: transaction outputs some
---   PermissionedCandidatesTokens
---
---   ERROR-PERMISSIONED-CANDIDATES-POLICY-05: Wrong ScriptContext - this should
---   never happen
+{- $mkMintingPolicy
+
+Permissioned candidates are stored in UTXOs carrying Permissioned Candidate tokens.
+
+Redeemers:
+
+1. `PermissionedCandidatesMint` mints Permissioned Candidate tokens for the purpose of adding new permissioned candidates.
+
+    * It is a governance action (see `approvedByGovernance`).
+    * All minted tokens must go to the `permissionedCandidatesValidatorAddress`.
+
+2. `PermissionedCandidatesBurn` burns Permissioned Candidate tokens for the purpose of removing permissioned candidates.
+
+    * It is a governance action (see `approvedByGovernance`).
+    * Transaction must not output any Permissioned Candidate tokens.
+
+Error codes:
+
+* ERROR-PERMISSIONED-CANDIDATES-POLICY-01: Transaction not signed by the governance authority
+* ERROR-PERMISSIONED-CANDIDATES-POLICY-02: Some tokens were not sent to the permissionedCandidatesValidatorAddress
+* ERROR-PERMISSIONED-CANDIDATES-POLICY-03: Transaction not signed by the governance authority
+* ERROR-PERMISSIONED-CANDIDATES-POLICY-04: Transaction outputs some PermissionedCandidatesTokens
+* ERROR-PERMISSIONED-CANDIDATES-POLICY-05: Wrong ScriptContext - this should never happen
+-}
 mkMintingPolicy ::
   BuiltinData ->
   VersionOracleConfig ->
@@ -139,13 +152,21 @@ mkMintingPolicy
           noOutputsWithPermissionedCandidatesToken
 mkMintingPolicy _ _ _ _ _ = traceError "ERROR-PERMISSIONED-CANDIDATES-POLICY-05"
 
--- OnChain error descriptions:
---
---   ERROR-PERMISSIONED-CANDIDATES-VALIDATOR-01: transaction not signed by the
---   governance authority
---
---   ERROR-PERMISSIONED-CANDIDATES-VALIDATOR-02: transaction not signed by the
---   governance authority
+{- $permissionedCandidatesValidator
+
+Redeemers:
+
+1. `UpdatePermissionedCandidates` allows inserting or updating the list of permissioned candidates.
+
+    * It is a governance action (see `approvedByGovernance`).
+
+2. `RemovePermissionedCandidates` is unused, and to be removed in the future.
+
+Error codes:
+
+  * ERROR-PERMISSIONED-CANDIDATES-VALIDATOR-01: Transaction not signed by the governance authority
+  * ERROR-PERMISSIONED-CANDIDATES-VALIDATOR-02: Transaction not signed by the governance authority
+-}
 {-# INLINEABLE permissionedCandidatesValidator #-}
 permissionedCandidatesValidator ::
   BuiltinData ->

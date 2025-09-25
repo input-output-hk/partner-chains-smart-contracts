@@ -289,7 +289,7 @@ wrapToVersioned datum =
     toBuiltinData $
       Types.VersionedGenericDatum
         { datum
-        , genericData = Test.dummyBuiltinData
+        , appendix = Test.dummyBuiltinData
         , version = 0
         }
 

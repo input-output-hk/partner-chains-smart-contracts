@@ -2,7 +2,7 @@
 
 {- |
 Module      : PartnerChains.Scripts.AlwaysFailingScripts
-Description : Always-failing Plutus scripts for integration testing
+Description : Always-failing Plutus scripts for integration testing.
 
 This module defines always-failing Plutus validator and minting policy scripts.
 These are useful for testing scenarios where script validation must fail deliberately.

@@ -1,15 +1,24 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-specialise #-}
 
+{- |
+Module      : PartnerChains.Scripts.DParameter
+Description : D-parameter validator and minting policy.
+-}
 module PartnerChains.Scripts.DParameter (
-  compiledMintingPolicy,
-  compiledValidator,
-  serialisableMintingPolicy,
-  serialisableValidator,
+  -- * D-parameter validator
+  -- $dParameterValidator
   dParameterValidator,
   mkValidatorUntyped,
+  compiledValidator,
+  serialisableValidator,
+
+  -- * D-parameter minting policy
+  -- $mkMintingPolicy
   mkMintingPolicy,
   mkMintingPolicyUntyped,
+  compiledMintingPolicy,
+  serialisableMintingPolicy,
 ) where
 
 import PartnerChains.Scripts.Versioning (approvedByGovernance)
@@ -32,15 +41,17 @@ import PlutusTx.Data.List qualified as List
 import PlutusTx.Foldable (sum)
 import PlutusTx.Prelude
 
--- OnChain error descriptions:
---
---   ERROR-DPARAMETER-POLICY-01: transaction not signed by the governance
---   authority
---
---   ERROR-DPARAMETER-POLICY-02: some tokens were not sent to the
---   dParameterValidatorAddress
---
---   ERROR-DPARAMETER-POLICY-03: Wrong ScriptContext - this should never happen
+{- $mkMintingPolicy
+
+* Minting D-parameter tokens is a governance action (see `approvedByGovernance`).
+* Transaction must transfer all D-parameter tokens to the provided `dParameterValidatorAddress`.
+
+Error codes:
+
+ * ERROR-DPARAMETER-POLICY-01: Transaction not signed by the governance authority
+ * ERROR-DPARAMETER-POLICY-02: Some tokens were not sent to the dParameterValidatorAddress
+ * ERROR-DPARAMETER-POLICY-03: Wrong ScriptContext - this should never happen
+-}
 mkMintingPolicy ::
   BuiltinData ->
   VersionOracleConfig ->
@@ -87,12 +98,14 @@ mkMintingPolicy
           allTokensSentToDParameterValidator
 mkMintingPolicy _ _ _ _ _ = traceError "ERROR-DPARAMETER-POLICY-03"
 
--- OnChain error descriptions:
---
---   ERROR-DPARAMETER-VALIDATOR-01: transaction not signed by the governance
---   authority
---
+{- $dParameterValidator
 
+* Spending from the D-parameter validator is a governance action (see `approvedByGovernance`).
+
+Error codes:
+
+ * ERROR-DPARAMETER-VALIDATOR-01: Transaction not signed by the governance authority
+-}
 {-# INLINEABLE dParameterValidator #-}
 dParameterValidator ::
   BuiltinData ->

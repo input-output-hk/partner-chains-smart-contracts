@@ -1,20 +1,25 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-{- | 'PartnerChains.Versioning' module implements script versioning system.
-It provides VersionOraclePolicy for minting tokens that store versioned
-scripts, as well as VersionedOracleValidator script for storing the
-versioning tokens.  Each versioning token stores a reference script and a
-datum that identifies the script and its version.
+{- |
+Module      : PartnerChains.Scripts.Versioning
+Description : Versioning validator and minting policy.
 -}
 module PartnerChains.Scripts.Versioning (
-  compiledVersionOraclePolicy,
-  compiledVersionOracleValidator,
-  serialisableVersionOraclePolicy,
-  serialisableVersionOracleValidator,
+  -- * Version Oracle Token minting policy
+  -- $versionOraclePolicy
   mkVersionOraclePolicy,
   mkVersionOraclePolicyUntyped,
+  compiledVersionOraclePolicy,
+  serialisableVersionOraclePolicy,
+
+  -- * Version Oracle Token validator
+  -- $versionOracleValidator
   mkVersionOracleValidator,
   mkVersionOracleValidatorUntyped,
+  compiledVersionOracleValidator,
+  serialisableVersionOracleValidator,
+
+  -- * Version oracle query functions
   getVersionedValidatorAddress,
   getVersionedCurrencySymbol,
   approvedByGovernance,
@@ -61,44 +66,67 @@ import PlutusTx.Data.List qualified as List
 import PlutusTx.List (null)
 import PlutusTx.Prelude
 
-{- | Token name for versioning tokens.  Must match definition in off-chain
-| module.
--}
+-- | Token name for versioning tokens.  Must match definition in off-chain.
 {-# INLINEABLE versionOracleTokenName #-}
 versionOracleTokenName :: TokenName
 versionOracleTokenName = TokenName "Version oracle"
 
-{- | Manages minting and burning of versioning tokens.  (Note that these are
-ordinary tokens, not NFTs.)  No restrictions are placed on minting initial
-versioning tokens during sidechain initialization, other than the usual
-requirement of burning a genesis UTxO.
+{- $versionOraclePolicy
 
-OnChain error descriptions:
+This is part of Partner Chains' versioning system. The versioning system stores `ScriptId`s with their corresponding reference scripts.
+This creates indirection that allows replacing scripts in the versioning system with different versions of them.
 
-  ERROR-VERSION-POLICY-01: Transaction should burn exactly one init token.
+Versioned scripts can be looked up using `getVersionedCurrencySymbol` and `getVersionedScriptHash`.
 
-  ERROR-VERSION-POLICY-02: Transaction should attach datum and reference
-    script to output containing one versioning token.
+Version Oracle Tokens identify authorized versioning UTXOs.
 
-  ERROR-VERSION-POLICY-03: Transaction should attach datum and reference
-    script to output containing one versioning token.
+Redeemers:
 
-  ERROR-VERSION-POLICY-04: Script to be invalidated should be present in
-    exactly one transaction input.
+1. `InitializeVersionOracle` initializes the first VersionOracle UTXO.
 
-  ERROR-VERSION-POLICY-05: Transaction should be signed by the governance.
+    * TX has to use the Genesis UTXO as an input.
+    * TX must mint a single Version Oracle Token.
+    * There must exist exactly one output at the validator address that carries:
 
-  ERROR-VERSION-POLICY-06: Transaction should burn all versioning tokens in
-    the input.
+        * VersionOracleDatum as datum matching script argument,
+        * a script reference matching script argument,
+        * and a single Version Oracle Token.
 
-  ERROR-VERSION-POLICY-07: Transaction should attach datum and reference
-    script to output containing one versioning token.
+2. `MintVersionOracle` creates a new VersionOracle UTXO.
 
-  ERROR-VERSION-POLICY-08: Script can only be used for Minting purpose.
+    * It is a governance action (see `approvedByGovernance`).
+    * TX must mint a single Version Oracle Token.
+    * There must exist exactly one output at the validator address that carries:
 
-  ERROR-VERSION-POLICY-09: Transaction should be signed by the governance.
+        * VersionOracleDatum as datum matching script argument,
+        * a script reference matching script argument,
+        * and a single Version Oracle Token.
 
-  ERROR-VERSION-POLICY-10: Script purpose is not Minting.
+3. `BurnVersionOracle` spends a VersionOracle UTXO.
+
+    * It is a governance action (see `approvedByGovernance`).
+    * There must exist exactly one input at the validator address that carries:
+
+        * VersionOracleDatum as datum matching script argument,
+        * and a single Version Oracle Token.
+
+    * There must NOT exist any outputs carrying any Version Oracle Tokens.
+
+Error codes:
+
+* ERROR-VERSION-POLICY-01: Genesis UTXO was not used as input.
+* ERROR-VERSION-POLICY-02: There is not a single output at the validator address with
+    correct VersionOracleDatum, reference script, and a single version oracle token.
+* ERROR-VERSION-POLICY-03: One versioning token was not minted.
+* ERROR-VERSION-POLICY-04: There is not a single output at the validator address with
+    correct VersionOracleDatum, reference script, and a single version oracle token.
+* ERROR-VERSION-POLICY-05: Transaction should be signed by the governance.
+* ERROR-VERSION-POLICY-06: One versioning token was not minted.
+* ERROR-VERSION-POLICY-07: There is not a single input at the validator address with
+    expected old VersionOracleDatum, and a single version oracle token.
+* ERROR-VERSION-POLICY-08: There was an output carrying version oracle tokens.
+* ERROR-VERSION-POLICY-09: Transaction should be signed by the governance.
+* ERROR-VERSION-POLICY-10: Script purpose is not Minting.
 -}
 mkVersionOraclePolicy ::
   TxOutRef ->
@@ -206,17 +234,24 @@ serialisableVersionOraclePolicy ::
   SerialisedScript
 serialisableVersionOraclePolicy = serialiseCompiledCode compiledVersionOraclePolicy
 
-{- | Stores VersionOraclePolicy UTxOs, acting both as an oracle of available
-scripts as well as a script caching system.  UTxOs on the script are managed
-by governance authority, with VersionOraclePolicy ensuring that tokens are
+{- $versionOracleValidator
+
+Stores VersionOraclePolicy UTXOs, acting both as an oracle of available
+scripts as well as a script caching system. UTXOs on the script are managed
+by the governance authority, with VersionOraclePolicy ensuring that tokens are
 minted and burned correctly.
 
-OnChain error descriptions:
-  ERROR-VERSION-VALIDATOR-01: Governance approval is not present
-  ERROR-VERSION-VALIDATOR-02: Version oracle in the datum does not match the redeemer
-  ERROR-VERSION-VALIDATOR-03: Transaction outputs version tokens to non-versioning address
-  ERROR-VERSION-VALIDATOR-04: Invalid script purpose is provided
-  ERROR-VERSION-VALIDATOR-05: Transaction does not have own input
+* Spending from the VersionOracle validator is a governance action (see `approvedByGovernance`).
+* `VersionOracle` in redeemer must match the one in the datum.
+* Transaction must not transfer any Version Oracle tokens to another address.
+
+Error codes:
+
+* ERROR-VERSION-VALIDATOR-01: Governance approval is not present
+* ERROR-VERSION-VALIDATOR-02: Version oracle in the datum does not match the redeemer
+* ERROR-VERSION-VALIDATOR-03: Transaction outputs version tokens to non-versioning address
+* ERROR-VERSION-VALIDATOR-04: Invalid script purpose is provided
+* ERROR-VERSION-VALIDATOR-05: Transaction does not have own input
 -}
 {-# INLINEABLE mkVersionOracleValidator #-}
 mkVersionOracleValidator ::
@@ -340,11 +375,14 @@ getVersionedScriptHash
         valueOf value versionOracleCurrencySymbol versionOracleTokenName == 1
         ]
 
-{- | Check whether a given transaction is approved by sidechain governance.  The
-actual check is delegated to a governance minting policy stored in the
-versioning system.  Caller specifies the requested governance version.  The
-transaction must mint at least one token of the governance minting policy to
+{- | Check whether a given transaction is approved by Partner Chain governance.
+The actual check is delegated to a governance minting policy stored in the
+versioning system. Caller specifies the requested governance version.
+The transaction must mint at least one token of the governance minting policy to
 signify transaction approval.
+
+Scripts calling `approvedByGovernance` must provide the VersionOracle UTXO for
+`ScriptId.governancePolicyId` as a reference input.
 -}
 {-# INLINEABLE approvedByGovernance #-}
 approvedByGovernance ::
