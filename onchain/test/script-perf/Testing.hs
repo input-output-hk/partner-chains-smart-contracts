@@ -10,7 +10,7 @@ import Data.ByteString.Short qualified as BSS
 import Data.Maybe (fromJust)
 import PlutusCore.Evaluation.Machine.ExBudgetingDefaults (defaultCekParametersForTesting)
 import PlutusCore.Version (plcVersion100)
-import PlutusLedgerApi.Common (SerialisedScript)
+import PlutusLedgerApi.Common (MajorProtocolVersion (..), PlutusLedgerLanguage (..), ScriptNamedDeBruijn (..), SerialisedScript, deserialiseScript, deserialisedScript)
 import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx
 import PlutusTx.Prelude (BuiltinUnit)
@@ -31,6 +31,16 @@ goldenSize name code = goldenVsVal cmp name ("./test/size_data/" <> name <> ".js
     cmp curr' new' = simpleCmp msg curr' new'
       where
         msg = "Script size " <> diffStr curr' new'
+
+goldenPerfV3 :: String -> SerialisedScript -> TestTree
+goldenPerfV3 name code = goldenVsVal cmp name ("./test/perf_data/" <> name <> "_v3.json") $ getExecutionCostV3 code
+  where
+    cmp :: V2.ExBudget -> V2.ExBudget -> IO (Maybe String)
+    cmp
+      curr'@V2.ExBudget {exBudgetCPU = V2.ExCPU currCpu, exBudgetMemory = V2.ExMemory currMem}
+      new'@V2.ExBudget {exBudgetCPU = V2.ExCPU newCpu, exBudgetMemory = V2.ExMemory newMem} = simpleCmp msg curr' new'
+        where
+          msg = "Performance changed:\n  CPU " <> diffStr currCpu newCpu <> "\n  MEM " <> diffStr currMem newMem
 
 goldenPerf :: String -> CompiledCode BuiltinUnit -> TestTree
 goldenPerf name code = goldenVsVal cmp name ("./test/perf_data/" <> name <> ".json") $ getExecutionCost code
@@ -89,5 +99,19 @@ getExecutionCost code = do
     (Right _actual, CountingSt exBudget, _logs) -> exBudget
     (Left ex, _counting, logs) -> error $ "failed execution. trace: " <> show logs <> "\n" <> show ex
 
+getExecutionCostV3 :: SerialisedScript -> V2.ExBudget
+getExecutionCostV3 serialised = do
+  let jazda = case deserialiseScript PlutusV3 (MajorProtocolVersion 8) serialised of
+        Right x -> x
+        Left _ -> error "dupa"
+  let (ScriptNamedDeBruijn prog) = deserialisedScript jazda
+  let plc = prog ^. progTerm
+  case runCekDeBruijn defaultCekParametersForTesting counting logEmitter plc of
+    (Right _actual, CountingSt exBudget, _logs) -> exBudget
+    (Left ex, _counting, logs) -> error $ "failed execution. trace: " <> show logs <> "\n" <> show ex
+
 appArg :: (ToData b) => CompiledCode (BuiltinData -> a) -> b -> CompiledCode a
-appArg a b = a `unsafeApplyCode` liftCode plcVersion100 (toBuiltinData b)
+appArg a b =
+  case a `applyCode` liftCode plcVersion100 (toBuiltinData b) of
+    Right code -> code
+    Left err -> error err
