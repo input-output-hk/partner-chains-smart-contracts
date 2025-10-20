@@ -8,16 +8,19 @@ import Data.Aeson (FromJSON, ToJSON, decode, encode)
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Short qualified as BSS
 import Data.Maybe (fromJust)
+import Debug.Trace (trace)
+import PlutusCore.Default (DefaultUni (DefaultUniData), Some (..), ValueOf (..))
 import PlutusCore.Evaluation.Machine.ExBudgetingDefaults (defaultCekParametersForTesting)
-import PlutusCore.Version (plcVersion100)
-import PlutusLedgerApi.Common (MajorProtocolVersion (..), PlutusLedgerLanguage (..), ScriptNamedDeBruijn (..), SerialisedScript, deserialiseScript, deserialisedScript)
+import PlutusCore.Version (plcVersion100, plcVersion110)
+import PlutusLedgerApi.Common (SerialisedScript)
 import PlutusLedgerApi.V2 qualified as V2
 import PlutusTx
+import PlutusTx.Code (CompiledCodeIn (..))
 import PlutusTx.Prelude (BuiltinUnit)
 import Test.Tasty
 import Test.Tasty.Golden (createDirectoriesAndWriteFile)
 import Test.Tasty.Golden.Advanced (goldenTest)
-import UntypedPlutusCore.Core.Type (progTerm)
+import UntypedPlutusCore.Core.Type (Term (..), progTerm)
 import UntypedPlutusCore.Evaluation.Machine.Cek (CountingSt (..), counting, logEmitter)
 import UntypedPlutusCore.Evaluation.Machine.Cek.Internal (runCekDeBruijn)
 
@@ -31,16 +34,6 @@ goldenSize name code = goldenVsVal cmp name ("./test/size_data/" <> name <> ".js
     cmp curr' new' = simpleCmp msg curr' new'
       where
         msg = "Script size " <> diffStr curr' new'
-
-goldenPerfV3 :: String -> SerialisedScript -> TestTree
-goldenPerfV3 name code = goldenVsVal cmp name ("./test/perf_data/" <> name <> "_v3.json") $ getExecutionCostV3 code
-  where
-    cmp :: V2.ExBudget -> V2.ExBudget -> IO (Maybe String)
-    cmp
-      curr'@V2.ExBudget {exBudgetCPU = V2.ExCPU currCpu, exBudgetMemory = V2.ExMemory currMem}
-      new'@V2.ExBudget {exBudgetCPU = V2.ExCPU newCpu, exBudgetMemory = V2.ExMemory newMem} = simpleCmp msg curr' new'
-        where
-          msg = "Performance changed:\n  CPU " <> diffStr currCpu newCpu <> "\n  MEM " <> diffStr currMem newMem
 
 goldenPerf :: String -> CompiledCode BuiltinUnit -> TestTree
 goldenPerf name code = goldenVsVal cmp name ("./test/perf_data/" <> name <> ".json") $ getExecutionCost code
@@ -94,24 +87,19 @@ goldenVsVal cmp name ref exBudget =
 
 getExecutionCost :: CompiledCode BuiltinUnit -> V2.ExBudget
 getExecutionCost code = do
-  let plc = getPlc code ^. progTerm
-  case runCekDeBruijn defaultCekParametersForTesting counting logEmitter plc of
-    (Right _actual, CountingSt exBudget, _logs) -> exBudget
-    (Left ex, _counting, logs) -> error $ "failed execution. trace: " <> show logs <> "\n" <> show ex
-
-getExecutionCostV3 :: SerialisedScript -> V2.ExBudget
-getExecutionCostV3 serialised = do
-  let jazda = case deserialiseScript PlutusV3 (MajorProtocolVersion 8) serialised of
-        Right x -> x
-        Left _ -> error "dupa"
-  let (ScriptNamedDeBruijn prog) = deserialisedScript jazda
-  let plc = prog ^. progTerm
+  let plc = trace "SIEEEEMA" (getPlc code ^. progTerm)
   case runCekDeBruijn defaultCekParametersForTesting counting logEmitter plc of
     (Right _actual, CountingSt exBudget, _logs) -> exBudget
     (Left ex, _counting, logs) -> error $ "failed execution. trace: " <> show logs <> "\n" <> show ex
 
 appArg :: (ToData b) => CompiledCode (BuiltinData -> a) -> b -> CompiledCode a
-appArg a b =
-  case a `applyCode` liftCode plcVersion100 (toBuiltinData b) of
-    Right code -> code
-    Left err -> error err
+appArg a b = a `unsafeApplyCode` liftCode plcVersion100 (toBuiltinData b)
+
+appArg110 :: (ToData b) => CompiledCode (BuiltinData -> a) -> b -> CompiledCode a
+appArg110 a b = a `unsafeApplyCode` liftCode plcVersion110 (toBuiltinData b)
+
+-- Apply a list of BuiltinData arguments at the UPLC level to a deserialised script
+appArgsUPLC :: CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> BuiltinData -> BuiltinUnit) -> [BuiltinData] -> CompiledCode BuiltinUnit
+appArgsUPLC code args =
+  let applied = over progTerm (\t -> foldl (\f a -> Apply mempty f (Constant mempty (Some (ValueOf DefaultUniData (PlutusTx.builtinDataToData a))))) t args) (getPlc code)
+   in DeserializedCode (fmap (const mempty) applied) Nothing mempty
